@@ -58,6 +58,8 @@ final class SettingsModel: ObservableObject {
     @Published var liveSpellCheck: Bool { didSet { AppState.shared.liveSpellCheck = liveSpellCheck } }
     @Published var simpleTelex: Bool { didSet { AppState.shared.simpleTelex = simpleTelex } }
     @Published var shortcuts: [ShortcutRow] = []
+    @Published var fallbackApps: [String] = []
+    @Published var inPlaceApps: [String] = []
 
     init(selected: SettingsTab) {
         selectedTab = selected
@@ -67,6 +69,12 @@ final class SettingsModel: ObservableObject {
         liveSpellCheck = AppState.shared.liveSpellCheck
         simpleTelex = AppState.shared.simpleTelex
         reloadShortcuts()
+        reloadLearnedApps()
+    }
+
+    func reloadLearnedApps() {
+        fallbackApps = AppState.shared.learnedFallbackApps
+        inPlaceApps = AppState.shared.learnedInPlaceApps
     }
 
     func reloadShortcuts() {
@@ -88,7 +96,8 @@ final class SettingsModel: ObservableObject {
     }
 }
 
-struct ShortcutRow: Identifiable { let id = UUID(); let key: String; let value: String }
+// id = key: selection survives reloads, and a row can be looked up by its key.
+struct ShortcutRow: Identifiable { var id: String { key }; let key: String; let value: String }
 
 // MARK: - Root view
 
@@ -110,6 +119,10 @@ struct SettingsView: View {
 struct GeneralTab: View {
     @EnvironmentObject var model: SettingsModel
 
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+    }
+
     var body: some View {
         Form {
             Section("Kiểu gõ") {
@@ -129,9 +142,32 @@ struct GeneralTab: View {
                 Text("Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt (google, github…) thay vì đợi hết từ.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Tương thích ứng dụng") {
+                if model.fallbackApps.isEmpty && model.inPlaceApps.isEmpty {
+                    Text("Chưa có ứng dụng nào được ghi nhớ.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    if !model.fallbackApps.isEmpty {
+                        Text("Dùng marked text: " + model.fallbackApps.joined(separator: ", "))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    if !model.inPlaceApps.isEmpty {
+                        Text("Gõ trực tiếp OK: " + model.inPlaceApps.joined(separator: ", "))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+                Button("Đặt lại (dò lại từ đầu)") {
+                    AppState.shared.resetLearnedApps()
+                    model.reloadLearnedApps()
+                }
+                Text("VietTelex tự học cách gõ phù hợp cho từng ứng dụng. Nếu một ứng dụng gõ bị gạch chân hoặc sai, bấm Đặt lại để dò lại.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Giới thiệu") {
                 Text("© Phil Trinh @ SenPrints")
-                Text("Version 1.0")
+                Text("Version \(appVersion)")
             }
         }
         .formStyle(.grouped)
@@ -144,10 +180,16 @@ struct ShortcutsTab: View {
     @EnvironmentObject var model: SettingsModel
     @State private var newKey = ""
     @State private var newValue = ""
+    @State private var selection: ShortcutRow.ID?
+
+    /// True when the fields hold an existing shortcut (save = update, not add).
+    private var isEditing: Bool {
+        AppState.shared.shortcuts[newKey.trimmingCharacters(in: .whitespaces)] != nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Table(model.shortcuts) {
+            Table(model.shortcuts, selection: $selection) {
                 TableColumn("Gõ", value: \.key)
                 TableColumn("Thành", value: \.value)
                 TableColumn("") { row in
@@ -157,15 +199,22 @@ struct ShortcutsTab: View {
                 }.width(40)
             }
             .frame(minHeight: 220)
+            .onChange(of: selection) { selected in
+                // Click a row -> load it into the fields for editing in place.
+                guard let key = selected,
+                      let value = AppState.shared.shortcuts[key] else { return }
+                newKey = key
+                newValue = value
+            }
 
             HStack {
                 TextField("gõ", text: $newKey).frame(width: 120)
                 TextField("thành", text: $newValue)
-                Button("Thêm") {
-                    model.addShortcut(key: newKey, value: newValue)
-                    newKey = ""; newValue = ""
-                }.disabled(newKey.isEmpty)
+                Button(isEditing ? "Cập nhật" : "Thêm") { save() }
+                    .disabled(newKey.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+            Text("Bấm một dòng để sửa.")
+                .font(.caption).foregroundStyle(.secondary)
 
             HStack {
                 Button("Nhập từ plist…") { importPlist() }
@@ -175,16 +224,47 @@ struct ShortcutsTab: View {
         }
     }
 
+    private func save() {
+        let key = newKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else { return }
+        // Overwriting a DIFFERENT entry than the one being edited needs a confirm —
+        // otherwise a typo in the key field silently clobbers an existing shortcut.
+        if AppState.shared.shortcuts[key] != nil, selection != key {
+            let alert = NSAlert()
+            alert.messageText = "Gõ tắt “\(key)” đã tồn tại"
+            alert.informativeText = "Ghi đè giá trị hiện có?"
+            alert.addButton(withTitle: "Ghi đè")
+            alert.addButton(withTitle: "Huỷ")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+        model.addShortcut(key: key, value: newValue)
+        newKey = ""; newValue = ""; selection = nil
+    }
+
     private func importPlist() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.propertyList]
         panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url,
-              let data = try? Data(contentsOf: url),
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let data = try? Data(contentsOf: url),
               let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
-        else { return }
-        AppState.shared.setShortcuts(dict)
+        else {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Không đọc được file"
+            alert.informativeText = "File phải là plist dạng dictionary String → String (như file Xuất ra plist… tạo)."
+            alert.runModal()
+            return
+        }
+        // Merge (imported entries win) rather than replace, so importing a shared
+        // list never silently wipes the user's existing shortcuts.
+        let merged = AppState.shared.shortcuts.merging(dict) { _, imported in imported }
+        AppState.shared.setShortcuts(merged)
         model.reloadShortcuts()
+        let alert = NSAlert()
+        alert.messageText = "Đã nhập \(dict.count) gõ tắt"
+        alert.informativeText = "Gộp vào bảng hiện có (mục trùng lấy giá trị mới)."
+        alert.runModal()
     }
 
     private func exportPlist() {

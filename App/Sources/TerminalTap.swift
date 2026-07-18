@@ -25,17 +25,56 @@ import ApplicationServices
 import TelexCore
 
 enum Accessibility {
+    // AXIsProcessTrusted() is an out-of-process TCC check; in Chromium apps it was
+    // hit up to twice per keystroke (usesSelectionReplace on the hot path). Cache
+    // with a short TTL — a grant/revoke shows up within ttlNs, and requestIfNeeded
+    // invalidates immediately after prompting.
+    private static var cached = false
+    private static var lastCheckNs: UInt64 = 0
+    private static let ttlNs: UInt64 = 2_000_000_000
+
     /// True when the process may create an event tap / post events. Always false in
     /// the sandboxed build — it can never be granted.
-    static var isTrusted: Bool { AXIsProcessTrusted() }
+    static var isTrusted: Bool {
+        let now = DispatchTime.now().uptimeNanoseconds
+        if lastCheckNs != 0, now &- lastCheckNs < ttlNs { return cached }
+        lastCheckNs = now
+        cached = AXIsProcessTrusted()
+        return cached
+    }
+
+    static func invalidateCache() { lastCheckNs = 0 }
 
     /// Prompt for Accessibility permission (opens System Settings). Safe when already
     /// trusted (returns true, no prompt).
     @discardableResult
     static func requestIfNeeded() -> Bool {
+        invalidateCache()
         if AXIsProcessTrusted() { return true }
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+    }
+}
+
+/// Cached frontmost-app bundle id. `NSWorkspace.shared.frontmostApplication` is an
+/// XPC round-trip and was being called on EVERY keystroke in both the tap callback
+/// (where slowness trips tapDisabledByTimeout) and the IMKit controller. App
+/// activation is an event, not a per-key question — observe it once and read a
+/// plain property on the hot path. All access is on the main thread (the tap's run
+/// loop source and NSWorkspace notifications both live there).
+final class FrontmostApp {
+    static let shared = FrontmostApp()
+
+    private(set) var bundleID: String?
+
+    private init() {
+        bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil, queue: .main) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            self?.bundleID = app?.bundleIdentifier
+        }
     }
 }
 
@@ -303,7 +342,7 @@ final class TerminalTapController {
         //  - MS Office → empty-char reset (Shift+Left would select adjacent cells).
         //  - Terminals (fallbackApps) → Backspace+retype.
         //  - Anything else → the IMKit in-place path handles it (pass through).
-        let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        let id = FrontmostApp.shared.bundleID
         if SpotlightDetector.isVisible {
             emitMode = .selection
         } else if AppState.shared.usesSelectionReplace(id) {

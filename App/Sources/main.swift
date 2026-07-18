@@ -18,6 +18,10 @@ telexServer = IMKServer(name: connectionName, bundleIdentifier: Bundle.main.bund
 // input source. Switch to another input source (or use macOS's per-app input-source
 // memory) to type English — the OS drives everything.
 
+// Prime the frontmost-app cache (registers its NSWorkspace observer) so the per-key
+// hot paths never call NSWorkspace.frontmostApplication themselves.
+_ = FrontmostApp.shared
+
 // Terminal tap-mode: OpenKey-style CGEventTap for apps that ignore replacementRange
 // (iTerm, Terminal…). No-op unless Accessibility is granted (Developer ID build);
 // re-attempted from activateServer once permission is granted.

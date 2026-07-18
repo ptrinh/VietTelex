@@ -7,7 +7,6 @@
 import Foundation
 
 extension Notification.Name {
-    static let telexSettingsChanged = Notification.Name("com.viettelex.settingsChanged")
     /// Posted by the mouse tap on any click: the caret may have moved, so any active
     /// composition must be abandoned (mirrors OpenKey's reset-on-mouse behavior).
     static let telexResetComposition = Notification.Name("com.viettelex.resetComposition")
@@ -60,7 +59,7 @@ final class AppState: @unchecked Sendable {
     /// retore). Default ON. Users who explicitly turned it off keep their choice.
     var autoRestore: Bool {
         get { defaults.object(forKey: Key.autoRestore) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Key.autoRestore); notify() }
+        set { defaults.set(newValue, forKey: Key.autoRestore) }
     }
 
     /// "Bỏ dấu tự do" (free mark placement, OpenKey term). When ON, modifier keys
@@ -70,28 +69,28 @@ final class AppState: @unchecked Sendable {
     /// ("ama"→ama, "trangw"→trangw; type "coot"/"trawng" to get the diacritic).
     var freeMarking: Bool {
         get { defaults.object(forKey: Key.freeMarking) as? Bool ?? false }
-        set { defaults.set(newValue, forKey: Key.freeMarking); notify() }
+        set { defaults.set(newValue, forKey: Key.freeMarking) }
     }
 
     /// Tone-placement style. false (default) = old style (hòa, thủy); true = modern
     /// (hoà, thuý). See `TelexEngine.modernTone`.
     var modernOrthography: Bool {
         get { defaults.object(forKey: Key.modernOrthography) as? Bool ?? false }
-        set { defaults.set(newValue, forKey: Key.modernOrthography); notify() }
+        set { defaults.set(newValue, forKey: Key.modernOrthography) }
     }
 
     /// Live spell-check: stop transforming a word mid-typing once it can't be valid
     /// Vietnamese (foreign words / URLs). Default ON. See `TelexEngine.liveSpellCheck`.
     var liveSpellCheck: Bool {
         get { defaults.object(forKey: Key.liveSpellCheck) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Key.liveSpellCheck); notify() }
+        set { defaults.set(newValue, forKey: Key.liveSpellCheck) }
     }
 
     /// Simple Telex: a standalone `w` stays literal (type `uw` for ư). Default ON.
     /// See `TelexEngine.simpleTelex`.
     var simpleTelex: Bool {
         get { defaults.object(forKey: Key.simpleTelex) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Key.simpleTelex); notify() }
+        set { defaults.set(newValue, forKey: Key.simpleTelex) }
     }
 
     // MARK: - Shortcuts (bảng gõ tắt)
@@ -102,20 +101,17 @@ final class AppState: @unchecked Sendable {
     func setShortcuts(_ dict: [String: String]) {
         shortcutsCache = dict
         defaults.set(dict, forKey: Key.shortcuts)
-        notify()
     }
 
     func upsertShortcut(key: String, value: String) {
         guard !key.isEmpty else { return }
         shortcutsCache[key] = value
         defaults.set(shortcutsCache, forKey: Key.shortcuts)
-        notify()
     }
 
     func removeShortcut(key: String) {
         shortcutsCache.removeValue(forKey: key)
         defaults.set(shortcutsCache, forKey: Key.shortcuts)
-        notify()
     }
 
     // MARK: - Learned typing strategy (in-place replacementRange vs marked text)
@@ -188,7 +184,32 @@ final class AppState: @unchecked Sendable {
         defaults.set(Array(fallbackAppsCache), forKey: Key.fallbackApps)
     }
 
-    private func notify() {
-        NotificationCenter.default.post(name: .telexSettingsChanged, object: nil)
+    /// Learned lists, for the Settings UI (Tương thích ứng dụng).
+    var learnedFallbackApps: [String] { fallbackAppsCache.sorted() }
+    var learnedInPlaceApps: [String] { probedAppsCache.sorted() }
+
+    /// Forget everything learned about apps. A bad one-shot probe (app busy during
+    /// the read-back) otherwise downgrades an app to marked text forever; this lets
+    /// the user re-probe from scratch.
+    func resetLearnedApps() {
+        fallbackAppsCache = []
+        probedAppsCache = []
+        defaults.removeObject(forKey: Key.fallbackApps)
+        defaults.removeObject(forKey: Key.probedApps)
+    }
+
+    /// Would this app type better with Accessibility granted (tap / selection-replace
+    /// / empty-reset strategies)? Membership only — ignores the current trust state.
+    func wantsAccessibility(_ bundleID: String?) -> Bool {
+        guard let id = bundleID else { return false }
+        return Self.selectionApps.contains(id) || Self.emptyResetApps.contains(id)
+            || fallbackAppsCache.contains(id)
+    }
+
+    /// One-time "grant Accessibility" prompt already shown (first focus of an app
+    /// that needs the event tap while the permission is missing).
+    var axPromptShown: Bool {
+        get { defaults.bool(forKey: "axPromptShown") }
+        set { defaults.set(newValue, forKey: "axPromptShown") }
     }
 }

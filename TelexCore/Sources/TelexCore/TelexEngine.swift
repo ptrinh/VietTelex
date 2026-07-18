@@ -8,8 +8,10 @@
 // re-parses; the raw buffer also feeds auto-restore of non-Vietnamese words.
 //
 // Note: fixed-capacity `[UInt8]`/`[UInt32]` buffers are pre-reserved (capacity 32)
-// and mutated in place. InlineArray would give a stronger zero-heap guarantee but
-// requires macOS 26; reserved arrays keep the macOS 14 deployment target.
+// and mutated in place — including the render/parse scratch buffers, which live on
+// the instance so the hot path allocates nothing per keystroke. InlineArray would
+// give a stronger zero-heap guarantee but requires macOS 26; reserved arrays keep
+// the macOS 14 deployment target.
 
 public enum TelexAction: Equatable {
     /// Not handled by the engine; let the system insert the character.
@@ -71,6 +73,14 @@ public struct TelexEngine {
     private var out: [UInt32]
     private var outCount = 0
 
+    // Scratch buffers reused by render/parse every keystroke (never allocated on
+    // the hot path). Valid only during/right after the call that filled them.
+    private var scratch: [UInt32]      // render output, diffed against `out`
+    private var letters: [LetterUnit]  // parse output
+    private var rawLetter: [Int]       // raw index -> display-letter provenance
+    private var toneKeys: [Int]        // raw indices of deferred tone/z keys
+    private var vowelIdx: [Int]        // vowel positions (tone placement)
+
     // Raw index from which keys are emitted literally because live spell-check found
     // the word can no longer be valid Vietnamese. Int.max = not disabled. Unlike
     // `markCancelled` this does NOT suppress boundary auto-restore (foreign words
@@ -87,6 +97,11 @@ public struct TelexEngine {
     public init() {
         raw = [UInt8](repeating: 0, count: Self.capacity)
         out = [UInt32](repeating: 0, count: Self.capacity)
+        scratch = [UInt32](repeating: 0, count: Self.capacity)
+        letters = [LetterUnit](repeating: LetterUnit(), count: Self.capacity)
+        rawLetter = [Int](repeating: -1, count: Self.capacity)
+        toneKeys = [Int](repeating: 0, count: Self.capacity)
+        vowelIdx = [Int](repeating: 0, count: Self.capacity)
     }
 
     public var isEmpty: Bool { rawCount == 0 }
@@ -104,28 +119,27 @@ public struct TelexEngine {
         raw[rawCount] = ascii
         rawCount += 1
 
-        var newOut = [UInt32](repeating: 0, count: Self.capacity)
         var cancelled = false
-        let newCount = render(into: &newOut, cancelled: &cancelled)
+        let newCount = render(cancelled: &cancelled)
         markCancelled = cancelled
 
         // Live spell-check: once the word can no longer be valid Vietnamese, freeze
         // transforms from the NEXT key on (current output unchanged). See disabledAtCount.
-        if liveSpellCheck, disabledAtCount == Int.max, !prefixIsValid(newOut, newCount) {
+        if liveSpellCheck, disabledAtCount == Int.max, !prefixIsValid(scratch, newCount) {
             disabledAtCount = rawCount
         }
 
         // No-transform fast path: render is exactly the previous output plus this
         // character. Let the system insert it (cheapest, no flicker).
         if newCount == outCount + 1,
-           newOut[newCount - 1] == UInt32(ascii),
-           prefixMatches(newOut, upTo: outCount) {
-            copyOut(newOut, newCount)
+           scratch[newCount - 1] == UInt32(ascii),
+           prefixMatches(scratch, upTo: outCount) {
+            copyOut(newCount)
             return .passthrough
         }
 
-        let action = diff(newOut, newCount)
-        copyOut(newOut, newCount)
+        let action = diff(scratch, newCount)
+        copyOut(newCount)
         return action
     }
 
@@ -140,10 +154,8 @@ public struct TelexEngine {
         // on the next forward key (backspace itself never adds a transform).
         disabledAtCount = Int.max
 
-        var letters = [LetterUnit](repeating: LetterUnit(), count: Self.capacity)
-        var rawLetter = [Int](repeating: -1, count: Self.capacity)
         var cancelledIgnored = false
-        let (letterCount, _, _) = parse(into: &letters, rawLetter: &rawLetter, cancelled: &cancelledIgnored)
+        let (letterCount, _, _) = parse(cancelled: &cancelledIgnored)
 
         if letterCount == 0 {
             rawCount -= 1                        // nothing on screen -> drop one key
@@ -156,12 +168,11 @@ public struct TelexEngine {
             rawCount = w
         }
 
-        var newOut = [UInt32](repeating: 0, count: Self.capacity)
         var cancelled = false
-        let newCount = render(into: &newOut, cancelled: &cancelled)
+        let newCount = render(cancelled: &cancelled)
         markCancelled = cancelled
-        let action = diff(newOut, newCount)
-        copyOut(newOut, newCount)
+        let action = diff(scratch, newCount)
+        copyOut(newCount)
         return action
     }
 
@@ -232,45 +243,43 @@ public struct TelexEngine {
     // MARK: - Rendering
 
     @inline(__always)
-    private mutating func copyOut(_ newOut: [UInt32], _ n: Int) {
-        for i in 0..<n { out[i] = newOut[i] }
+    private mutating func copyOut(_ n: Int) {
+        for i in 0..<n { out[i] = scratch[i] }
         outCount = n
     }
 
-    /// Re-parse `raw` and render composed scalars into `dest`. Returns count.
+    /// Re-parse `raw` and render composed scalars into `scratch`. Returns count.
     /// `cancelled` is set true if the parse hit an explicit diacritic-cancel gesture.
-    private func render(into dest: inout [UInt32], cancelled: inout Bool) -> Int {
-        var letters = [LetterUnit](repeating: LetterUnit(), count: Self.capacity)
-        var rawLetter = [Int](repeating: -1, count: Self.capacity)
-        let (letterCount, toneIdx, tone) = parse(into: &letters, rawLetter: &rawLetter, cancelled: &cancelled)
+    private mutating func render(cancelled: inout Bool) -> Int {
+        let (letterCount, toneIdx, tone) = parse(cancelled: &cancelled)
 
         var n = 0
         for k in 0..<letterCount {
             let u = letters[k]
             var scalar = Tables.markedScalar(base: u.base, mark: u.mark, upper: u.upper)
             if k == toneIdx { scalar = Tables.applyTone(scalar, tone) }
-            dest[n] = scalar
+            scratch[n] = scalar
             n += 1
         }
         return n
     }
 
-    /// Parse `raw` into display letters. Also records, for each raw key, the index
-    /// of the display letter it produced or modified (`rawLetter[i]`); tone / z keys
-    /// map to the toned vowel. Returns letter count, tone-target letter index, tone.
-    private func parse(into letters: inout [LetterUnit], rawLetter: inout [Int],
-                       cancelled: inout Bool) -> (count: Int, toneIdx: Int, tone: Tone) {
+    /// Parse `raw` into the `letters` scratch buffer. Also records, for each raw key,
+    /// the index of the display letter it produced or modified (`rawLetter[i]`); tone
+    /// / z keys map to the toned vowel. Returns letter count, tone-target letter
+    /// index, tone.
+    private mutating func parse(cancelled: inout Bool) -> (count: Int, toneIdx: Int, tone: Tone) {
         var letterCount = 0
         var tone: Tone = .none
-        var toneKeys = [Int](repeating: 0, count: Self.capacity)
         var toneKeyCount = 0
+        for i in 0..<rawCount { rawLetter[i] = -1 }
 
         // A word starting with 'w' is English: Vietnamese has essentially no w-initial
         // syllable, so type it literally with no diacritics ("was"→was, "write"→write).
         // An initial ư is typed "uw", not "w". Applies in both modes.
         if rawCount >= 1, lowercased(raw[0]) == UInt8(ascii: "w") {
             for k in 0..<rawCount {
-                appendLetter(&letters, &letterCount,
+                appendLetter(&letterCount,
                              base: lowercased(raw[k]), mark: .none, upper: isUpperAscii(raw[k]))
                 rawLetter[k] = k
             }
@@ -292,25 +301,25 @@ public struct TelexEngine {
             // Cancelled diacritic, OR live spell-check froze the word from here on:
             // emit every remaining key literally (no tone/mark transforms).
             if cancelled || at >= disabledAtCount {
-                appendLetter(&letters, &letterCount, base: lower, mark: .none, upper: upper)
+                appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
                 rawLetter[at] = letterCount - 1
                 continue
             }
 
             // Tone keys: s f r x j
             if let t = toneForKey(lower) {
-                if hasVowel(letters, letterCount) {
+                if hasVowel(letterCount) {
                     if tone == t {
                         tone = .none // double same tone -> cancel, emit literal
                         cancelled = true
-                        appendLetter(&letters, &letterCount, base: lower, mark: .none, upper: upper)
+                        appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
                         rawLetter[at] = letterCount - 1
                     } else {
                         tone = t
                         toneKeys[toneKeyCount] = at; toneKeyCount += 1
                     }
                 } else {
-                    appendLetter(&letters, &letterCount, base: lower, mark: .none, upper: upper)
+                    appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
                     rawLetter[at] = letterCount - 1
                 }
                 continue
@@ -362,13 +371,13 @@ public struct TelexEngine {
                     if p.mark == .breve && p.base == UInt8(ascii: "a") {
                         letters[tIdx].mark = .none
                         cancelled = true
-                        appendLetter(&letters, &letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
+                        appendLetter(&letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
                         rawLetter[at] = letterCount - 1; continue
                     }
                     if p.mark == .horn && (p.base == UInt8(ascii: "o") || p.base == UInt8(ascii: "u")) {
                         letters[tIdx].mark = .none
                         cancelled = true
-                        appendLetter(&letters, &letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
+                        appendLetter(&letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
                         rawLetter[at] = letterCount - 1; continue
                     }
                 }
@@ -379,10 +388,10 @@ public struct TelexEngine {
                 // ("kw", "windows", "ew"); auto-restore then leaves them intact.
                 // Simple Telex disables this entirely — a lone `w` is always literal
                 // (type `uw` for ư), matching OpenKey.
-                if !simpleTelex && standaloneHornUAllowed(letters, letterCount) {
-                    appendLetter(&letters, &letterCount, base: UInt8(ascii: "u"), mark: .horn, upper: upper)
+                if !simpleTelex && standaloneHornUAllowed(letterCount) {
+                    appendLetter(&letterCount, base: UInt8(ascii: "u"), mark: .horn, upper: upper)
                 } else {
-                    appendLetter(&letters, &letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
+                    appendLetter(&letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
                 }
                 rawLetter[at] = letterCount - 1
                 continue
@@ -399,7 +408,7 @@ public struct TelexEngine {
                     if p.base == lower && p.mark == .circumflex {
                         letters[pIdx].mark = .none
                         cancelled = true
-                        appendLetter(&letters, &letterCount, base: lower, mark: .none, upper: upper)
+                        appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
                         rawLetter[at] = letterCount - 1; continue
                     }
                 }
@@ -414,7 +423,7 @@ public struct TelexEngine {
                         letters[k].mark = .circumflex; rawLetter[at] = k; continue
                     }
                 }
-                appendLetter(&letters, &letterCount, base: lower, mark: .none, upper: upper)
+                appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
                 rawLetter[at] = letterCount - 1
                 continue
             }
@@ -430,7 +439,7 @@ public struct TelexEngine {
                     if p.base == UInt8(ascii: "d") && p.mark == .bar {
                         letters[pIdx].mark = .none
                         cancelled = true
-                        appendLetter(&letters, &letterCount, base: UInt8(ascii: "d"), mark: .none, upper: upper)
+                        appendLetter(&letterCount, base: UInt8(ascii: "d"), mark: .none, upper: upper)
                         rawLetter[at] = letterCount - 1; continue
                     }
                 }
@@ -439,13 +448,13 @@ public struct TelexEngine {
                 if letterCount > 1, letters[0].base == UInt8(ascii: "d"), letters[0].mark == .none {
                     letters[0].mark = .bar; rawLetter[at] = 0; continue
                 }
-                appendLetter(&letters, &letterCount, base: UInt8(ascii: "d"), mark: .none, upper: upper)
+                appendLetter(&letterCount, base: UInt8(ascii: "d"), mark: .none, upper: upper)
                 rawLetter[at] = letterCount - 1
                 continue
             }
 
             // ordinary letter
-            appendLetter(&letters, &letterCount, base: lower, mark: .none, upper: upper)
+            appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
             rawLetter[at] = letterCount - 1
         }
 
@@ -472,11 +481,11 @@ public struct TelexEngine {
         // Tone placement; map deferred tone/z keys onto the toned vowel (or the
         // last letter when there is no tone, so they group with it for backspace).
         var effTone = tone
-        var toneIdx = tone == .none ? -1 : toneVowelIndex(letters, letterCount)
+        var toneIdx = tone == .none ? -1 : toneVowelIndex(letterCount)
         // Stop codas (-c, -ch, -p, -t) only allow sắc (´) and nặng (.). Drop an
         // invalid huyền/hỏi/ngã (e.g. "batf" stays "bat", not "bàt").
         if toneIdx >= 0, effTone == .grave || effTone == .hook || effTone == .tilde,
-           hasStopCoda(letters, letterCount) {
+           hasStopCoda(letterCount) {
             effTone = .none
             toneIdx = -1
         }
@@ -487,8 +496,7 @@ public struct TelexEngine {
 
     // MARK: - Tone placement (old style: òa, úy)
 
-    private func toneVowelIndex(_ letters: [LetterUnit], _ count: Int) -> Int {
-        var vidx = [Int](repeating: 0, count: Self.capacity)
+    private mutating func toneVowelIndex(_ count: Int) -> Int {
         var vcount = 0
 
         var start = 0
@@ -505,7 +513,7 @@ public struct TelexEngine {
         }
 
         for k in start..<count where isVowelAscii(letters[k].base) {
-            vidx[vcount] = k
+            vowelIdx[vcount] = k
             vcount += 1
         }
         if vcount == 0 {
@@ -515,29 +523,29 @@ public struct TelexEngine {
 
         // 1) A marked vowel takes the tone (last one covers ươ -> ơ).
         var lastMarked = -1
-        for j in 0..<vcount where letters[vidx[j]].mark != .none { lastMarked = vidx[j] }
+        for j in 0..<vcount where letters[vowelIdx[j]].mark != .none { lastMarked = vowelIdx[j] }
         if lastMarked >= 0 { return lastMarked }
 
         // 2) No marked vowel.
-        if vcount == 1 { return vidx[0] }
+        if vcount == 1 { return vowelIdx[0] }
 
-        let hasCoda = vidx[vcount - 1] < (count - 1)
+        let hasCoda = vowelIdx[vcount - 1] < (count - 1)
         if vcount == 2 {
-            if hasCoda { return vidx[1] }   // closed: second vowel (toàn)
+            if hasCoda { return vowelIdx[1] }   // closed: second vowel (toàn)
             // Open nucleus. OLD style: first vowel (hóa, khỏe, thúy). MODERN style:
             // second vowel BUT only for a /w/-glide-initial diphthong (oa, oe, uy →
             // hoà, khoẻ, uý). Falling diphthongs (ua, ưa, ia, ai, oi…) keep the first
             // vowel in both styles (múa, mía, tài), so only oa/oe/uy differ.
             if modernTone {
-                let a = letters[vidx[0]].base, b = letters[vidx[1]].base
+                let a = letters[vowelIdx[0]].base, b = letters[vowelIdx[1]].base
                 let glideInitial =
                     (a == UInt8(ascii: "o") && (b == UInt8(ascii: "a") || b == UInt8(ascii: "e"))) ||
                     (a == UInt8(ascii: "u") && b == UInt8(ascii: "y"))
-                if glideInitial { return vidx[1] }
+                if glideInitial { return vowelIdx[1] }
             }
-            return vidx[0]                  // open, old style: first vowel (hóa, úy)
+            return vowelIdx[0]                  // open, old style: first vowel (hóa, úy)
         }
-        return vidx[1]                      // 3 vowels: middle (oái, ngoáy)
+        return vowelIdx[1]                      // 3 vowels: middle (oái, ngoáy)
     }
 
     // MARK: - Diffing
@@ -575,7 +583,7 @@ public struct TelexEngine {
 
     /// True if the letters typed before a standalone `w` form an onset (built from
     /// base letters, marks ignored — đ reads as "d") that can precede ư.
-    private func standaloneHornUAllowed(_ letters: [LetterUnit], _ count: Int) -> Bool {
+    private func standaloneHornUAllowed(_ count: Int) -> Bool {
         if count == 0 { return true }
         var s = String.UnicodeScalarView()
         s.reserveCapacity(count)
@@ -584,7 +592,7 @@ public struct TelexEngine {
     }
 
     @inline(__always)
-    private func hasVowel(_ letters: [LetterUnit], _ count: Int) -> Bool {
+    private func hasVowel(_ count: Int) -> Bool {
         for k in 0..<count where isVowelAscii(letters[k].base) { return true }
         return false
     }
@@ -592,7 +600,7 @@ public struct TelexEngine {
     /// Does the syllable end in a stop coda (-p, -t, -c, -ch)? Such codas only
     /// allow sắc/nặng. Only meaningful when a vowel precedes (checked by caller).
     @inline(__always)
-    private func hasStopCoda(_ letters: [LetterUnit], _ count: Int) -> Bool {
+    private func hasStopCoda(_ count: Int) -> Bool {
         guard count > 0 else { return false }
         let last = letters[count - 1].base
         if last == UInt8(ascii: "p") || last == UInt8(ascii: "t") || last == UInt8(ascii: "c") {
@@ -606,8 +614,8 @@ public struct TelexEngine {
     }
 
     @inline(__always)
-    private func appendLetter(_ letters: inout [LetterUnit], _ count: inout Int,
-                              base: UInt8, mark: Mark, upper: Bool) {
+    private mutating func appendLetter(_ count: inout Int,
+                                       base: UInt8, mark: Mark, upper: Bool) {
         guard count < Self.capacity else { return }
         letters[count] = LetterUnit(base: base, mark: mark, upper: upper)
         count += 1

@@ -75,12 +75,13 @@ final class TelexInputController: IMKInputController {
         // per app when "automatically switch" is on).
 
         // Decide tap-defer by the ACTUAL frontmost app — the SAME source the tap uses
-        // (NSWorkspace) — not the IMK client id, which can be nil/stale. If the client
-        // id is nil we'd otherwise think "unknown app → in-place" and wrongly compose
-        // into a terminal the tap is handling; when the tap then leaks a physical key
-        // (a brief tapDisabled window), IMKit composes it → intermittent garbage in
-        // iTerm/Claude Code. Using the frontmost app keeps controller and tap in sync.
-        let frontID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        // (FrontmostApp cache) — not the IMK client id, which can be nil/stale. If the
+        // client id is nil we'd otherwise think "unknown app → in-place" and wrongly
+        // compose into a terminal the tap is handling; when the tap then leaks a
+        // physical key (a brief tapDisabled window), IMKit composes it → intermittent
+        // garbage in iTerm/Claude Code. Using the frontmost app keeps controller and
+        // tap in sync.
+        let frontID = FrontmostApp.shared.bundleID
         let id = AppState.shared.currentBundleID ?? frontID
 
         // Apps the CGEvent tap handles (terminals via Backspace, Chromium browsers &
@@ -307,6 +308,7 @@ final class TelexInputController: IMKInputController {
         tracking = false
         if let client = sender as? IMKTextInput {
             AppState.shared.currentBundleID = client.bundleIdentifier()
+            maybePromptAccessibility(AppState.shared.currentBundleID)
         }
         // VietTelex is the active input source now: let the terminal tap act (it must
         // stay dormant when the user switches to ABC/US). ensureRunning() also revives
@@ -385,6 +387,20 @@ final class TelexInputController: IMKInputController {
             guard let self else { return }
             if Accessibility.isTrusted { self.showDebugLog() }
             else { self.grantAccessibility() }
+        }
+    }
+
+    /// One-time gentle prompt: the user just focused an app that needs the event tap
+    /// (terminal-class / Chromium / Excel) but Accessibility is missing — exactly the
+    /// moment typing would misbehave. Otherwise the permission is only discoverable
+    /// through the input-method menu. Shown once ever (axPromptShown).
+    private func maybePromptAccessibility(_ id: String?) {
+        guard !AppState.shared.axPromptShown,
+              AppState.shared.wantsAccessibility(id),
+              !Accessibility.isTrusted else { return }
+        AppState.shared.axPromptShown = true
+        DispatchQueue.main.async { [weak self] in
+            self?.grantAccessibility()
         }
     }
 
