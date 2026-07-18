@@ -1,0 +1,53 @@
+name: VietTelex
+options:
+  bundleIdPrefix: com.viettelex
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+packages:
+  TelexCore:
+    path: TelexCore
+
+targets:
+  VietTelex:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources/AppIcon.icns
+        buildPhase: resources
+      - path: App/Resources/MenuIcon.tiff
+        buildPhase: resources
+      - path: App/Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+      - path: App/Resources/en.lproj
+        buildPhase: resources
+      - path: App/Resources/vi.lproj
+        buildPhase: resources
+    dependencies:
+      - package: TelexCore
+        product: TelexCore
+      - sdk: InputMethodKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.viettelex.inputmethod.telex
+        PRODUCT_NAME: VietTelex
+        PRODUCT_MODULE_NAME: VietTelex
+        INFOPLIST_FILE: App/Resources/Info.plist
+        # xcodebuild ad-hoc signs; Scripts/notarize-install.sh re-signs with
+        # Developer ID + hardened runtime, then notarizes + staples. macOS 26
+        # requires input methods to be NOTARIZED to register — verified with a
+        # notarized third-party input method as control (registered) vs our
+        # unnotarized builds (never
+        # did). Uses VietTelex.entitlements (sandbox off, NO get-task-allow —
+        # get-task-allow is rejected by notarization).
+        CODE_SIGN_ENTITLEMENTS: App/Resources/VietTelex.entitlements
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_ALLOWED: "YES"
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        # App uses Swift 5 language mode (AppKit/IMK main-thread singletons).
+        # TelexCore remains Swift 6 strict-concurrency clean.
+        SWIFT_VERSION: "5.0"
+        ENABLE_HARDENED_RUNTIME: "YES"

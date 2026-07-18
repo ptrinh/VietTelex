@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Xcode project is generated from project.yml by XcodeGen — regenerate with `xcodegen generate`
+/VietTelex.xcodeproj/
+
+# Build output
+.build/
+DerivedData/
+build/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Packaging / notarization artifacts
+*.zip
+*.app
+
+# Agent / local tooling
+.claude/

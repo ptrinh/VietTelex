@@ -1,0 +1,556 @@
+import XCTest
+@testable import TelexCore
+
+/// Type a whole key sequence into a fresh engine and return the composed word.
+private func compose(_ keys: String) -> String {
+    var e = TelexEngine()
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
+/// Same, with "bỏ dấu tự do" (free mark placement) enabled.
+private func composeFree(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.freeMarking = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
+/// Same, with modern-orthography tone placement (hoà, thuý) enabled.
+private func composeModern(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.modernTone = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
+/// Same, with live spell-check (stop transforming invalid words) enabled.
+private func composeSpell(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.liveSpellCheck = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
+/// Same, in Simple Telex mode (standalone w stays literal).
+private func composeSimple(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.simpleTelex = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
+/// Type keys then commit at a word boundary with auto-restore on.
+private func commit(_ keys: String) -> String {
+    var e = TelexEngine()
+    for ch in keys { _ = e.feed(ch) }
+    return e.commitText(autoRestore: true)
+}
+
+final class EngineGoldenTests: XCTestCase {
+
+    // B1: "uo" + horn -> ươ (horn BOTH) when the ơ is closed (has a coda/offglide)
+    // and the u is not the "qu" glide; stays plain "uơ" when ơ is the last letter
+    // (open) or after "qu". Fixes trường/được/nước while keeping thuở/quở correct.
+    func testUowHornPropagation() {
+        // Closed -> ươ (both horned). Very common words.
+        XCTAssertEqual(compose("truowngf"), "trường")
+        XCTAssertEqual(compose("dduowcj"), "được")
+        XCTAssertEqual(compose("nuowcs"), "nước")
+        XCTAssertEqual(compose("thuwowng"), "thương")
+        XCTAssertEqual(compose("dduowngf"), "đường")    // w right after uo
+        XCTAssertEqual(compose("tuowi"), "tươi")        // offglide i closes it
+        XCTAssertEqual(compose("nguowif"), "người")
+        XCTAssertEqual(compose("muwowif"), "mười")
+
+        // Open "uơ" -> plain u (ơ is the last letter). Rare but real words.
+        XCTAssertEqual(compose("thuowr"), "thuở")
+        XCTAssertEqual(compose("huow"), "huơ")
+
+        // "qu" glide -> plain u (u belongs to the onset).
+        XCTAssertEqual(compose("quowr"), "quở")
+        XCTAssertEqual(compose("quown"), "quơn")        // closed but qu-glide stays u
+
+        // Explicit double-w still works and agrees.
+        XCTAssertEqual(compose("nguwowif"), "người")
+
+        // Fast typing can reorder adjacent o/w so the engine sees "uwo" instead of
+        // "uow". Both must yield ươ (this is the "được"->"đựoc" fast-typing report).
+        XCTAssertEqual(compose("dduowjc"), "được")   // normal order
+        XCTAssertEqual(compose("dduwojc"), "được")   // o/w reordered
+        XCTAssertEqual(compose("dduwocj"), "được")   // w before o, tone last
+        XCTAssertEqual(compose("truwongf"), "trường") // reordered
+        XCTAssertEqual(compose("suwong"), "sương")    // reordered
+        XCTAssertEqual(compose("nguwoif"), "người")   // reordered
+    }
+
+    // "Bỏ dấu tự do" toggle. Default (strict / Minimal Telex):
+    // modifiers act only on the adjacent vowel — reach-back over a consonant is off,
+    // so English/code types cleanly. Free mode: modifiers reach back over consonants.
+    func testFreeMarkingToggle() {
+        // --- Strict (default): reach-back over a consonant is blocked. ---
+        XCTAssertEqual(compose("ama"), "ama")       // circumflex can't cross the m
+        XCTAssertEqual(compose("aam"), "âm")        // adjacent doubler still works
+        XCTAssertEqual(compose("coto"), "coto")     // vs "coot"→côt
+        XCTAssertEqual(compose("coot"), "côt")
+        XCTAssertEqual(compose("data"), "data")     // English stays intact
+        XCTAssertEqual(compose("trangw"), "trangw") // w can't cross the ng coda
+        XCTAssertEqual(compose("trawng"), "trăng")  // w adjacent to a still works
+        XCTAssertEqual(compose("quatw"), "quatw")   // strict: no reach-back over t
+
+        // --- Free ("bỏ dấu tự do"): reach-back over a consonant coda. ---
+        XCTAssertEqual(composeFree("ama"), "âm")
+        XCTAssertEqual(composeFree("aam"), "âm")
+        XCTAssertEqual(composeFree("coto"), "côt")
+        XCTAssertEqual(composeFree("trangw"), "trăng")
+        XCTAssertEqual(composeFree("trawng"), "trăng")
+        XCTAssertEqual(composeFree("quatw"), "quăt")
+
+        // --- Both modes: reach-back over a VOWEL offglide stays on (người), and
+        // adjacent-vowel rules (ua horn, ươ propagation) are unaffected. ---
+        for word in ["nguoiwf", "truowngf", "nuawx", "nuwax", "dduowcj"] {
+            XCTAssertEqual(compose(word), composeFree(word), "mode-invariant: \(word)")
+        }
+        XCTAssertEqual(compose("nguoiwf"), "người")
+        XCTAssertEqual(compose("nuawx"), "nữa")
+        XCTAssertEqual(compose("truowngf"), "trường")
+    }
+
+    // G2 SAFETY (critical): live spell-check must NEVER break a real Vietnamese word
+    // mid-typing. Every intermediate Telex state (bare "uo"/"ie"/"uoi" before the
+    // diacritic lands) must be accepted as a valid prefix. If any of these regress,
+    // isValidPrefix is too strict.
+    func testLiveSpellCheckKeepsValidWords() {
+        let words = [
+            "ddaay", "tieengs", "vieejt", "hoas", "huyeenf", "nguwowif", "quaan",
+            "thuowr", "truwowngf", "dduowcj", "nuwowcs", "thuwowng", "dduowngf",
+            "nguoiwf", "muwowif", "tuowi", "quocs", "quyeenr", "thuyeenf", "khuya",
+            "uoongs", "mias", "cuar", "muaf", "chuyeenj", "nghieeng",
+            "ngoaif", "ngoays", "khoer", "thuys", "huowngs", "sawnx",
+            "ddoongf", "ddaaus", "gif", "ginf", "quets", "toans", "lamf",
+            "ban", "conf", "Vieejt", "Nam",
+        ]
+        for w in words {
+            XCTAssertEqual(composeSpell(w), compose(w),
+                           "live spell-check must not alter valid word: \(w)")
+        }
+        // And they really are the right words (spot checks).
+        XCTAssertEqual(composeSpell("nguoiwf"), "người")
+        XCTAssertEqual(composeSpell("truwowngf"), "trường")
+        XCTAssertEqual(composeSpell("dduowcj"), "được")
+    }
+
+    // G2 EFFECT: a foreign word stops accreting diacritics once it can't be Vietnamese.
+    func testLiveSpellCheckStopsForeignWords() {
+        // "google": goo→gô is a valid prefix, but the 2nd g makes "gôg" impossible →
+        // freeze; l,e stay literal. Boundary auto-restore (elsewhere) reverts the token.
+        XCTAssertEqual(composeSpell("google"), "gôgle")
+        // Keys after the freeze are literal — no tone/circumflex applied.
+        XCTAssertEqual(composeSpell("googlex"), "gôglex")   // x not ngã
+        XCTAssertEqual(composeSpell("googlee"), "gôglee")   // ee not ê
+        XCTAssertEqual(composeSpell("github"), "github")    // never valid past "gith"
+        // Without live spell-check the tail WOULD transform (contrast).
+        XCTAssertNotEqual(compose("googlex"), "gôglex")
+    }
+
+    // G1: modern-orthography toggle. Only oa/oe/uy OPEN nuclei move the tone to the
+    // second vowel; everything else is identical to the default old style.
+    func testModernOrthography() {
+        // Differ: glide-initial open diphthongs.
+        XCTAssertEqual(compose("hoas"), "hóa");   XCTAssertEqual(composeModern("hoas"), "hoá")
+        XCTAssertEqual(compose("khoer"), "khỏe");  XCTAssertEqual(composeModern("khoer"), "khoẻ")
+        XCTAssertEqual(compose("thuys"), "thúy");  XCTAssertEqual(composeModern("thuys"), "thuý")
+        XCTAssertEqual(compose("hoef"), "hòe");    XCTAssertEqual(composeModern("hoef"), "hoè")
+
+        // Identical in both styles (falling diphthongs, coda, single vowel, ê/ơ magnet).
+        for w in ["muaf", "mias", "cuar", "toans", "hoafng", "tieengs",
+                  "as", "banf", "nguowif", "quaf", "giaf"] {
+            XCTAssertEqual(composeModern(w), compose(w), "style-invariant: \(w)")
+        }
+        // Spot-check a couple of the invariants' actual values.
+        XCTAssertEqual(composeModern("muaf"), "mùa")   // ua falling: tone stays on u
+        XCTAssertEqual(composeModern("toans"), "toán") // closed: second vowel both ways
+    }
+
+    // Auto-restore leaves a word alone when the user explicitly CANCELLED a diacritic
+    // (double tone / z / double circumflex / double breve-horn / double-d). That
+    // gesture means "I want the literal", so "iss"→is must NOT be restored to "iss".
+    // Trade-off (accepted): English double-letter words like miss/class also keep the
+    // composed (shorter) form rather than restoring the raw keystrokes.
+    func testCancelledMarkSkipsRestore() {
+        XCTAssertEqual(commit("iss"), "is")     // double-s cancel -> keep, not "iss"
+        XCTAssertEqual(commit("ass"), "as")
+        XCTAssertEqual(commit("aff"), "af")     // double huyền cancel
+        XCTAssertEqual(commit("az"), "a")       // z clears tone
+        XCTAssertEqual(commit("aaa"), "aa")     // triple a -> aa (circumflex cancel)
+
+        // After a cancel the rest of the word stays literal (English): a further tone
+        // key does NOT re-apply a diacritic. "messs"→mess, not "més".
+        XCTAssertEqual(compose("messs"), "mess")
+        XCTAssertEqual(compose("asss"), "ass")
+        XCTAssertEqual(compose("bossss"), "bosss") // b,o + s(sắc) s(cancel) s s literal
+        XCTAssertEqual(commit("messs"), "mess")
+
+        // Not a cancel: a mangled word (diacritic applied, no cancel) still restores
+        // to the raw keystrokes. "school" -> "schôl" (oo→ô) -> restored to "school".
+        XCTAssertEqual(commit("school"), "school")
+
+        // Valid Vietnamese is never touched regardless.
+        XCTAssertEqual(commit("toans"), "toán")
+        XCTAssertEqual(commit("hoas"), "hóa")
+    }
+
+    // Uppercase tone key in a MIXED-case word = English/code signal. "SaaS" composes
+    // to "Sấ" (aa→â, trailing S = sắc) which IS a valid syllable, so plain validation
+    // would wrongly keep it — the uppercase tone key forces the restore. All-caps
+    // words are exempt (uppercase tone keys are how you type VIỆT), and mark doublers
+    // with shift held (DDaay) stay untouched.
+    func testUpperToneKeyMixedCaseRestores() {
+        XCTAssertEqual(commit("SaaS"), "SaaS")            // was "Sấ"
+        XCTAssertEqual(commit("JavaScript"), "JavaScript")
+        XCTAssertEqual(commit("TypeScript"), "TypeScript")
+        // All-caps: uppercase tone keys are legitimate Vietnamese.
+        XCTAssertEqual(commit("VIEEJT"), "VIỆT")
+        XCTAssertEqual(commit("HOAS"), "HÓA")
+        // Lowercase tone keys unaffected.
+        XCTAssertEqual(commit("hoas"), "hóa")
+        XCTAssertEqual(commit("Vieejt"), "Việt")
+        // Shift held across a mark doubler is normal typing, still composes.
+        XCTAssertEqual(commit("DDaay"), "Đây")
+    }
+
+    // C2: the w modifier reaches back to a/o/u. Crossing a VOWEL offglide (i) works
+    // in both modes; crossing a CONSONANT coda is free-mode only (see toggle test).
+    func testWReachesBackOverCoda() {
+        XCTAssertEqual(compose("moiw"), "mơi")     // w after i (vowel) -> horn the o
+        XCTAssertEqual(compose("nguoiwf"), "người") // w after i -> ơ, then ươ + tone
+        XCTAssertEqual(compose("quaw"), "quă")     // immediate case still fine
+        XCTAssertEqual(compose("thw"), "thư")      // no a/o/u -> standalone ư
+        XCTAssertEqual(compose("uw"), "ư")
+        XCTAssertEqual(composeFree("quatw"), "quăt") // w after t (coda) -> free only
+    }
+
+    // "ua" nucleus: w horns the u (→ ưa), never breves the a ("uă" is invalid).
+    // Marks become order-free — w typed AFTER the a still lands on u.
+    func testUaNucleusHornsU() {
+        XCTAssertEqual(compose("nuawx"), "nữa")    // w+tone typed after the a
+        XCTAssertEqual(compose("nuwax"), "nữa")    // w typed right after u — same result
+        XCTAssertEqual(compose("muaw"), "mưa")
+        XCTAssertEqual(compose("chuaw"), "chưa")
+        XCTAssertEqual(compose("buawx"), "bữa")
+        XCTAssertEqual(compose("tuawj"), "tựa")
+        // "oa" still breves the a (o is not a u vowel): hoă / hoặc.
+        XCTAssertEqual(compose("hoaw"), "hoă")
+        XCTAssertEqual(compose("hoawcj"), "hoặc")
+        // "qu" glide keeps breve on a (the u belongs to the onset, not retargeted).
+        XCTAssertEqual(compose("quawt"), "quăt")   // w adjacent to a -> breve, not horn-u
+        XCTAssertEqual(compose("quaw"), "quă")
+    }
+
+    // Simple Telex: a standalone w is ALWAYS literal — type `uw` for ư.
+    // `w` still horns/breves an ADJACENT vowel. Only this differs from full Telex; the
+    // bracket rule already matches (this engine never made [ / ] into ơ / ư).
+    func testSimpleTelex() {
+        // Standalone w -> literal (was cư/thư/sư/ngư in full Telex).
+        XCTAssertEqual(composeSimple("cw"), "cw")
+        XCTAssertEqual(composeSimple("thw"), "thw")
+        XCTAssertEqual(composeSimple("sw"), "sw")
+        XCTAssertEqual(composeSimple("ngw"), "ngw")
+        XCTAssertEqual(composeSimple("w"), "w")
+        XCTAssertEqual(composeSimple("giw"), "giw")
+        // Explicit `uw` still gives ư; w on an adjacent vowel still works.
+        XCTAssertEqual(composeSimple("uw"), "ư")
+        XCTAssertEqual(composeSimple("cuw"), "cư")
+        XCTAssertEqual(composeSimple("aw"), "ă")
+        XCTAssertEqual(composeSimple("ow"), "ơ")
+        // Real words that already type the u are unaffected.
+        XCTAssertEqual(composeSimple("nguwowif"), "người")
+        XCTAssertEqual(composeSimple("chuaw"), "chưa")   // ua nucleus (adjacent vowel)
+        XCTAssertEqual(composeSimple("dduwowngf"), "đường")
+        // Contrast: full Telex (default) still turns a lone w into ư.
+        XCTAssertEqual(compose("cw"), "cư")
+        XCTAssertEqual(compose("thw"), "thư")
+    }
+
+    // C3: a standalone w (no a/o/u to modify) becomes ư ONLY after an onset that
+    // can begin a "ư" syllable. After k/q/gh/ngh/p, after "qu", or after another
+    // vowel, w stays literal so English words type through unmangled.
+    func testStandaloneWBlocking() {
+        // Blocked -> literal w (was wrongly "kư", "qư"…).
+        XCTAssertEqual(compose("kw"), "kw")
+        XCTAssertEqual(compose("qw"), "qw")
+        XCTAssertEqual(compose("ghw"), "ghw")
+        XCTAssertEqual(compose("nghw"), "nghw")
+        XCTAssertEqual(compose("pw"), "pw")
+        XCTAssertEqual(compose("ew"), "ew")     // vowel before -> block
+        XCTAssertEqual(compose("iw"), "iw")
+
+        // Leading 'w' = English word (no w-initial Vietnamese syllable): literal.
+        XCTAssertEqual(compose("w"), "w")        // empty onset -> English, not ư
+        XCTAssertEqual(compose("was"), "was")
+        XCTAssertEqual(compose("web"), "web")
+        XCTAssertEqual(compose("win"), "win")
+        XCTAssertEqual(compose("write"), "write")
+        XCTAssertEqual(compose("Wow"), "Wow")
+        XCTAssertEqual(compose("would"), "would")
+
+        // Allowed -> ư (valid Vietnamese onsets, must NOT regress).
+        XCTAssertEqual(compose("cw"), "cư")
+        XCTAssertEqual(compose("sw"), "sư")
+        XCTAssertEqual(compose("thw"), "thư")
+        XCTAssertEqual(compose("chw"), "chư")
+        XCTAssertEqual(compose("ngw"), "ngư")
+        XCTAssertEqual(compose("nhw"), "như")
+        XCTAssertEqual(compose("trw"), "trư")
+        XCTAssertEqual(compose("phw"), "phư")
+        XCTAssertEqual(compose("khw"), "khư")
+        XCTAssertEqual(compose("giw"), "giư")    // gi onset -> giữ family
+        XCTAssertEqual(compose("dw"), "dư")
+        XCTAssertEqual(compose("ddw"), "đư")     // đ onset (base d)
+
+        // Horn/breve of a real a/o/u is unaffected (not the standalone path).
+        XCTAssertEqual(compose("uw"), "ư")
+        XCTAssertEqual(compose("ow"), "ơ")
+        XCTAssertEqual(compose("aw"), "ă")
+    }
+
+    // C4: rare-but-valid syllables must round-trip through auto-restore untouched,
+    // and their composed form must validate (so auto-restore leaves them alone).
+    func testAutoRestoreKeepsRareValidWords() {
+        // These compose to valid Vietnamese -> validator true -> no restore.
+        for (keys, word) in [("sw","sư"), ("thw","thư"), ("cw","cư"),
+                             ("quowrn","quởn"), ("giuwx","giữ"), ("uw","ư")] {
+            var e = TelexEngine()
+            for ch in keys { _ = e.feed(ch) }
+            XCTAssertEqual(e.composed, word, "keys=\(keys)")
+            XCTAssertTrue(SyllableValidator.isValidSyllable(word), "invalid: \(word)")
+            // commitText with auto-restore on keeps the Vietnamese word.
+            var e2 = TelexEngine()
+            for ch in keys { _ = e2.feed(ch) }
+            XCTAssertEqual(e2.commitText(autoRestore: true), word, "restored wrongly: \(keys)")
+        }
+
+        // Blocked-w English words are invalid syllables -> restore to raw keys
+        // (which already equal the literal composition, so it's a clean no-op).
+        var k = TelexEngine()
+        for ch in "kw" { _ = k.feed(ch) }
+        XCTAssertEqual(k.composed, "kw")
+        XCTAssertFalse(SyllableValidator.isValidSyllable("kw"))
+        XCTAssertEqual(k.commitText(autoRestore: true), "kw")
+
+        // Whole-word English (w opens on an empty buffer -> ư, then mangles): the
+        // safety net here is auto-restore at the boundary, not C3.
+        for eng in ["windows", "keyword"] {
+            var e = TelexEngine()
+            for ch in eng { _ = e.feed(ch) }
+            XCTAssertFalse(SyllableValidator.isValidSyllable(e.composed), "unexpectedly valid: \(eng)")
+            XCTAssertEqual(e.commitText(autoRestore: true), eng, "not restored: \(eng)")
+        }
+    }
+
+    /// Auto-restore ON: keystrokes whose composed form is not a valid Vietnamese
+    /// syllable revert to the raw keys at the boundary ("retore"→retỏe→"retore").
+    /// With it OFF, the (invalid) composed form is kept.
+    func testAutoRestoreRevertsInvalidWords() {
+        // (keys, composed-display, restored-to-raw)
+        let cases = [("retore", "retỏe"), ("user", "ủe"), ("paper", "pảpe"),
+                     ("after", "ảte"), ("strongs", "stróng"), ("codej", "cọde"),
+                     ("helloj", "hẹllo")]
+        for (keys, display) in cases {
+            var on = TelexEngine()
+            for ch in keys { _ = on.feed(ch) }
+            XCTAssertEqual(on.composed, display, "display \(keys)")
+            XCTAssertFalse(SyllableValidator.isValidSyllable(display), "should be invalid: \(display)")
+            XCTAssertEqual(on.commitText(autoRestore: true), keys, "should restore: \(keys)")
+
+            var off = TelexEngine()
+            for ch in keys { _ = off.feed(ch) }
+            XCTAssertEqual(off.commitText(autoRestore: false), display, "off keeps VN: \(keys)")
+        }
+
+        // A composed form that happens to be a valid syllable is NOT restored, even
+        // when the raw was English — rule-based can't tell "test"→"tét" (bánh tét)
+        // apart. Documents the known limitation.
+        var t = TelexEngine()
+        for ch in "test" { _ = t.feed(ch) }
+        XCTAssertEqual(t.composed, "tét")
+        XCTAssertTrue(SyllableValidator.isValidSyllable("tét"))
+        XCTAssertEqual(t.commitText(autoRestore: true), "tét")
+    }
+
+    // C1: a trailing d converts the onset d to đ.
+    func testTrailingDMakesDbar() {
+        XCTAssertEqual(compose("dand"), "đan")
+        XCTAssertEqual(compose("duwowngd"), "đương")   // no tone key -> no tone
+        XCTAssertEqual(compose("duwowngdf"), "đường")  // + huyền
+        // Existing dd behavior is unchanged.
+        XCTAssertEqual(compose("dd"), "đ")
+        XCTAssertEqual(compose("ddd"), "dd")
+        XCTAssertEqual(compose("add"), "ađ")
+    }
+
+    // B2: stop codas -p, -t, -c, -ch only allow sắc (´) and nặng (.). An invalid
+    // huyền/hỏi/ngã is dropped (the syllable keeps no tone) rather than composing
+    // an illegal word like "bàt".
+    func testStopCodaToneConstraint() {
+        // Allowed: sắc / nặng.
+        XCTAssertEqual(compose("bats"), "bát")
+        XCTAssertEqual(compose("batj"), "bạt")
+        XCTAssertEqual(compose("sachs"), "sách")
+        XCTAssertEqual(compose("hocj"), "học")
+        XCTAssertEqual(compose("caps"), "cáp")
+
+        // Rejected on stop coda -> tone dropped.
+        XCTAssertEqual(compose("batf"), "bat")   // no huyền on -t
+        XCTAssertEqual(compose("batr"), "bat")   // no hỏi on -t
+        XCTAssertEqual(compose("batx"), "bat")   // no ngã on -t
+        XCTAssertEqual(compose("sachf"), "sach") // no huyền on -ch
+        XCTAssertEqual(compose("capr"), "cap")   // no hỏi on -p
+        XCTAssertEqual(compose("hocf"), "hoc")   // no huyền on -c
+
+        // Non-stop codas (-n, -ng, -nh, -m) still allow every tone.
+        XCTAssertEqual(compose("banf"), "bàn")
+        XCTAssertEqual(compose("bangx"), "bãng")
+        XCTAssertEqual(compose("banhr"), "bảnh")
+        XCTAssertEqual(compose("lamf"), "làm")
+    }
+
+    // The golden table from DESIGN.md plus a broad set of real Vietnamese words.
+    func testGoldenTable() {
+        let cases: [(String, String)] = [
+            // DESIGN.md golden cases
+            ("ddaay", "đây"),
+            ("tieengs", "tiếng"),
+            ("vieejt", "việt"),
+            ("hoas", "hóa"),
+            ("huyeenf", "huyền"),
+            ("nguwowif", "người"),
+            ("quaan", "quân"),
+            ("thuowr", "thuở"),
+
+            // Single transforms
+            ("aa", "â"), ("aw", "ă"), ("ee", "ê"), ("oo", "ô"),
+            ("ow", "ơ"), ("uw", "ư"), ("w", "w"), ("dd", "đ"),
+
+            // Bare tones on 'a'
+            ("as", "á"), ("af", "à"), ("ar", "ả"), ("ax", "ã"), ("aj", "ạ"),
+
+            // Old-style tone placement
+            ("hoaf", "hòa"), ("khoer", "khỏe"), ("thuys", "thúy"),
+            ("toans", "toán"), ("muaf", "mùa"), ("muas", "múa"),
+            ("mias", "mía"), ("cuar", "của"),
+
+            // qu / gi onsets (glide belongs to onset)
+            ("quys", "quý"), ("quaf", "quà"), ("giaf", "già"),
+
+            // Marked vowel attracts tone
+            ("ddaaus", "đấu"), ("nuwowcs", "nước"), ("ddoongf", "đồng"),
+            ("chuyeenr", "chuyển"), ("nghieeng", "nghiêng"),
+
+            // Triphthongs (tone on middle vowel)
+            ("ngoaif", "ngoài"), ("ngoays", "ngoáy"),
+
+            // Stop coda + valid tone
+            ("hocj", "học"), ("caps", "cáp"), ("vieetj", "việt"),
+
+            // Change tone / clear tone mid-sequence
+            ("asf", "à"), ("asz", "a"),
+
+            // More words
+            ("Vieejt", "Việt"), ("Nam", "Nam"),
+            ("cams", "cám"),
+            ("ban", "ban"), ("banf", "bàn"), ("conf", "còn"),
+            ("truwowngf", "trường"),
+        ]
+        for (input, expected) in cases {
+            XCTAssertEqual(compose(input), expected, "input=\(input)")
+        }
+    }
+
+    func testDoubleKeyCancel() {
+        let cases: [(String, String)] = [
+            ("aaa", "aa"),
+            ("eee", "ee"),
+            ("ooo", "oo"),
+            ("ddd", "dd"),
+            ("aww", "aw"),
+            ("ass", "as"),   // double sắc cancels, literal s
+            ("aff", "af"),
+            ("arr", "ar"),
+            ("axx", "ax"),
+            ("ajj", "aj"),
+            ("az", "a"),     // z clears (no) tone
+        ]
+        for (input, expected) in cases {
+            XCTAssertEqual(compose(input), expected, "input=\(input)")
+        }
+    }
+
+    func testUppercaseAndMixedCase() {
+        XCTAssertEqual(compose("DDAAY"), "ĐÂY")
+        XCTAssertEqual(compose("Ddaay"), "Đây")
+        XCTAssertEqual(compose("ddAAy"), "đÂy")
+        XCTAssertEqual(compose("HOAS"), "HÓA")
+        XCTAssertEqual(compose("Tieengs"), "Tiếng")
+    }
+
+    func testBackspaceDeletesWholeGlyph() {
+        // Reported bug: "khoo" -> "khô"; one backspace must delete the whole "ô"
+        // (giving "kh"), not just undo the circumflex (which gave "kho").
+        var e = TelexEngine()
+        for ch in "khoo" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "khô")
+        _ = e.backspace()
+        XCTAssertEqual(e.composed, "kh")
+
+        // "aa" -> "â"; backspace deletes the whole composed glyph -> ""
+        var a = TelexEngine()
+        _ = a.feed("a"); _ = a.feed("a")
+        XCTAssertEqual(a.composed, "â")
+        _ = a.backspace()
+        XCTAssertEqual(a.composed, "")
+
+        // "vieejt" -> "việt"; delete 't' -> "việ"; delete whole "ệ" -> "vi"
+        var f = TelexEngine()
+        for ch in "vieejt" { _ = f.feed(ch) }
+        XCTAssertEqual(f.composed, "việt")
+        _ = f.backspace()
+        XCTAssertEqual(f.composed, "việ")
+        _ = f.backspace()
+        XCTAssertEqual(f.composed, "vi")
+
+        // "dduwowngf" -> "đường"; delete 'g' -> "đườn"; 'n' -> "đườ"; whole "ờ" -> "đư".
+        var d = TelexEngine()
+        for ch in "dduwowngf" { _ = d.feed(ch) }
+        XCTAssertEqual(d.composed, "đường")
+        _ = d.backspace()               // delete 'g'
+        XCTAssertEqual(d.composed, "đườn")
+        _ = d.backspace()               // delete 'n'
+        XCTAssertEqual(d.composed, "đườ")
+        _ = d.backspace()               // delete whole "ờ"
+        XCTAssertEqual(d.composed, "đư")
+
+        // backspace on empty is passthrough
+        var g = TelexEngine()
+        XCTAssertEqual(g.backspace(), .passthrough)
+    }
+
+    func testActionShapes() {
+        var e = TelexEngine()
+        // plain consonant -> passthrough (system inserts)
+        XCTAssertEqual(e.feed("b"), .passthrough)
+        // vowel -> passthrough
+        XCTAssertEqual(e.feed("a"), .passthrough)
+        // second 'a' forms â -> replace last 1 char
+        XCTAssertEqual(e.feed("a"), .replace(backspaces: 1, insert: "â"))
+        // tone key modifies in place
+        XCTAssertEqual(e.feed("s"), .replace(backspaces: 1, insert: "ấ"))
+    }
+
+    func testRawKeystrokesPreserved() {
+        var e = TelexEngine()
+        for ch in "nguwowif" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "người")
+        XCTAssertEqual(e.rawKeystrokes, "nguwowif")
+    }
+}
