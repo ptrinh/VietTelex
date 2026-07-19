@@ -117,6 +117,7 @@
   .copybtn:hover { border-color: var(--gold); }
   .copybtn .copyhint { font-family: var(--sans); font-size: .72rem; color: var(--ink-soft); }
   .support-links a { font-weight: 700; text-decoration: none; }
+  .vietqr { width: 200px; max-width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 8px; }
 
   :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 </style>
@@ -213,7 +214,10 @@
       <div class="card support-links">
         <h3><span class="dot">›</span> Ủng hộ</h3>
         <p><a href="https://ko-fi.com/ptrinh" rel="noopener">☕ Ko-fi — ko-fi.com/ptrinh →</a></p>
-        <p style="margin-top:10px">Bitcoin:
+        <p style="margin-top:12px">Chuyển khoản (VietQR):</p>
+        <img class="vietqr" src="https://img.vietqr.io/image/MB-032318-compact.png"
+             alt="Mã VietQR chuyển khoản MB Bank" width="200" loading="lazy">
+        <p style="margin-top:12px">Bitcoin:
           <button class="copybtn" type="button"
                   data-copy="bc1ps44wjx3wpu4s0xj746gz2lu45nspsm9059d3ym8xz0nrhu4psyasdgwwhx"
                   title="Bấm để copy địa chỉ BTC" aria-label="Copy địa chỉ Bitcoin">
