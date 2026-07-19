@@ -82,6 +82,24 @@ for src, name in [(i1, "instructions-1.png"), (i2, "instructions-2.png")]:
 PY2
 (cd "$RTFDSRC" && textutil -convert rtfd conclusion.en.html -output en.rtfd \
                 && textutil -convert rtfd conclusion.vi.html -output vi.rtfd)
+
+# Force a FIXED display width on every embedded image, preserving aspect. textutil
+# sizes attachments from the PNG's DPI, which Installer's text view interprets
+# inconsistently (one image could overflow the Summary pane while another fit).
+# Rewriting NeXTGraphic \width/\height in the RTF pins both to the same on-screen
+# size, well inside the pane, independent of DPI.
+python3 - "$RTFDSRC/en.rtfd/TXT.rtf" "$RTFDSRC/vi.rtfd/TXT.rtf" <<'PY2'
+import sys, re
+TARGET_W = 7200  # twips (=360pt), comfortably inside the Summary pane
+for path in sys.argv[1:]:
+    s = open(path, encoding="utf-8", errors="surrogateescape").read()
+    def fix(m):
+        w, h = int(m.group(1)), int(m.group(2))
+        nh = round(TARGET_W * h / w) if w else h
+        return f"\\width{TARGET_W} \\height{nh}"
+    s = re.sub(r"\\width(\d+) \\height(\d+)", fix, s)
+    open(path, "w", encoding="utf-8", errors="surrogateescape").write(s)
+PY2
 # productbuild cannot stream an .rtfd (directory) resource itself — it errors
 # with "conclusion.rtfd couldn't be opened". So: build the product with NO
 # conclusion resource, then post-process the archive: expand, drop the .rtfd
