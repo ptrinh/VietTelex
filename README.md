@@ -4,6 +4,13 @@
 
 <h1 align="center">VietTelex</h1>
 
+<p align="center">
+  <a href="https://github.com/ptrinh/viettelex/actions/workflows/ci.yml"><img src="https://github.com/ptrinh/viettelex/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ptrinh/viettelex/releases/latest"><img src="https://img.shields.io/github/v/release/ptrinh/viettelex?color=c22727" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ptrinh/viettelex?color=555" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-17233d" alt="macOS 14+">
+</p>
+
 Bộ gõ tiếng Việt **Telex** cho macOS — không gạch chân, con trỏ luôn ở cuối, dấu bỏ trực tiếp vào chữ, và gõ được cả trong **Terminal / iTerm** mà không phá autocomplete của shell.
 
 > Dự án của **Phil Trịnh** (ViệtTelex / ViếtTelex), viết lại từ đầu sau nhiều năm dùng macOS mà chưa thấy bộ gõ tiếng Việt nào thật sự *ngon, chuẩn, mượt*.

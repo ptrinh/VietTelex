@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md", "assets/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: TelexCore tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift test
+        run: cd TelexCore && swift test
+      - name: Benchmarks (release)
+        run: cd TelexCore && swift test -c release --filter 'Benchmark|ZeroAllocation'
+
+  build:
+    name: Build app (unsigned)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: xcodebuild
+        run: |
+          xcodebuild -project VietTelex.xcodeproj -scheme VietTelex \
+                     -configuration Release -destination 'platform=macOS' \
+                     CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= build
