@@ -218,12 +218,15 @@ final class AppState: @unchecked Sendable {
         "com.microsoft.Excel",
     ]
 
+    /// Bundle id is a selection-replace app (exact match or Chromium-PWA prefix).
+    private static func matchesSelectionApp(_ id: String) -> Bool {
+        selectionApps.contains(id) || selectionAppPrefixes.contains { id.hasPrefix($0) }
+    }
+
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
     func usesSelectionReplace(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        guard Accessibility.isTrusted else { return false }
-        if Self.selectionApps.contains(id) { return true }
-        return Self.selectionAppPrefixes.contains { id.hasPrefix($0) }
+        return Self.matchesSelectionApp(id) && Accessibility.isTrusted
     }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).
@@ -270,7 +273,7 @@ final class AppState: @unchecked Sendable {
     /// / empty-reset strategies)? Membership only — ignores the current trust state.
     func wantsAccessibility(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return Self.selectionApps.contains(id) || Self.emptyResetApps.contains(id)
+        return Self.matchesSelectionApp(id) || Self.emptyResetApps.contains(id)
             || fallbackAppsCache.contains(id)
     }
 
