@@ -113,6 +113,7 @@ Mỗi mục = test case cần chạy tay (và automate được thì automate). 
 | 11.5 | ☐ App bỏ qua replacementRange (trả NSNotFound) | Probe read-back tự phát hiện → chuyển marked-text/tap |
 | 11.6 | ☐ Spotlight, Raycast/Alfred | Field đặc biệt, hay bị bỏ quên |
 | 11.7 | ☐ Save dialog / rename file trong Finder | Field nhỏ native |
+| 11.8 | ☐ Stress gõ 500 phím/s (`swift Scripts/stress-typing.swift`) vào TextEdit / terminal / Chrome | Văn bản ra khớp 100% kỳ vọng — không mất/lặp/đảo dấu (lớp bug chỉ lộ khi gõ nhanh) |
 
 ---
 

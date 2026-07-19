@@ -50,6 +50,13 @@ final class TelexInputController: IMKInputController {
         guard let event = event, event.type == .keyDown,
               let client = sender as? IMKTextInput else { return false }
 
+        // Signpost the whole IMKit round trip; the end message names the strategy
+        // that actually handled this key (see Instrumentation.swift).
+        var spMode = "passthrough"
+        let spState = Signposts.poster.beginInterval("imk.handle",
+                                                     id: Signposts.poster.makeSignpostID())
+        defer { Signposts.poster.endInterval("imk.handle", spState, "\(spMode)") }
+
         // Our own terminal tap-mode output (synthetic Backspace / Unicode) loops back
         // through the input system. Pass it straight to the app WITHOUT re-feeding the
         // engine (a synthetic Backspace would otherwise re-enter as kDelete).
@@ -92,8 +99,11 @@ final class TelexInputController: IMKInputController {
             || AppState.shared.usesSelectionReplace(frontID) || AppState.shared.usesSelectionReplace(id)
             || AppState.shared.usesEmptyReset(frontID) || AppState.shared.usesEmptyReset(id)
             || SpotlightDetector.isVisible {
+            spMode = "tap-defer"
             return false
         }
+        spMode = AppState.shared.usesMarkedText(id) ? "marked"
+               : (tracking || engine.isEmpty ? "in-place" : "in-place-per-op")
 
         // Reflect the current "bỏ dấu tự do" setting before any engine op (feed,
         // backspace and boundary all re-parse `raw` and honor this flag).

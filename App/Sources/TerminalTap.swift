@@ -164,6 +164,11 @@ enum SyntheticKeyboard {
     ///   suggestion). A pure deletion
     ///   (empty `text`) has nothing to overtype, so it falls back to real Backspaces.
     static func apply(backspaces: Int, insert text: String, mode: TapEmit = .backspace) {
+        // Signpost each synthesized edit burst — this is where a tone edit pays
+        // real milliseconds (every posted event round-trips the window server).
+        let spState = Signposts.poster.beginInterval("tap.emit",
+                                                     id: Signposts.poster.makeSignpostID())
+        defer { Signposts.poster.endInterval("tap.emit", spState, "bs=\(backspaces) ins=\(text.count)") }
         if mode == .selection, backspaces > 0, !text.isEmpty {
             for _ in 0..<backspaces { postSelectLeft() }
             postUnicode(text)
@@ -362,6 +367,15 @@ final class TerminalTapController {
         engine.modernTone = AppState.shared.modernOrthography
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
+
+        // Signpost the tap-handled keystroke; message = emit mode (see Instrumentation).
+        let spState = Signposts.poster.beginInterval("tap.handle",
+                                                     id: Signposts.poster.makeSignpostID())
+        defer {
+            let mode = emitMode == .selection ? "selection"
+                     : emitMode == .emptyReset ? "emptyReset" : "backspace"
+            Signposts.poster.endInterval("tap.handle", spState, "\(mode)")
+        }
 
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
 
