@@ -24,7 +24,7 @@ final class KeystrokePerfTests: XCTestCase {
 
     /// Upper bound on µs per Vietnamese keystroke, measured on the CI runner
     /// (GitHub macos-15 / Apple Silicon). See BENCHMARKS.md for the calibration.
-    static let ceilingMicros = 10.0        // provisional (safe-high); tighten from CI
+    static let ceilingMicros = 0.40        // 2026-07-20: CI (macos-15/M1) measured 0.2234µs; ceiling ≈1.8×
 
     override func setUpWithError() throws {
         #if DEBUG

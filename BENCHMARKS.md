@@ -83,7 +83,7 @@ giờ báo nhầm ở local.
 > của engine, tỷ lệ nhảy 87→234 từ M-series nhanh sang M1 của CI. µs thô neo theo phần
 > cứng CI mới là gate trung thực.
 
-- **Ngưỡng: `ceilingMicros`** trong `KeystrokePerfTests.swift`, hiệu chỉnh theo CI (M1).
+- **Ngưỡng: `ceilingMicros = 0.40 µs`** (đo 2026-07-20: CI `macos-15`/M1 = **0.2234 µs**; ngưỡng ≈1.8×).
 - Local điển hình ~0.10 µs/keystroke; CI (M1) chậm hơn — xem dòng log
   `KeystrokePerf: us/keystroke=…` của run xanh gần nhất để biết số hiện tại.
 - Chạy CI cùng nhóm: `swift test -c release --filter 'Benchmark|ZeroAllocation|KeystrokePerf'`.
