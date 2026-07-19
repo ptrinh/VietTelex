@@ -190,6 +190,8 @@ struct AboutTab: View {
                 .frame(width: 128, height: 128)
             Text("VietTelex").font(.title2).bold()
             Text("Version \(appVersion)").foregroundStyle(.secondary)
+            Link("ptrinh.github.io/VietTelex",
+                 destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
             Text("© Phil Trinh @ SenPrints").foregroundStyle(.secondary)
             Spacer()
         }
