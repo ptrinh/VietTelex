@@ -54,41 +54,55 @@ pkgbuild --root "$WORK/payload" \
          --version "$VER" \
          "$WORK/VietTelex-component.pkg" >/dev/null
 
-# 4. Product archive with a bilingual conclusion screen showing the annotated
-#    screenshots. Installer's WebView will NOT render data: URIs, and productbuild
-#    only bundles Distribution-referenced files — so the HTML references the images
-#    by relative filename, and we build the product UNSIGNED, INJECT the
-#    (downscaled) screenshots into the archive's Resources, then productsign.
-#    English at top level = default/fallback; Vietnamese in vi.lproj → Installer
-#    shows it automatically on Vietnamese-language macOS.
+# 4. Product archive with a bilingual conclusion screen. Installer's HTML pane
+#    renders neither data: URIs nor relative <img> files (WKWebView sandbox), so
+#    the conclusion ships as RTFD — the format Installer supports natively for
+#    images (rendered like the license pane: light document background, so no
+#    dark-mode color issues). textutil converts our HTML sources and EMBEDS the
+#    (downscaled, quantized) screenshots into each .rtfd. English at top level =
+#    default/fallback; Vietnamese in vi.lproj → shown on Vietnamese-language macOS.
 sed "s/__VERSION__/$VER/g" "$RES/distribution.xml" > "$WORK/distribution.xml"
 
-mkdir -p "$WORK/resources/vi.lproj"
-cp "$RES/conclusion.en.html" "$WORK/resources/conclusion.html"
-cp "$RES/conclusion.vi.html" "$WORK/resources/vi.lproj/conclusion.html"
-
-# Downscaled + palette-quantized screenshots to inject (keeps the pkg small).
-python3 - "$WORK/imgs" assets/instructions-1.png assets/instructions-2.png <<'PY'
-import sys, os
+echo "→ building RTFD conclusion screens (textutil, images embedded)"
+RTFDSRC="$WORK/rtfd-src"
+rm -rf "$RTFDSRC" "$WORK/resources"
+mkdir -p "$RTFDSRC" "$WORK/resources/vi.lproj"
+cp "$RES/conclusion.en.html" "$RES/conclusion.vi.html" "$RTFDSRC/"
+python3 - "$RTFDSRC" assets/instructions-1.png assets/instructions-2.png <<'PY2'
+import sys
 from PIL import Image
 out, i1, i2 = sys.argv[1:4]
-os.makedirs(out, exist_ok=True)
 for src, name in [(i1, "instructions-1.png"), (i2, "instructions-2.png")]:
     im = Image.open(src).convert("RGB"); im.thumbnail((880, 880), Image.LANCZOS)
     q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
     q.save(f"{out}/{name}", optimize=True)
-PY
-
-echo "→ productbuild (unsigned) + inject screenshots into Resources"
-productbuild --distribution "$WORK/distribution.xml" \
+PY2
+(cd "$RTFDSRC" && textutil -convert rtfd conclusion.en.html -output en.rtfd \
+                && textutil -convert rtfd conclusion.vi.html -output vi.rtfd)
+# productbuild cannot stream an .rtfd (directory) resource itself — it errors
+# with "conclusion.rtfd couldn't be opened". So: build the product with NO
+# conclusion resource, then post-process the archive: expand, drop the .rtfd
+# bundles into Resources (top-level + vi.lproj) and point the Distribution's
+# <conclusion> at them, flatten again. pkgutil handles directories fine.
+echo "→ productbuild + inject RTFD conclusions"
+sed 's#<conclusion file="conclusion.rtfd"/>##' "$WORK/distribution.xml" > "$WORK/distribution-noconclusion.xml"
+productbuild --distribution "$WORK/distribution-noconclusion.xml" \
              --package-path "$WORK" \
-             --resources "$WORK/resources" \
-             "$WORK/unsigned.pkg" >/dev/null
+             "$WORK/plain.pkg" >/dev/null
 rm -rf "$WORK/expand"
-pkgutil --expand "$WORK/unsigned.pkg" "$WORK/expand"
-cp "$WORK/imgs/"*.png "$WORK/expand/Resources/"
+pkgutil --expand "$WORK/plain.pkg" "$WORK/expand"
 mkdir -p "$WORK/expand/Resources/vi.lproj"
-cp "$WORK/imgs/"*.png "$WORK/expand/Resources/vi.lproj/"
+/usr/bin/ditto "$RTFDSRC/en.rtfd" "$WORK/expand/Resources/conclusion.rtfd"
+/usr/bin/ditto "$RTFDSRC/vi.rtfd" "$WORK/expand/Resources/vi.lproj/conclusion.rtfd"
+# Re-add the conclusion element to the embedded Distribution.
+python3 - "$WORK/expand/Distribution" <<'PY2'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+assert "<conclusion" not in s
+s = s.replace("<options ", '<conclusion file="conclusion.rtfd"/>\n    <options ', 1)
+open(p, "w").write(s)
+PY2
 rm -f "$WORK/injected.pkg"
 pkgutil --flatten "$WORK/expand" "$WORK/injected.pkg"
 
