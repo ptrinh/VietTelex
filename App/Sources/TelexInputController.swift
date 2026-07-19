@@ -29,6 +29,10 @@ final class TelexInputController: IMKInputController {
     private let kEnter: UInt16 = 76
     private let kTab: UInt16 = 48
     private let kEscape: UInt16 = 53
+    private let kArrowLeft: UInt16 = 123
+    private let kArrowRight: UInt16 = 124
+    private let kArrowDown: UInt16 = 125
+    private let kArrowUp: UInt16 = 126
 
     // In-place editing without marked text needs to know where the composed word
     // lives. We track it locally — the composition occupies [anchor, anchor+onLen),
@@ -44,16 +48,48 @@ final class TelexInputController: IMKInputController {
     // composition (the tap can't reach this controller's private engine directly).
     private var resetObserver: NSObjectProtocol?
 
+    // Ctrl-tap temp bypass (feature: escape hatch for "test"/"list"-like words).
+    // A press+release of Ctrl with NO other key in between makes the current word
+    // literal. `ctrlUsedCombo` is OpenKey's _hasJustUsedHotKey pattern: any keyDown
+    // (or click) while Ctrl is down marks the press as a combo, so ⌃C etc. never
+    // triggers the bypass on release.
+    private var ctrlDown = false
+    private var ctrlUsedCombo = false
+
+    // Backspace-resume of the last committed word: armed ONLY on the keystroke
+    // sequence "clean word commit + single space", consumed by the very next
+    // Backspace. Any other event (key, click, focus change, modifier) disarms it.
+    private var resumeArmed = false
+    private var resumeAnchor = 0     // anchor of the committed word
+    private var resumeLen = 0        // its UTF-16 length on screen
+    private var resumeTracked = false
+
     // MARK: - Event handling (hot path)
 
+    override func recognizedEvents(_ sender: Any!) -> Int {
+        // keyDown for typing + flagsChanged for the Ctrl-tap bypass detector.
+        Int(NSEvent.EventTypeMask([.keyDown, .flagsChanged]).rawValue)
+    }
+
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event = event, event.type == .keyDown,
-              let client = sender as? IMKTextInput else { return false }
+        guard let event = event, let client = sender as? IMKTextInput else { return false }
 
         // Our own terminal tap-mode output (synthetic Backspace / Unicode) loops back
         // through the input system. Pass it straight to the app WITHOUT re-feeding the
         // engine (a synthetic Backspace would otherwise re-enter as kDelete).
         if SyntheticKeyboard.isSynthetic(event) { return false }
+
+        if event.type == .flagsChanged { return handleFlagsChanged(event, client) }
+        guard event.type == .keyDown else { return false }
+
+        // Any key while Ctrl is held makes the Ctrl press a combo (⌃C, ⌃R…): the
+        // upcoming Ctrl release must NOT fire the word bypass.
+        if ctrlDown { ctrlUsedCombo = true }
+
+        // Backspace-resume is one-shot: it only survives from the space commit to the
+        // IMMEDIATELY following event, and only a Backspace consumes it.
+        let wasResumeArmed = resumeArmed
+        resumeArmed = false
 
         // Secure input active (password field, or an app holding secure input like
         // some chat apps): finish anything pending, then pass through untouched.
@@ -101,10 +137,24 @@ final class TelexInputController: IMKInputController {
         engine.modernTone = AppState.shared.modernOrthography
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
+        engine.detectEnglishTone = AppState.shared.englishToneDetection
+        engine.toneEarlyStyle = AppState.shared.toneEarlyStyle
+        engine.restoreWhitelist = AppState.shared.restoreWhitelist
 
         switch event.keyCode {
         case kDelete:
-            if engine.isEmpty { return false }   // not composing -> normal delete
+            if engine.isEmpty {
+                // Backspace right after "word + space": let it delete the space
+                // normally (return false) but silently re-open the word in the
+                // engine, so the user can keep editing it ("hoa␣⌫f" → "hoà").
+                if wasResumeArmed, engine.hasSavedWord,
+                   !AppState.shared.usesMarkedText(id), engine.resumeLastWord() {
+                    tracking = resumeTracked
+                    anchor = resumeAnchor
+                    onLen = resumeLen
+                }
+                return false                     // not composing -> normal delete
+            }
             let action = engine.backspace()
             if AppState.shared.usesMarkedText(id) { updateMarked(client); return true }
             if tracking {
@@ -132,7 +182,12 @@ final class TelexInputController: IMKInputController {
                 return true
             }
 
-        case kReturn, kEnter, kTab, kEscape:
+        case kReturn, kEnter, kTab, kEscape,
+             kArrowLeft, kArrowRight, kArrowDown, kArrowUp:
+            // Control-key word breaks: full boundary — shortcut expansion + restore-
+            // on-invalid both run — then the key passes through to the app. (Arrow
+            // keys would also reach the non-letter branch below via their function-
+            // key characters; listing them here makes the word-break explicit.)
             boundary(client); return false
 
         default:
@@ -145,8 +200,23 @@ final class TelexInputController: IMKInputController {
             // code-ish context (arr[i], {json}, (x)); skip auto-restore there so a
             // token isn't "corrected" (auto-restore is off around [ ] { }).
             // The composed word itself is committed unchanged.
-            let boundaryChar = event.characters?.utf8.first
+            let utf8 = event.characters?.utf8
+            let boundaryChar = utf8?.first
+            // Arm backspace-resume only for the conservative case: a single plain
+            // SPACE after a word, on the in-place path. boundary() only leaves a
+            // saved word in the engine when the commit was clean (no auto-restore,
+            // no shortcut expansion), so a stale arm cannot resume the wrong text.
+            let isPlainSpace = boundaryChar == 32 && utf8?.count == 1
+            let hadWord = !engine.isEmpty
+            let wordAnchor = anchor, wordLen = onLen, wordTracked = tracking
+            let marked = AppState.shared.usesMarkedText(id)
             boundary(client, suppressAutoRestore: boundaryChar.map(isBracket) ?? false)
+            if isPlainSpace, hadWord, !marked, engine.hasSavedWord {
+                resumeArmed = true
+                resumeAnchor = wordAnchor
+                resumeLen = wordLen
+                resumeTracked = wordTracked
+            }
             return false
         }
 
@@ -188,6 +258,48 @@ final class TelexInputController: IMKInputController {
         case let .replace(bs, insert):
             applyInPlace(bs: bs, insert: insert, client)
             return true
+        }
+    }
+
+    // MARK: - Ctrl-tap temp bypass (flagsChanged)
+
+    /// Detect a lone Ctrl press+release (no key in between) and make the current
+    /// word literal: transforms and live spell-check stop, boundary auto-restore is
+    /// suppressed, and any on-screen transform is rewound to the raw keystrokes.
+    /// The escape hatch for words that ARE valid Vietnamese syllables ("test"→tét,
+    /// "list"→lít) which the validator can never catch. Always returns false —
+    /// modifier events must reach the app regardless.
+    private func handleFlagsChanged(_ event: NSEvent, _ client: IMKTextInput) -> Bool {
+        resumeArmed = false                    // any modifier activity disarms resume
+        let hasCtrl = event.modifierFlags.contains(.control)
+        if hasCtrl, !ctrlDown {
+            ctrlDown = true
+            ctrlUsedCombo = false
+        } else if !hasCtrl, ctrlDown {
+            ctrlDown = false
+            if !ctrlUsedCombo { applyCtrlBypass(client) }
+        }
+        return false
+    }
+
+    /// Apply the bypass to the engine and reconcile the screen (in-place diff or
+    /// marked-text refresh). No-op in tap-handled apps — this controller's engine is
+    /// idle there (the tap layer owns its own engine and needs its own hook).
+    private func applyCtrlBypass(_ client: IMKTextInput) {
+        let id = AppState.shared.currentBundleID ?? FrontmostApp.shared.bundleID
+        if AppState.shared.usesTapMode(id) || AppState.shared.usesSelectionReplace(id)
+            || AppState.shared.usesEmptyReset(id) || SpotlightDetector.isVisible {
+            return
+        }
+        let hadWord = !engine.isEmpty
+        let action = engine.bypassCurrentWord()
+        guard hadWord else { return }          // armed for the upcoming word only
+        if AppState.shared.usesMarkedText(id) {
+            updateMarked(client)
+            return
+        }
+        if case let .replace(bs, insert) = action, bs > 0 || !insert.isEmpty {
+            applyInPlace(bs: bs, insert: insert, client)
         }
     }
 
@@ -269,6 +381,7 @@ final class TelexInputController: IMKInputController {
             client.setMarkedText("", selectionRange: kNoRange, replacementRange: kNoRange)
         }
         engine.reset()
+        engine.clearSavedWord()   // the shortcut may move the caret (⌘A, ⌘V…)
         tracking = false
         onLen = 0
     }
@@ -281,8 +394,11 @@ final class TelexInputController: IMKInputController {
         let onScreen = word.unicodeScalars.count
 
         // Shortcut expansion (bảng gõ tắt) takes precedence over the composed word.
-        if !word.isEmpty, let expansion = AppState.shared.shortcuts[word] {
+        // ShortcutExpander adds auto-caps: "Vn" → "Việt nam", "VN" → "VIỆT NAM".
+        if !word.isEmpty,
+           let expansion = ShortcutExpander.expansion(for: word, table: AppState.shared.shortcuts) {
             engine.reset()
+            engine.clearSavedWord()   // expanded text ≠ composed word: not resumable
             if marked { client.insertText(expansion, replacementRange: kNoRange) }
             else { applyInPlace(bs: onScreen, insert: expansion, client) }
             return
@@ -292,6 +408,9 @@ final class TelexInputController: IMKInputController {
         // Suppressed next to brackets (code context).
         let autoRestore = AppState.shared.autoRestore && !suppressAutoRestore
         let restored = engine.commitText(autoRestore: autoRestore)
+        // Tone-early kill-switch learning (Rule A): count mark-before-tone +
+        // keys-after-tone commits; at ≥2 English detection goes silent.
+        if engine.lastCommitToneEarlyPattern { AppState.shared.noteToneEarlyCommit() }
         if marked {
             // Commit the marked text (replaces it with the final word).
             client.insertText(restored, replacementRange: kNoRange)
@@ -305,7 +424,10 @@ final class TelexInputController: IMKInputController {
     override func activateServer(_ sender: Any!) {
         super.activateServer(sender)
         engine.reset()
+        engine.clearSavedWord()   // focus/app changed: resume slot invalid
         tracking = false
+        resumeArmed = false
+        ctrlDown = false
         if let client = sender as? IMKTextInput {
             AppState.shared.currentBundleID = client.bundleIdentifier()
             maybePromptAccessibility(AppState.shared.currentBundleID)
@@ -323,8 +445,11 @@ final class TelexInputController: IMKInputController {
             resetObserver = NotificationCenter.default.addObserver(
                 forName: .telexResetComposition, object: nil, queue: nil) { [weak self] _ in
                 self?.engine.reset()
+                self?.engine.clearSavedWord()   // caret moved: resume slot invalid
                 self?.tracking = false
                 self?.onLen = 0
+                self?.resumeArmed = false
+                self?.ctrlUsedCombo = true      // Ctrl+click is a combo, not a tap
             }
         }
     }
@@ -340,7 +465,10 @@ final class TelexInputController: IMKInputController {
 
     override func deactivateServer(_ sender: Any!) {
         engine.reset()
+        engine.clearSavedWord()
         tracking = false
+        resumeArmed = false
+        ctrlDown = false
         if let obs = resetObserver { NotificationCenter.default.removeObserver(obs); resetObserver = nil }
         // Input source switched away from VietTelex (or focus lost): the tap must not
         // transform keys, so the user really types English in terminals.

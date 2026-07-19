@@ -88,4 +88,88 @@ final class ValidatorTests: XCTestCase {
             XCTAssertFalse(SyllableValidator.isValidPrefix(p), "'\(p)' must be rejected")
         }
     }
+
+    // MARK: - Compositional-model delta (Onset·Nucleus·Coda·Tone rewrite)
+
+    // Newly VALID: qu+y… rimes (the onset u belongs to the nucleus: q+uynh),
+    // gi+ê… rimes (the onset i belongs to the nucleus: gi+iêc), and uyp (tuýp).
+    func testDeltaNewlyValid() {
+        for w in ["quỳnh", "quýt", "quých", "giếc", "tuýp", "quyên", "quyết",
+                  "huỳnh", "giêng", "giếng"] {
+            XCTAssertTrue(SyllableValidator.isValidSyllable(w), "should be valid: \(w)")
+        }
+        // Their prefixes must also pass (live spell-check must not freeze them).
+        for w in ["quỳnh", "quýt", "tuýp", "giếc"] {
+            let scalars = Array(w.unicodeScalars)
+            for i in 1...scalars.count {
+                let p = String(String.UnicodeScalarView(scalars[0..<i]))
+                XCTAssertTrue(SyllableValidator.isValidPrefix(p),
+                              "prefix '\(p)' of '\(w)' must be valid")
+            }
+        }
+    }
+
+    // Newly INVALID: bare unstable nuclei (ă â iê oă uâ uô ươ oo yê never occur
+    // open), the bogus general êng rime, yê/ya with a non-zero onset, spelling
+    // gates (k/gh/ngh front-only; c/g/ng non-front), and bare uên.
+    func testDeltaNewlyInvalid() {
+        let invalid = [
+            // bare unstable nuclei
+            "hă", "câ", "noă", "oă", "tuâ", "muô", "diê", "chiê", "hươ", "hoo", "byê",
+            // êng was never a real rime (giêng is gi+iêng)
+            "hêng", "kêng", "êng",
+            // yê/ya rimes take the zero onset only
+            "byêm", "hyêu",
+            // spelling gates
+            "ka", "ku", "cy", "ci", "ce", "nge", "ngi", "gha", "ghò", "ngho", "ge", "gy",
+            // uê + n is not a rime (quên = qu+ên)
+            "uên",
+        ]
+        for w in invalid {
+            XCTAssertFalse(SyllableValidator.isValidSyllable(w), "should be invalid: \(w)")
+        }
+    }
+
+    // Marginal but attested syllables must NOT break.
+    func testDeltaMarginalStillValid() {
+        let valid = [
+            "xoong", "boong", "soóc",          // oong / ooc loanwords
+            "eng", "éc",                        // leng keng, eng éc
+            "huơ", "thuở", "quơ",               // open uơ
+            "ngoém", "ngoao", "ngoạp", "ngoẻo", // oem oao oap oeo
+            "khuya", "khuỷu", "yếu", "yên",
+            "nghiêng", "gì", "gìn", "giữ", "già", "hy", "quý", "ỷ",
+            "quên", "huênh", "khuếch", "quyển", "cứu", "hưu",
+        ]
+        for w in valid {
+            XCTAssertTrue(SyllableValidator.isValidSyllable(w), "should be valid: \(w)")
+        }
+    }
+
+    // The gate exception: "g"+i is the gi onset written degenerately (gì, gìn),
+    // while g before e/ê/y stays invalid (must be gh).
+    func testGOnsetIException() {
+        XCTAssertTrue(SyllableValidator.isValidSyllable("gì"))
+        XCTAssertTrue(SyllableValidator.isValidSyllable("gìn"))
+        XCTAssertTrue(SyllableValidator.isValidSyllable("ghi"))
+        XCTAssertTrue(SyllableValidator.isValidSyllable("ghe"))
+        XCTAssertFalse(SyllableValidator.isValidSyllable("ge"))
+        XCTAssertFalse(SyllableValidator.isValidSyllable("gê"))
+        XCTAssertFalse(SyllableValidator.isValidSyllable("gy"))
+    }
+
+    // Prefixes of words whose full rime was tightened must stay typable: the
+    // prefix model matches partial codas against every allowed continuation
+    // ("uen" is fine on the way to "uênh"/"quên").
+    func testPrefixStaysPermissiveAfterDelta() {
+        for p in ["ue", "uen", "uenh", "hue", "huen", "huenh", "que", "quen",
+                  "gie", "gien", "gieng", "xoo", "xoon", "xoong", "quy", "quyn",
+                  "quynh", "tuy", "tuyp", "ie", "uo", "ua", "oo", "y", "ya"] {
+            XCTAssertTrue(SyllableValidator.isValidPrefix(p), "prefix '\(p)' must be valid")
+        }
+    }
+
+    func testMaxRawSyllableLengthConstant() {
+        XCTAssertEqual(SyllableValidator.maxRawSyllableLength, 9)  // "nghieengs"
+    }
 }

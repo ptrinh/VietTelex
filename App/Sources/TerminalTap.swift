@@ -144,6 +144,17 @@ enum SyntheticKeyboard {
         event.cgEvent.map(isSynthetic) ?? false
     }
 
+    /// Tap proxy of the callback currently executing. Events synthesized from inside
+    /// the tap callback are posted with CGEventTapPostEvent(proxy) so they enter the
+    /// event stream at the tap's own position, immediately after the (suppressed)
+    /// original — guaranteed ordering relative to it. CGEventPost injects at the HID
+    /// level instead, where ordering versus in-flight events is only held together by
+    /// our timestamp discipline (OpenKey posts via the proxy; goxkey had reordering
+    /// bugs until it switched). Set/cleared by the tap callback around handle();
+    /// main-thread only. Falls back to CGEventPost when nil (defensive — every
+    /// current post happens inside the callback).
+    static var proxy: CGEventTapProxy?
+
     /// Strictly-increasing timestamp for posted events. CGEvent.post orders delivery
     /// by timestamp, and events we create back-to-back can get equal/near-equal
     /// mach-time stamps — the window server then reorders same-stamp events, so a
@@ -154,6 +165,20 @@ enum SyntheticKeyboard {
         let now = mach_absolute_time()
         lastStamp = now > lastStamp ? now : lastStamp &+ 1
         event.timestamp = CGEventTimestamp(lastStamp)
+    }
+
+    /// Single exit point for every synthetic event: mark non-coalesced (the window
+    /// server may merge coalescable events, breaking a backspace burst), stamp a
+    /// strictly-increasing timestamp, then post via the tap proxy (ordering preserved
+    /// relative to the swallowed original) or CGEventPost as fallback.
+    private static func post(_ event: CGEvent) {
+        event.flags.insert(.maskNonCoalesced)
+        stamp(event)
+        if let proxy {
+            event.tapPostEvent(proxy)
+        } else {
+            event.post(tap: .cgSessionEventTap)
+        }
     }
 
     /// Replace `backspaces` trailing chars with `text`. Two strategies:
@@ -188,31 +213,47 @@ enum SyntheticKeyboard {
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: false)
         else { return }
+        // The shift modifier MUST be a flag ON the arrow event itself — never a
+        // separate synthetic shift-down/up pair (the ordering of injected
+        // flagsChanged versus keyDown events is not guaranteed, so the arrow can
+        // land unshifted and MOVE the caret instead of extending the selection).
         down.flags = .maskShift
         up.flags = .maskShift
-        stamp(down); down.post(tap: .cgSessionEventTap)
-        stamp(up);   up.post(tap: .cgSessionEventTap)
+        post(down)
+        post(up)
     }
 
     private static func postVirtual(_ key: CGKeyCode) {
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
         else { return }
-        stamp(down); down.post(tap: .cgSessionEventTap)
-        stamp(up);   up.post(tap: .cgSessionEventTap)
+        post(down)
+        post(up)
     }
+
+    /// keyboardSetUnicodeString truncates long payloads (~20 UTF-16 units per event),
+    /// so a long insert — a gõ tắt expansion, typically — must be split across several
+    /// events. OpenKey chunks at 16 UTF-16 code units; do the same, and never split a
+    /// surrogate pair across two events.
+    private static let maxUnitsPerEvent = 16
 
     private static func postUnicode(_ text: String) {
         let utf16 = Array(text.utf16)
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
-        else { return }
-        utf16.withUnsafeBufferPointer { buf in
-            down.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
-            up.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
+        var start = 0
+        while start < utf16.count {
+            var end = min(start + maxUnitsPerEvent, utf16.count)
+            if end < utf16.count, UTF16.isLeadSurrogate(utf16[end - 1]) { end -= 1 }
+            guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true),
+                  let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
+            else { return }
+            utf16[start..<end].withUnsafeBufferPointer { buf in
+                down.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
+                up.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
+            }
+            post(down)
+            post(up)
+            start = end
         }
-        stamp(down); down.post(tap: .cgSessionEventTap)
-        stamp(up);   up.post(tap: .cgSessionEventTap)
     }
 }
 
@@ -246,7 +287,39 @@ final class TerminalTapController {
 
     private let kDelete = 51, kReturn = 36, kEnter = 76, kTab = 48, kEscape = 53
 
-    private init() {}
+    // Ctrl-tap temp bypass (mirror of TelexInputController's): a press+release of
+    // Ctrl with NO other key in between makes the current word literal. Any keyDown
+    // or mouse event while Ctrl is down marks the press as a combo (⌃C, ⌃click…),
+    // so the release never fires the bypass.
+    private var ctrlDown = false
+    private var ctrlUsedCombo = false
+
+    // Backspace-resume of the last committed word: armed ONLY on the keystroke
+    // sequence "clean word commit + single space", consumed by the very next
+    // Backspace. Any other event (key, click, modifier, app/space change) disarms it.
+    private var resumeArmed = false
+
+    private init() {
+        // Session-reset signals beyond keys/clicks: switching Spaces moves focus to a
+        // different window (the caret we were composing at is gone), and sleep/wake
+        // invalidates any in-flight composition. App activation likewise means the
+        // old caret is stale (the IMKit controller resets itself via activateServer,
+        // but THIS engine is separate and must be reset too). All are one-shot
+        // notifications — event-driven, no timers, no polling.
+        let nc = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.activeSpaceDidChangeNotification,
+                     NSWorkspace.willSleepNotification,
+                     NSWorkspace.didWakeNotification,
+                     NSWorkspace.didActivateApplicationNotification] {
+            nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.engine.reset()
+                self?.engine.clearSavedWord()   // caret context gone: resume slot invalid
+                self?.resumeArmed = false
+                self?.ctrlDown = false          // a release after the switch must not fire
+                NotificationCenter.default.post(name: .telexResetComposition, object: nil)
+            }
+        }
+    }
 
     /// Create and enable the tap. No-op if already running or not Accessibility-
     /// trusted (sandboxed build, or permission not yet granted). Idempotent — called
@@ -254,14 +327,21 @@ final class TerminalTapController {
     func start() {
         guard tap == nil, Accessibility.isTrusted else { return }
         let mask = CGEventMask((1 << CGEventType.keyDown.rawValue)
+                             | (1 << CGEventType.flagsChanged.rawValue)
                              | (1 << CGEventType.leftMouseDown.rawValue)
                              | (1 << CGEventType.rightMouseDown.rawValue))
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
             eventsOfInterest: mask,
-            callback: { _, type, event, refcon in
+            callback: { proxy, type, event, refcon in
                 guard let refcon else { return Unmanaged.passUnretained(event) }
                 let me = Unmanaged<TerminalTapController>.fromOpaque(refcon).takeUnretainedValue()
+                // The proxy is only valid for the duration of this invocation; expose
+                // it to SyntheticKeyboard so every event synthesized while handling
+                // this key is posted at the tap's position (ordered right after the
+                // suppressed original), then clear it.
+                SyntheticKeyboard.proxy = proxy
+                defer { SyntheticKeyboard.proxy = nil }
                 return me.handle(type: type, event: event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
@@ -313,7 +393,27 @@ final class TerminalTapController {
         // signal the IMKit controller (other apps) to drop its composition.
         if type == .leftMouseDown || type == .rightMouseDown {
             engine.reset()
+            engine.clearSavedWord()   // caret moved: resume slot invalid
+            resumeArmed = false
+            ctrlUsedCombo = true      // Ctrl+click is a combo, not a tap
             if imeActive { NotificationCenter.default.post(name: .telexResetComposition, object: nil) }
+            return pass
+        }
+
+        // Lone Ctrl press+release (no key in between) = temp bypass of the current
+        // word. Modifier events always pass through to the app regardless.
+        if type == .flagsChanged {
+            if SyntheticKeyboard.isSynthetic(event) { return pass }   // our own output
+            resumeArmed = false                // any modifier activity disarms resume
+            guard imeActive else { ctrlDown = false; return pass }
+            let hasCtrl = event.flags.contains(.maskControl)
+            if hasCtrl, !ctrlDown {
+                ctrlDown = true
+                ctrlUsedCombo = false
+            } else if !hasCtrl, ctrlDown {
+                ctrlDown = false
+                if !ctrlUsedCombo { applyCtrlBypass() }
+            }
             return pass
         }
 
@@ -321,6 +421,15 @@ final class TerminalTapController {
 
         // Our own synthesized output: never re-process it.
         if SyntheticKeyboard.isSynthetic(event) { return pass }
+
+        // Any key while Ctrl is held makes the Ctrl press a combo (⌃C, ⌃R…): the
+        // upcoming Ctrl release must NOT fire the word bypass.
+        if ctrlDown { ctrlUsedCombo = true }
+
+        // Backspace-resume is one-shot: it only survives from the space commit to the
+        // IMMEDIATELY following event, and only a Backspace consumes it.
+        let wasResumeArmed = resumeArmed
+        resumeArmed = false
 
         guard imeActive else { return pass }
 
@@ -333,6 +442,7 @@ final class TerminalTapController {
         let flags = event.flags
         if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
             engine.reset()
+            engine.clearSavedWord()   // the shortcut may move the caret (⌘A, ⌘V…)
             NotificationCenter.default.post(name: .telexResetComposition, object: nil)
             return pass
         }
@@ -362,11 +472,21 @@ final class TerminalTapController {
         engine.modernTone = AppState.shared.modernOrthography
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
+        engine.detectEnglishTone = AppState.shared.englishToneDetection
+        engine.toneEarlyStyle = AppState.shared.toneEarlyStyle
+        engine.restoreWhitelist = AppState.shared.restoreWhitelist
 
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
 
         if keyCode == kDelete {
-            if engine.isEmpty { return pass }        // not composing -> real Backspace
+            if engine.isEmpty {
+                // Backspace right after "word + space": let the REAL key through (it
+                // deletes the space — no synthetic edit needed) while silently
+                // re-opening the word in the engine, so the user can keep editing it
+                // ("hoa␣⌫f" → "hoà").
+                if wasResumeArmed, engine.hasSavedWord { engine.resumeLastWord() }
+                return pass                          // not composing -> real Backspace
+            }
             if case let .replace(bs, insert) = engine.backspace() {
                 SyntheticKeyboard.apply(backspaces: bs, insert: insert, mode: emitMode)
             }
@@ -413,7 +533,14 @@ final class TerminalTapController {
         let ch = Character(scalar)
         guard let ascii = ch.asciiValue, isLetterAscii(ascii) else {
             // Non-letter boundary. Brackets skip auto-restore (code context).
+            // Arm backspace-resume only for the conservative case: a single plain
+            // SPACE after a word. commitBoundary only leaves a saved word in the
+            // engine when the commit was clean (no auto-restore, no shortcut
+            // expansion), so a stale arm cannot resume the wrong text.
+            let isPlainSpace = buf[0] == 32 && len == 1
+            let hadWord = !engine.isEmpty
             emitBoundary(suppressAutoRestore: isBracketUnichar(buf[0]))
+            if isPlainSpace, hadWord, engine.hasSavedWord { resumeArmed = true }
             reemit(keyCode: keyCode, string: String(ch))
             return nil
         }
@@ -440,17 +567,52 @@ final class TerminalTapController {
         guard !engine.isEmpty else { engine.reset(); return false }
         let word = engine.composed
         let onScreen = word.unicodeScalars.count
-        if !word.isEmpty, let expansion = AppState.shared.shortcuts[word] {
+        // Shortcut expansion (bảng gõ tắt) takes precedence over the composed word.
+        // ShortcutExpander adds auto-caps: "Vn" → "Việt nam", "VN" → "VIỆT NAM".
+        if !word.isEmpty,
+           let expansion = ShortcutExpander.expansion(for: word, table: AppState.shared.shortcuts) {
             engine.reset()
+            engine.clearSavedWord()   // expanded text ≠ composed word: not resumable
             SyntheticKeyboard.apply(backspaces: onScreen, insert: expansion, mode: emitMode)
             return true
         }
         let restore = AppState.shared.autoRestore && !suppressAutoRestore
-        if case let .replace(bs, insert) = engine.commitBoundary(autoRestore: restore) {
+        let action = engine.commitBoundary(autoRestore: restore)
+        // Tone-early kill-switch learning (Rule A): count mark-before-tone +
+        // keys-after-tone commits; at ≥2 English detection goes silent.
+        if engine.lastCommitToneEarlyPattern { AppState.shared.noteToneEarlyCommit() }
+        if case let .replace(bs, insert) = action {
             SyntheticKeyboard.apply(backspaces: bs, insert: insert, mode: emitMode)
             return true
         }
         return false
+    }
+
+    /// The user tapped Ctrl alone: make the current word literal (transforms and
+    /// live spell-check stop, boundary auto-restore is suppressed) and rewind any
+    /// on-screen transform to the raw keystrokes. Only acts when the frontmost app
+    /// is one THIS tap handles (the IMKit controller owns the bypass elsewhere);
+    /// the rewind diff goes through the same synthetic channel as normal edits,
+    /// with the app's emit mode. With an empty engine the bypass still arms for
+    /// the upcoming word (no screen edit needed).
+    private func applyCtrlBypass() {
+        let id = FrontmostApp.shared.bundleID
+        let mode: TapEmit
+        if SpotlightDetector.isVisible {
+            mode = .selection
+        } else if AppState.shared.usesSelectionReplace(id) {
+            mode = .selection
+        } else if AppState.shared.usesEmptyReset(id) {
+            mode = .emptyReset
+        } else if AppState.shared.usesTapMode(id) {
+            mode = .backspace
+        } else {
+            return
+        }
+        if IsSecureEventInputEnabled() { return }
+        if case let .replace(bs, insert) = engine.bypassCurrentWord(), bs > 0 || !insert.isEmpty {
+            SyntheticKeyboard.apply(backspaces: bs, insert: insert, mode: mode)
+        }
     }
 
     private func reemit(keyCode: Int, string: String?) {

@@ -63,6 +63,36 @@ public struct TelexEngine {
     /// this engine, the other Simple-Telex difference.) Preserved across `reset()`.
     public var simpleTelex = false
 
+    /// English-detection Rule A ("tone must be terminal"). Vietnamese places its
+    /// tone key at (or effectively at) the end of the word; an English word whose
+    /// Telex reading happens to be a valid syllable (test→tét, list→lít, more→mỏe)
+    /// betrays itself by consuming a tone key MID-word and then continuing with
+    /// literal letters or new marks. When detected, the word is re-rendered
+    /// literally right away and commits as typed. Automatically silent when
+    /// `freeMarking` is on (tone keys are then legitimately non-terminal) or when
+    /// `toneEarlyStyle` was learned. Preserved across `reset()`.
+    public var detectEnglishTone = true
+
+    /// Learned kill-switch for Rule A: the user types tone-early style
+    /// ("tieesng", "dduwowjc"). Set by the caller once ≥2 clean commits matched
+    /// the mark-before-tone + keys-after-tone pattern (see
+    /// `lastCommitToneEarlyPattern`); Rule A then goes permanently silent.
+    /// Preserved across `reset()`.
+    public var toneEarlyStyle = false
+
+    /// True right after `commitBoundary`/`commitText` when the committed word was
+    /// a valid syllable typed in the tone-early pattern (a mark consumed BEFORE
+    /// the tone key AND keys consumed after it — "tieesng"). The caller counts
+    /// these into persistent storage to learn `toneEarlyStyle`.
+    public private(set) var lastCommitToneEarlyPattern = false
+
+    /// Auto-restore whitelist: LOWERCASE words that `SyllableValidator` would reject
+    /// but must never be reverted to raw keystrokes at a word boundary ("wifi",
+    /// proper names). Checked O(1) at the boundary only, case-folded. Preserved
+    /// across `reset()`; the caller sets it from settings (Set assignment is CoW —
+    /// a retain, not a copy — so refreshing it per keystroke stays allocation-free).
+    public var restoreWhitelist: Set<String> = []
+
     static let capacity = 32
 
     // Raw keystrokes that make up the current word (ascii, case preserved).
@@ -94,6 +124,50 @@ public struct TelexEngine {
     // Vietnamese syllable: "iss"→is (not restored to "iss"), "ass"→as.
     private var markCancelled = false
 
+    // Repeated-key guard: 4+ identical consecutive letter keys ("jjjj" in vim) mean
+    // the user is NOT typing Vietnamese. From the 4th key on the word is emitted
+    // literally (via disabledAtCount) and boundary auto-restore is suppressed —
+    // the keys are intentional, not a word to "fix". Legit Telex doubles/triples
+    // (aa, ee, oo, dd, aaa/sss undo-latch) are at most 3 keys, so they never trip it.
+    private var repeatGuarded = false
+
+    // Rule A state: the current word tripped English detection (tone key consumed
+    // mid-word) and is rendered literally for the rest of the word. Sticky across
+    // backspace WITHIN the word (like repeatGuarded); cleared at the boundary or
+    // when the word is fully erased.
+    private var englishSuspect = false
+
+    // Rule A exemption: the composed word matched the restore whitelist at the
+    // moment detection would have fired — the whitelist beats Rule A, and the
+    // check is not repeated for the rest of the word.
+    private var ruleAExempt = false
+
+    // Positional flags from the LAST parse (valid while transforms were live):
+    // raw index of the first key consumed as a tone / as a diacritic mark, and
+    // whether some later key was consumed as a literal letter or a new non-bar
+    // mark AFTER the first tone. Zero extra passes — filled inside parse().
+    private var flagFirstTone = Int.max
+    private var flagFirstMark = Int.max
+    private var flagTrigger = false
+
+    // Ctrl-tap temp bypass: the user asked for the CURRENT word to be literal
+    // (no transforms, no live spell-check, no boundary auto-restore). Cleared by
+    // `reset()`, i.e. at the next word boundary.
+    private var wordBypassed = false
+
+    // Resume-after-commit slot: raw keystrokes of the last CLEANLY committed word
+    // (committed exactly as composed — no auto-restore, no shortcut expansion), so
+    // a Backspace right after the boundary can silently re-open it for editing
+    // ("hoa␣" + ⌫ + "f" → "hoà"). Preallocated; survives `reset()`. Cleared by
+    // `clearSavedWord()` (caller: mouse click / focus change / app switch) or by a
+    // non-clean commit.
+    private var savedRaw: [UInt8]
+    private var savedRawCount = 0
+    // Whether the saved word had tripped Rule A (its clean commit was the LITERAL
+    // raw render). Resuming must reproduce that literal render, or the engine's
+    // idea of the screen would diverge from what was committed.
+    private var savedSuspect = false
+
     public init() {
         raw = [UInt8](repeating: 0, count: Self.capacity)
         out = [UInt32](repeating: 0, count: Self.capacity)
@@ -102,6 +176,7 @@ public struct TelexEngine {
         rawLetter = [Int](repeating: -1, count: Self.capacity)
         toneKeys = [Int](repeating: 0, count: Self.capacity)
         vowelIdx = [Int](repeating: 0, count: Self.capacity)
+        savedRaw = [UInt8](repeating: 0, count: Self.capacity)
     }
 
     public var isEmpty: Bool { rawCount == 0 }
@@ -119,14 +194,56 @@ public struct TelexEngine {
         raw[rawCount] = ascii
         rawCount += 1
 
+        // Repeated-key guard: 4+ identical trailing keys (case-insensitive) —
+        // modal-editor spam like vim's "jjjj". Freeze transforms for the rest of
+        // the word and suppress boundary auto-restore. O(run), zero heap.
+        if !repeatGuarded, rawCount >= 4 {
+            let cur = lowercased(ascii)
+            var run = 1
+            var k = rawCount - 2
+            while k >= 0, lowercased(raw[k]) == cur { run += 1; k -= 1 }
+            if run >= 4 { repeatGuarded = true }
+        }
+        if repeatGuarded, disabledAtCount > rawCount - 1 {
+            disabledAtCount = rawCount - 1   // this key (and all later ones) literal
+        }
+
         var cancelled = false
-        let newCount = render(cancelled: &cancelled)
+        var newCount = render(cancelled: &cancelled)
         markCancelled = cancelled
 
         // Live spell-check: once the word can no longer be valid Vietnamese, freeze
         // transforms from the NEXT key on (current output unchanged). See disabledAtCount.
-        if liveSpellCheck, disabledAtCount == Int.max, !prefixIsValid(scratch, newCount) {
+        // A leading loanword consonant z/j/f/w is tolerated (OpenKey's
+        // vAllowConsonantZFWJ): validity is judged on the rest of the word, so slang /
+        // loanwords like "zô", "fở" keep receiving diacritics instead of freezing at
+        // the first key.
+        if liveSpellCheck, disabledAtCount == Int.max, !prefixIsValidTolerant(newCount) {
             disabledAtCount = rawCount
+        }
+
+        // Rule A (English tone-position detection): a tone key was consumed
+        // mid-word — a later key landed as a literal letter or a new mark — and no
+        // mark preceded the tone (protects the tone-early style "tieesng"). This
+        // word is English (test, list, more, here…): re-render it literally NOW so
+        // the user sees "test" live, not "tét"-then-restore at the boundary. The
+        // restore whitelist beats Rule A (one String lookup, only at the moment
+        // detection fires). Disabled under free marking (tone keys are then
+        // legitimately non-terminal), after the tone-early kill-switch, for a
+        // Ctrl-tap bypassed word, and after an explicit cancel gesture.
+        if detectEnglishTone, !toneEarlyStyle, !freeMarking, !wordBypassed,
+           !englishSuspect, !ruleAExempt, !cancelled,
+           flagFirstTone != Int.max, flagTrigger, flagFirstMark > flagFirstTone {
+            if !restoreWhitelist.isEmpty,
+               restoreWhitelist.contains(scratchWord(newCount).lowercased()) {
+                ruleAExempt = true
+            } else {
+                englishSuspect = true
+                disabledAtCount = 0
+                var c = false
+                newCount = render(cancelled: &c)
+                markCancelled = c
+            }
         }
 
         // No-transform fast path: render is exactly the previous output plus this
@@ -151,8 +268,10 @@ public struct TelexEngine {
         guard rawCount > 0 else { return .passthrough }
 
         // Editing the word re-opens transforms; a still-invalid word simply re-disables
-        // on the next forward key (backspace itself never adds a transform).
-        disabledAtCount = Int.max
+        // on the next forward key (backspace itself never adds a transform). A
+        // Ctrl-tap bypass — or a word Rule A already flagged as English — keeps
+        // the whole word literal until the boundary (sticky, like repeatGuarded).
+        disabledAtCount = (wordBypassed || englishSuspect) ? 0 : Int.max
 
         var cancelledIgnored = false
         let (letterCount, _, _) = parse(cancelled: &cancelledIgnored)
@@ -167,6 +286,11 @@ public struct TelexEngine {
             }
             rawCount = w
         }
+        if rawCount == 0 {                       // word fully erased: Rule A re-arms
+            englishSuspect = false
+            ruleAExempt = false
+            disabledAtCount = wordBypassed ? 0 : Int.max
+        }
 
         var cancelled = false
         let newCount = render(cancelled: &cancelled)
@@ -179,32 +303,49 @@ public struct TelexEngine {
     /// Word boundary reached. Optionally auto-restore the raw keystrokes when the
     /// composed word is not a valid Vietnamese syllable. Resets the engine.
     /// The caller inserts the boundary character itself afterwards.
+    /// A CLEAN commit (word left exactly as composed) is saved for backspace-resume.
     public mutating func commitBoundary(autoRestore: Bool) -> TelexAction {
         defer { reset() }
+        noteToneEarlyPattern()
         guard rawCount > 0 else { return .none }
-        // Skip restore when the user cancelled a diacritic on purpose ("iss"→is).
-        if autoRestore, !markCancelled {
-            let word = composed
-            if !word.isEmpty, !SyllableValidator.isValidSyllable(word) {
-                let restored = rawKeystrokes
-                if restored != word {
-                    return .replace(backspaces: outCount, insert: restored)
-                }
-            }
+        if let restored = restoreTarget(autoRestore: autoRestore) {
+            savedRawCount = 0            // screen ≠ composed render: not resumable
+            return .replace(backspaces: outCount, insert: restored)
         }
+        saveForResume()
         return .none
     }
 
     /// Final text to commit at a word boundary, with auto-restore applied
     /// (non-Vietnamese syllables fall back to the raw keystrokes). Resets the engine.
     /// Used by the marked-text controller path.
+    /// A CLEAN commit (word left exactly as composed) is saved for backspace-resume.
     public mutating func commitText(autoRestore: Bool) -> String {
         defer { reset() }
-        let word = composed
-        if autoRestore, !markCancelled, !word.isEmpty, !SyllableValidator.isValidSyllable(word) {
-            return rawKeystrokes
+        noteToneEarlyPattern()
+        guard rawCount > 0 else { return "" }
+        if let restored = restoreTarget(autoRestore: autoRestore) {
+            savedRawCount = 0
+            return restored
         }
-        return word
+        saveForResume()
+        return composed
+    }
+
+    /// The raw keystrokes to restore to at a boundary, or nil when the composed word
+    /// stands (valid syllable, deliberate cancel gesture, Ctrl-tap bypass,
+    /// repeated-key spam, whitelisted word, or restore would be a no-op).
+    private func restoreTarget(autoRestore: Bool) -> String? {
+        guard autoRestore, !markCancelled, !wordBypassed, !repeatGuarded else { return nil }
+        let word = composed
+        guard !word.isEmpty, !SyllableValidator.isValidSyllable(word) else { return nil }
+        // Whitelist ("wifi", proper names): never restore these. O(1), case-folded;
+        // the lowercased() allocation only happens at a boundary with a non-empty list.
+        if !restoreWhitelist.isEmpty, restoreWhitelist.contains(word.lowercased()) {
+            return nil
+        }
+        let restored = rawKeystrokes
+        return restored == word ? nil : restored
     }
 
     public mutating func reset() {
@@ -212,14 +353,119 @@ public struct TelexEngine {
         outCount = 0
         markCancelled = false
         disabledAtCount = Int.max
+        repeatGuarded = false
+        wordBypassed = false        // Ctrl-tap bypass lasts until the word boundary
+        englishSuspect = false
+        ruleAExempt = false
+        flagFirstTone = Int.max
+        flagFirstMark = Int.max
+        flagTrigger = false
+        // lastCommitToneEarlyPattern intentionally survives reset(): commits set it
+        // and the caller reads it right after.
     }
 
-    /// True if the first `n` scalars of `out` form a valid Vietnamese syllable prefix.
-    private func prefixIsValid(_ out: [UInt32], _ n: Int) -> Bool {
+    /// Tone-early pattern detector for the kill-switch: the word being committed
+    /// consumed a mark BEFORE its (first) tone key AND consumed keys after the
+    /// tone ("tieesng", "dduwowjc"), and it is a valid Vietnamese syllable — the
+    /// signature of a tone-early typist that Rule A must learn to leave alone.
+    private mutating func noteToneEarlyPattern() {
+        lastCommitToneEarlyPattern = false
+        guard rawCount > 0,
+              flagFirstTone != Int.max, flagTrigger, flagFirstMark < flagFirstTone,
+              !markCancelled, !wordBypassed, !repeatGuarded, !englishSuspect
+        else { return }
+        if SyllableValidator.isValidSyllable(composed) {
+            lastCommitToneEarlyPattern = true
+        }
+    }
+
+    // MARK: - Backspace-resume of the last committed word
+
+    /// A cleanly committed word is available to re-open.
+    public var hasSavedWord: Bool { savedRawCount > 0 }
+
+    /// Forget the resume slot. Callers invoke this when the caret can no longer be
+    /// right after "word + boundary char": mouse click, focus change, app switch,
+    /// or a shortcut expansion replaced the word.
+    public mutating func clearSavedWord() { savedRawCount = 0 }
+
+    /// Re-open the last cleanly committed word: the raw keystrokes are reloaded and
+    /// re-rendered so typing continues exactly where the word left off ("hoa␣" +
+    /// Backspace + "f" → "hoà"). The caller must have already removed the boundary
+    /// character from screen (it lets the physical Backspace delete the space).
+    /// Returns false when there is nothing to resume.
+    @discardableResult
+    public mutating func resumeLastWord() -> Bool {
+        guard savedRawCount > 0 else { return false }
+        for i in 0..<savedRawCount { raw[i] = savedRaw[i] }
+        rawCount = savedRawCount
+        savedRawCount = 0
+        repeatGuarded = false
+        wordBypassed = false
+        // A word that had tripped Rule A resumes in its literal state (so the
+        // re-render below matches the committed text); erasing it fully re-arms
+        // detection, and other words re-evaluate normally.
+        englishSuspect = savedSuspect
+        ruleAExempt = false
+        disabledAtCount = savedSuspect ? 0 : Int.max // spell-check re-evaluates next key
+        var cancelled = false
+        let n = render(cancelled: &cancelled)
+        markCancelled = cancelled
+        copyOut(n)
+        return true
+    }
+
+    /// Copy the current word into the preallocated resume slot (clean commits only).
+    private mutating func saveForResume() {
+        for i in 0..<rawCount { savedRaw[i] = raw[i] }
+        savedRawCount = rawCount
+        savedSuspect = englishSuspect
+    }
+
+    // MARK: - Ctrl-tap temp bypass
+
+    /// The user tapped Ctrl alone: make the CURRENT word literal — re-render it as
+    /// the raw keystrokes (undoing any on-screen transforms), stop all further
+    /// transforms and live spell-check for this word, and suppress boundary
+    /// auto-restore. State clears at the next word boundary (`reset()`). Returns the
+    /// screen edit needed (`.none` when nothing is composing).
+    public mutating func bypassCurrentWord() -> TelexAction {
+        wordBypassed = true
+        disabledAtCount = 0
+        guard rawCount > 0 else { return .none }
+        var cancelled = false
+        let n = render(cancelled: &cancelled)
+        markCancelled = cancelled
+        let action = diff(scratch, n)
+        copyOut(n)
+        return action
+    }
+
+    /// True if the first `n` scalars of `scratch` form a valid Vietnamese syllable
+    /// prefix, tolerating ONE leading loanword consonant z/j/f/w (validity is then
+    /// judged on the remainder): "zô", "jú", "fở" keep composing instead of tripping
+    /// live spell-check on the very first key. No legitimate Vietnamese syllable
+    /// starts with these letters, so the tolerance can't mask a real word.
+    private func prefixIsValidTolerant(_ n: Int) -> Bool {
+        var start = 0
+        if n > 0, isLoanConsonant(scratch[0]) { start = 1 }
         var s = String.UnicodeScalarView()
-        s.reserveCapacity(n)
-        for i in 0..<n { s.append(Unicode.Scalar(out[i])!) }
+        s.reserveCapacity(n - start)
+        for i in start..<n { s.append(Unicode.Scalar(scratch[i])!) }
         return SyllableValidator.isValidPrefix(String(s))
+    }
+
+    /// z / j / f / w (either case) — consonants Vietnamese lacks but loanwords use.
+    @inline(__always)
+    private func isLoanConsonant(_ v: UInt32) -> Bool {
+        let lower = (v >= 65 && v <= 90) ? v + 32 : v
+        switch lower {
+        case UInt32(UInt8(ascii: "z")), UInt32(UInt8(ascii: "j")),
+             UInt32(UInt8(ascii: "f")), UInt32(UInt8(ascii: "w")):
+            return true
+        default:
+            return false
+        }
     }
 
     // MARK: - Test / caller helpers
@@ -274,6 +520,11 @@ public struct TelexEngine {
         var toneKeyCount = 0
         for i in 0..<rawCount { rawLetter[i] = -1 }
 
+        // Rule A positional flags, recomputed by every parse (see detectEnglishTone).
+        flagFirstTone = Int.max
+        flagFirstMark = Int.max
+        flagTrigger = false
+
         // A word starting with 'w' is English: Vietnamese has essentially no w-initial
         // syllable, so type it literally with no diacritics ("was"→was, "write"→write).
         // An initial ư is typed "uw", not "w". Applies in both modes.
@@ -316,6 +567,7 @@ public struct TelexEngine {
                         rawLetter[at] = letterCount - 1
                     } else {
                         tone = t
+                        if flagFirstTone == Int.max { flagFirstTone = at }
                         toneKeys[toneKeyCount] = at; toneKeyCount += 1
                     }
                 } else {
@@ -325,11 +577,18 @@ public struct TelexEngine {
                 continue
             }
 
-            // z: clear tone (always consumed)
+            // z: clear tone. Only meaningful once a vowel exists; before that it is a
+            // literal letter, so z-initial loanwords type through ("zalo", "zô") —
+            // mirrors the tone keys s/f/r/x/j just above.
             if lower == UInt8(ascii: "z") {
-                if tone != .none { cancelled = true }
-                tone = .none
-                toneKeys[toneKeyCount] = at; toneKeyCount += 1
+                if hasVowel(letterCount) {
+                    if tone != .none { cancelled = true }
+                    tone = .none
+                    toneKeys[toneKeyCount] = at; toneKeyCount += 1
+                } else {
+                    appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
+                    rawLetter[at] = letterCount - 1
+                }
                 continue
             }
 
@@ -363,10 +622,12 @@ public struct TelexEngine {
                 if tIdx >= 0 {
                     let p = letters[tIdx]
                     if p.mark == .none && p.base == UInt8(ascii: "a") {
-                        letters[tIdx].mark = .breve; rawLetter[at] = tIdx; continue
+                        letters[tIdx].mark = .breve; rawLetter[at] = tIdx
+                        noteMark(at, trigger: true); continue
                     }
                     if p.mark == .none && (p.base == UInt8(ascii: "o") || p.base == UInt8(ascii: "u")) {
-                        letters[tIdx].mark = .horn; rawLetter[at] = tIdx; continue
+                        letters[tIdx].mark = .horn; rawLetter[at] = tIdx
+                        noteMark(at, trigger: true); continue
                     }
                     if p.mark == .breve && p.base == UInt8(ascii: "a") {
                         letters[tIdx].mark = .none
@@ -394,6 +655,7 @@ public struct TelexEngine {
                     appendLetter(&letterCount, base: UInt8(ascii: "w"), mark: .none, upper: upper)
                 }
                 rawLetter[at] = letterCount - 1
+                noteLiteral(at)
                 continue
             }
 
@@ -403,7 +665,8 @@ public struct TelexEngine {
                     let pIdx = letterCount - 1
                     let p = letters[pIdx]
                     if p.base == lower && p.mark == .none {
-                        letters[pIdx].mark = .circumflex; rawLetter[at] = pIdx; continue
+                        letters[pIdx].mark = .circumflex; rawLetter[at] = pIdx
+                        noteMark(at, trigger: true); continue
                     }
                     if p.base == lower && p.mark == .circumflex {
                         letters[pIdx].mark = .none
@@ -420,11 +683,13 @@ public struct TelexEngine {
                     var k = letterCount - 1
                     while k >= 0 && !isVowelAscii(letters[k].base) { k -= 1 }
                     if k >= 0, letters[k].base == lower, letters[k].mark == .none {
-                        letters[k].mark = .circumflex; rawLetter[at] = k; continue
+                        letters[k].mark = .circumflex; rawLetter[at] = k
+                        noteMark(at, trigger: true); continue
                     }
                 }
                 appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
                 rawLetter[at] = letterCount - 1
+                noteLiteral(at)
                 continue
             }
 
@@ -434,7 +699,9 @@ public struct TelexEngine {
                     let pIdx = letterCount - 1
                     let p = letters[pIdx]
                     if p.base == UInt8(ascii: "d") && p.mark == .none {
-                        letters[pIdx].mark = .bar; rawLetter[at] = pIdx; continue
+                        // Rule A: the trailing d of dd→đ never counts as a trigger.
+                        letters[pIdx].mark = .bar; rawLetter[at] = pIdx
+                        noteMark(at, trigger: false); continue
                     }
                     if p.base == UInt8(ascii: "d") && p.mark == .bar {
                         letters[pIdx].mark = .none
@@ -446,16 +713,19 @@ public struct TelexEngine {
                 // A trailing d (after a formed syllable) converts the onset d to đ,
                 // so "dand"->đan, "duwowngd"->đường even without doubling at the start.
                 if letterCount > 1, letters[0].base == UInt8(ascii: "d"), letters[0].mark == .none {
-                    letters[0].mark = .bar; rawLetter[at] = 0; continue
+                    letters[0].mark = .bar; rawLetter[at] = 0
+                    noteMark(at, trigger: false); continue   // trailing-d exclusion
                 }
                 appendLetter(&letterCount, base: UInt8(ascii: "d"), mark: .none, upper: upper)
                 rawLetter[at] = letterCount - 1
+                noteLiteral(at)
                 continue
             }
 
             // ordinary letter
             appendLetter(&letterCount, base: lower, mark: .none, upper: upper)
             rawLetter[at] = letterCount - 1
+            noteLiteral(at)
         }
 
         // ươ propagation: in a "uo" cluster, if EITHER letter is horned, mirror it
@@ -589,6 +859,33 @@ public struct TelexEngine {
         s.reserveCapacity(count)
         for k in 0..<count { s.append(Unicode.Scalar(letters[k].base)) }
         return Self.onsetsAllowingStandaloneU.contains(String(s))
+    }
+
+    // MARK: - Rule A flag bookkeeping (inside parse, zero extra passes)
+
+    /// A key was consumed as a diacritic mark. Marks after the first tone key are
+    /// Rule A triggers ("here" → h e r(tone) e(new ê mark)) — except the trailing
+    /// d of dd→đ, which is a normal Vietnamese afterthought ("dansd").
+    @inline(__always)
+    private mutating func noteMark(_ at: Int, trigger: Bool) {
+        if at < flagFirstMark { flagFirstMark = at }
+        if trigger, flagFirstTone < at { flagTrigger = true }
+    }
+
+    /// A key was consumed as a literal letter while transforms were live. Literal
+    /// letters after the first tone key are Rule A triggers ("test", "list").
+    @inline(__always)
+    private mutating func noteLiteral(_ at: Int) {
+        if flagFirstTone < at { flagTrigger = true }
+    }
+
+    /// String view of the first `n` scalars of the render scratch buffer.
+    /// Allocates — used only at the single moment Rule A fires (whitelist check).
+    private func scratchWord(_ n: Int) -> String {
+        var s = String.UnicodeScalarView()
+        s.reserveCapacity(n)
+        for i in 0..<n { s.append(Unicode.Scalar(scratch[i])!) }
+        return String(s)
     }
 
     @inline(__always)

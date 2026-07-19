@@ -333,9 +333,10 @@ final class EngineGoldenTests: XCTestCase {
     /// syllable revert to the raw keys at the boundary ("retore"→retỏe→"retore").
     /// With it OFF, the (invalid) composed form is kept.
     func testAutoRestoreRevertsInvalidWords() {
-        // (keys, composed-display, restored-to-raw)
-        let cases = [("retore", "retỏe"), ("user", "ủe"), ("paper", "pảpe"),
-                     ("after", "ảte"), ("strongs", "stróng"), ("codej", "cọde"),
+        // (keys, composed-display, restored-to-raw). These have no mid-word tone
+        // pattern (Rule A stays quiet), so the mangled display persists until the
+        // boundary, where auto-restore reverts the token.
+        let cases = [("paper", "pảpe"), ("strongs", "stróng"), ("codej", "cọde"),
                      ("helloj", "hẹllo")]
         for (keys, display) in cases {
             var on = TelexEngine()
@@ -349,10 +350,22 @@ final class EngineGoldenTests: XCTestCase {
             XCTAssertEqual(off.commitText(autoRestore: false), display, "off keeps VN: \(keys)")
         }
 
-        // A composed form that happens to be a valid syllable is NOT restored, even
-        // when the raw was English — rule-based can't tell "test"→"tét" (bánh tét)
-        // apart. Documents the known limitation.
+        // These consume a tone key mid-word and keep typing — Rule A flags them as
+        // English immediately, so the display is already the raw keystrokes and
+        // the commit leaves them as typed (see EnglishDetectionTests).
+        for keys in ["retore", "user", "after"] {
+            var e = TelexEngine()
+            for ch in keys { _ = e.feed(ch) }
+            XCTAssertEqual(e.composed, keys, "Rule A literal display: \(keys)")
+            XCTAssertEqual(e.commitText(autoRestore: true), keys)
+        }
+
+        // A composed form that happens to be a valid syllable with a TERMINAL tone
+        // is NOT restored — rule-based can't tell "tets"→"tét" (bánh tét) apart
+        // from English. With detection off, even "test" commits as "tét"
+        // (the pre-Rule-A behaviour, kept accessible via the setting).
         var t = TelexEngine()
+        t.detectEnglishTone = false
         for ch in "test" { _ = t.feed(ch) }
         XCTAssertEqual(t.composed, "tét")
         XCTAssertTrue(SyllableValidator.isValidSyllable("tét"))

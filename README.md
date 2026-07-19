@@ -14,9 +14,20 @@ Bộ gõ tiếng Việt kiểu **Telex** cho macOS. Gõ tự nhiên, mượt: **
 - **Kiểu bỏ dấu cũ / mới** — `hòa, thủy` (cũ, mặc định) hoặc `hoà, thuý` (mới).
 - **Kiểm tra chính tả khi gõ** — ngừng bỏ dấu ngay khi từ không thể là tiếng Việt
   (`google`, `github`…), cộng với **tự khôi phục** ở ranh giới từ: từ không hợp lệ được
-  trả về đúng chuỗi phím đã gõ. Dùng validator âm vị học (`SyllableValidator`),
-  không cần từ điển.
+  trả về đúng chuỗi phím đã gõ. Dùng validator âm vị học compositional
+  (onset · glide · nucleus · coda · tone, ~330 byte bảng tĩnh), không cần từ điển.
+- **Phát hiện từ tiếng Anh** (bật/tắt, mặc định BẬT) — luật "dấu thanh phải ở cuối từ":
+  `test`, `list`, `here`, `horse`… hiện nguyên dạng ngay khi gõ thay vì thành `tét`, `lít`.
+  Tự tắt cho người quen gõ dấu sớm (`tieesng`) sau 2 từ nhận diện được, và khi bật
+  bỏ dấu tự do.
+- **Sửa từ vừa gõ** — Backspace ngay sau space mở lại từ trước đó để bỏ dấu tiếp
+  (`hoa␣` + Backspace + `f` → `hoà`).
+- **Gõ một từ tiếng Anh nhanh** — nhấn-thả Ctrl (không kèm phím khác) tắt biến đổi +
+  chính tả cho đúng từ đang gõ.
+- **Từ ngoại lệ** — whitelist từ không bị tự khôi phục (`wifi`, tên riêng…),
+  sửa trong Cài đặt.
 - **Gõ tắt** (bảng gõ tắt): định nghĩa `vn` → `Việt Nam`…, import/export plist.
+  Tự viết hoa theo cách gõ: `Vn` → `Việt nam`, `VN` → `VIỆT NAM`.
 - **Gõ được trong Terminal** (iTerm, Terminal, Claude Code…) qua CGEventTap — vừa gõ
   tiếng Việt vừa giữ nguyên autocomplete/Tab của shell, điều IMKit thuần không làm được.
 - **Xử lý autocomplete thông minh** cho Chrome/Spotlight (chọn-rồi-ghi-đè bằng Shift+←)

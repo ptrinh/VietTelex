@@ -23,15 +23,20 @@ final class AppState: @unchecked Sendable {
         static let modernOrthography = "modernOrthography"
         static let liveSpellCheck = "liveSpellCheck"
         static let simpleTelex = "simpleTelex"
+        static let englishToneDetection = "englishToneDetection"
+        static let toneEarlyCount = "toneEarlyCount"  // kill-switch counter for Rule A
         static let shortcuts = "shortcuts"
+        static let restoreWhitelist = "restoreWhitelist"  // words never auto-restored
         static let fallbackApps = "fallbackApps"      // learned: ignore replacementRange
         static let probedApps = "probedApps"          // learned: verified good
     }
 
     // In-memory caches (loaded once).
     private var shortcutsCache: [String: String]
+    private var restoreWhitelistCache: Set<String>
     private var fallbackAppsCache: Set<String>
     private var probedAppsCache: Set<String>
+    private var toneEarlyCountCache: Int
 
     /// Bundle id of the frontmost client, set in activateServer.
     var currentBundleID: String?
@@ -44,8 +49,11 @@ final class AppState: @unchecked Sendable {
 
     private init() {
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
+        restoreWhitelistCache = Set(
+            (defaults.stringArray(forKey: Key.restoreWhitelist) ?? []).map { $0.lowercased() })
         fallbackAppsCache = Set(defaults.stringArray(forKey: Key.fallbackApps) ?? [])
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
+        toneEarlyCountCache = defaults.integer(forKey: Key.toneEarlyCount)
         for key in Self.legacyKeys { defaults.removeObject(forKey: key) }
     }
 
@@ -93,6 +101,28 @@ final class AppState: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Key.simpleTelex) }
     }
 
+    /// English tone-position detection (Rule A): a word that consumes a tone key
+    /// mid-word and keeps typing (test→tét, list→lít) is English — render it
+    /// literally and commit as typed. Default ON. Gates Rule A only; see
+    /// `TelexEngine.detectEnglishTone`.
+    var englishToneDetection: Bool {
+        get { defaults.object(forKey: Key.englishToneDetection) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.englishToneDetection) }
+    }
+
+    // MARK: - Tone-early kill-switch (Rule A learning)
+
+    /// The user types tone-early style ("tieesng"): once ≥2 clean commits matched
+    /// the mark-before-tone + keys-after-tone pattern, Rule A goes permanently
+    /// silent. Cached once; the hot path only reads memory.
+    var toneEarlyStyle: Bool { toneEarlyCountCache >= 2 }
+
+    /// Record one tone-early-pattern commit (called at word boundaries only).
+    func noteToneEarlyCommit() {
+        toneEarlyCountCache += 1
+        defaults.set(toneEarlyCountCache, forKey: Key.toneEarlyCount)
+    }
+
     // MARK: - Shortcuts (bảng gõ tắt)
 
     /// Read-only snapshot used at word boundaries (no disk hit).
@@ -112,6 +142,29 @@ final class AppState: @unchecked Sendable {
     func removeShortcut(key: String) {
         shortcutsCache.removeValue(forKey: key)
         defaults.set(shortcutsCache, forKey: Key.shortcuts)
+    }
+
+    // MARK: - Auto-restore whitelist (từ ngoại lệ)
+
+    /// Words `SyllableValidator` rejects but must never be auto-restored ("wifi",
+    /// proper names). Stored and matched CASE-FOLDED; read-only snapshot for the
+    /// boundary check (O(1) Set lookup, no disk hit — same cache-once pattern as
+    /// `shortcuts`).
+    var restoreWhitelist: Set<String> { restoreWhitelistCache }
+
+    /// Sorted view for the Settings UI.
+    var restoreWhitelistWords: [String] { restoreWhitelistCache.sorted() }
+
+    func addWhitelistWord(_ word: String) {
+        let w = word.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !w.isEmpty, !restoreWhitelistCache.contains(w) else { return }
+        restoreWhitelistCache.insert(w)
+        defaults.set(Array(restoreWhitelistCache), forKey: Key.restoreWhitelist)
+    }
+
+    func removeWhitelistWord(_ word: String) {
+        guard restoreWhitelistCache.remove(word.lowercased()) != nil else { return }
+        defaults.set(Array(restoreWhitelistCache), forKey: Key.restoreWhitelist)
     }
 
     // MARK: - Learned typing strategy (in-place replacementRange vs marked text)

@@ -9,7 +9,11 @@ Bộ gõ tiếng Việt cho macOS. Ưu tiên tuyệt đối: **performance** (la
   z = xóa dấu. Không VNI, không hỗn hợp.
 - Bảng mã: **Unicode dựng sẵn (NFC precomposed)** duy nhất.
 - Tùy chọn: Simple Telex, bỏ dấu tự do, kiểu bỏ dấu cũ/mới (hòa/hoà), kiểm tra chính tả
-  khi gõ, tự khôi phục từ không hợp lệ, bảng gõ tắt.
+  khi gõ, tự khôi phục từ không hợp lệ, phát hiện từ tiếng Anh (Rule A), bảng gõ tắt
+  (kèm auto-caps), whitelist từ ngoại lệ.
+- Tiện ích không cần setting (luôn bật): resume từ trước bằng Backspace-sau-space,
+  Ctrl-tap bỏ qua biến đổi cho một từ, guard 4+ phím lặp (jjjj trong vim),
+  tolerance phụ âm mượn z/w/j/f.
 - **Không có bật/tắt VI/EN nội bộ, không hotkey riêng**: Vietnamese bật khi VietTelex là
   input source đang chọn; chuyển input source để gõ tiếng Anh (macOS nhớ theo app).
 - KHÔNG làm: nhớ theo browser tab (IME không thấy được tab), check update, từ điển file
@@ -86,20 +90,38 @@ Quy tắc ổn định đã rút ra khi implement (chi tiết trong `MACOS_IME_N
 
 ## SyllableValidator (thay từ điển)
 
-Âm tiết tiếng Việt đóng theo luật → validate bằng phonotactics, không cần file:
-- Parse: onset (∅, b, c, ch, d, đ, g/gh, gi, h, kh, l, m, n, ng/ngh, nh, p, ph, qu, r,
-  s, t, th, tr, v, x) + rime (bảng ~180 vần hợp lệ hard-code) + tone.
-- Ràng buộc: coda p/t/c/ch chỉ đi với sắc/nặng.
+Âm tiết tiếng Việt đóng theo luật → validate bằng phonotactics, không cần file.
+Mô hình compositional **Onset · (Glide) · Nucleus · (Coda) · Tone** trên bảng integer
+packed (~330 byte static, zero heap khi validate):
+- Onset (28, gồm ∅/qu/gi) + spelling gate: `k/gh/ngh` chỉ trước e ê i y; `c/ng` không
+  trước e ê i y; `g` non-front trừ `gi`-parse (gì, gìn).
+- Nucleus: 30 chuỗi nguyên âm (kèm glide) → bitmask 13 coda cho phép + cờ
+  zeroOnsetOnly (ya/yê). Nucleus không ổn định (ă â iê oă uâ uô ươ oo yê trần) không
+  được đứng cuối.
+- 2 retry zero-cost: `qu`+y → thử nucleus `u…` (quỳnh/quýt/quých); `gi`+ê → thử `i…`
+  (giêng/giếc) — nhờ đó bỏ được vần rởm `êng`.
+- Ràng buộc: coda p/t/c/ch chỉ đi với sắc/nặng. Độ dài raw tối đa 1 âm tiết = 9 phím
+  (`nghieengs`).
 - `isValidSyllable` dùng ở ranh giới từ cho auto-restore; `isValidPrefix` (fold nguyên
   âm về gốc để chấp nhận trạng thái Telex trung gian) dùng cho live spell-check.
-- Chi phí: O(độ dài từ), zero RAM ngoài static tables.
-- Hạn chế cố hữu (chấp nhận): từ tiếng Anh trùng âm tiết Việt hợp lệ (`test`→tét,
-  `list`→lít) không khôi phục được — cần từ điển/tần suất, ngoài phạm vi.
+- Chi phí: O(độ dài từ), một lượt duyệt, không cấp phát.
+
+**Phát hiện từ tiếng Anh (Rule A, setting "Phát hiện từ tiếng Anh", mặc định bật):**
+với người gõ dấu cuối từ, mọi từ Việt hợp lệ có tone key là phím hiệu lực cuối cùng.
+Từ tiếng Anh trùng âm tiết hợp lệ (`test`→tét, `here`→hể) vi phạm đúng điều này
+(có phím literal/mark sau tone key đã tiêu thụ). 3 cờ vị trí trong parse pass sẵn có,
+0 byte bảng; khi nghi ngờ → re-render literal ngay (thấy `test` chứ không phải
+`tét`-rồi-khôi-phục). Miễn trừ: có mark trước tone (`tieesng`), tone replacement, `z`,
+đuôi `d` của `dd`. Kill-switch: 2 từ hợp lệ kiểu gõ-dấu-sớm → tắt vĩnh viễn
+(`toneEarlyStyle`, persist). Tự tắt khi bật bỏ dấu tự do. Hạn chế còn lại (chấp nhận):
+từ tiếng Anh có chuỗi phím trùng hệt cách gõ Việt (`his`≡hí, `seen`≡sên) — về nguyên
+tắc không phân biệt được nếu không có từ điển.
 
 ## State & Settings
 
 - `UserDefaults` (suite riêng): autoRestore, freeMarking, modernOrthography,
-  liveSpellCheck, simpleTelex, shortcuts `[String: String]`, fallbackApps, probedApps.
+  liveSpellCheck, simpleTelex, englishToneDetection, toneEarlyCount, restoreWhitelist,
+  shortcuts `[String: String]`, fallbackApps, probedApps.
 - Cache in-memory load một lần; hot path chỉ đọc cache, không đọc disk.
 - Bảng gõ tắt chỉ tra ở word boundary.
 
@@ -121,7 +143,7 @@ Quy tắc ổn định đã rút ra khi implement (chi tiết trong `MACOS_IME_N
 ## Ngoài phạm vi (đã quyết định không làm)
 
 - Phím ngoặc `[`→ơ `]`→ư, quick consonants (f→ph, w→qu, g→ng), `oo` literal cho từ mượn
-  (xoong, boong), macro auto-caps, tự viết hoa đầu câu.
+  (xoong, boong), tự viết hoa đầu câu.
 - VNI (phím 6/7/8/9), Quick Telex (cc=ch, gg=gi), smart switch EN/VI, Dvorak,
   Windows/Linux.
 

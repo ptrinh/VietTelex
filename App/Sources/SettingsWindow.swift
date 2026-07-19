@@ -57,7 +57,9 @@ final class SettingsModel: ObservableObject {
     @Published var modernOrthography: Bool { didSet { AppState.shared.modernOrthography = modernOrthography } }
     @Published var liveSpellCheck: Bool { didSet { AppState.shared.liveSpellCheck = liveSpellCheck } }
     @Published var simpleTelex: Bool { didSet { AppState.shared.simpleTelex = simpleTelex } }
+    @Published var englishToneDetection: Bool { didSet { AppState.shared.englishToneDetection = englishToneDetection } }
     @Published var shortcuts: [ShortcutRow] = []
+    @Published var whitelist: [String] = []
     @Published var fallbackApps: [String] = []
     @Published var inPlaceApps: [String] = []
 
@@ -68,8 +70,24 @@ final class SettingsModel: ObservableObject {
         modernOrthography = AppState.shared.modernOrthography
         liveSpellCheck = AppState.shared.liveSpellCheck
         simpleTelex = AppState.shared.simpleTelex
+        englishToneDetection = AppState.shared.englishToneDetection
         reloadShortcuts()
+        reloadWhitelist()
         reloadLearnedApps()
+    }
+
+    func reloadWhitelist() {
+        whitelist = AppState.shared.restoreWhitelistWords
+    }
+
+    func addWhitelistWord(_ word: String) {
+        AppState.shared.addWhitelistWord(word)
+        reloadWhitelist()
+    }
+
+    func removeWhitelistWord(_ word: String) {
+        AppState.shared.removeWhitelistWord(word)
+        reloadWhitelist()
     }
 
     func reloadLearnedApps() {
@@ -118,6 +136,7 @@ struct SettingsView: View {
 
 struct GeneralTab: View {
     @EnvironmentObject var model: SettingsModel
+    @State private var newWhitelistWord = ""
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -140,6 +159,28 @@ struct GeneralTab: View {
                 Toggle("Tự khôi phục từ không hợp lệ", isOn: $model.autoRestore)
                 Toggle("Kiểm tra chính tả khi gõ", isOn: $model.liveSpellCheck)
                 Text("Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt (google, github…) thay vì đợi hết từ.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Phát hiện từ tiếng Anh", isOn: $model.englishToneDetection)
+                Text("Từ tiếng Anh trùng âm Việt (test→tét, list→lít) được giữ nguyên: dấu thanh gõ giữa từ rồi gõ tiếp là dấu hiệu tiếng Anh. Tự tắt nếu bạn quen bỏ dấu sớm (tieesng).")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Từ ngoại lệ (không tự khôi phục)") {
+                ForEach(model.whitelist, id: \.self) { word in
+                    HStack {
+                        Text(word)
+                        Spacer()
+                        Button(role: .destructive) { model.removeWhitelistWord(word) } label: {
+                            Image(systemName: "trash")
+                        }.buttonStyle(.borderless)
+                    }
+                }
+                HStack {
+                    TextField("wifi, tên riêng…", text: $newWhitelistWord)
+                        .onSubmit { addWhitelistWord() }
+                    Button("Thêm") { addWhitelistWord() }
+                        .disabled(newWhitelistWord.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                Text("Các từ trong danh sách không bao giờ bị tự khôi phục về phím gốc dù không phải âm tiết tiếng Việt.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Tương thích ứng dụng") {
@@ -171,6 +212,13 @@ struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func addWhitelistWord() {
+        let w = newWhitelistWord.trimmingCharacters(in: .whitespaces)
+        guard !w.isEmpty else { return }
+        model.addWhitelistWord(w)
+        newWhitelistWord = ""
     }
 }
 
