@@ -75,7 +75,10 @@ out, i1, i2 = sys.argv[1:4]
 for src, name in [(i1, "instructions-1.png"), (i2, "instructions-2.png")]:
     im = Image.open(src).convert("RGB"); im.thumbnail((880, 880), Image.LANCZOS)
     q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
-    q.save(f"{out}/{name}", optimize=True)
+    # dpi=144 -> RTFD/NSTextAttachment shows 880px as 440pt: fits the ~800pt
+    # Summary pane (textutil sizes attachments by POINTS from the PNG's pHYs),
+    # and stays crisp on Retina (2x pixels available).
+    q.save(f"{out}/{name}", optimize=True, dpi=(144, 144))
 PY2
 (cd "$RTFDSRC" && textutil -convert rtfd conclusion.en.html -output en.rtfd \
                 && textutil -convert rtfd conclusion.vi.html -output vi.rtfd)
