@@ -222,7 +222,7 @@ struct AboutTab: View {
             Text("VietTelex").font(.title2).bold()
             Text(String(format: model.loc("Version %@ · %@"), appVersion, buildDate))
                 .foregroundStyle(.secondary)
-            Link("Website", destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
+            Link("Website", destination: URL(string: "https://ptrinh.github.io/viettelex/")!)
 
             // Manual update check — the only thing that touches the network, and
             // only on this click (see Updater.swift).
