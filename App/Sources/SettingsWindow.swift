@@ -205,7 +205,7 @@ struct AboutTab: View {
                 .frame(width: 128, height: 128)
             Text("VietTelex").font(.title2).bold()
             Text("Version \(appVersion) ngày \(buildDate)").foregroundStyle(.secondary)
-            Link("ptrinh.github.io/VietTelex",
+            Link("Website",
                  destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
 
             // Manual update check — the only thing that touches the network, and
