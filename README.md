@@ -8,7 +8,7 @@ Bộ gõ tiếng Việt kiểu **Telex** cho macOS. Gõ tự nhiên, mượt: **
 
 ## Giới thiệu
 
-VietTelex (ViệtTelex) là một dự án của **Phil Trịnh** — ra đời sau nhiều năm dùng macOS mà vẫn chưa tìm được một bộ gõ tiếng Việt nào thật sự *ngon, chuẩn và mượt* trên nền tảng này. VietTelex được viết lại từ đầu để giải quyết đúng những điểm đó.
+VietTelex (ViệtTelex/ViếtTelex) là một dự án của **Phil Trịnh** — ra đời sau nhiều năm dùng macOS mà vẫn chưa tìm được một bộ gõ tiếng Việt nào thật sự *ngon, chuẩn và mượt* trên nền tảng này. VietTelex được viết lại từ đầu để giải quyết đúng những điểm đó.
 
 ### Điểm khác biệt so với các bộ gõ khác trên macOS
 
