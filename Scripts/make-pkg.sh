@@ -57,11 +57,17 @@ pkgbuild --root "$WORK/payload" \
 # 4. Product archive (adds title + conclusion screen + user-home domain).
 sed "s/__VERSION__/$VER/g" "$RES/distribution.xml" > "$WORK/distribution.xml"
 
+# Assemble the productbuild resources dir: the conclusion page + the annotated
+# screenshots it references (kept single-sourced in assets/, copied at build).
+mkdir -p "$WORK/resources"
+cp "$RES/conclusion.html" "$WORK/resources/"
+cp assets/instructions-1.png assets/instructions-2.png "$WORK/resources/"
+
 echo "→ productbuild"
 if security find-identity -v 2>/dev/null | grep -q "Developer ID Installer"; then
     productbuild --distribution "$WORK/distribution.xml" \
                  --package-path "$WORK" \
-                 --resources "$RES" \
+                 --resources "$WORK/resources" \
                  --sign "$INSTALLER_SIGN_ID" \
                  "$OUT" >/dev/null
     echo "→ notarizing pkg (waits for result)"
@@ -72,7 +78,7 @@ if security find-identity -v 2>/dev/null | grep -q "Developer ID Installer"; the
 else
     productbuild --distribution "$WORK/distribution.xml" \
                  --package-path "$WORK" \
-                 --resources "$RES" \
+                 --resources "$WORK/resources" \
                  "$OUT" >/dev/null
     echo "⚠️  UNSIGNED installer (local test only): $OUT"
     echo "   Create a 'Developer ID Installer' certificate, then re-run to ship it."
