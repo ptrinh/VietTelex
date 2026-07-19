@@ -8,6 +8,9 @@
 
 /* General tab */
 "Input style" = "Kiểu gõ";
+"Simple Telex" = "Telex đơn giản";
+"Language" = "Ngôn ngữ";
+"System" = "Theo hệ thống";
 "A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư)." = "Chữ w đứng một mình luôn là 'w' (gõ 'uw' để ra ư). Tắt = Telex đầy đủ (cw→cư).";
 "Free tone placement" = "Bỏ dấu tự do";
 "Off = strict Telex: tones apply only next to a vowel — good for English/code (data→data). On: free placement (ama→âm)." = "Tắt = Telex nghiêm ngặt: dấu chỉ nhận khi gõ sát nguyên âm, hợp cho English/code (data→data). Bật: dấu đặt tự do (ama→âm).";

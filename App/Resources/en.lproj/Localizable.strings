@@ -1,0 +1,4 @@
+/* Settings UI — English. Keys ARE the English source strings, so this table can
+   stay empty: any lookup misses and falls back to the key (= English). It exists
+   so an explicit "English" UI-language pick resolves to en.lproj even on a
+   Vietnamese-language system (VTLocalized loads this bundle by name). */

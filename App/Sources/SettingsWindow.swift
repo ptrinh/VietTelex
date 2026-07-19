@@ -28,7 +28,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             let root = SettingsView().environmentObject(model)
             let hosting = NSHostingController(rootView: root)
             let win = NSWindow(contentViewController: hosting)
-            win.title = String(localized: "VietTelex — Settings")
+            win.title = VTLocalized("VietTelex — Settings")
             win.styleMask = [.titled, .closable, .miniaturizable]
             win.setContentSize(NSSize(width: 580, height: 440))
             win.delegate = self
@@ -58,6 +58,9 @@ final class SettingsModel: ObservableObject {
     @Published var modernOrthography: Bool { didSet { AppState.shared.modernOrthography = modernOrthography } }
     @Published var liveSpellCheck: Bool { didSet { AppState.shared.liveSpellCheck = liveSpellCheck } }
     @Published var simpleTelex: Bool { didSet { AppState.shared.simpleTelex = simpleTelex } }
+    /// UI language: "system" / "en" / "vi". Changing it re-renders every view that
+    /// observes this model (they call `loc(_:)`), so the switch is live — no relaunch.
+    @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
     @Published var shortcuts: [ShortcutRow] = []
     @Published var fallbackApps: [String] = []
     @Published var inPlaceApps: [String] = []
@@ -69,9 +72,13 @@ final class SettingsModel: ObservableObject {
         modernOrthography = AppState.shared.modernOrthography
         liveSpellCheck = AppState.shared.liveSpellCheck
         simpleTelex = AppState.shared.simpleTelex
+        uiLanguage = AppState.shared.uiLanguage
         reloadShortcuts()
         reloadLearnedApps()
     }
+
+    /// Localized string for the user's chosen UI language (see `VTLocalized`).
+    func loc(_ key: String) -> String { VTLocalized(key) }
 
     func reloadLearnedApps() {
         fallbackApps = AppState.shared.learnedFallbackApps
@@ -107,9 +114,9 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $model.selectedTab) {
-            GeneralTab().tabItem { Text("Settings") }.tag(SettingsTab.general)
-            ShortcutsTab().tabItem { Text("Shortcuts") }.tag(SettingsTab.shortcuts)
-            AboutTab().tabItem { Text("About") }.tag(SettingsTab.about)
+            GeneralTab().tabItem { Text(model.loc("Settings")) }.tag(SettingsTab.general)
+            ShortcutsTab().tabItem { Text(model.loc("Shortcuts")) }.tag(SettingsTab.shortcuts)
+            AboutTab().tabItem { Text(model.loc("About")) }.tag(SettingsTab.about)
         }
         .padding(16)
         .frame(width: 580, height: 440)
@@ -123,45 +130,52 @@ struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section("Input style") {
-                Toggle("Simple Telex", isOn: $model.simpleTelex)
-                Text("A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư).")
+            Section(model.loc("Input style")) {
+                Toggle(model.loc("Simple Telex"), isOn: $model.simpleTelex)
+                Text(model.loc("A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư)."))
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Free tone placement", isOn: $model.freeMarking)
-                Text("Off = strict Telex: tones apply only next to a vowel — good for English/code (data→data). On: free placement (ama→âm).")
+                Toggle(model.loc("Free tone placement"), isOn: $model.freeMarking)
+                Text(model.loc("Off = strict Telex: tones apply only next to a vowel — good for English/code (data→data). On: free placement (ama→âm)."))
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Modern tone placement (oà, uý)", isOn: $model.modernOrthography)
-                Text("Off = old style (hòa, thủy, khỏe). On = new style (hoà, thuý, khoẻ). Only oa/oe/uy differ.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Spelling") {
-                Toggle("Auto-restore invalid words", isOn: $model.autoRestore)
-                Toggle("Live spell-check", isOn: $model.liveSpellCheck)
-                Text("Stop adding tones as soon as a word can’t be Vietnamese (google, github…) instead of waiting for word end.")
+                Toggle(model.loc("Modern tone placement (oà, uý)"), isOn: $model.modernOrthography)
+                Text(model.loc("Off = old style (hòa, thủy, khỏe). On = new style (hoà, thuý, khoẻ). Only oa/oe/uy differ."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("App compatibility") {
+            Section(model.loc("Spelling")) {
+                Toggle(model.loc("Auto-restore invalid words"), isOn: $model.autoRestore)
+                Toggle(model.loc("Live spell-check"), isOn: $model.liveSpellCheck)
+                Text(model.loc("Stop adding tones as soon as a word can’t be Vietnamese (google, github…) instead of waiting for word end."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(model.loc("App compatibility")) {
                 if model.fallbackApps.isEmpty && model.inPlaceApps.isEmpty {
-                    Text("No apps learned yet.")
+                    Text(model.loc("No apps learned yet."))
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     if !model.fallbackApps.isEmpty {
-                        Text("Marked text: \(model.fallbackApps.joined(separator: ", "))")
+                        Text(String(format: model.loc("Marked text: %@"), model.fallbackApps.joined(separator: ", ")))
                             .font(.caption).foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
                     if !model.inPlaceApps.isEmpty {
-                        Text("In-place OK: \(model.inPlaceApps.joined(separator: ", "))")
+                        Text(String(format: model.loc("In-place OK: %@"), model.inPlaceApps.joined(separator: ", ")))
                             .font(.caption).foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
                 }
-                Button("Reset (re-probe)") {
+                Button(model.loc("Reset (re-probe)")) {
                     AppState.shared.resetLearnedApps()
                     model.reloadLearnedApps()
                 }
-                Text("VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe.")
+                Text(model.loc("VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe."))
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(model.loc("Language")) {
+                Picker(model.loc("Language"), selection: $model.uiLanguage) {
+                    Text(model.loc("System")).tag("system")
+                    Text("Tiếng Việt").tag("vi")
+                    Text("English").tag("en")
+                }
             }
         }
         .formStyle(.grouped)
@@ -171,6 +185,8 @@ struct GeneralTab: View {
 // MARK: - Tab: Giới thiệu
 
 struct AboutTab: View {
+    @EnvironmentObject var model: SettingsModel
+
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
@@ -204,9 +220,9 @@ struct AboutTab: View {
                 .interpolation(.high)
                 .frame(width: 128, height: 128)
             Text("VietTelex").font(.title2).bold()
-            Text("Version \(appVersion) · \(buildDate)").foregroundStyle(.secondary)
-            Link("ptrinh.github.io/viettelex",
-                 destination: URL(string: "https://ptrinh.github.io/viettelex/")!)
+            Text(String(format: model.loc("Version %@ · %@"), appVersion, buildDate))
+                .foregroundStyle(.secondary)
+            Link("Website", destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
 
             // Manual update check — the only thing that touches the network, and
             // only on this click (see Updater.swift).
@@ -214,9 +230,9 @@ struct AboutTab: View {
                 if checking {
                     ProgressView().controlSize(.small)
                 } else if let updateURL {
-                    Button("Download update…") { NSWorkspace.shared.open(updateURL) }
+                    Button(model.loc("Download update…")) { NSWorkspace.shared.open(updateURL) }
                 } else {
-                    Button("Check for updates") { runCheck() }
+                    Button(model.loc("Check for updates")) { runCheck() }
                 }
                 if let status {
                     Text(status).font(.caption).foregroundStyle(.secondary)
@@ -238,11 +254,11 @@ struct AboutTab: View {
                 checking = false
                 switch outcome {
                 case .upToDate(let v):
-                    status = String(localized: "You’re up to date (\(v)).")
+                    status = String(format: model.loc("You’re up to date (%@)."), v)
                 case .update(let latest, let url):
-                    status = String(localized: "Update available: \(latest)"); updateURL = url
+                    status = String(format: model.loc("Update available: %@"), latest); updateURL = url
                 case .failed(let e):
-                    status = String(localized: "Couldn’t check — \(e).")
+                    status = String(format: model.loc("Couldn’t check — %@."), e)
                 }
             }
         }
@@ -265,8 +281,8 @@ struct ShortcutsTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Table(model.shortcuts, selection: $selection) {
-                TableColumn("Type", value: \.key)
-                TableColumn("Becomes", value: \.value)
+                TableColumn(model.loc("Type"), value: \.key)
+                TableColumn(model.loc("Becomes"), value: \.value)
                 TableColumn("") { row in
                     Button(role: .destructive) { model.removeShortcut(row.key) } label: {
                         Image(systemName: "trash")
@@ -283,17 +299,17 @@ struct ShortcutsTab: View {
             }
 
             HStack {
-                TextField("type", text: $newKey).frame(width: 120)
-                TextField("becomes", text: $newValue)
-                Button(String(localized: isEditing ? "Update" : "Add")) { save() }
+                TextField(model.loc("type"), text: $newKey).frame(width: 120)
+                TextField(model.loc("becomes"), text: $newValue)
+                Button(model.loc(isEditing ? "Update" : "Add")) { save() }
                     .disabled(newKey.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            Text("Click a row to edit.")
+            Text(model.loc("Click a row to edit."))
                 .font(.caption).foregroundStyle(.secondary)
 
             HStack {
-                Button("Import from plist…") { importPlist() }
-                Button("Export to plist…") { exportPlist() }
+                Button(model.loc("Import from plist…")) { importPlist() }
+                Button(model.loc("Export to plist…")) { exportPlist() }
                 Spacer()
             }
         }
@@ -306,10 +322,10 @@ struct ShortcutsTab: View {
         // otherwise a typo in the key field silently clobbers an existing shortcut.
         if AppState.shared.shortcuts[key] != nil, selection != key {
             let alert = NSAlert()
-            alert.messageText = String(localized: "Shortcut “\(key)” already exists")
-            alert.informativeText = String(localized: "Overwrite the existing value?")
-            alert.addButton(withTitle: String(localized: "Overwrite"))
-            alert.addButton(withTitle: String(localized: "Cancel"))
+            alert.messageText = String(format: VTLocalized("Shortcut “%@” already exists"), key)
+            alert.informativeText = VTLocalized("Overwrite the existing value?")
+            alert.addButton(withTitle: VTLocalized("Overwrite"))
+            alert.addButton(withTitle: VTLocalized("Cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         model.addShortcut(key: key, value: newValue)
@@ -326,8 +342,8 @@ struct ShortcutsTab: View {
         else {
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = String(localized: "Couldn’t read the file")
-            alert.informativeText = String(localized: "The file must be a String → String dictionary plist (like the one Export to plist… creates).")
+            alert.messageText = VTLocalized("Couldn’t read the file")
+            alert.informativeText = VTLocalized("The file must be a String → String dictionary plist (like the one Export to plist… creates).")
             alert.runModal()
             return
         }
@@ -337,8 +353,8 @@ struct ShortcutsTab: View {
         AppState.shared.setShortcuts(merged)
         model.reloadShortcuts()
         let alert = NSAlert()
-        alert.messageText = String(localized: "Imported \(dict.count) shortcuts")
-        alert.informativeText = String(localized: "Merged into the existing table (duplicates take the new value).")
+        alert.messageText = String(format: VTLocalized("Imported %lld shortcuts"), dict.count)
+        alert.informativeText = VTLocalized("Merged into the existing table (duplicates take the new value).")
         alert.runModal()
     }
 

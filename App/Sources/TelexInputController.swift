@@ -368,14 +368,14 @@ final class TelexInputController: IMKInputController {
 
         // Status first. OK when Accessibility is granted (terminal tap works), else
         // missing. No checkmark. Click → grant-permission pane if missing, else a debug log.
-        let status = NSMenuItem(title: Accessibility.isTrusted ? String(localized: "Status: OK") : String(localized: "Status: Permission needed"),
+        let status = NSMenuItem(title: Accessibility.isTrusted ? VTLocalized("Status: OK") : VTLocalized("Status: Permission needed"),
                                 action: #selector(showStatus(_:)), keyEquivalent: "")
         status.target = self
         menu.addItem(status)
 
         // Everything else lives in the Settings window (Chung + Gõ tắt tabs). The menu
         // stays minimal: status + Settings.
-        let settings = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings(_:)), keyEquivalent: "")
+        let settings = NSMenuItem(title: VTLocalized("Settings…"), action: #selector(openSettings(_:)), keyEquivalent: "")
         settings.target = self
         menu.addItem(settings)
 
@@ -421,10 +421,10 @@ final class TelexInputController: IMKInputController {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = String(localized: "Accessibility permission needed")
-        alert.informativeText = String(localized: "VietTelex needs Accessibility to type Vietnamese in Terminal/iTerm and browsers.\n\nOpen System Settings → Privacy & Security → Accessibility and enable VietTelex (if it’s already there, untick then tick it again).")
-        alert.addButton(withTitle: String(localized: "Open Settings"))
-        alert.addButton(withTitle: String(localized: "Close"))
+        alert.messageText = VTLocalized("Accessibility permission needed")
+        alert.informativeText = VTLocalized("VietTelex needs Accessibility to type Vietnamese in Terminal/iTerm and browsers.\n\nOpen System Settings → Privacy & Security → Accessibility and enable VietTelex (if it’s already there, untick then tick it again).")
+        alert.addButton(withTitle: VTLocalized("Open Settings"))
+        alert.addButton(withTitle: VTLocalized("Close"))
         let resp = alert.runModal()
         if resp == .alertFirstButtonReturn,
            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {

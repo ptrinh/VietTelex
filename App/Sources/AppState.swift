@@ -94,6 +94,14 @@ final class AppState: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Key.simpleTelex) }
     }
 
+    /// UI language override for the Settings window + menu, independent of the
+    /// system language: "system" (follow macOS), "en", or "vi". Default "system".
+    /// Read by `VTLocalized`.
+    var uiLanguage: String {
+        get { defaults.string(forKey: "uiLanguage") ?? "system" }
+        set { defaults.set(newValue, forKey: "uiLanguage") }
+    }
+
     /// Tap-mode native fast path: non-transforming letters pass through natively
     /// (zero synthetic events) when no synthetic burst is in flight. Default ON.
     /// Kill switch if reordering ever reappears on some setup:
@@ -220,4 +228,20 @@ final class AppState: @unchecked Sendable {
         get { defaults.bool(forKey: "axPromptShown") }
         set { defaults.set(newValue, forKey: "axPromptShown") }
     }
+}
+
+/// Look up a UI string honoring the user's chosen `AppState.uiLanguage`. Keys are
+/// the English source strings (dev region = en); "vi" reads vi.lproj, "en" falls
+/// back to the key (= English), "system" uses the system-resolved main bundle.
+/// Used by both the SwiftUI Settings window and the AppKit menu/alerts so an
+/// explicit language pick applies everywhere, immediately (views re-render via the
+/// SettingsModel's @Published language).
+func VTLocalized(_ key: String) -> String {
+    let lang = AppState.shared.uiLanguage
+    if lang != "system",
+       let path = Bundle.main.path(forResource: lang, ofType: "lproj"),
+       let bundle = Bundle(path: path) {
+        return bundle.localizedString(forKey: key, value: key, table: nil)
+    }
+    return Bundle.main.localizedString(forKey: key, value: key, table: nil)
 }
