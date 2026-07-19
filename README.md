@@ -16,7 +16,7 @@ Bộ gõ tiếng Việt **Telex** cho macOS — không gạch chân, con trỏ l
 - **Nhanh** — luật chính tả compile thành trie + bitmap, incremental parse, SIMD, zero-alloc: **~130 ns/phím**, gõ nhanh cỡ nào cũng mượt.
 - **Gõ được ở nơi bộ gõ khác hay vỡ** — Terminal/iTerm (giữ autocomplete shell), address bar Chrome, ô Excel, Spotlight; tự học theo từng app.
 - **Thông minh với English/code** — tự khôi phục `google`/`github`, nhận token camelCase (`OmS`, `JavaScript`) để không bỏ dấu nhầm, có Telex nghiêm ngặt.
-- **Nhẹ & riêng tư** — không chạy nền, không mạng, không thu thập dữ liệu.
+- **Nhẹ & riêng tư** — không chạy nền, không thu thập dữ liệu; chỉ gọi mạng khi bạn bấm *Kiểm tra cập nhật*.
 
 | Menu trên thanh menu | Cửa sổ Cài đặt |
 |---|---|

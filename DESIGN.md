@@ -12,7 +12,7 @@ Bộ gõ tiếng Việt cho macOS. Ưu tiên tuyệt đối: **performance** (la
   khi gõ, tự khôi phục từ không hợp lệ, bảng gõ tắt.
 - **Không có bật/tắt VI/EN nội bộ, không hotkey riêng**: Vietnamese bật khi VietTelex là
   input source đang chọn; chuyển input source để gõ tiếng Anh (macOS nhớ theo app).
-- KHÔNG làm: nhớ theo browser tab (IME không thấy được tab), check update, từ điển file
+- KHÔNG làm: nhớ theo browser tab (IME không thấy được tab), từ điển file
   (dùng phonotactic validator).
 
 ## Kiến trúc
@@ -114,7 +114,7 @@ Quy tắc ổn định đã rút ra khi implement (chi tiết trong `MACOS_IME_N
 
 ## Privacy
 
-- Zero network. Zero log keystroke. Không Analytics SDK.
+- Zero network trên đường gõ (chỉ gọi mạng khi user bấm *Kiểm tra cập nhật* — GitHub Releases API, xem `Updater.swift`). Zero log keystroke. Không Analytics SDK.
 - `PrivacyInfo.xcprivacy` khai báo zero data collection / zero tracking.
 - Store description: "Không thu thập bất kỳ dữ liệu nào."
 

@@ -181,6 +181,10 @@ struct AboutTab: View {
         NSImage(named: NSImage.applicationIconName) ?? NSImage()
     }
 
+    @State private var checking = false
+    @State private var status: String?     // result line under the button
+    @State private var updateURL: URL?     // set only when a newer release exists
+
     var body: some View {
         VStack(spacing: 10) {
             Spacer()
@@ -192,10 +196,45 @@ struct AboutTab: View {
             Text("Version \(appVersion)").foregroundStyle(.secondary)
             Link("ptrinh.github.io/VietTelex",
                  destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
+
+            // Manual update check — the only thing that touches the network, and
+            // only on this click (see Updater.swift).
+            VStack(spacing: 4) {
+                if checking {
+                    ProgressView().controlSize(.small)
+                } else if let updateURL {
+                    Button("Tải bản mới…") { NSWorkspace.shared.open(updateURL) }
+                } else {
+                    Button("Kiểm tra cập nhật") { runCheck() }
+                }
+                if let status {
+                    Text(status).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 44)
+
             Text("© Phil Trinh @ SenPrints").foregroundStyle(.secondary)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func runCheck() {
+        checking = true; status = nil; updateURL = nil
+        Task {
+            let outcome = await UpdateCheck.check()
+            await MainActor.run {
+                checking = false
+                switch outcome {
+                case .upToDate(let v):
+                    status = "Đã là bản mới nhất (\(v))."
+                case .update(let latest, let url):
+                    status = "Có bản mới: \(latest)"; updateURL = url
+                case .failed(let e):
+                    status = "Không kiểm tra được — \(e)."
+                }
+            }
+        }
     }
 }
 
