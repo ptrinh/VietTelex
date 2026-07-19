@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>ViệtTelex</title>
+    <organization>com.viettelex</organization>
+    <!-- Install into the logged-in user's ~/Library/Input Methods (no admin, no
+         /Library). Scripts then register the source in that user's GUI session. -->
+    <domains enable_currentUserHome="true" enable_localSystem="false" enable_anywhere="false"/>
+    <options customize="never" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+
+    <!-- Final screen with the "add it in Keyboard settings" instructions. -->
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.viettelex.inputmethod.telex.pkg"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.viettelex.inputmethod.telex.pkg" visible="false">
+        <pkg-ref id="com.viettelex.inputmethod.telex.pkg"/>
+    </choice>
+    <pkg-ref id="com.viettelex.inputmethod.telex.pkg"
+             version="__VERSION__" onConclusion="none">VietTelex-component.pkg</pkg-ref>
+</installer-gui-script>

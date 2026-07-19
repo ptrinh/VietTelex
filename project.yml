@@ -15,9 +15,9 @@ targets:
     platform: macOS
     sources:
       - path: App/Sources
-      - path: App/Resources/AppIcon.icns
+      - path: App/Resources/Assets.xcassets
         buildPhase: resources
-      - path: App/Resources/MenuIcon.tiff
+      - path: App/Resources/MenuIcon.pdf
         buildPhase: resources
       - path: App/Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
@@ -35,6 +35,10 @@ targets:
         PRODUCT_NAME: VietTelex
         PRODUCT_MODULE_NAME: VietTelex
         INFOPLIST_FILE: App/Resources/Info.plist
+        # App icon comes from Assets.xcassets (compiled to Assets.car by actool),
+        # not a raw .icns — smaller bundle. See Scripts/make_appicon.py.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_OPTIMIZATION: space
         # xcodebuild ad-hoc signs; Scripts/notarize-install.sh re-signs with
         # Developer ID + hardened runtime, then notarizes + staples. macOS 26
         # requires input methods to be NOTARIZED to register — verified with a

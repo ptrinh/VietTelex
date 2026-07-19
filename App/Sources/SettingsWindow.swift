@@ -1,6 +1,7 @@
 // SettingsWindow.swift
-// SwiftUI settings (2 tabs). The window is created only when opened from the IMK
-// menu and released when closed (windowWillClose drops the reference).
+// SwiftUI settings (3 tabs: Tùy chỉnh, Gõ tắt, Giới thiệu). The window is created
+// only when opened from the IMK menu and released when closed (windowWillClose
+// drops the reference).
 //
 // There is no VI/EN enable/disable: Vietnamese is on whenever VietTelex is the active
 // macOS input source. To type English, switch input source (macOS remembers it per
@@ -10,7 +11,7 @@ import AppKit
 import SwiftUI
 import TelexCore
 
-enum SettingsTab: Hashable { case general, shortcuts }
+enum SettingsTab: Hashable { case general, shortcuts, about }
 
 // MARK: - Window controller
 
@@ -106,22 +107,19 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $model.selectedTab) {
-            GeneralTab().tabItem { Text("Chung") }.tag(SettingsTab.general)
+            GeneralTab().tabItem { Text("Tùy chỉnh") }.tag(SettingsTab.general)
             ShortcutsTab().tabItem { Text("Gõ tắt") }.tag(SettingsTab.shortcuts)
+            AboutTab().tabItem { Text("Giới thiệu") }.tag(SettingsTab.about)
         }
         .padding(16)
         .frame(width: 580, height: 440)
     }
 }
 
-// MARK: - Tab: Chung
+// MARK: - Tab: Tùy chỉnh
 
 struct GeneralTab: View {
     @EnvironmentObject var model: SettingsModel
-
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-    }
 
     var body: some View {
         Form {
@@ -165,12 +163,37 @@ struct GeneralTab: View {
                 Text("VietTelex tự học cách gõ phù hợp cho từng ứng dụng. Nếu một ứng dụng gõ bị gạch chân hoặc sai, bấm Đặt lại để dò lại.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Giới thiệu") {
-                Text("© Phil Trinh @ SenPrints")
-                Text("Version \(appVersion)")
-            }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Tab: Giới thiệu
+
+struct AboutTab: View {
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+    }
+
+    /// The app icon (Asset Catalog "AppIcon"). Resolved via the special
+    /// application-icon name so it works regardless of icns vs asset-catalog.
+    private var appIcon: NSImage {
+        NSImage(named: NSImage.applicationIconName) ?? NSImage()
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Spacer()
+            Image(nsImage: appIcon)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 128, height: 128)
+            Text("VietTelex").font(.title2).bold()
+            Text("Version \(appVersion)").foregroundStyle(.secondary)
+            Text("© Phil Trinh @ SenPrints").foregroundStyle(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

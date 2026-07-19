@@ -372,7 +372,6 @@ final class TelexInputController: IMKInputController {
                                 action: #selector(showStatus(_:)), keyEquivalent: "")
         status.target = self
         menu.addItem(status)
-        menu.addItem(.separator())
 
         // Everything else lives in the Settings window (Chung + Gõ tắt tabs). The menu
         // stays minimal: status + Settings.
@@ -414,12 +413,11 @@ final class TelexInputController: IMKInputController {
         }
     }
 
-    /// Missing permission: prompt + open the Accessibility pane so the user can grant
-    /// it. Background input-method agents often can't surface the system dialog, so we
-    /// open the pane directly. Once trusted, the terminal tap starts on next keystroke.
+    /// Missing permission: show OUR explanatory popup. We deliberately do NOT call
+    /// `AXIsProcessTrustedWithOptions(prompt:)` here — that fires the system TCC
+    /// dialog too, so clicking the status opened Settings AND our popup at once. The
+    /// popup's "Mở Cài đặt" button opens the Accessibility pane on demand instead.
     private func grantAccessibility() {
-        Accessibility.requestIfNeeded()
-        TerminalTapController.shared.ensureRunning()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()

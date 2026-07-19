@@ -18,10 +18,16 @@ SCRATCH="${TMPDIR:-/tmp}/viettelex-notarize"
 
 echo "→ building"
 xcodegen generate >/dev/null 2>&1 || true
+# Explicit derivedDataPath: multiple stale DerivedData dirs made the old
+# `ls | head -1` pick an OUTDATED build (shipped old icons/name once). Build
+# and install from ONE deterministic location.
+DERIVED="${TMPDIR:-/tmp}/viettelex-derived"
 xcodebuild -project VietTelex.xcodeproj -scheme VietTelex \
            -configuration Release -destination 'platform=macOS' \
+           -derivedDataPath "$DERIVED" \
            build | grep -E "BUILD" || true
-APP=$(ls -d ~/Library/Developer/Xcode/DerivedData/VietTelex-*/Build/Products/Release/VietTelex.app | head -1)
+APP="$DERIVED/Build/Products/Release/VietTelex.app"
+[ -d "$APP" ] || { echo "build product not found: $APP"; exit 1; }
 
 echo "→ cleaning stray legacy code seal + Developer ID sign + hardened runtime"
 # xcodebuild leaves a legacy top-level Contents/CodeResources that no valid app
@@ -51,4 +57,12 @@ rm -rf "$DEST"
 /usr/bin/ditto "$APP" "$DEST"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST"
 spctl -a -t exec -vv "$DEST" 2>&1 | head -2
-echo "Done. Log out / log in ONCE, then add it: Keyboard → Input Sources → + → Vietnamese → Tiếng Việt (VietTelex)."
+# A re-signed build makes the old Accessibility grant STALE: AXIsProcessTrusted()
+# still returns true but CGEvent.post is silently dropped -> letters type but no
+# diacritics in tap-mode apps (see MACOS_IME_NOTES.md). Reset so the user re-grants.
+tccutil reset Accessibility com.viettelex.inputmethod.telex >/dev/null 2>&1 || true
+pkill -x VietTelex 2>/dev/null || true
+
+echo "Done. Log out / log in ONCE (first install only), then add it: Keyboard → Input Sources → + → Vietnamese → Tiếng Việt (VietTelex)."
+echo "NOTE: Accessibility grant was reset (stale after re-sign) — re-enable VietTelex in"
+echo "System Settings → Privacy & Security → Accessibility for Terminal/Chromium typing."

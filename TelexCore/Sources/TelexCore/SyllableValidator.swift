@@ -15,10 +15,16 @@ public enum SyllableValidator {
     // MARK: - Rule tables (human-readable source of truth)
 
     // Valid onsets (initial consonant clusters). "" = zero onset.
+    // `z` and the `dz` cluster are not native Vietnamese onsets, but they're
+    // included so casual/colloquial words type with diacritics like any consonant
+    // ("zoo"→zô, "dzij"→dzị, "dzoo"→dzô — the "dz" spelling iOS Vietnamese accepts).
+    // Cost: z-initial English words with a Telex tone letter (zero→zẻo, zoom→zôm)
+    // transform instead of restore — the usual Telex trade-off, same as any onset;
+    // switch input source for those.
     static let onsets: Set<String> = [
         "", "b", "c", "ch", "d", "đ", "g", "gh", "gi", "h", "k", "kh", "l",
         "m", "n", "ng", "ngh", "nh", "p", "ph", "qu", "r", "s", "t", "th",
-        "tr", "v", "x"
+        "tr", "v", "x", "z", "dz"
     ]
 
     // Valid rimes = nucleus (+ coda), toneless, with marks. ~180 entries.

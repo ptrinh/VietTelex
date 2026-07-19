@@ -15,14 +15,14 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1</string>
+    <string>1.1.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
+    <!-- App icon from Assets.car (asset catalog); CFBundleIconName is the key
+         the asset-catalog icon is looked up by. No CFBundleIconFile (.icns). -->
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
 
@@ -58,13 +58,13 @@
                 <key>TISIntendedLanguage</key>
                 <string>vi</string>
                 <key>tsInputModeAlternateMenuIconFileKey</key>
-                <string>MenuIcon.tiff</string>
+                <string>MenuIcon.pdf</string>
                 <key>tsInputModeMenuIconFileKey</key>
-                <string>MenuIcon.tiff</string>
+                <string>MenuIcon.pdf</string>
                 <key>tsInputModePaletteIconFileKey</key>
-                <string>MenuIcon.tiff</string>
+                <string>MenuIcon.pdf</string>
                 <key>tsInputModeAlternateMenuTitleStringKey</key>
-                <string>Tiếng Việt (VietTelex)</string>
+                <string>ViệtTelex</string>
                 <key>tsInputModeCharacterRepertoireKey</key>
                 <array>
                     <string>Latn</string>

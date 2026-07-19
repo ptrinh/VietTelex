@@ -458,13 +458,22 @@ public struct TelexEngine {
             return
         }
 
-        // z: clear tone (always consumed)
+        // z: clear tone if there is one; otherwise it's a literal letter. Matching
+        // OpenKey (`removeMark(); if !isChanged insertKey`): `z` is NOT an absolute
+        // control key — it only vanishes when it actually removes a tone. With no
+        // tone to clear it types through ("z"→z, "pizza"→pizza, "xyz"→xyz), instead
+        // of being silently swallowed.
         if lower == UInt8(ascii: "z") {
-            if pTone != .none { pCancelled = true }
-            pTone = .none
-            if upper { upperToneKey = true }
-            rawLetter[at] = -1
-            toneKeys[pToneKeyCount] = at; pToneKeyCount += 1
+            if pTone != .none {                          // a tone to clear -> consume z
+                pCancelled = true
+                pTone = .none
+                if upper { upperToneKey = true }
+                rawLetter[at] = -1
+                toneKeys[pToneKeyCount] = at; pToneKeyCount += 1
+            } else {                                     // nothing to clear -> literal z
+                appendLetter(base: lower, mark: .none, upper: upper)
+                rawLetter[at] = pCount - 1
+            }
             return
         }
 

@@ -181,7 +181,7 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(commit("iss"), "is")     // double-s cancel -> keep, not "iss"
         XCTAssertEqual(commit("ass"), "as")
         XCTAssertEqual(commit("aff"), "af")     // double huyền cancel
-        XCTAssertEqual(commit("az"), "a")       // z clears tone
+        XCTAssertEqual(commit("asz"), "a")      // z clears the á tone -> cancel, skip restore
         XCTAssertEqual(commit("aaa"), "aa")     // triple a -> aa (circumflex cancel)
 
         // After a cancel the rest of the word stays literal (English): a further tone
@@ -467,6 +467,41 @@ final class EngineGoldenTests: XCTestCase {
         }
     }
 
+    // `z` is a tone-CLEAR key, not an absolute control key (OpenKey parity): it
+    // only vanishes when it removes a tone; with nothing to clear it types through.
+    func testZClearsToneOrTypesLiteral() {
+        // Nothing to clear -> literal z (was silently swallowed before).
+        XCTAssertEqual(compose("z"), "z")
+        XCTAssertEqual(compose("az"), "az")
+        XCTAssertEqual(compose("xyz"), "xyz")
+        XCTAssertEqual(compose("pizza"), "pizza")
+        // A tone present -> z clears it and is consumed.
+        XCTAssertEqual(compose("asz"), "a")       // á -> a
+        XCTAssertEqual(compose("huyeenfz"), "huyên")  // huyền -> huyên
+    }
+
+    // z is allowed as an initial consonant (casual Vietnamese: zô, zậy, zui), so
+    // diacritics apply after it and the word is a valid syllable (no auto-restore).
+    func testZAsInitialConsonant() {
+        XCTAssertEqual(compose("zoo"), "zô")       // oo -> ô after z
+        XCTAssertEqual(commit("zoo"), "zô")        // valid syllable, not restored
+        XCTAssertEqual(compose("zaay"), "zây")     // aa -> â
+        XCTAssertEqual(compose("zaajy"), "zậy")    // colloquial "zậy"
+        XCTAssertEqual(compose("zui"), "zui")
+        XCTAssertTrue(SyllableValidator.isValidSyllable("zô"))
+        // Still restores true non-syllables that merely start with z.
+        XCTAssertEqual(commit("zip"), "zip")       // stop coda -p with no tone -> invalid
+    }
+
+    // The "dz" cluster works as an onset (iOS Vietnamese parity): dzô, dzị, dzậy.
+    func testDzCluster() {
+        XCTAssertEqual(compose("dzij"), "dzị")
+        XCTAssertEqual(commit("dzij"), "dzị")      // valid syllable, not restored
+        XCTAssertEqual(compose("dzoo"), "dzô")
+        XCTAssertEqual(compose("dzaay"), "dzây")
+        XCTAssertTrue(SyllableValidator.isValidSyllable("dzị"))
+    }
+
     func testDoubleKeyCancel() {
         let cases: [(String, String)] = [
             ("aaa", "aa"),
@@ -479,7 +514,7 @@ final class EngineGoldenTests: XCTestCase {
             ("arr", "ar"),
             ("axx", "ax"),
             ("ajj", "aj"),
-            ("az", "a"),     // z clears (no) tone
+            ("az", "az"),    // z with no tone to clear -> literal letter (OpenKey parity)
         ]
         for (input, expected) in cases {
             XCTAssertEqual(compose(input), expected, "input=\(input)")

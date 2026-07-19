@@ -1,0 +1,25 @@
+#!/bin/bash
+# pkg postinstall — runs after VietTelex.app is written to
+# ~/Library/Input Methods. Registers the input source and opens Keyboard
+# settings, both in the CONSOLE USER's GUI session (the installer runs scripts
+# as root; Text Input Source state and `open` must target the logged-in user).
+set +e
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+consoleUser="$(stat -f%Su /dev/console)"
+[ -z "$consoleUser" ] && consoleUser="$USER"
+uid="$(id -u "$consoleUser")"
+APP="/Users/$consoleUser/Library/Input Methods/VietTelex.app"
+
+# Make LaunchServices aware of the freshly installed bundle.
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+"$LSREGISTER" -f "$APP" 2>/dev/null
+
+# Register + best-effort enable, inside the user's GUI session.
+launchctl asuser "$uid" sudo -u "$consoleUser" "$DIR/register-source" "$APP" 2>/dev/null
+
+# Drop the user straight into System Settings → Keyboard for the final "＋" step.
+launchctl asuser "$uid" sudo -u "$consoleUser" \
+    open "x-apple.systempreferences:com.apple.Keyboard-Settings.extension" 2>/dev/null
+
+exit 0
