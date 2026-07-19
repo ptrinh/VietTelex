@@ -156,6 +156,40 @@ enum SyntheticKeyboard {
         event.timestamp = CGEventTimestamp(lastStamp)
     }
 
+    // MARK: In-flight tracking (native fast-path ordering guard)
+    //
+    // Synthetic keyDowns that were posted but have not yet re-entered the tap.
+    // While > 0 a physical key must NOT pass through natively: a native letter
+    // delivered ahead of a still-queued synthetic edit reorders the text (the
+    // historical "nuwax"→"nuẵ" corruption). Once the queue is drained, plain
+    // letters go through natively again — zero synthetic events on the common
+    // path. Main-thread only (the tap's run loop source lives there).
+    private static var inFlightKeyDowns = 0
+    private static var lastPostNs: UInt64 = 0
+
+    @inline(__always)
+    private static func notePostedKeyDown() {
+        inFlightKeyDowns += 1
+        lastPostNs = DispatchTime.now().uptimeNanoseconds
+    }
+
+    /// Called by the tap when one of our own keyDowns comes back around.
+    static func noteObservedSynthetic() {
+        if inFlightKeyDowns > 0 { inFlightKeyDowns -= 1 }
+    }
+
+    /// True when no synthetic keyDown is still in flight. Self-heals: if an event
+    /// was dropped (tap flapped mid-burst), a 500ms silence resets the counter so
+    /// we can't get wedged in all-synthetic mode.
+    static func queueDrained() -> Bool {
+        if inFlightKeyDowns == 0 { return true }
+        if DispatchTime.now().uptimeNanoseconds &- lastPostNs > 500_000_000 {
+            inFlightKeyDowns = 0
+            return true
+        }
+        return false
+    }
+
     /// Replace `backspaces` trailing chars with `text`. Two strategies:
     /// - Default (terminals): Backspace ×N, then type.
     /// - `selectionReplace` (Chrome omnibox / Spotlight): Shift+Left ×N to SELECT the
@@ -195,6 +229,7 @@ enum SyntheticKeyboard {
         else { return }
         down.flags = .maskShift
         up.flags = .maskShift
+        notePostedKeyDown()
         stamp(down); down.post(tap: .cgSessionEventTap)
         stamp(up);   up.post(tap: .cgSessionEventTap)
     }
@@ -203,6 +238,7 @@ enum SyntheticKeyboard {
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
         else { return }
+        notePostedKeyDown()
         stamp(down); down.post(tap: .cgSessionEventTap)
         stamp(up);   up.post(tap: .cgSessionEventTap)
     }
@@ -216,6 +252,7 @@ enum SyntheticKeyboard {
             down.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
             up.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
         }
+        notePostedKeyDown()
         stamp(down); down.post(tap: .cgSessionEventTap)
         stamp(up);   up.post(tap: .cgSessionEventTap)
     }
@@ -324,8 +361,12 @@ final class TerminalTapController {
 
         guard type == .keyDown else { return pass }
 
-        // Our own synthesized output: never re-process it.
-        if SyntheticKeyboard.isSynthetic(event) { return pass }
+        // Our own synthesized output: never re-process it (but note its arrival —
+        // it drains the in-flight counter that gates the native fast path).
+        if SyntheticKeyboard.isSynthetic(event) {
+            SyntheticKeyboard.noteObservedSynthetic()
+            return pass
+        }
 
         guard imeActive else { return pass }
 
@@ -380,7 +421,13 @@ final class TerminalTapController {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
 
         if keyCode == kDelete {
-            if engine.isEmpty { return pass }        // not composing -> real Backspace
+            if engine.isEmpty {
+                // Not composing -> real Backspace, unless a synthetic burst is still
+                // draining (it must land first or the delete hits the wrong char).
+                if SyntheticKeyboard.queueDrained() { return pass }
+                SyntheticKeyboard.postKey(CGKeyCode(kVK_Delete))
+                return nil
+            }
             if case let .replace(bs, insert) = engine.backspace() {
                 SyntheticKeyboard.apply(backspaces: bs, insert: insert, mode: emitMode)
             }
@@ -396,8 +443,8 @@ final class TerminalTapController {
             // enough. Only when auto-restore ACTUALLY rewrote the word (emitBoundary →
             // true) do we suppress + re-emit synthetically, so the boundary key lands
             // AFTER the async edit; otherwise the real key passes through untouched.
-            if engine.isEmpty { return pass }
-            if emitBoundary(suppressAutoRestore: false) {
+            if engine.isEmpty, SyntheticKeyboard.queueDrained() { return pass }
+            if emitBoundary(suppressAutoRestore: false) || !SyntheticKeyboard.queueDrained() {
                 reemit(keyCode: keyCode, string: nil)
                 return nil
             }
@@ -432,12 +479,20 @@ final class TerminalTapController {
             return nil
         }
 
-        // EVERY key is suppressed and re-emitted through the one ordered synthetic
-        // channel — never mix native passthrough with synthetic edits, or a later
-        // native letter races ahead of an earlier synthetic tone edit ("nuwax" showed
-        // as "nuẵ" because native 'a' landed before the synthetic ư from 'w').
+        // Ordering rule: a native letter must never race ahead of a still-queued
+        // synthetic edit ("nuwax" showed as "nuẵ" because native 'a' landed before
+        // the synthetic ư from 'w'). Historically EVERY key was therefore suppressed
+        // and re-emitted synthetically — 2 posted events per plain letter, each a
+        // real window-server round trip. The in-flight counter restores the native
+        // fast path safely: a NON-TRANSFORMING letter passes through untouched
+        // whenever no synthetic keyDown is still in flight (the common case), and
+        // only falls back to the synthetic channel while a burst is draining. The
+        // tap callback is serial, so the decision itself cannot race.
         switch engine.feed(ch) {
         case .passthrough:
+            if AppState.shared.tapNativeFastPath, SyntheticKeyboard.queueDrained() {
+                return pass                               // native: zero synthetic events
+            }
             SyntheticKeyboard.apply(backspaces: 0, insert: String(ch), mode: emitMode)
         case .none:
             break

@@ -186,8 +186,19 @@ Key details (all learned the hard way):
   to `max(mach_absolute_time(), lastStamp+1)` before posting — strict monotonic order,
   FIFO restored. (Verified decisive: adding os_log to the hot path also "fixed" it by
   adding latency between posts — a Heisenbug; the timestamp fix holds with NO logging,
-  ~17/17 fast `nuwax` correct.) Everything already goes through one synthetic channel
-  (no native passthrough), which is necessary but NOT sufficient without the timestamps.
+  ~17/17 fast `nuwax` correct.)
+- **Native fast path + in-flight guard (fewer synthetic round trips).** Originally
+  EVERY key was suppressed and re-emitted synthetically so that ordering versus
+  synthetic edits could never break. That costs 2 posted events per plain letter.
+  The current design restores native passthrough for NON-TRANSFORMING letters,
+  guarded by an in-flight counter: each posted synthetic keyDown increments it, and
+  it decrements when that event re-enters the tap. A letter passes natively ONLY
+  when the counter is 0 (queue drained); while a burst is draining, keys still go
+  through the timestamped synthetic channel. The tap callback is serial, so the
+  decision cannot race; a 500ms silence self-heals a counter wedged by a dropped
+  event (tap flap). Backspace/Return/Tab on an empty buffer get the same guard.
+  Kill switch if reordering ever reappears on some setup:
+  `defaults write com.viettelex.settings tapNativeFastPath -bool false`.
 
 Two in-place gotchas (both fixed):
 - **`insertText("", replacementRange:)` is a no-op in some apps (TextEdit).** So a

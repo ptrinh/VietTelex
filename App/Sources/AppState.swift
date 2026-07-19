@@ -43,6 +43,7 @@ final class AppState: @unchecked Sendable {
     ]
 
     private init() {
+        tapNativeFastPath = (defaults.object(forKey: "tapNativeFastPath") as? Bool) ?? true
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
         fallbackAppsCache = Set(defaults.stringArray(forKey: Key.fallbackApps) ?? [])
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
@@ -92,6 +93,13 @@ final class AppState: @unchecked Sendable {
         get { defaults.object(forKey: Key.simpleTelex) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Key.simpleTelex) }
     }
+
+    /// Tap-mode native fast path: non-transforming letters pass through natively
+    /// (zero synthetic events) when no synthetic burst is in flight. Default ON.
+    /// Kill switch if reordering ever reappears on some setup:
+    ///   defaults write com.viettelex.settings tapNativeFastPath -bool false
+    /// Read once at launch (per-key hot path).
+    let tapNativeFastPath: Bool
 
     // MARK: - Shortcuts (bảng gõ tắt)
 
