@@ -1,0 +1,64 @@
+/* Settings UI — Vietnamese. Keys are the English source strings (dev region = en);
+   Vietnamese-language macOS shows these values, everything else shows the keys. */
+
+/* Tabs */
+"Settings" = "Tùy chỉnh";
+"Shortcuts" = "Gõ tắt";
+"About" = "Giới thiệu";
+
+/* General tab */
+"Input style" = "Kiểu gõ";
+"A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư)." = "Chữ w đứng một mình luôn là 'w' (gõ 'uw' để ra ư). Tắt = Telex đầy đủ (cw→cư).";
+"Free tone placement" = "Bỏ dấu tự do";
+"Off = strict Telex: tones apply only next to a vowel — good for English/code (data→data). On: free placement (ama→âm)." = "Tắt = Telex nghiêm ngặt: dấu chỉ nhận khi gõ sát nguyên âm, hợp cho English/code (data→data). Bật: dấu đặt tự do (ama→âm).";
+"Modern tone placement (oà, uý)" = "Bỏ dấu kiểu mới (oà, uý)";
+"Off = old style (hòa, thủy, khỏe). On = new style (hoà, thuý, khoẻ). Only oa/oe/uy differ." = "Tắt = kiểu cũ (hòa, thủy, khỏe). Bật = kiểu mới (hoà, thuý, khoẻ). Chỉ đổi vị trí dấu ở oa/oe/uy.";
+"Spelling" = "Chính tả";
+"Auto-restore invalid words" = "Tự khôi phục từ không hợp lệ";
+"Live spell-check" = "Kiểm tra chính tả khi gõ";
+"Stop adding tones as soon as a word can’t be Vietnamese (google, github…) instead of waiting for word end." = "Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt (google, github…) thay vì đợi hết từ.";
+"App compatibility" = "Tương thích ứng dụng";
+"No apps learned yet." = "Chưa có ứng dụng nào được ghi nhớ.";
+"Marked text: %@" = "Dùng marked text: %@";
+"In-place OK: %@" = "Gõ trực tiếp OK: %@";
+"Reset (re-probe)" = "Đặt lại (dò lại từ đầu)";
+"VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe." = "VietTelex tự học cách gõ phù hợp cho từng ứng dụng. Nếu một ứng dụng gõ bị gạch chân hoặc sai, bấm Đặt lại để dò lại.";
+
+/* About tab */
+"Version %@ · %@" = "Version %@ ngày %@";
+"Check for updates" = "Kiểm tra cập nhật";
+"Download update…" = "Tải bản mới…";
+"You’re up to date (%@)." = "Đã là bản mới nhất (%@).";
+"Update available: %@" = "Có bản mới: %@";
+"Couldn’t check — %@." = "Không kiểm tra được — %@.";
+
+/* Shortcuts tab */
+"Type" = "Gõ";
+"Becomes" = "Thành";
+"type" = "gõ";
+"becomes" = "thành";
+"Update" = "Cập nhật";
+"Add" = "Thêm";
+"Click a row to edit." = "Bấm một dòng để sửa.";
+"Import from plist…" = "Nhập từ plist…";
+"Export to plist…" = "Xuất ra plist…";
+"Shortcut “%@” already exists" = "Gõ tắt “%@” đã tồn tại";
+"Overwrite the existing value?" = "Ghi đè giá trị hiện có?";
+"Overwrite" = "Ghi đè";
+"Cancel" = "Huỷ";
+"Couldn’t read the file" = "Không đọc được file";
+"The file must be a String → String dictionary plist (like the one Export to plist… creates)." = "File phải là plist dạng dictionary String → String (như file Xuất ra plist… tạo).";
+"Imported %lld shortcuts" = "Đã nhập %lld gõ tắt";
+"Merged into the existing table (duplicates take the new value)." = "Gộp vào bảng hiện có (mục trùng lấy giá trị mới).";
+
+/* Window title */
+"VietTelex — Settings" = "VietTelex — Cài đặt";
+
+/* Input-method menu + Accessibility alert */
+"Status: OK" = "Tình trạng: OK";
+"Status: Permission needed" = "Tình trạng: Thiếu quyền";
+"Settings…" = "Cài đặt…";
+"Accessibility permission needed" = "Thiếu quyền Trợ năng (Accessibility)";
+"VietTelex needs Accessibility to type Vietnamese in Terminal/iTerm and browsers.\n\nOpen System Settings → Privacy & Security → Accessibility and enable VietTelex (if it’s already there, untick then tick it again)." = "VietTelex cần quyền Accessibility để gõ tiếng Việt trong Terminal/iTerm và các trình duyệt.\n\nMở System Settings → Privacy & Security → Accessibility, rồi bật VietTelex (nếu đã có thì bỏ tick và tick lại).";
+"Open Settings" = "Mở Cài đặt";
+"Close" = "Đóng";

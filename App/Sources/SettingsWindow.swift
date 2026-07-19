@@ -28,7 +28,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             let root = SettingsView().environmentObject(model)
             let hosting = NSHostingController(rootView: root)
             let win = NSWindow(contentViewController: hosting)
-            win.title = "VietTelex — Cài đặt"
+            win.title = String(localized: "VietTelex — Settings")
             win.styleMask = [.titled, .closable, .miniaturizable]
             win.setContentSize(NSSize(width: 580, height: 440))
             win.delegate = self
@@ -107,9 +107,9 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $model.selectedTab) {
-            GeneralTab().tabItem { Text("Tùy chỉnh") }.tag(SettingsTab.general)
-            ShortcutsTab().tabItem { Text("Gõ tắt") }.tag(SettingsTab.shortcuts)
-            AboutTab().tabItem { Text("Giới thiệu") }.tag(SettingsTab.about)
+            GeneralTab().tabItem { Text("Settings") }.tag(SettingsTab.general)
+            ShortcutsTab().tabItem { Text("Shortcuts") }.tag(SettingsTab.shortcuts)
+            AboutTab().tabItem { Text("About") }.tag(SettingsTab.about)
         }
         .padding(16)
         .frame(width: 580, height: 440)
@@ -123,44 +123,44 @@ struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section("Kiểu gõ") {
+            Section("Input style") {
                 Toggle("Simple Telex", isOn: $model.simpleTelex)
-                Text("Chữ w đứng một mình luôn là 'w' (gõ 'uw' để ra ư). Tắt = Telex đầy đủ (cw→cư).")
+                Text("A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư).")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Bỏ dấu tự do", isOn: $model.freeMarking)
-                Text("Tắt = Telex nghiêm ngặt: dấu chỉ nhận khi gõ sát nguyên âm, hợp cho English/code (data→data). Bật: dấu đặt tự do (ama→âm).")
+                Toggle("Free tone placement", isOn: $model.freeMarking)
+                Text("Off = strict Telex: tones apply only next to a vowel — good for English/code (data→data). On: free placement (ama→âm).")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Bỏ dấu kiểu mới (oà, uý)", isOn: $model.modernOrthography)
-                Text("Tắt = kiểu cũ (hòa, thủy, khỏe). Bật = kiểu mới (hoà, thuý, khoẻ). Chỉ đổi vị trí dấu ở oa/oe/uy.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Chính tả") {
-                Toggle("Tự khôi phục từ không hợp lệ", isOn: $model.autoRestore)
-                Toggle("Kiểm tra chính tả khi gõ", isOn: $model.liveSpellCheck)
-                Text("Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt (google, github…) thay vì đợi hết từ.")
+                Toggle("Modern tone placement (oà, uý)", isOn: $model.modernOrthography)
+                Text("Off = old style (hòa, thủy, khỏe). On = new style (hoà, thuý, khoẻ). Only oa/oe/uy differ.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Tương thích ứng dụng") {
+            Section("Spelling") {
+                Toggle("Auto-restore invalid words", isOn: $model.autoRestore)
+                Toggle("Live spell-check", isOn: $model.liveSpellCheck)
+                Text("Stop adding tones as soon as a word can’t be Vietnamese (google, github…) instead of waiting for word end.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("App compatibility") {
                 if model.fallbackApps.isEmpty && model.inPlaceApps.isEmpty {
-                    Text("Chưa có ứng dụng nào được ghi nhớ.")
+                    Text("No apps learned yet.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     if !model.fallbackApps.isEmpty {
-                        Text("Dùng marked text: " + model.fallbackApps.joined(separator: ", "))
+                        Text("Marked text: \(model.fallbackApps.joined(separator: ", "))")
                             .font(.caption).foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
                     if !model.inPlaceApps.isEmpty {
-                        Text("Gõ trực tiếp OK: " + model.inPlaceApps.joined(separator: ", "))
+                        Text("In-place OK: \(model.inPlaceApps.joined(separator: ", "))")
                             .font(.caption).foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
                 }
-                Button("Đặt lại (dò lại từ đầu)") {
+                Button("Reset (re-probe)") {
                     AppState.shared.resetLearnedApps()
                     model.reloadLearnedApps()
                 }
-                Text("VietTelex tự học cách gõ phù hợp cho từng ứng dụng. Nếu một ứng dụng gõ bị gạch chân hoặc sai, bấm Đặt lại để dò lại.")
+                Text("VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -204,7 +204,7 @@ struct AboutTab: View {
                 .interpolation(.high)
                 .frame(width: 128, height: 128)
             Text("VietTelex").font(.title2).bold()
-            Text("Version \(appVersion) ngày \(buildDate)").foregroundStyle(.secondary)
+            Text("Version \(appVersion) · \(buildDate)").foregroundStyle(.secondary)
             Link("Website",
                  destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
 
@@ -214,9 +214,9 @@ struct AboutTab: View {
                 if checking {
                     ProgressView().controlSize(.small)
                 } else if let updateURL {
-                    Button("Tải bản mới…") { NSWorkspace.shared.open(updateURL) }
+                    Button("Download update…") { NSWorkspace.shared.open(updateURL) }
                 } else {
-                    Button("Kiểm tra cập nhật") { runCheck() }
+                    Button("Check for updates") { runCheck() }
                 }
                 if let status {
                     Text(status).font(.caption).foregroundStyle(.secondary)
@@ -238,11 +238,11 @@ struct AboutTab: View {
                 checking = false
                 switch outcome {
                 case .upToDate(let v):
-                    status = "Đã là bản mới nhất (\(v))."
+                    status = String(localized: "You’re up to date (\(v)).")
                 case .update(let latest, let url):
-                    status = "Có bản mới: \(latest)"; updateURL = url
+                    status = String(localized: "Update available: \(latest)"); updateURL = url
                 case .failed(let e):
-                    status = "Không kiểm tra được — \(e)."
+                    status = String(localized: "Couldn’t check — \(e).")
                 }
             }
         }
@@ -265,8 +265,8 @@ struct ShortcutsTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Table(model.shortcuts, selection: $selection) {
-                TableColumn("Gõ", value: \.key)
-                TableColumn("Thành", value: \.value)
+                TableColumn("Type", value: \.key)
+                TableColumn("Becomes", value: \.value)
                 TableColumn("") { row in
                     Button(role: .destructive) { model.removeShortcut(row.key) } label: {
                         Image(systemName: "trash")
@@ -283,17 +283,17 @@ struct ShortcutsTab: View {
             }
 
             HStack {
-                TextField("gõ", text: $newKey).frame(width: 120)
-                TextField("thành", text: $newValue)
-                Button(isEditing ? "Cập nhật" : "Thêm") { save() }
+                TextField("type", text: $newKey).frame(width: 120)
+                TextField("becomes", text: $newValue)
+                Button(String(localized: isEditing ? "Update" : "Add")) { save() }
                     .disabled(newKey.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            Text("Bấm một dòng để sửa.")
+            Text("Click a row to edit.")
                 .font(.caption).foregroundStyle(.secondary)
 
             HStack {
-                Button("Nhập từ plist…") { importPlist() }
-                Button("Xuất ra plist…") { exportPlist() }
+                Button("Import from plist…") { importPlist() }
+                Button("Export to plist…") { exportPlist() }
                 Spacer()
             }
         }
@@ -306,10 +306,10 @@ struct ShortcutsTab: View {
         // otherwise a typo in the key field silently clobbers an existing shortcut.
         if AppState.shared.shortcuts[key] != nil, selection != key {
             let alert = NSAlert()
-            alert.messageText = "Gõ tắt “\(key)” đã tồn tại"
-            alert.informativeText = "Ghi đè giá trị hiện có?"
-            alert.addButton(withTitle: "Ghi đè")
-            alert.addButton(withTitle: "Huỷ")
+            alert.messageText = String(localized: "Shortcut “\(key)” already exists")
+            alert.informativeText = String(localized: "Overwrite the existing value?")
+            alert.addButton(withTitle: String(localized: "Overwrite"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         model.addShortcut(key: key, value: newValue)
@@ -326,8 +326,8 @@ struct ShortcutsTab: View {
         else {
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Không đọc được file"
-            alert.informativeText = "File phải là plist dạng dictionary String → String (như file Xuất ra plist… tạo)."
+            alert.messageText = String(localized: "Couldn’t read the file")
+            alert.informativeText = String(localized: "The file must be a String → String dictionary plist (like the one Export to plist… creates).")
             alert.runModal()
             return
         }
@@ -337,8 +337,8 @@ struct ShortcutsTab: View {
         AppState.shared.setShortcuts(merged)
         model.reloadShortcuts()
         let alert = NSAlert()
-        alert.messageText = "Đã nhập \(dict.count) gõ tắt"
-        alert.informativeText = "Gộp vào bảng hiện có (mục trùng lấy giá trị mới)."
+        alert.messageText = String(localized: "Imported \(dict.count) shortcuts")
+        alert.informativeText = String(localized: "Merged into the existing table (duplicates take the new value).")
         alert.runModal()
     }
 
