@@ -58,8 +58,9 @@ Quy ước khi sửa engine:
 ## Quy trình release
 
 1. Test tay theo `checklist.md` (VS Code EditContext là blocker).
-2. `Scripts/notarize-install.sh` → smoke test trên máy thật.
-3. Zip app đã staple, tạo GitHub Release, đính kèm.
+2. `Scripts/notarize-install.sh` → build + notarize + staple app, smoke test trên máy thật.
+3. `Scripts/make-pkg.sh` → đóng gói `.pkg` (ký Developer ID Installer + notarize + staple).
+4. `gh release create/upload` đính `.pkg` vào GitHub Release.
 
 ## Giấy phép
 
