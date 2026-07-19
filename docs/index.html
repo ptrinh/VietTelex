@@ -141,7 +141,7 @@
     <div class="cta-row">
       <a class="btn btn-primary" href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">⬇︎ Tải bản mới nhất (.pkg)</a>
       <button class="brew" id="brewbtn" type="button" aria-label="Copy lệnh Homebrew">
-        <span>$ brew install --cask viettelex</span>
+        <span>$ brew install --cask ptrinh/viettelex/viettelex</span>
         <span class="copied" id="copied"></span>
       </button>
     </div>
@@ -177,7 +177,7 @@
     <h2>Cài đặt trong một phút</h2>
     <p class="lead">Trình cài đặt tự đặt app vào đúng chỗ, đăng ký bộ gõ và mở sẵn System Settings — không cần kéo thả, không cần đăng xuất.</p>
     <div class="steps">
-      <div class="step"><strong>Tải và chạy trình cài đặt</strong><p>Tải <a href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">VietTelex-x.y.z.pkg</a> (đã ký + notarized bởi Apple) rồi double-click. Hoặc dùng Homebrew: <code>brew tap ptrinh/viettelex &amp;&amp; brew install --cask viettelex</code></p></div>
+      <div class="step"><strong>Tải và chạy trình cài đặt</strong><p>Tải <a href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">VietTelex-x.y.z.pkg</a> (đã ký + notarized bởi Apple) rồi double-click. Hoặc dùng Homebrew: <code>brew install --cask ptrinh/viettelex/viettelex</code></p></div>
       <div class="step"><strong>Thêm bộ gõ</strong><p>System Settings → Keyboard → Input Sources → <b>Edit… / ＋</b> → Vietnamese → <b>ViệtTelex</b> → Add.</p>
         <img src="assets/instructions-2.png" alt="Thêm ViệtTelex trong Input Sources" loading="lazy" style="max-width:560px"></div>
       <div class="step"><strong>Gõ thử</strong><p>Chuyển sang ViệtTelex bằng phím 🌐 hoặc ⌃Space. Muốn gõ trong Terminal/iTerm/Chrome thì bật quyền Accessibility cho VietTelex (Privacy &amp; Security → Accessibility).</p></div>
@@ -256,7 +256,7 @@ if (reduced) {
   playWord();
 }
 document.getElementById("brewbtn").addEventListener("click", () => {
-  navigator.clipboard.writeText("brew tap ptrinh/viettelex && brew install --cask viettelex").then(() => {
+  navigator.clipboard.writeText("brew install --cask ptrinh/viettelex/viettelex").then(() => {
     document.getElementById("copied").textContent = "đã copy ✓";
     setTimeout(() => document.getElementById("copied").textContent = "", 2000);
   });
