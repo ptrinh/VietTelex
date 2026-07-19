@@ -57,11 +57,30 @@ pkgbuild --root "$WORK/payload" \
 # 4. Product archive (adds title + conclusion screen + user-home domain).
 sed "s/__VERSION__/$VER/g" "$RES/distribution.xml" > "$WORK/distribution.xml"
 
-# Assemble the productbuild resources dir: the conclusion page + the annotated
-# screenshots it references (kept single-sourced in assets/, copied at build).
-mkdir -p "$WORK/resources"
-cp "$RES/conclusion.html" "$WORK/resources/"
-cp assets/instructions-1.png assets/instructions-2.png "$WORK/resources/"
+# Assemble localized conclusion screens. The screenshots are INLINED as data
+# URIs (productbuild only ships Distribution-referenced files, so external <img>
+# files wouldn't travel). English at the top level = default/fallback; Vietnamese
+# in vi.lproj → Installer.app shows it automatically on Vietnamese-language macOS.
+# Images are downscaled + palette-quantized here to keep the pkg small.
+mkdir -p "$WORK/resources/vi.lproj"
+python3 - "$RES" "$WORK/resources" assets/instructions-1.png assets/instructions-2.png <<'PY'
+import sys, base64, tempfile, os
+from PIL import Image
+res, out, i1, i2 = sys.argv[1:5]
+def datauri(p):
+    im = Image.open(p).convert("RGB")
+    im.thumbnail((900, 900), Image.LANCZOS)
+    q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
+    t = tempfile.mktemp(suffix=".png"); q.save(t, optimize=True)
+    b = base64.b64encode(open(t, "rb").read()).decode(); os.remove(t)
+    return "data:image/png;base64," + b
+u1, u2 = datauri(i1), datauri(i2)
+def emit(src, dst):
+    html = open(src).read().replace("__IMG1__", u1).replace("__IMG2__", u2)
+    open(dst, "w").write(html)
+emit(f"{res}/conclusion.en.html", f"{out}/conclusion.html")          # default (fallback)
+emit(f"{res}/conclusion.vi.html", f"{out}/vi.lproj/conclusion.html")  # Vietnamese systems
+PY
 
 echo "→ productbuild"
 if security find-identity -v 2>/dev/null | grep -q "Developer ID Installer"; then
