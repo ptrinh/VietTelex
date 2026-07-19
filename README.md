@@ -22,9 +22,9 @@ Bộ gõ tiếng Việt **Telex** cho macOS — không gạch chân, con trỏ l
 
 ## Cài đặt
 
-**Website:** [ptrinh.github.io/VietTelex](https://ptrinh.github.io/VietTelex/) · **Homebrew:** `brew install --cask ptrinh/viettelex/viettelex`
+**Website:** [ptrinh.github.io/viettelex](https://ptrinh.github.io/viettelex/) · **Homebrew:** `brew install --cask ptrinh/viettelex/viettelex`
 
-1. Tải **`VietTelex-x.y.z.pkg`** từ [Releases](https://github.com/ptrinh/VietTelex/releases) (đã ký + notarized).
+1. Tải **`VietTelex-x.y.z.pkg`** từ [Releases](https://github.com/ptrinh/viettelex/releases) (đã ký + notarized).
 2. Double-click → làm theo hướng dẫn (tự cài, đăng ký bộ gõ, mở sẵn System Settings → Keyboard).
 3. **Input Sources → Edit… / ＋ → Vietnamese → ViệtTelex → Add.**
 
