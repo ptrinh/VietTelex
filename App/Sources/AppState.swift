@@ -189,9 +189,22 @@ final class AppState: @unchecked Sendable {
     /// gets the same (detected by window list, not bundle id).
     private static let selectionApps: Set<String> = [
         "com.google.Chrome", "com.google.Chrome.canary", "com.google.Chrome.beta",
+        "com.google.Chrome.dev",
         "org.chromium.Chromium", "com.brave.Browser", "com.brave.Browser.beta",
         "com.microsoft.edgemac", "com.microsoft.edgemac.Beta", "com.microsoft.Edge",
+        "com.microsoft.edgemac.Dev", "com.microsoft.edgemac.Canary",
         "com.vivaldi.Vivaldi", "com.operasoftware.Opera", "company.thebrowser.Browser",
+        "com.operasoftware.OperaGX", "com.coccoc.Coccoc",
+        "com.duckduckgo.macos.browser", "com.openai.atlas",
+        // Launcher overlays with Spotlight-style inline suggestions. Unlike Spotlight
+        // they DO become the frontmost app, so plain bundle-id matching works.
+        "com.raycast.macos", "com.runningwithcrayons.Alfred",
+    ]
+
+    /// Chromium PWAs ("install as app") get derived bundle ids like
+    /// `com.google.Chrome.app.<hash>` and inherit the same autocomplete behavior.
+    private static let selectionAppPrefixes: [String] = [
+        "com.google.Chrome.app.", "com.brave.Browser.app.", "com.microsoft.edgemac.app.",
     ]
 
     /// Excel: cell autocomplete (from column values) races a Backspace-retype
@@ -208,7 +221,9 @@ final class AppState: @unchecked Sendable {
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
     func usesSelectionReplace(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return Self.selectionApps.contains(id) && Accessibility.isTrusted
+        guard Accessibility.isTrusted else { return false }
+        if Self.selectionApps.contains(id) { return true }
+        return Self.selectionAppPrefixes.contains { id.hasPrefix($0) }
     }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).
