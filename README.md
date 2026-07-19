@@ -8,18 +8,13 @@ Bộ gõ tiếng Việt kiểu **Telex** cho macOS. Gõ tự nhiên, mượt: **
 
 ## Cài đặt
 
-**Cách 1 — Trình cài đặt (khuyên dùng):**
 1. Tải **`VietTelex-x.y.z.pkg`** từ [Releases](https://github.com/ptrinh/VietTelex/releases) (đã ký + notarized bởi Apple).
 2. Double-click → làm theo hướng dẫn. Installer tự cài vào `~/Library/Input Methods`, đăng ký bộ gõ và mở sẵn **System Settings → Keyboard**.
 3. Ở **Input Sources** bấm **Edit… / ＋** → **Vietnamese** → **ViệtTelex** → **Add**.
 
-Các bước thêm input source trong System Settings → Keyboard:
-
 | ① Input Sources → Edit… | ② ＋ → Vietnamese → ViệtTelex → Add |
 |---|---|
 | ![Keyboard → Input Sources → Edit](assets/instructions-1.png) | ![Add Vietnamese ViệtTelex](assets/instructions-2.png) |
-
-**Cách 2 — Thủ công (file `.zip`):** giải nén, chép `VietTelex.app` vào `~/Library/Input Methods` (Finder: ⌘⇧G dán đường dẫn), đăng xuất/đăng nhập một lần, rồi thêm input source như trên.
 
 Cuối cùng, để gõ tiếng Việt trong **Terminal, iTerm và trình duyệt Chrome/Edge/Brave**:
 bật quyền **Accessibility** cho VietTelex (System Settings → Privacy & Security →
