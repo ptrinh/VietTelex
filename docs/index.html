@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ViệtTelex — Bộ gõ tiếng Việt cho macOS</title>
+<meta name="description" content="ViệtTelex — bộ gõ tiếng Việt Telex miễn phí cho macOS. Không gạch chân, gõ mượt ~130ns/phím, gõ được trong Terminal/iTerm/Chrome. Cài bằng installer hoặc Homebrew.">
+<meta name="keywords" content="bộ gõ tiếng Việt, gõ tiếng Việt macOS, Telex, bộ gõ Mac, Vietnamese input method, ViệtTelex, VietTelex, unikey mac, gõ tiếng việt terminal">
+<link rel="canonical" href="https://ptrinh.github.io/VietTelex/">
+<link rel="icon" href="assets/VietTelex-logo.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ViệtTelex — Bộ gõ tiếng Việt cho macOS">
+<meta property="og:description" content="Bộ gõ Telex miễn phí, mã nguồn mở: không gạch chân, mượt, gõ được cả trong Terminal và Chrome.">
+<meta property="og:image" content="https://ptrinh.github.io/VietTelex/assets/VietTelex-logo.png">
+<meta property="og:url" content="https://ptrinh.github.io/VietTelex/">
+<meta property="og:locale" content="vi_VN">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ViệtTelex",
+  "operatingSystem": "macOS 14+",
+  "applicationCategory": "UtilitiesApplication",
+  "description": "Bộ gõ tiếng Việt Telex cho macOS: không gạch chân, con trỏ luôn ở cuối, gõ được trong Terminal/iTerm/Chrome.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Phil Trịnh" },
+  "downloadUrl": "https://github.com/ptrinh/VietTelex/releases/latest",
+  "license": "https://github.com/ptrinh/VietTelex/blob/main/LICENSE"
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #17233d;
+    --navy-2: #1e2d4e;
+    --red: #a81f1f;
+    --red-bright: #c22727;
+    --gold: #d4a94a;
+    --paper: #fbfaf7;
+    --ink: #1c2333;
+    --ink-soft: #55607a;
+    --line: #e6e2d8;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    --sans: "Be Vietnam Pro", -apple-system, "Segoe UI", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.6; }
+  img { max-width: 100%; height: auto; display: block; }
+  a { color: var(--red); }
+
+  .hero { background: linear-gradient(175deg, var(--navy) 0%, var(--navy-2) 100%); color: #f2f0ea; padding: 64px 24px 88px; }
+  .hero-inner { max-width: 880px; margin: 0 auto; text-align: center; }
+  .hero img.logo { width: 96px; margin: 0 auto 20px; filter: drop-shadow(0 8px 24px rgba(0,0,0,.4)); }
+  .hero h1 { font-size: clamp(2rem, 5.5vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+  .hero h1 .accent { color: var(--gold); }
+  .hero p.sub { margin: 18px auto 0; max-width: 34em; color: #c6ccdb; font-size: 1.06rem; }
+
+  .typebox { margin: 40px auto 0; max-width: 560px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 22px 26px; text-align: left; }
+  .typebox .keys { font-family: var(--mono); font-size: .82rem; color: #8b94ab; letter-spacing: .18em; min-height: 1.4em; }
+  .typebox .out { font-family: var(--mono); font-size: clamp(1.5rem, 4.4vw, 2.2rem); font-weight: 700; color: #fff; min-height: 1.5em; }
+  .typebox .out .caret { display: inline-block; width: 2px; height: 1.15em; background: var(--gold); vertical-align: text-bottom; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .typebox .out .caret { animation: none; } }
+
+  .cta-row { margin-top: 36px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; align-items: stretch; }
+  .btn { display: inline-block; padding: 14px 26px; border-radius: 12px; font-weight: 700; text-decoration: none; font-size: 1rem; }
+  .btn-primary { background: var(--red-bright); color: #fff; box-shadow: 0 6px 20px rgba(194,39,39,.35); }
+  .btn-primary:hover { background: #d63030; }
+  .brew { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: .84rem; color: #d8dce8; cursor: pointer; }
+  .brew:hover { border-color: rgba(255,255,255,.3); }
+  .brew .copied { color: var(--gold); font-family: var(--sans); font-size: .78rem; }
+  .hero .meta { margin-top: 20px; font-size: .82rem; color: #7f889f; }
+
+  section { padding: 72px 24px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .lead { color: var(--ink-soft); max-width: 40em; margin-bottom: 36px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .card h3 { font-size: 1.02rem; font-weight: 700; margin-bottom: 6px; }
+  .card h3 .dot { color: var(--red); }
+  .card p { font-size: .92rem; color: var(--ink-soft); }
+  .card code, .step code { font-family: var(--mono); font-size: .84em; background: #f3f1ea; padding: 1px 5px; border-radius: 5px; }
+
+  .shots { display: grid; grid-template-columns: 1fr 2fr; gap: 18px; align-items: start; }
+  .shots figure { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .shots img { border-radius: 8px; }
+  .shots figcaption { font-size: .82rem; color: var(--ink-soft); margin-top: 10px; }
+  @media (max-width: 720px) { .shots { grid-template-columns: 1fr; } }
+
+  .steps { counter-reset: step; display: grid; gap: 14px; }
+  .step { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px 20px 64px; position: relative; }
+  .step::before { counter-increment: step; content: counter(step); position: absolute; left: 20px; top: 20px; width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: var(--gold); font-weight: 800; font-size: .9rem; display: grid; place-items: center; }
+  .step strong { display: block; margin-bottom: 2px; }
+  .step p { font-size: .92rem; color: var(--ink-soft); }
+  .step img { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; }
+
+  table.telex { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); }
+  table.telex th, table.telex td { padding: 12px 16px; text-align: left; font-size: .95rem; border-bottom: 1px solid var(--line); }
+  table.telex th { background: var(--navy); color: #eef; font-weight: 700; }
+  table.telex td:first-child { font-family: var(--mono); color: var(--red); font-weight: 700; }
+  table.telex tr:last-child td { border-bottom: none; }
+  .table-scroll { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); }
+
+  footer { background: var(--navy); color: #aab2c6; padding: 40px 24px; text-align: center; font-size: .88rem; }
+  footer a { color: var(--gold); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <img class="logo" src="assets/VietTelex-logo.png" alt="Logo ViệtTelex — phím keycap đỏ chữ VT" width="96" height="96">
+    <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>đúng như nó <span class="accent">phải thế</span>.</h1>
+    <p class="sub">ViệtTelex là bộ gõ Telex miễn phí, mã nguồn mở cho macOS — không gạch chân từ đang gõ, con trỏ luôn ở cuối, và gõ được cả trong Terminal lẫn Chrome.</p>
+
+    <div class="typebox" aria-label="Mô phỏng gõ Telex">
+      <div class="keys" id="keys">&nbsp;</div>
+      <div class="out"><span id="out"></span><span class="caret" aria-hidden="true"></span></div>
+    </div>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/ptrinh/VietTelex/releases/latest" rel="noopener">⬇︎ Tải bản mới nhất (.pkg)</a>
+      <button class="brew" id="brewbtn" type="button" aria-label="Copy lệnh Homebrew">
+        <span>$ brew install --cask ptrinh/viettelex/viettelex</span>
+        <span class="copied" id="copied"></span>
+      </button>
+    </div>
+    <p class="meta">Miễn phí · Mã nguồn mở (MIT) · Đã notarized bởi Apple · macOS 14+</p>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Vì sao ViệtTelex?</h2>
+    <p class="lead">Viết lại từ đầu sau nhiều năm chưa tìm được bộ gõ tiếng Việt nào trên macOS thật sự ngon, chuẩn, mượt.</p>
+    <div class="grid">
+      <div class="card"><h3><span class="dot">●</span> Chuẩn IMKit của macOS</h3><p>Là input method thật của hệ thống, không phải app chặn phím — tự đổi kiểu gõ theo từng app, chính tả/dự đoán/undo/VoiceOver đều hoạt động đúng.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Nhanh — ~130 nano giây/phím</h3><p>Luật chính tả compile thành máy trạng thái, không cấp phát bộ nhớ khi gõ. Gõ nhanh cỡ nào cũng mượt, không mất hay loạn ký tự.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Gõ được trong Terminal &amp; Chrome</h3><p>Terminal/iTerm giữ nguyên autocomplete của shell; thanh địa chỉ Chrome, ô Excel, Spotlight đều gõ đúng — nơi các bộ gõ khác thường vỡ.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Thông minh với English &amp; code</h3><p>Tự khôi phục <code>google</code>, <code>github</code>…; nhận token camelCase (<code>OmS</code>, <code>JavaScript</code>) để không bỏ dấu nhầm; có chế độ Telex nghiêm ngặt cho dev.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Nhẹ &amp; riêng tư</h3><p>Không chạy nền tốn CPU, không kết nối mạng, không thu thập bất kỳ dữ liệu nào.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="shots" style="padding-top:0">
+  <div class="wrap">
+    <div class="shots">
+      <figure><img src="assets/Menu-Bar-Screenshot.png" alt="Menu ViệtTelex trên thanh menu macOS" loading="lazy"><figcaption>Badge VT trên thanh menu — chọn nguồn gõ như bộ gõ hệ thống.</figcaption></figure>
+      <figure><img src="assets/Settings-Screenshot.png" alt="Cửa sổ Cài đặt của ViệtTelex" loading="lazy"><figcaption>Cài đặt: Simple Telex, bỏ dấu tự do, kiểu cũ/mới, kiểm tra chính tả, gõ tắt.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Cài đặt trong một phút</h2>
+    <p class="lead">Trình cài đặt tự đặt app vào đúng chỗ, đăng ký bộ gõ và mở sẵn System Settings — không cần kéo thả, không cần đăng xuất.</p>
+    <div class="steps">
+      <div class="step"><strong>Tải và chạy trình cài đặt</strong><p>Tải <a href="https://github.com/ptrinh/VietTelex/releases/latest" rel="noopener">VietTelex-x.y.z.pkg</a> (đã ký + notarized bởi Apple) rồi double-click. Hoặc dùng Homebrew: <code>brew install --cask ptrinh/viettelex/viettelex</code></p></div>
+      <div class="step"><strong>Thêm bộ gõ</strong><p>System Settings → Keyboard → Input Sources → <b>Edit… / ＋</b> → Vietnamese → <b>ViệtTelex</b> → Add.</p>
+        <img src="assets/instructions-2.png" alt="Thêm ViệtTelex trong Input Sources" loading="lazy" style="max-width:560px"></div>
+      <div class="step"><strong>Gõ thử</strong><p>Chuyển sang ViệtTelex bằng phím 🌐 hoặc ⌃Space. Muốn gõ trong Terminal/iTerm/Chrome thì bật quyền Accessibility cho VietTelex (Privacy &amp; Security → Accessibility).</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="telex" style="padding-top:0">
+  <div class="wrap">
+    <h2>Cách gõ Telex</h2>
+    <p class="lead">Telex chuẩn, kèm cải tiến: <code style="font-family:var(--mono)">z</code>/<code style="font-family:var(--mono)">dz</code> là phụ âm đầu (zô, dzị), tự khôi phục từ tiếng Anh.</p>
+    <div class="table-scroll">
+    <table class="telex">
+      <tr><th>Gõ</th><th>Kết quả</th></tr>
+      <tr><td>s · f · r · x · j</td><td>sắc · huyền · hỏi · ngã · nặng</td></tr>
+      <tr><td>aa · ee · oo</td><td>â · ê · ô</td></tr>
+      <tr><td>aw · ow · uw</td><td>ă · ơ · ư</td></tr>
+      <tr><td>dd</td><td>đ</td></tr>
+      <tr><td>z</td><td>xóa dấu (asz → a)</td></tr>
+      <tr><td>vieejt · truowngf · hoas</td><td>việt · trường · hóa</td></tr>
+    </table>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>ViệtTelex — dự án mã nguồn mở của Phil Trịnh · <a href="https://github.com/ptrinh/VietTelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/VietTelex/blob/main/LICENSE" rel="noopener">MIT License</a></p>
+</footer>
+
+<script>
+// Demo gõ sống: mô phỏng cách engine biến đổi từng phím (phím gõ -> chuỗi hiển thị).
+const words = [
+  ["vieejt",   [["v","v"],["i","vi"],["e","vie"],["e","viê"],["j","việ"],["t","việt"]]],
+  ["truowngf", [["t","t"],["r","tr"],["u","tru"],["o","truo"],["w","trươ"],["n","trươn"],["g","trương"],["f","trường"]]],
+  ["hoas",     [["h","h"],["o","ho"],["a","hoa"],["s","hóa"]]],
+  ["dduowcj",  [["d","d"],["d","đ"],["u","đu"],["o","đuo"],["w","đươ"],["c","đươc"],["j","được"]]],
+];
+const outEl = document.getElementById("out");
+const keysEl = document.getElementById("keys");
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (reduced) {
+  outEl.textContent = "tiếng Việt";
+  keysEl.textContent = "t i e e n g s   V i e e j t";
+} else {
+  let wi = 0;
+  function playWord() {
+    const frames = words[wi % words.length][1];
+    let i = 0, typed = "";
+    keysEl.textContent = " ";
+    function step() {
+      if (i < frames.length) {
+        typed += frames[i][0];
+        keysEl.textContent = typed.split("").join(" ");
+        outEl.textContent = frames[i][1];
+        i++;
+        setTimeout(step, 260);
+      } else {
+        setTimeout(() => { outEl.textContent = ""; wi++; setTimeout(playWord, 350); }, 1600);
+      }
+    }
+    step();
+  }
+  playWord();
+}
+document.getElementById("brewbtn").addEventListener("click", () => {
+  navigator.clipboard.writeText("brew install --cask ptrinh/viettelex/viettelex").then(() => {
+    document.getElementById("copied").textContent = "đã copy ✓";
+    setTimeout(() => document.getElementById("copied").textContent = "", 2000);
+  });
+});
+</script>
+</body>
+</html>
