@@ -8,6 +8,8 @@ Bộ gõ tiếng Việt **Telex** cho macOS — không gạch chân, con trỏ l
 
 > Dự án của **Phil Trịnh** (ViệtTelex / ViếtTelex), viết lại từ đầu sau nhiều năm dùng macOS mà chưa thấy bộ gõ tiếng Việt nào thật sự *ngon, chuẩn, mượt*.
 
+**Triết lý:** *Minimalist* — chỉ Telex, chỉ Unicode dựng sẵn, không tính năng thừa · *Intuitive* — hoạt động đúng như bộ gõ hệ thống, không cần học lại · *Performant* — ~130ns/phím, không chạy nền.
+
 ## Điểm nổi bật
 
 - **Chuẩn IMKit** — là input method thật của hệ thống (không phải app chặn phím), nên thừa hưởng miễn phí: tự đổi kiểu gõ theo từng app, chính tả/dự đoán/viết hoa của macOS, con trỏ/undo/VoiceOver đều đúng.
