@@ -167,8 +167,20 @@ public struct TelexEngine {
             pProcessed = rawCount
         }
 
-        let newCount = render()
+        var newCount = render()
         markCancelled = pCancelled
+
+        // Uppercase tone/mark key in a MIXED-case word ("OmS", "SaaS", "JavaScript")
+        // → this is English/code, not Vietnamese. Freeze the WHOLE word to its raw
+        // keystrokes IMMEDIATELY (not just at the boundary) so the tone never even
+        // flashes on screen ("OmS" stays "OmS", never briefly "Óm"). Rebuild with
+        // transforms disabled from the first key, then re-render.
+        if disabledAtCount == Int.max, forceRestoreUpperTone {
+            disabledAtCount = 0
+            rebuildParseState()
+            newCount = render()
+            markCancelled = pCancelled
+        }
 
         // Live spell-check: once the word can no longer be valid Vietnamese, freeze
         // transforms from the NEXT key on (current output unchanged). See disabledAtCount.

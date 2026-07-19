@@ -200,23 +200,26 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(commit("hoas"), "hóa")
     }
 
-    // Uppercase tone key in a MIXED-case word = English/code signal. "SaaS" composes
-    // to "Sấ" (aa→â, trailing S = sắc) which IS a valid syllable, so plain validation
-    // would wrongly keep it — the uppercase tone key forces the restore. All-caps
-    // words are exempt (uppercase tone keys are how you type VIỆT), and mark doublers
-    // with shift held (DDaay) stay untouched.
+    // Uppercase tone/mark key in a MIXED-case word = English/code signal ("OmS",
+    // "SaaS", "JavaScript"). The whole word freezes to its raw keystrokes LIVE — the
+    // tone never even flashes ("OmS" stays "OmS", not briefly "Óm"). All-caps words
+    // are exempt (uppercase tone keys are how you type VIỆT); mark doublers with
+    // shift held (DDaay) and lowercase tone keys are untouched.
     func testUpperToneKeyMixedCaseRestores() {
-        XCTAssertEqual(commit("SaaS"), "SaaS")            // was "Sấ"
-        XCTAssertEqual(commit("JavaScript"), "JavaScript")
+        // Live (while composing), not just at the word boundary.
+        XCTAssertEqual(compose("OmS"), "OmS")             // not "Óm"
+        XCTAssertEqual(compose("SaaS"), "SaaS")           // not "Sấ"
+        XCTAssertEqual(compose("JavaScript"), "JavaScript")
+        XCTAssertEqual(commit("SaaS"), "SaaS")
         XCTAssertEqual(commit("TypeScript"), "TypeScript")
         // All-caps: uppercase tone keys are legitimate Vietnamese.
-        XCTAssertEqual(commit("VIEEJT"), "VIỆT")
-        XCTAssertEqual(commit("HOAS"), "HÓA")
+        XCTAssertEqual(compose("VIEEJT"), "VIỆT")
+        XCTAssertEqual(compose("HOAS"), "HÓA")
         // Lowercase tone keys unaffected.
-        XCTAssertEqual(commit("hoas"), "hóa")
-        XCTAssertEqual(commit("Vieejt"), "Việt")
+        XCTAssertEqual(compose("hoas"), "hóa")
+        XCTAssertEqual(compose("Vieejt"), "Việt")
         // Shift held across a mark doubler is normal typing, still composes.
-        XCTAssertEqual(commit("DDaay"), "Đây")
+        XCTAssertEqual(compose("DDaay"), "Đây")
     }
 
     // C2: the w modifier reaches back to a/o/u. Crossing a VOWEL offglide (i) works
