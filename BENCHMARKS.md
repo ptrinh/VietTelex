@@ -72,14 +72,24 @@ phần còn lại:
 ## Chống hồi quy tốc độ (regression gate)
 
 `KeystrokePerfTests` (release-only) canh cho **các bản sau không được chậm hơn bản
-trước**. Vì runner CI khác phần cứng máy dev, không so µs tuyệt đối mà so **tỷ lệ
-chuẩn hoá**: (ns mỗi keystroke tiếng Việt) ÷ (ns mỗi đơn vị workload tham chiếu đo
-cùng máy, cùng tiến trình). Tỷ lệ này không phụ thuộc CPU nên so được giữa máy local
-và CI.
+trước**. Gate chỉ chạy trên CI, mà runner GitHub `macos-15` luôn cùng một lớp phần
+cứng (Apple Silicon) → chỉ có **một** máy để canh, nên gate thẳng trên **µs/keystroke
+thô** (median-of-5, lấy min để loại nhiễu), ngưỡng hiệu chỉnh theo chính runner CI.
+Máy dev nhanh hơn chỉ việc lọt sâu dưới ngưỡng (ngưỡng là chặn trên) nên không bao
+giờ báo nhầm ở local.
 
-- **Baseline: 90** (đo 2026-07-20, Apple Silicon, release; giá trị điển hình 87–90).
-- **Ngưỡng fail: baseline × 1.40 = 126** — dư cho nhiễu CI, vẫn bắt được hồi quy thật (>1.4×).
-- Lấy min của 5 lần đo để loại nhiễu.
-- Khi tối ưu engine nhanh hơn thật: chạy test, đọc dòng `KeystrokePerf: ratio=…`,
-  hạ `baseline` trong `KeystrokePerfTests.swift` xuống để khoá thành tựu.
+> Bản đầu từng chuẩn hoá theo một workload tham chiếu để "độc lập phần cứng" — nhưng
+> không: vòng lặp ALU đơn giản không co giãn cùng nhịp với code rẽ nhánh + tra bảng
+> của engine, tỷ lệ nhảy 87→234 từ M-series nhanh sang M1 của CI. µs thô neo theo phần
+> cứng CI mới là gate trung thực.
+
+- **Ngưỡng: `ceilingMicros`** trong `KeystrokePerfTests.swift`, hiệu chỉnh theo CI (M1).
+- Local điển hình ~0.10 µs/keystroke; CI (M1) chậm hơn — xem dòng log
+  `KeystrokePerf: us/keystroke=…` của run xanh gần nhất để biết số hiện tại.
 - Chạy CI cùng nhóm: `swift test -c release --filter 'Benchmark|ZeroAllocation|KeystrokePerf'`.
+
+> **Ratchet (bắt buộc):** mỗi khi engine nhanh hơn thật → **siết** `ceilingMicros`
+> xuống (đặt ~1.5× số `us/keystroke` của một run CI xanh) để chốt tốc độ mới làm yêu
+> cầu tối thiểu, và ghi lại số + ngày vào file này. Không bao giờ nới ngưỡng lên cho
+> một bản chậm đi pass — phải sửa hồi quy. Nhờ vậy "bản sau nhanh hơn bản trước" được
+> CI cưỡng chế, không trôi ngược.
