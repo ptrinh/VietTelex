@@ -17,7 +17,7 @@ jobs:
       - name: swift test
         run: cd TelexCore && swift test
       - name: Benchmarks (release)
-        run: cd TelexCore && swift test -c release --filter 'Benchmark|ZeroAllocation'
+        run: cd TelexCore && swift test -c release --filter 'Benchmark|ZeroAllocation|KeystrokePerf'
 
   build:
     name: Build app (unsigned)

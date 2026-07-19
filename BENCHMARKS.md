@@ -68,3 +68,18 @@ phần còn lại:
   mode nhỉnh hơn một chút.
 - Passthrough gần như miễn phí (~8ns/phím).
 - Mọi case đều dưới budget 50µs trên dưới ~200 lần.
+
+## Chống hồi quy tốc độ (regression gate)
+
+`KeystrokePerfTests` (release-only) canh cho **các bản sau không được chậm hơn bản
+trước**. Vì runner CI khác phần cứng máy dev, không so µs tuyệt đối mà so **tỷ lệ
+chuẩn hoá**: (ns mỗi keystroke tiếng Việt) ÷ (ns mỗi đơn vị workload tham chiếu đo
+cùng máy, cùng tiến trình). Tỷ lệ này không phụ thuộc CPU nên so được giữa máy local
+và CI.
+
+- **Baseline: 90** (đo 2026-07-20, Apple Silicon, release; giá trị điển hình 87–90).
+- **Ngưỡng fail: baseline × 1.40 = 126** — dư cho nhiễu CI, vẫn bắt được hồi quy thật (>1.4×).
+- Lấy min của 5 lần đo để loại nhiễu.
+- Khi tối ưu engine nhanh hơn thật: chạy test, đọc dòng `KeystrokePerf: ratio=…`,
+  hạ `baseline` trong `KeystrokePerfTests.swift` xuống để khoá thành tựu.
+- Chạy CI cùng nhóm: `swift test -c release --filter 'Benchmark|ZeroAllocation|KeystrokePerf'`.
