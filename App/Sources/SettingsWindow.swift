@@ -175,6 +175,17 @@ struct AboutTab: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
+    /// Build date (dd/MM/yyyy) from the executable's modification time — updates
+    /// itself every build, no manual bump.
+    private var buildDate: String {
+        let path = (Bundle.main.executableURL ?? Bundle.main.bundleURL).path
+        let date = (try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate]) as? Date ?? Date()
+        let f = DateFormatter(); f.dateFormat = "dd/MM/yyyy"
+        return f.string(from: date)
+    }
+
+    private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
+
     /// The app icon (Asset Catalog "AppIcon"). Resolved via the special
     /// application-icon name so it works regardless of icns vs asset-catalog.
     private var appIcon: NSImage {
@@ -193,7 +204,7 @@ struct AboutTab: View {
                 .interpolation(.high)
                 .frame(width: 128, height: 128)
             Text("VietTelex").font(.title2).bold()
-            Text("Version \(appVersion)").foregroundStyle(.secondary)
+            Text("Version \(appVersion) ngày \(buildDate)").foregroundStyle(.secondary)
             Link("ptrinh.github.io/VietTelex",
                  destination: URL(string: "https://ptrinh.github.io/VietTelex/")!)
 
@@ -213,7 +224,7 @@ struct AboutTab: View {
             }
             .frame(height: 44)
 
-            Text("© Phil Trinh @ SenPrints").foregroundStyle(.secondary)
+            Text("© Phil Trinh \(String(currentYear))").foregroundStyle(.secondary)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
