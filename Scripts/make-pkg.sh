@@ -54,51 +54,54 @@ pkgbuild --root "$WORK/payload" \
          --version "$VER" \
          "$WORK/VietTelex-component.pkg" >/dev/null
 
-# 4. Product archive (adds title + conclusion screen + user-home domain).
+# 4. Product archive with a bilingual conclusion screen showing the annotated
+#    screenshots. Installer's WebView will NOT render data: URIs, and productbuild
+#    only bundles Distribution-referenced files — so the HTML references the images
+#    by relative filename, and we build the product UNSIGNED, INJECT the
+#    (downscaled) screenshots into the archive's Resources, then productsign.
+#    English at top level = default/fallback; Vietnamese in vi.lproj → Installer
+#    shows it automatically on Vietnamese-language macOS.
 sed "s/__VERSION__/$VER/g" "$RES/distribution.xml" > "$WORK/distribution.xml"
 
-# Assemble localized conclusion screens. The screenshots are INLINED as data
-# URIs (productbuild only ships Distribution-referenced files, so external <img>
-# files wouldn't travel). English at the top level = default/fallback; Vietnamese
-# in vi.lproj → Installer.app shows it automatically on Vietnamese-language macOS.
-# Images are downscaled + palette-quantized here to keep the pkg small.
 mkdir -p "$WORK/resources/vi.lproj"
-python3 - "$RES" "$WORK/resources" assets/instructions-1.png assets/instructions-2.png <<'PY'
-import sys, base64, tempfile, os
+cp "$RES/conclusion.en.html" "$WORK/resources/conclusion.html"
+cp "$RES/conclusion.vi.html" "$WORK/resources/vi.lproj/conclusion.html"
+
+# Downscaled + palette-quantized screenshots to inject (keeps the pkg small).
+python3 - "$WORK/imgs" assets/instructions-1.png assets/instructions-2.png <<'PY'
+import sys, os
 from PIL import Image
-res, out, i1, i2 = sys.argv[1:5]
-def datauri(p):
-    im = Image.open(p).convert("RGB")
-    im.thumbnail((900, 900), Image.LANCZOS)
+out, i1, i2 = sys.argv[1:4]
+os.makedirs(out, exist_ok=True)
+for src, name in [(i1, "instructions-1.png"), (i2, "instructions-2.png")]:
+    im = Image.open(src).convert("RGB"); im.thumbnail((880, 880), Image.LANCZOS)
     q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
-    t = tempfile.mktemp(suffix=".png"); q.save(t, optimize=True)
-    b = base64.b64encode(open(t, "rb").read()).decode(); os.remove(t)
-    return "data:image/png;base64," + b
-u1, u2 = datauri(i1), datauri(i2)
-def emit(src, dst):
-    html = open(src).read().replace("__IMG1__", u1).replace("__IMG2__", u2)
-    open(dst, "w").write(html)
-emit(f"{res}/conclusion.en.html", f"{out}/conclusion.html")          # default (fallback)
-emit(f"{res}/conclusion.vi.html", f"{out}/vi.lproj/conclusion.html")  # Vietnamese systems
+    q.save(f"{out}/{name}", optimize=True)
 PY
 
-echo "→ productbuild"
+echo "→ productbuild (unsigned) + inject screenshots into Resources"
+productbuild --distribution "$WORK/distribution.xml" \
+             --package-path "$WORK" \
+             --resources "$WORK/resources" \
+             "$WORK/unsigned.pkg" >/dev/null
+rm -rf "$WORK/expand"
+pkgutil --expand "$WORK/unsigned.pkg" "$WORK/expand"
+cp "$WORK/imgs/"*.png "$WORK/expand/Resources/"
+mkdir -p "$WORK/expand/Resources/vi.lproj"
+cp "$WORK/imgs/"*.png "$WORK/expand/Resources/vi.lproj/"
+rm -f "$WORK/injected.pkg"
+pkgutil --flatten "$WORK/expand" "$WORK/injected.pkg"
+
+echo "→ sign"
 if security find-identity -v 2>/dev/null | grep -q "Developer ID Installer"; then
-    productbuild --distribution "$WORK/distribution.xml" \
-                 --package-path "$WORK" \
-                 --resources "$WORK/resources" \
-                 --sign "$INSTALLER_SIGN_ID" \
-                 "$OUT" >/dev/null
+    productsign --sign "$INSTALLER_SIGN_ID" "$WORK/injected.pkg" "$OUT"
     echo "→ notarizing pkg (waits for result)"
     xcrun notarytool submit "$OUT" --keychain-profile "$PROFILE" --wait
     xcrun stapler staple "$OUT"
     xcrun stapler validate "$OUT"
     echo "✅ Signed + notarized installer: $OUT"
 else
-    productbuild --distribution "$WORK/distribution.xml" \
-                 --package-path "$WORK" \
-                 --resources "$WORK/resources" \
-                 "$OUT" >/dev/null
+    cp "$WORK/injected.pkg" "$OUT"
     echo "⚠️  UNSIGNED installer (local test only): $OUT"
     echo "   Create a 'Developer ID Installer' certificate, then re-run to ship it."
 fi
