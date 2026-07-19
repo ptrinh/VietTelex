@@ -1,4 +1,8 @@
-# VietTelex
+<p align="center">
+  <img src="assets/VietTelex-logo.png" width="128" alt="VietTelex">
+</p>
+
+<h1 align="center">VietTelex</h1>
 
 Bộ gõ tiếng Việt kiểu **Telex** cho macOS. Gõ tự nhiên, mượt: **không gạch chân từ đang gõ, con trỏ luôn ở cuối**, dấu được bỏ trực tiếp vào chữ trên màn hình — và gõ được cả trong **Terminal / iTerm** mà không phá autocomplete của shell.
 
@@ -42,6 +46,12 @@ Ví dụ: `vieejt` → việt · `truowngf` → trường · `hoas` → hóa.
 - **Nhẹ và riêng tư**: không timer chạy nền, không mạng, không thu thập bất kỳ dữ liệu nào. Engine xử lý một phím trong ~0.1 micro giây.
 
 Mọi tùy chọn nằm ở menu bộ gõ trên thanh menu → **Cài đặt…**
+
+## Ảnh màn hình
+
+| Menu trên thanh menu | Cửa sổ Cài đặt |
+|---|---|
+| ![Menu bộ gõ trên thanh menu](assets/Menu-Bar-Screenshot.png) | ![Cửa sổ Cài đặt](assets/Settings-Screenshot.png) |
 
 ## Khắc phục sự cố
 
