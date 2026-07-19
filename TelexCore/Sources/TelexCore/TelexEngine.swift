@@ -286,12 +286,17 @@ public struct TelexEngine {
         return false
     }
 
-    /// Uppercase tone key in a MIXED-case word ("SaaS", "JavaScript") → English,
-    /// restore even when the composed form happens to be a valid syllable ("Sấ").
-    /// All-caps words keep uppercase tone keys ("VIEEJT"→VIỆT).
-    private var forceRestoreUpperTone: Bool {
-        guard upperToneKey else { return false }
-        for i in 0..<rawCount where raw[i] >= UInt8(ascii: "a") && raw[i] <= UInt8(ascii: "z") {
+    /// Uppercase tone/mark key preceded by a lowercase letter (camelCase like
+    /// "SaaS", "OmS", "JavaScript") → English/code, freeze/restore to raw even if
+    /// the composed form is a valid syllable. `upperToneKey` already encodes the
+    /// "a lowercase came before it" test (see `hasLowercaseBefore`), so an uppercase
+    /// tone key that is first ("OSm") or in an all-caps word ("VIEEJT") never sets it.
+    private var forceRestoreUpperTone: Bool { upperToneKey }
+
+    /// True if any raw keystroke before index `at` is a lowercase ascii letter.
+    @inline(__always)
+    private func hasLowercaseBefore(_ at: Int) -> Bool {
+        for i in 0..<at where raw[i] >= UInt8(ascii: "a") && raw[i] <= UInt8(ascii: "z") {
             return true
         }
         return false
@@ -459,7 +464,11 @@ public struct TelexEngine {
                     rawLetter[at] = pCount - 1
                 } else {
                     pTone = t
-                    if upper { upperToneKey = true }
+                    // English/code signal ONLY when a lowercase letter came BEFORE
+                    // this uppercase tone key (camelCase: "OmS"). If the uppercase
+                    // tone key is first / precedes any lowercase ("OSm", "VIEEJT"),
+                    // it's just a capital, so keep the tone ("OSm"→Óm).
+                    if upper && hasLowercaseBefore(at) { upperToneKey = true }
                     rawLetter[at] = -1                    // mapped to the toned vowel at render
                     toneKeys[pToneKeyCount] = at; pToneKeyCount += 1
                 }
@@ -479,7 +488,7 @@ public struct TelexEngine {
             if pTone != .none {                          // a tone to clear -> consume z
                 pCancelled = true
                 pTone = .none
-                if upper { upperToneKey = true }
+                if upper && hasLowercaseBefore(at) { upperToneKey = true }
                 rawLetter[at] = -1
                 toneKeys[pToneKeyCount] = at; pToneKeyCount += 1
             } else {                                     // nothing to clear -> literal z

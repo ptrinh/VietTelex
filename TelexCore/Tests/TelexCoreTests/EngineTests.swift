@@ -207,7 +207,11 @@ final class EngineGoldenTests: XCTestCase {
     // shift held (DDaay) and lowercase tone keys are untouched.
     func testUpperToneKeyMixedCaseRestores() {
         // Live (while composing), not just at the word boundary.
-        XCTAssertEqual(compose("OmS"), "OmS")             // not "Óm"
+        XCTAssertEqual(compose("OmS"), "OmS")             // not "Óm" (lowercase before S)
+        // But an uppercase tone key that PRECEDES any lowercase is just a capital:
+        // keep the tone.
+        XCTAssertEqual(compose("OSm"), "Óm")
+        XCTAssertEqual(commit("OSm"), "Óm")
         XCTAssertEqual(compose("SaaS"), "SaaS")           // not "Sấ"
         XCTAssertEqual(compose("JavaScript"), "JavaScript")
         XCTAssertEqual(commit("SaaS"), "SaaS")
