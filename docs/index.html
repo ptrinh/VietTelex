@@ -113,6 +113,11 @@
   footer a { color: var(--gold); text-decoration: none; }
   footer a:hover { text-decoration: underline; }
 
+  .copybtn { display: inline-flex; align-items: center; gap: 8px; background: #f3f1ea; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-family: var(--mono); font-size: .84rem; color: var(--ink); vertical-align: middle; }
+  .copybtn:hover { border-color: var(--gold); }
+  .copybtn .copyhint { font-family: var(--sans); font-size: .72rem; color: var(--ink-soft); }
+  .support-links a { font-weight: 700; text-decoration: none; }
+
   :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 </style>
 </head>
@@ -195,8 +200,33 @@
   </div>
 </section>
 
+<section id="support" style="padding-top:0">
+  <div class="wrap">
+    <h2>Ủng hộ &amp; phản hồi</h2>
+    <p class="lead">Dự án miễn phí, mã nguồn mở. Nếu thấy hữu ích, bạn có thể ủng hộ tác giả — hoặc gửi góp ý, báo lỗi.</p>
+    <div class="grid">
+      <div class="card support-links">
+        <h3><span class="dot">›</span> Phản hồi</h3>
+        <p>Góp ý, báo lỗi, đề xuất tính năng:</p>
+        <p><a href="https://trinh.uk/contact" rel="noopener">trinh.uk/contact →</a></p>
+      </div>
+      <div class="card support-links">
+        <h3><span class="dot">›</span> Ủng hộ</h3>
+        <p><a href="https://ko-fi.com/ptrinh" rel="noopener">☕ Ko-fi — ko-fi.com/ptrinh →</a></p>
+        <p style="margin-top:10px">Bitcoin:
+          <button class="copybtn" type="button"
+                  data-copy="bc1ps44wjx3wpu4s0xj746gz2lu45nspsm9059d3ym8xz0nrhu4psyasdgwwhx"
+                  title="Bấm để copy địa chỉ BTC" aria-label="Copy địa chỉ Bitcoin">
+            <code>bc1ps4…gwwhx</code> <span class="copyhint">copy</span>
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
-  <p>ViệtTelex — dự án mã nguồn mở của Phil Trịnh · <a href="https://github.com/ptrinh/viettelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/viettelex/blob/main/LICENSE" rel="noopener">MIT License</a></p>
+  <p>ViệtTelex — dự án mã nguồn mở của Phil Trịnh · <a href="https://github.com/ptrinh/viettelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/viettelex/blob/main/LICENSE" rel="noopener">MIT License</a> · <a href="https://trinh.uk/contact" rel="noopener">Liên hệ</a></p>
 </footer>
 
 <script>
@@ -238,6 +268,18 @@ document.getElementById("brewbtn").addEventListener("click", () => {
   navigator.clipboard.writeText("brew install --cask ptrinh/viettelex/viettelex").then(() => {
     document.getElementById("copied").textContent = "đã copy ✓";
     setTimeout(() => document.getElementById("copied").textContent = "", 2000);
+  });
+});
+// Click-to-copy for any [data-copy] element (BTC address, …).
+document.querySelectorAll("[data-copy]").forEach((el) => {
+  el.addEventListener("click", () => {
+    navigator.clipboard.writeText(el.dataset.copy).then(() => {
+      const hint = el.querySelector(".copyhint");
+      if (!hint) return;
+      const prev = hint.textContent;
+      hint.textContent = "đã copy ✓";
+      setTimeout(() => { hint.textContent = prev; }, 2000);
+    });
   });
 });
 </script>
