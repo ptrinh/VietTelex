@@ -118,7 +118,8 @@
   .copybtn .copyhint { font-family: var(--sans); font-size: .72rem; color: var(--ink-soft); }
   .support-links { display: flow-root; }   /* contain the floated QR */
   .support-links a { font-weight: 700; text-decoration: none; }
-  .vietqr { float: right; width: 150px; max-width: 45%; margin: 0 0 8px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px; }
+  .vietqr-link { float: right; margin: 0 0 8px 16px; max-width: 45%; }
+  .vietqr { width: 150px; max-width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px; display: block; }
 
   :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 </style>
@@ -184,24 +185,6 @@
   </div>
 </section>
 
-<section id="telex" style="padding-top:0">
-  <div class="wrap">
-    <h2>Cách gõ Telex</h2>
-    <p class="lead">Telex chuẩn, kèm cải tiến: <code style="font-family:var(--mono)">z</code>/<code style="font-family:var(--mono)">dz</code> là phụ âm đầu (zô, dzị), tự khôi phục từ tiếng Anh.</p>
-    <div class="table-scroll">
-    <table class="telex">
-      <tr><th>Gõ</th><th>Kết quả</th></tr>
-      <tr><td>s · f · r · x · j</td><td>sắc · huyền · hỏi · ngã · nặng</td></tr>
-      <tr><td>aa · ee · oo</td><td>â · ê · ô</td></tr>
-      <tr><td>aw · ow · uw</td><td>ă · ơ · ư</td></tr>
-      <tr><td>dd</td><td>đ</td></tr>
-      <tr><td>z</td><td>xóa dấu (asz → a)</td></tr>
-      <tr><td>vieejt · truowngf · hoas</td><td>việt · trường · hóa</td></tr>
-    </table>
-    </div>
-  </div>
-</section>
-
 <section id="support" style="padding-top:0">
   <div class="wrap">
     <h2>Ủng hộ &amp; phản hồi</h2>
@@ -214,8 +197,11 @@
       </div>
       <div class="card support-links">
         <h3><span class="dot">›</span> Ủng hộ</h3>
-        <img class="vietqr" src="assets/vietqr-mb.png"
-             alt="Mã VietQR chuyển khoản MB Bank" width="150" loading="lazy">
+        <a class="vietqr-link" href="assets/vietqr-mb.png" target="_blank" rel="noopener"
+           title="Mở ảnh QR (phóng to để quét)">
+          <img class="vietqr" src="assets/vietqr-mb.png"
+               alt="Mã VietQR chuyển khoản MB Bank" width="150" loading="lazy">
+        </a>
         <p><a href="https://ko-fi.com/ptrinh" rel="noopener">☕ Ko-fi — ko-fi.com/ptrinh →</a></p>
         <p style="margin-top:10px">🏦 Chuyển khoản: quét VietQR (MB) →</p>
         <p style="margin-top:10px">₿ Bitcoin:
