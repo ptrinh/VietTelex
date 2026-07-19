@@ -60,3 +60,7 @@ Quy ước khi sửa engine:
 1. Test tay theo `checklist.md` (VS Code EditContext là blocker).
 2. `Scripts/notarize-install.sh` → smoke test trên máy thật.
 3. Zip app đã staple, tạo GitHub Release, đính kèm.
+
+## Giấy phép
+
+MIT (xem [`LICENSE`](LICENSE)). Khi đóng góp, bạn đồng ý code của mình được phát hành theo MIT.

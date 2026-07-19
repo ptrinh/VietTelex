@@ -58,6 +58,10 @@ Mọi tùy chọn nằm ở menu bộ gõ trên thanh menu → **Cài đặt…*
 
 Xem [`CONTRIBUTE.md`](CONTRIBUTE.md) — hướng dẫn build, kiến trúc, benchmark và checklist test.
 
-## Bản quyền
+## Giấy phép
 
-© Phil Trinh @ SenPrints
+[MIT License](LICENSE) — © 2026 Phil Trinh (SENPRINTS LLC).
+
+Bạn được tự do dùng, sửa, tích hợp VietTelex vào hệ thống/sản phẩm khác (kể cả
+thương mại, mã đóng), miễn là **giữ lại thông báo bản quyền và giấy phép** trong
+bản phân phối.
