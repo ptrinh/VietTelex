@@ -194,10 +194,21 @@ final class AppState: @unchecked Sendable {
 
     // MARK: - Learned typing strategy (in-place replacementRange vs marked text)
 
+    /// Apps where the in-place replacementRange path is known-broken but the learned
+    /// probe can't catch it. WhatsApp is a Mac Catalyst app: it returns a valid caret
+    /// (so it never falls back on a NotFound selectedRange) AND echoes the inserted
+    /// text on read-back (so `probeInPlace` false-positives and marks it "good"), yet
+    /// it ignores `replacementRange` — tone edits get inserted WITHOUT replacing, so
+    /// diacritics never render. Force these off in-place: → tap backspace-retype when
+    /// Accessibility is granted, else marked text. Built-in, never probed.
+    static let builtInFallbackApps: Set<String> = [
+        "net.whatsapp.WhatsApp",
+    ]
+
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return fallbackAppsCache.contains(id)
+        return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
     }
 
     /// Terminal tap-mode: an app that ignores replacementRange (would otherwise get
@@ -206,7 +217,7 @@ final class AppState: @unchecked Sendable {
     /// Store build can never be trusted, so it transparently stays on marked text.
     func usesTapMode(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return fallbackAppsCache.contains(id) && Accessibility.isTrusted
+        return (fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)) && Accessibility.isTrusted
     }
 
     /// Chromium browsers: inline omnibox autocomplete corrupts a Backspace-retype
@@ -242,10 +253,12 @@ final class AppState: @unchecked Sendable {
         return Self.emptyResetApps.contains(id) && Accessibility.isTrusted
     }
 
-    /// One-shot probe needed: not yet classified either way.
+    /// One-shot probe needed: not yet classified either way. Never probe a built-in
+    /// fallback app — it's known-broken in-place and would false-positive the probe.
     func needsProbe(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
         return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
+            && !Self.builtInFallbackApps.contains(id)
     }
 
     /// In-place replacement verified working for this app.
@@ -281,7 +294,7 @@ final class AppState: @unchecked Sendable {
     func wantsAccessibility(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
         return Self.selectionApps.contains(id) || Self.emptyResetApps.contains(id)
-            || fallbackAppsCache.contains(id)
+            || fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
     }
 
     /// One-time "grant Accessibility" prompt already shown (first focus of an app
