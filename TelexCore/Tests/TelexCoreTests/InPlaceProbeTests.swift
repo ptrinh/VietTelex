@@ -143,6 +143,17 @@ final class InPlaceProbeTests: XCTestCase {
                                             regionReadback: "ê", inserted: "ê"), .honored)
     }
 
+    func testRegionMismatchOverridesHonoredCaret() {
+        // Lark: caret lands exactly at start+len (looks honored) but the target region
+        // read-back shows our text never landed → the replace didn't happen. Positive
+        // failure evidence must win over the caret → marked text.
+        XCTAssertEqual(InPlaceProbe.verdict(caret: 8, start: 7, bs: 1, insertLength: 1,
+                                            regionReadback: "e", inserted: "ê"), .appended)
+        // Sanity: caret honored + region confirms → still honored.
+        XCTAssertEqual(InPlaceProbe.verdict(caret: 8, start: 7, bs: 1, insertLength: 1,
+                                            regionReadback: "ê", inserted: "ê"), .honored)
+    }
+
     func testShouldProbeGating() {
         XCTAssertTrue(InPlaceProbe.shouldProbe(insertLength: 1, bs: 1, clear: 0, needsProbe: true))
         XCTAssertFalse(InPlaceProbe.shouldProbe(insertLength: 1, bs: 0, clear: 0, needsProbe: true),

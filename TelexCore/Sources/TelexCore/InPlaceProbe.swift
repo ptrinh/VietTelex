@@ -58,12 +58,15 @@ public enum InPlaceProbe {
     public static func verdict(caret: Int?, start: Int, bs: Int, insertLength: Int,
                                regionReadback: String?, inserted: String) -> Verdict {
         let expectedReplace = start + insertLength
-        if let c = caret {
-            return c == expectedReplace ? .honored : .appended
-        }
-        // No caret at all: the read-back is the only signal. Confirm in-place only on
-        // a positive match; anything else falls back to the safe marked-text mode.
-        if let r = regionReadback, r == inserted { return .honored }
-        return .appended
+        // POSITIVE FAILURE EVIDENCE WINS. If the target region does NOT hold our text,
+        // the replace didn't land — no matter what the caret claims. Lark reports a
+        // caret at start+len (looks honored) yet the region never received the text
+        // (regionMatch=no); trusting the caret there locked it to a broken in-place
+        // path. A region read that contradicts the insert is the ground truth.
+        if let r = regionReadback, r != inserted { return .appended }
+        if let c = caret { return c == expectedReplace ? .honored : .appended }
+        // No caret at all: a positive read-back match keeps in-place (mismatch was
+        // already handled above); nothing to go on → safe marked-text mode.
+        return regionReadback != nil ? .honored : .appended
     }
 }
