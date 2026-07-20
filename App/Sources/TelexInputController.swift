@@ -509,12 +509,19 @@ final class TelexInputController: IMKInputController {
     /// popup's "Mở Cài đặt" button opens the Accessibility pane on demand instead.
     private func grantAccessibility() {
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = VTLocalized("Accessibility permission needed")
         alert.informativeText = VTLocalized("VietTelex needs Accessibility to type Vietnamese in Terminal/iTerm and browsers.\n\nOpen System Settings → Privacy & Security → Accessibility and enable VietTelex (if it’s already there, untick then tick it again).")
         alert.addButton(withTitle: VTLocalized("Open Settings"))
         alert.addButton(withTitle: VTLocalized("Close"))
+        // We're an accessory (agent) app, so a plain runModal() can open the alert
+        // BEHIND the frontmost app — the user then has to click our Dock icon to find
+        // it (the reported bug). Activate the app AND force the alert window frontmost
+        // (float level + orderFrontRegardless) right before running it modally.
+        NSApp.activate(ignoringOtherApps: true)
+        alert.window.level = .floating
+        alert.window.orderFrontRegardless()
+        alert.window.makeKeyAndOrderFront(nil)
         let resp = alert.runModal()
         if resp == .alertFirstButtonReturn,
            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
