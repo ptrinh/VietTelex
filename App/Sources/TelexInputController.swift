@@ -333,25 +333,33 @@ final class TelexInputController: IMKInputController {
         if start >= 0, let sub = client.attributedSubstring(from: NSRange(location: start, length: len)) {
             region = sub.string
         }
-        let verdict = InPlaceProbe.verdict(caret: caret, start: start, bs: bs,
+        // Ground-truth read via the Accessibility tree (independent of the app's IMKit
+        // self-report). Authoritative when available — this is what auto-detects apps
+        // like Lark that fake the caret/read-back.
+        let axRegion = AXTextEdit.readString(at: start, length: len)
+        let verdict = InPlaceProbe.verdict(axRegion: axRegion, caret: caret, start: start, bs: bs,
                                            insertLength: len, regionReadback: region,
                                            inserted: inserted)
         // Structural diagnostics only — never the typed text itself. `regionMatch`
         // is a bool (did the read-back equal what we inserted), not the content.
         DebugLog.log("probe \(AppState.shared.currentBundleID ?? "?"): start=\(start) bs=\(bs) len=\(len) "
             + "caret=\(caret.map(String.init) ?? "none") expReplace=\(start + len) expAppend=\(start + bs + len) "
-            + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
+            + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") "
+            + "axMatch=\(axRegion.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
         let id = AppState.shared.currentBundleID
         switch verdict {
         case .honored:
             AppState.shared.markInPlaceGood(id)
             if let id { probeFailures[id] = nil }   // a good read clears the streak
         case .appended:
-            // Don't condemn on a single failure (the app may just have been busy):
-            // count consecutive failures and only switch to marked text on the 2nd.
-            // Either way abandon the glitched word so it doesn't linger half-written;
-            // on the first failure leave the app UNCLASSIFIED so the next word re-probes.
-            if let id {
+            // An AX-backed verdict is GROUND TRUTH, not a transient read — condemn
+            // immediately (one glitched word, then the app is on the fallback path for
+            // good). Without AX (caret/read-back only), a single failure may just be the
+            // app being busy, so require TWO in a row before switching.
+            if axRegion != nil {
+                if let id { probeFailures[id] = nil }
+                AppState.shared.markUsesMarkedText(id)
+            } else if let id {
                 let n = (probeFailures[id] ?? 0) + 1
                 if n >= 2 {
                     probeFailures[id] = nil

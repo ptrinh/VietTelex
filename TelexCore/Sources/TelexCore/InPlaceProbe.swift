@@ -55,8 +55,15 @@ public enum InPlaceProbe {
     /// ALWAYS renders Vietnamese (just with an underline). This is the right default:
     /// a wrong in-place guess silently drops diacritics, whereas marked text only
     /// costs a cosmetic underline — so when unsure, prefer the mode that always works.
-    public static func verdict(caret: Int?, start: Int, bs: Int, insertLength: Int,
-                               regionReadback: String?, inserted: String) -> Verdict {
+    public static func verdict(axRegion: String?, caret: Int?, start: Int, bs: Int,
+                               insertLength: Int, regionReadback: String?, inserted: String) -> Verdict {
+        // GROUND TRUTH FIRST: the Accessibility tree reports the field's real content,
+        // independent of the app's IMKit self-report (caret / attributedSubstring),
+        // which Lark fakes. When an AX read is available it decides outright — the
+        // engine strips the common prefix, so axRegion == inserted iff the replace
+        // actually landed at `start`.
+        if let ax = axRegion { return ax == inserted ? .honored : .appended }
+
         let expectedReplace = start + insertLength
         // POSITIVE FAILURE EVIDENCE WINS. If the target region does NOT hold our text,
         // the replace didn't land — no matter what the caret claims. Lark reports a

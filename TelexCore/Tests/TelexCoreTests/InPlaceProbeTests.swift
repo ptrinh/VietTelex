@@ -80,7 +80,7 @@ final class InPlaceProbeTests: XCTestCase {
     }
 
     private func verdict(_ p: Probe) -> InPlaceProbe.Verdict {
-        InPlaceProbe.verdict(caret: p.caret, start: p.start, bs: p.bs,
+        InPlaceProbe.verdict(axRegion: nil, caret: p.caret, start: p.start, bs: p.bs,
                              insertLength: p.insLen, regionReadback: p.region, inserted: p.inserted)
     }
 
@@ -119,7 +119,7 @@ final class InPlaceProbeTests: XCTestCase {
         // honored — the exact false-positive that broke Slack & Lark.
         for keys in cases {
             guard let p = firstProbe(keys, .appendEcho) else { XCTFail("no probe: \(keys)"); continue }
-            let readbackOnly = InPlaceProbe.verdict(caret: nil, start: p.start, bs: p.bs,
+            let readbackOnly = InPlaceProbe.verdict(axRegion: nil, caret: nil, start: p.start, bs: p.bs,
                                                     insertLength: p.insLen, regionReadback: p.region,
                                                     inserted: p.inserted)
             XCTAssertEqual(readbackOnly, .honored, "read-back alone false-positives the echo app: \(keys)")
@@ -131,15 +131,15 @@ final class InPlaceProbeTests: XCTestCase {
         // marked text, which always renders Vietnamese (this is the behavior the app
         // relied on when Accessibility was missing: it worked, just with an underline).
         // No evidence at all → marked text (never silently break in-place).
-        XCTAssertEqual(InPlaceProbe.verdict(caret: nil, start: 2, bs: 1, insertLength: 1,
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: nil, start: 2, bs: 1, insertLength: 1,
                                             regionReadback: nil, inserted: "ê"), .appended)
         // Caret present but not the clean-replace position (untrusted) → marked text,
         // EVEN IF the read-back is echoed to match. Silently dropping diacritics is
         // worse than a cosmetic underline.
-        XCTAssertEqual(InPlaceProbe.verdict(caret: 999, start: 2, bs: 1, insertLength: 1,
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: 999, start: 2, bs: 1, insertLength: 1,
                                             regionReadback: "ê", inserted: "ê"), .appended)
         // No caret, but a positive read-back match → trust it and keep in-place.
-        XCTAssertEqual(InPlaceProbe.verdict(caret: nil, start: 2, bs: 1, insertLength: 1,
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: nil, start: 2, bs: 1, insertLength: 1,
                                             regionReadback: "ê", inserted: "ê"), .honored)
     }
 
@@ -147,10 +147,24 @@ final class InPlaceProbeTests: XCTestCase {
         // Lark: caret lands exactly at start+len (looks honored) but the target region
         // read-back shows our text never landed → the replace didn't happen. Positive
         // failure evidence must win over the caret → marked text.
-        XCTAssertEqual(InPlaceProbe.verdict(caret: 8, start: 7, bs: 1, insertLength: 1,
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: 8, start: 7, bs: 1, insertLength: 1,
                                             regionReadback: "e", inserted: "ê"), .appended)
         // Sanity: caret honored + region confirms → still honored.
-        XCTAssertEqual(InPlaceProbe.verdict(caret: 8, start: 7, bs: 1, insertLength: 1,
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: 8, start: 7, bs: 1, insertLength: 1,
+                                            regionReadback: "ê", inserted: "ê"), .honored)
+    }
+
+    func testAXGroundTruthWins() {
+        // The Accessibility read is authoritative over every self-reported signal.
+        // Lark's case: caret says honored AND read-back is echoed to match, but AX
+        // shows the old char → the replace never landed → marked text.
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: "e", caret: 8, start: 7, bs: 1, insertLength: 1,
+                                            regionReadback: "ê", inserted: "ê"), .appended)
+        // AX confirms the text landed → in-place, regardless of a misreported caret.
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: "ê", caret: 999, start: 7, bs: 1, insertLength: 1,
+                                            regionReadback: nil, inserted: "ê"), .honored)
+        // AX unavailable (nil) → fall back to caret/read-back logic.
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: 8, start: 7, bs: 1, insertLength: 1,
                                             regionReadback: "ê", inserted: "ê"), .honored)
     }
 

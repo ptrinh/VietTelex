@@ -229,7 +229,6 @@ final class AppState: @unchecked Sendable {
     /// If an app here turns out not to draw marked text, move it to builtInFallbackApps
     /// (→ tap) instead.
     static let markedTextApps: Set<String> = [
-        "com.larksuite.larkApp",
     ]
 
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
