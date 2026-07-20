@@ -106,3 +106,18 @@
 "Recently used app" = "App mở gần đây";
 "Choose an app…" = "Chọn một app…";
 "…or enter a bundle id:" = "…hoặc nhập bundle id:";
+
+/* Mode table tab (Bảng chế độ gõ) */
+"Typing modes" = "Bảng chế độ gõ";
+"App" = "Ứng dụng";
+"Detected" = "Đã nhận diện";
+"Manual" = "Ép tay";
+"Tap (backspace)" = "Tap (backspace)";
+"Selection-replace" = "Tap (chọn rồi ghi đè)";
+"Empty-reset" = "Tap (Excel)";
+"not detected yet" = "chưa dò";
+"Add recent app" = "Thêm app mở gần đây";
+"…or a bundle id" = "…hoặc bundle id";
+"Clear & re-learn" = "Xoá & học lại từ đầu";
+"Empty — type a few Vietnamese words in any app and it will appear here." = "Trống — gõ vài từ tiếng Việt trong app bất kỳ là app sẽ hiện ở đây.";
+"Detected = the mode VietTelex chose for this app. Manual = force one instead (tap modes need Accessibility). Clear forgets everything learned — manual picks are kept." = "Đã nhận diện = chế độ VietTelex tự chọn cho app. Ép tay = buộc dùng một chế độ (các chế độ tap cần quyền Trợ năng). Xoá = quên hết những gì đã học — các mục ép tay được giữ.";

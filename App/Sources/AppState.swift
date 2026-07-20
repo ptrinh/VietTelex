@@ -37,10 +37,13 @@ final class AppState: @unchecked Sendable {
         static let manualModes = "manualAppModes"     // user override: bundleID -> AppMode
     }
 
-    /// A user-forced per-app handling strategy (Experimental → App mode). Overrides the
-    /// learned/probed classification entirely. `.auto` = no override (probe decides).
+    /// A user-forced per-app handling strategy (Settings → Bảng chế độ gõ). Overrides
+    /// the learned/probed classification entirely. `.auto` = no override (probe
+    /// decides). All 5 typing strategies are selectable; the three tap-family modes
+    /// (`tap`, `selection`, `emptyReset`) need Accessibility and fall back to marked
+    /// text without it (never silently to in-place — that loses diacritics).
     enum AppMode: String, CaseIterable {
-        case auto, inPlace, marked, tap
+        case auto, inPlace, marked, tap, selection, emptyReset
     }
 
     // In-memory caches (loaded once). All guarded by `lock` (see above).
@@ -319,8 +322,18 @@ final class AppState: @unchecked Sendable {
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
+        let trusted = Accessibility.isTrusted   // own lock — read BEFORE ours, never nested
         return lock.withLock {
-            if let m = _manualMode(id) { return m == .marked }   // user override wins
+            if let m = _manualMode(id) {         // user override wins
+                switch m {
+                case .marked: return true
+                // Tap-family override without Accessibility: marked text is the safe
+                // degradation (in-place would silently drop diacritics on an app the
+                // user explicitly said is broken).
+                case .tap, .selection, .emptyReset: return !trusted
+                case .inPlace, .auto: return false
+                }
+            }
             return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
                 || Self.markedTextApps.contains(id)
         }
@@ -368,13 +381,39 @@ final class AppState: @unchecked Sendable {
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
     func usesSelectionReplace(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return Self.selectionApps.contains(id) && Accessibility.isTrusted
+        let wants: Bool = lock.withLock {
+            if let m = _manualMode(id) { return m == .selection }   // user override wins
+            return Self.selectionApps.contains(id)
+        }
+        return wants && Accessibility.isTrusted
     }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).
     func usesEmptyReset(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return Self.emptyResetApps.contains(id) && Accessibility.isTrusted
+        let wants: Bool = lock.withLock {
+            if let m = _manualMode(id) { return m == .emptyReset }  // user override wins
+            return Self.emptyResetApps.contains(id)
+        }
+        return wants && Accessibility.isTrusted
+    }
+
+    /// What Auto currently resolves to for this app — the label shown in the mode
+    /// table's "Auto — …" row. Ignores any manual override (that's what the row IS).
+    /// nil = not classified yet (probe hasn't seen a real replace here).
+    func autoResolvedMode(_ bundleID: String?) -> AppMode? {
+        guard let id = bundleID else { return nil }
+        let trusted = Accessibility.isTrusted
+        return lock.withLock {
+            if Self.selectionApps.contains(id) { return trusted ? .selection : .marked }
+            if Self.emptyResetApps.contains(id) { return trusted ? .emptyReset : .marked }
+            if Self.markedTextApps.contains(id) { return .marked }
+            if fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id) {
+                return trusted ? .tap : .marked
+            }
+            if probedAppsCache.contains(id) { return .inPlace }
+            return nil
+        }
     }
 
     /// One-shot probe needed: not yet classified either way. Never probe a built-in

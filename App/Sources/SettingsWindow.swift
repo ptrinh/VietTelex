@@ -11,7 +11,7 @@ import AppKit
 import SwiftUI
 import TelexCore
 
-enum SettingsTab: Hashable { case general, shortcuts, experimental, about }
+enum SettingsTab: Hashable { case general, shortcuts, modeTable, experimental, about }
 
 // MARK: - Window controller
 
@@ -68,11 +68,13 @@ final class SettingsModel: ObservableObject {
     /// observes this model (they call `loc(_:)`), so the switch is live — no relaunch.
     @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
     @Published var shortcuts: [ShortcutRow] = []
-    @Published var fallbackApps: [String] = []
-    @Published var inPlaceApps: [String] = []
+    @Published var modeRows: [AppModeRow] = []            // Bảng chế độ gõ, sorted by name
     @Published var manualModes: [String: String] = [:]   // bundleID -> AppMode.rawValue
-    @Published var newModeAppID: String = ""              // Experimental: bundle id to pin
-    @Published var recentApps: [(id: String, name: String)] = []  // recent, not-yet-pinned apps
+    @Published var newModeAppID: String = ""              // mode table: bundle id to add
+    @Published var recentApps: [(id: String, name: String)] = []  // recent, not-yet-listed apps
+    /// Rows the user added by hand this session but hasn't pinned yet (mode still
+    /// auto, nothing learned) — kept visible so the dropdown can be used on them.
+    private var addedApps: Set<String> = []
 
     init(selected: SettingsTab) {
         selectedTab = selected
@@ -88,40 +90,78 @@ final class SettingsModel: ObservableObject {
         debugLogging = AppState.shared.debugLogging
         uiLanguage = AppState.shared.uiLanguage
         reloadShortcuts()
-        reloadLearnedApps()
+        reloadModeTable()
     }
 
     /// Localized string for the user's chosen UI language (see `VTLocalized`).
     func loc(_ key: String) -> String { VTLocalized(key) }
 
-    func reloadLearnedApps() {
-        fallbackApps = AppState.shared.learnedFallbackApps
-        inPlaceApps = AppState.shared.learnedInPlaceApps
+    // MARK: Bảng chế độ gõ
+
+    /// Rebuild the mode table: every app VietTelex knows something about — manual
+    /// overrides ∪ learned (probe) ∪ built-in pins ∪ rows added by hand — sorted by
+    /// display name A-Z.
+    func reloadModeTable() {
         manualModes = AppState.shared.manualModes
-        // Up to 10 recently-focused apps that aren't already configured (manual
-        // override OR built-in pin) — quick candidates to override.
+        var ids = Set(manualModes.keys)
+        ids.formUnion(AppState.shared.learnedFallbackApps)
+        ids.formUnion(AppState.shared.learnedInPlaceApps)
+        ids.formUnion(AppState.builtInFallbackApps)
+        ids.formUnion(addedApps)
+        modeRows = ids
+            .map { AppModeRow(id: $0, name: Self.appName(for: $0)) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        // Up to 10 recently-focused apps not yet in the table — quick add candidates.
         recentApps = FrontmostApp.shared.recent
-            .filter { !AppState.shared.isModeConfigured($0.id) }
+            .filter { !ids.contains($0.id) }
             .prefix(10).map { $0 }
     }
 
-    /// Apps to show in the App-mode override list: ONLY those the user has pinned
-    /// (auto apps aren't listed — add one via the bundle-id field).
-    var knownApps: [String] {
-        manualModes.keys.sorted()
+    /// Display name for a bundle id (the installed app's name; the raw id when the
+    /// app isn't found — e.g. learned on another machine or since uninstalled).
+    static func appName(for id: String) -> String {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
+        else { return id }
+        let name = FileManager.default.displayName(atPath: url.path)
+        return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
     }
+
     /// Current override for `id` as an AppMode raw value ("auto" when unset).
     func appMode(_ id: String) -> String { manualModes[id] ?? "auto" }
     func setAppMode(_ id: String, _ raw: String) {
         guard let mode = AppState.AppMode(rawValue: raw) else { return }
         AppState.shared.setManualMode(mode, for: id)
-        reloadLearnedApps()
+        if mode != .auto { addedApps.remove(id) }   // pinned now — persisted for real
+        reloadModeTable()
     }
-    func pinNewApp(_ raw: String) {
+
+    /// Label for what Auto resolves to right now ("In-place", "Tap (backspace)"…,
+    /// or "chưa dò" when the probe hasn't classified the app yet).
+    func autoLabel(_ id: String) -> String {
+        switch AppState.shared.autoResolvedMode(id) {
+        case .inPlace: return loc("In-place")
+        case .marked: return loc("Marked text")
+        case .tap: return loc("Tap (backspace)")
+        case .selection: return loc("Selection-replace")
+        case .emptyReset: return loc("Empty-reset")
+        case .auto, nil: return loc("not detected yet")
+        }
+    }
+
+    /// Add a row by hand (recent-apps picker or typed bundle id), mode = Auto.
+    func addApp() {
         let id = newModeAppID.trimmingCharacters(in: .whitespaces)
         guard !id.isEmpty else { return }
-        setAppMode(id, raw)
+        addedApps.insert(id)
         newModeAppID = ""
+        reloadModeTable()
+    }
+
+    /// Forget everything learned so the probe re-classifies from scratch. Keeps the
+    /// user's manual pins (they're choices, not learning).
+    func clearLearned() {
+        AppState.shared.resetLearnedApps()
+        reloadModeTable()
     }
 
     func reloadShortcuts() {
@@ -146,6 +186,9 @@ final class SettingsModel: ObservableObject {
 // id = key: selection survives reloads, and a row can be looked up by its key.
 struct ShortcutRow: Identifiable { var id: String { key }; let key: String; let value: String }
 
+/// One row of the mode table. `id` = bundle id (stable across reloads).
+struct AppModeRow: Identifiable { let id: String; let name: String }
+
 // MARK: - Root view
 
 struct SettingsView: View {
@@ -155,6 +198,7 @@ struct SettingsView: View {
         TabView(selection: $model.selectedTab) {
             GeneralTab().tabItem { Text(model.loc("Settings")) }.tag(SettingsTab.general)
             ShortcutsTab().tabItem { Text(model.loc("Shortcuts")) }.tag(SettingsTab.shortcuts)
+            ModeTableTab().tabItem { Text(model.loc("Typing modes")) }.tag(SettingsTab.modeTable)
             ExperimentalTab().tabItem { Text(model.loc("Experimental")) }.tag(SettingsTab.experimental)
             AboutTab().tabItem { Text(model.loc("About")) }.tag(SettingsTab.about)
         }
@@ -187,33 +231,6 @@ struct GeneralTab: View {
                 Text(model.loc("Stop adding tones as soon as a word can’t be Vietnamese (google, github…) instead of waiting for word end."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section(model.loc("App compatibility")) {
-                if model.fallbackApps.isEmpty && model.inPlaceApps.isEmpty {
-                    Text(model.loc("No apps learned yet."))
-                        .font(.caption).foregroundStyle(.secondary)
-                } else {
-                    if !model.fallbackApps.isEmpty {
-                        // fallbackApps = "in-place is broken here". The RUNTIME mode
-                        // depends on Accessibility: granted → tap backspace-retype,
-                        // missing → marked text. Label both so the list doesn't read
-                        // as "these apps show underlines" on a tap-capable install.
-                        Text(String(format: model.loc("No in-place (tap / marked text): %@"), model.fallbackApps.joined(separator: ", ")))
-                            .font(.caption).foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                    if !model.inPlaceApps.isEmpty {
-                        Text(String(format: model.loc("In-place OK: %@"), model.inPlaceApps.joined(separator: ", ")))
-                            .font(.caption).foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                }
-                Button(model.loc("Reset (re-probe)")) {
-                    AppState.shared.resetLearnedApps()
-                    model.reloadLearnedApps()
-                }
-                Text(model.loc("VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe."))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
             Section(model.loc("Language")) {
                 Picker(model.loc("Language"), selection: $model.uiLanguage) {
                     Text(model.loc("System")).tag("system")
@@ -223,6 +240,82 @@ struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Tab: Bảng chế độ gõ
+
+/// One table of every app VietTelex knows: learned by the probe, pinned by the
+/// user, or built-in. Column 2 is a dropdown — "Auto — <detected>" plus the 5
+/// manual strategies. Replaces the old "App compatibility" (Tùy chỉnh) and
+/// "App mode" (Thử Nghiệm) sections.
+struct ModeTableTab: View {
+    @EnvironmentObject var model: SettingsModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Table(model.modeRows) {
+                TableColumn(model.loc("App")) { row in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(row.name)
+                        if row.name != row.id {
+                            Text(row.id).font(.caption2).foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                TableColumn(model.loc("Detected")) { row in
+                    // What Auto resolves to for this app right now. Grayed out when a
+                    // manual pick overrides it.
+                    Text(model.autoLabel(row.id))
+                        .foregroundStyle(model.appMode(row.id) == "auto" ? .primary : .tertiary)
+                }.width(min: 120)
+                TableColumn(model.loc("Manual")) { row in
+                    Picker("", selection: Binding(get: { model.appMode(row.id) },
+                                                  set: { model.setAppMode(row.id, $0) })) {
+                        Text(model.loc("Auto")).tag("auto")
+                        Divider()
+                        Text(model.loc("In-place")).tag("inPlace")
+                        Text(model.loc("Marked text")).tag("marked")
+                        Text(model.loc("Tap (backspace)")).tag("tap")
+                        Text(model.loc("Selection-replace")).tag("selection")
+                        Text(model.loc("Empty-reset")).tag("emptyReset")
+                    }
+                    .labelsHidden()
+                }.width(min: 150)
+            }
+            .frame(minHeight: 230)
+
+            if model.modeRows.isEmpty {
+                Text(model.loc("Empty — type a few Vietnamese words in any app and it will appear here."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                if !model.recentApps.isEmpty {
+                    Picker(model.loc("Add recent app"), selection: $model.newModeAppID) {
+                        Text(model.loc("Choose an app…")).tag("")
+                        ForEach(model.recentApps, id: \.id) { app in
+                            Text(app.name).tag(app.id)
+                        }
+                    }
+                    .frame(maxWidth: 240)
+                }
+                TextField(model.loc("…or a bundle id"), text: $model.newModeAppID)
+                    .textFieldStyle(.roundedBorder)
+                Button(model.loc("Add")) { model.addApp() }
+                    .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+
+            HStack {
+                Button(role: .destructive) { model.clearLearned() } label: {
+                    Text(model.loc("Clear & re-learn"))
+                }
+                Spacer()
+            }
+            Text(model.loc("Detected = the mode VietTelex chose for this app. Manual = force one instead (tap modes need Accessibility). Clear forgets everything learned — manual picks are kept."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .onAppear { model.reloadModeTable() }
     }
 }
 
@@ -250,37 +343,6 @@ struct ExperimentalTab: View {
                 Text(model.loc("Keep this ON. Stops the terminal tap if it ever floods the keyboard with synthetic events, so a bug can’t freeze typing."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section(model.loc("App mode")) {
-                Text(model.loc("Force how VietTelex types in a specific app. Auto = detect automatically. Use Tap (real keystrokes, no underline) if an app types wrong or shows underlines; Marked text is the safe fallback."))
-                    .font(.caption).foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 6) {
-                    if !model.recentApps.isEmpty {
-                        Picker(model.loc("Recently used app"), selection: $model.newModeAppID) {
-                            Text(model.loc("Choose an app…")).tag("")
-                            ForEach(model.recentApps, id: \.id) { app in
-                                Text(app.name).tag(app.id)
-                            }
-                        }
-                    }
-                    Text(model.loc("…or enter a bundle id:")).font(.caption).foregroundStyle(.secondary)
-                    HStack {
-                        TextField("com.larksuite.larkApp", text: $model.newModeAppID)
-                            .textFieldStyle(.roundedBorder)
-                        Button(model.loc("Pin as Tap")) { model.pinNewApp("tap") }
-                            .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                }
-                if !model.knownApps.isEmpty {
-                    Text(model.loc("Pinned:")).font(.caption).foregroundStyle(.secondary)
-                    ForEach(model.knownApps, id: \.self) { id in
-                        modePicker(id: id, label: id)
-                    }
-                }
-                if model.knownApps.isEmpty && model.recentApps.isEmpty {
-                    Text(model.loc("No apps yet — type in one first, or add a bundle id above."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
             Section(model.loc("Diagnostics")) {
                 Toggle(model.loc("Record debug log"), isOn: $model.debugLogging)
                 Text(model.loc("Records tap health events in memory (never the text you type). Turn it on, reproduce the problem, then Save debug log and send us the file."))
@@ -295,17 +357,6 @@ struct ExperimentalTab: View {
             }
         }
         .formStyle(.grouped)
-    }
-
-    @ViewBuilder
-    private func modePicker(id: String, label: String) -> some View {
-        Picker(label, selection: Binding(get: { model.appMode(id) },
-                                         set: { model.setAppMode(id, $0) })) {
-            Text(model.loc("Auto")).tag("auto")
-            Text(model.loc("In-place")).tag("inPlace")
-            Text(model.loc("Marked text")).tag("marked")
-            Text(model.loc("Tap")).tag("tap")
-        }
     }
 
     private func saveLog() {
