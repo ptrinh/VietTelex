@@ -220,19 +220,34 @@ final class AppState: @unchecked Sendable {
         "com.macromates.TextMate",// TextMate
     ]
 
+    /// Apps FORCED to marked-text — never in-place, and never tap (even with
+    /// Accessibility). For apps whose in-place is broken AND whose probe signals can't
+    /// be trusted (Lark reports a caret at start+len and/or echoes the read-back, so
+    /// auto-detection coincidentally locks it to a broken in-place path), but where
+    /// tap backspace-retype is more invasive than we want. Marked text renders the
+    /// composition via the app's own IME display, independent of its caret coordinates.
+    /// If an app here turns out not to draw marked text, move it to builtInFallbackApps
+    /// (→ tap) instead.
+    static let markedTextApps: Set<String> = [
+        "com.larksuite.larkApp",
+    ]
+
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
         return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
+            || Self.markedTextApps.contains(id)
     }
 
     /// Terminal tap-mode: an app that ignores replacementRange (would otherwise get
     /// marked text) gets full CGEvent backspace-retype instead, but only when the
     /// process is Accessibility-trusted (Developer ID build). The sandboxed Mac App
     /// Store build can never be trusted, so it transparently stays on marked text.
+    /// markedTextApps are excluded: they must stay on marked text even when trusted.
     func usesTapMode(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return (fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)) && Accessibility.isTrusted
+        return (fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id))
+            && !Self.markedTextApps.contains(id) && Accessibility.isTrusted
     }
 
     /// Chromium browsers: inline omnibox autocomplete corrupts a Backspace-retype
@@ -273,7 +288,7 @@ final class AppState: @unchecked Sendable {
     func needsProbe(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
         return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
-            && !Self.builtInFallbackApps.contains(id)
+            && !Self.builtInFallbackApps.contains(id) && !Self.markedTextApps.contains(id)
     }
 
     /// In-place replacement verified working for this app.
