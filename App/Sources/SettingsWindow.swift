@@ -64,6 +64,17 @@ final class SettingsModel: ObservableObject {
     @Published var axSelectionReplace: Bool { didSet { AppState.shared.axSelectionReplace = axSelectionReplace } }
     @Published var tapCascadeBreaker: Bool { didSet { AppState.shared.tapCascadeBreaker = tapCascadeBreaker } }
     @Published var debugLogging: Bool { didSet { AppState.shared.debugLogging = debugLogging } }
+    /// Shows/hides the Bảng chế độ gõ + Thử Nghiệm tabs. When turned off while one
+    /// of them is frontmost, selection falls back to Tùy chỉnh.
+    @Published var advancedFeatures: Bool {
+        didSet {
+            AppState.shared.advancedFeatures = advancedFeatures
+            if !advancedFeatures,
+               selectedTab == .modeTable || selectedTab == .experimental {
+                selectedTab = .general
+            }
+        }
+    }
     /// UI language: "system" / "en" / "vi". Changing it re-renders every view that
     /// observes this model (they call `loc(_:)`), so the switch is live — no relaunch.
     @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
@@ -88,6 +99,7 @@ final class SettingsModel: ObservableObject {
         axSelectionReplace = AppState.shared.axSelectionReplace
         tapCascadeBreaker = AppState.shared.tapCascadeBreaker
         debugLogging = AppState.shared.debugLogging
+        advancedFeatures = AppState.shared.advancedFeatures
         uiLanguage = AppState.shared.uiLanguage
         reloadShortcuts()
         reloadModeTable()
@@ -164,6 +176,22 @@ final class SettingsModel: ObservableObject {
         reloadModeTable()
     }
 
+    /// Merge imported manual pins (bundleID → AppMode raw value). Invalid mode
+    /// values are skipped; returns how many entries were applied. Learned lists are
+    /// NOT importable on purpose — they're per-machine probe results and re-learn
+    /// themselves; only deliberate user choices are worth carrying across installs.
+    func importManualModes(_ dict: [String: String]) -> Int {
+        var applied = 0
+        for (id, raw) in dict {
+            guard let mode = AppState.AppMode(rawValue: raw), mode != .auto,
+                  !id.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+            AppState.shared.setManualMode(mode, for: id)
+            applied += 1
+        }
+        reloadModeTable()
+        return applied
+    }
+
     func reloadShortcuts() {
         shortcuts = AppState.shared.shortcuts
             .sorted { $0.key < $1.key }
@@ -198,8 +226,10 @@ struct SettingsView: View {
         TabView(selection: $model.selectedTab) {
             GeneralTab().tabItem { Text(model.loc("Settings")) }.tag(SettingsTab.general)
             ShortcutsTab().tabItem { Text(model.loc("Shortcuts")) }.tag(SettingsTab.shortcuts)
-            ModeTableTab().tabItem { Text(model.loc("Typing modes")) }.tag(SettingsTab.modeTable)
-            ExperimentalTab().tabItem { Text(model.loc("Experimental")) }.tag(SettingsTab.experimental)
+            if model.advancedFeatures {
+                ModeTableTab().tabItem { Text(model.loc("Typing modes")) }.tag(SettingsTab.modeTable)
+                ExperimentalTab().tabItem { Text(model.loc("Experimental")) }.tag(SettingsTab.experimental)
+            }
             AboutTab().tabItem { Text(model.loc("About")) }.tag(SettingsTab.about)
         }
         .padding(16)
@@ -238,6 +268,11 @@ struct GeneralTab: View {
                     Text("English").tag("en")
                 }
             }
+            Section {
+                Toggle(model.loc("Show advanced features"), isOn: $model.advancedFeatures)
+                Text(model.loc("Adds the Typing modes and Experimental tabs — per-app overrides, latency flags, debug log. Not needed for everyday typing."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
     }
@@ -270,13 +305,17 @@ struct ModeTableTab: View {
                         .foregroundStyle(model.appMode(row.id) == "auto" ? .primary : .tertiary)
                 }.width(min: 120)
                 TableColumn(model.loc("Manual")) { row in
+                    // Common picks first (Auto / Tap / Marked cover ~95% of real
+                    // overrides); the specialist modes sit below the divider —
+                    // Empty-reset exists for exactly one app (Excel), and picking it
+                    // elsewhere types stray U+202F.
                     Picker("", selection: Binding(get: { model.appMode(row.id) },
                                                   set: { model.setAppMode(row.id, $0) })) {
                         Text(model.loc("Auto")).tag("auto")
+                        Text(model.loc("Tap (backspace)")).tag("tap")
+                        Text(model.loc("Marked text")).tag("marked")
                         Divider()
                         Text(model.loc("In-place")).tag("inPlace")
-                        Text(model.loc("Marked text")).tag("marked")
-                        Text(model.loc("Tap (backspace)")).tag("tap")
                         Text(model.loc("Selection-replace")).tag("selection")
                         Text(model.loc("Empty-reset")).tag("emptyReset")
                     }
@@ -311,11 +350,51 @@ struct ModeTableTab: View {
                     Text(model.loc("Clear & re-learn"))
                 }
                 Spacer()
+                Button(model.loc("Import from plist…")) { importModes() }
+                Button(model.loc("Export to plist…")) { exportModes() }
             }
-            Text(model.loc("Detected = the mode VietTelex chose for this app. Manual = force one instead (tap modes need Accessibility). Clear forgets everything learned — manual picks are kept."))
+            Text(model.loc("An app types wrong or shows underlines? Pick Tap — real keystrokes, no underline (needs Accessibility). Marked text always renders correctly but underlines while typing. The modes below the divider are for special cases — leave them unless you know the app needs one. Clear forgets everything learned; manual picks are kept."))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onAppear { model.reloadModeTable() }
+    }
+
+    /// Import manual pins (bundleID → mode) from a String → String plist — the same
+    /// container format the Shortcuts tab uses, so the flow is familiar. Merge, not
+    /// replace: imported entries win, everything else is kept.
+    private func importModes() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.propertyList]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let data = try? Data(contentsOf: url),
+              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
+        else {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = VTLocalized("Couldn’t read the file")
+            alert.informativeText = VTLocalized("The file must be a String → String dictionary plist (like the one Export to plist… creates).")
+            alert.runModal()
+            return
+        }
+        let applied = model.importManualModes(dict)
+        let alert = NSAlert()
+        alert.messageText = String(format: VTLocalized("Imported %lld app modes"), applied)
+        alert.informativeText = VTLocalized("Merged into the table (existing pins for the same app take the imported value). Entries with an unknown mode were skipped.")
+        alert.runModal()
+    }
+
+    /// Export the manual pins only — learned entries are per-machine probe results
+    /// that re-learn themselves and would just be noise on another install.
+    private func exportModes() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.propertyList]
+        panel.nameFieldStringValue = "VietTelexAppModes.plist"
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? PropertyListSerialization.data(
+                fromPropertyList: AppState.shared.manualModes, format: .xml, options: 0)
+        else { return }
+        try? data.write(to: url)
     }
 }
 

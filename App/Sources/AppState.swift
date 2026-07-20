@@ -141,6 +141,14 @@ final class AppState: @unchecked Sendable {
         set { defaults.set(newValue, forKey: "uiLanguage") }
     }
 
+    /// Show the power-user surface (Bảng chế độ gõ + Thử Nghiệm tabs). Default OFF —
+    /// the philosophy is "cài xong là gõ"; per-app strategy names are implementation
+    /// vocabulary most users never need. Settings-UI only (main thread), no lock.
+    var advancedFeatures: Bool {
+        get { defaults.bool(forKey: "advancedFeatures") }
+        set { defaults.set(newValue, forKey: "advancedFeatures") }
+    }
+
     /// Tap-mode native fast path: non-transforming letters pass through natively
     /// (zero synthetic events) when no synthetic burst is in flight. Default ON.
     /// Kill switch if reordering ever reappears on some setup:
