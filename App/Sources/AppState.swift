@@ -261,6 +261,14 @@ final class AppState: @unchecked Sendable {
     }
     var manualModes: [String: String] { manualModesCache }
 
+    /// True if this app already has a fixed (non-auto) mode — a manual override OR a
+    /// built-in pin. Used to hide already-configured apps from the "recent apps" picker.
+    func isModeConfigured(_ bundleID: String?) -> Bool {
+        guard let id = bundleID else { return false }
+        return manualMode(id) != nil
+            || Self.builtInFallbackApps.contains(id) || Self.markedTextApps.contains(id)
+    }
+
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }

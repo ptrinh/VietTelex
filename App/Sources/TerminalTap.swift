@@ -82,7 +82,7 @@ final class FrontmostApp {
             guard let self, let id = app?.bundleIdentifier, id != Self.selfID else { return }
             self.recent.removeAll { $0.id == id }
             self.recent.insert((id, app?.localizedName ?? id), at: 0)
-            if self.recent.count > 5 { self.recent.removeLast() }
+            if self.recent.count > 10 { self.recent.removeLast() }
         }
     }
 }

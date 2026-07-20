@@ -98,10 +98,11 @@ final class SettingsModel: ObservableObject {
         fallbackApps = AppState.shared.learnedFallbackApps
         inPlaceApps = AppState.shared.learnedInPlaceApps
         manualModes = AppState.shared.manualModes
-        // Up to 3 recently-focused apps that aren't already pinned — quick candidates.
+        // Up to 10 recently-focused apps that aren't already configured (manual
+        // override OR built-in pin) — quick candidates to override.
         recentApps = FrontmostApp.shared.recent
-            .filter { manualModes[$0.id] == nil }
-            .prefix(3).map { $0 }
+            .filter { !AppState.shared.isModeConfigured($0.id) }
+            .prefix(10).map { $0 }
     }
 
     /// Apps to show in the App-mode override list: ONLY those the user has pinned
@@ -249,19 +250,20 @@ struct ExperimentalTab: View {
                 Text(model.loc("Force how VietTelex types in a specific app. Auto = detect automatically. Use Tap (real keystrokes, no underline) if an app types wrong or shows underlines; Marked text is the safe fallback."))
                     .font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(model.loc("Add an app by bundle id:")).font(.caption).foregroundStyle(.secondary)
+                    if !model.recentApps.isEmpty {
+                        Picker(model.loc("Recently used app"), selection: $model.newModeAppID) {
+                            Text(model.loc("Choose an app…")).tag("")
+                            ForEach(model.recentApps, id: \.id) { app in
+                                Text(app.name).tag(app.id)
+                            }
+                        }
+                    }
+                    Text(model.loc("…or enter a bundle id:")).font(.caption).foregroundStyle(.secondary)
                     HStack {
                         TextField("com.larksuite.larkApp", text: $model.newModeAppID)
                             .textFieldStyle(.roundedBorder)
                         Button(model.loc("Pin as Tap")) { model.pinNewApp("tap") }
                             .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                }
-                if !model.recentApps.isEmpty {
-                    Text(model.loc("Recently used — pick a mode to override:"))
-                        .font(.caption).foregroundStyle(.secondary)
-                    ForEach(model.recentApps, id: \.id) { app in
-                        modePicker(id: app.id, label: app.name)
                     }
                 }
                 if !model.knownApps.isEmpty {

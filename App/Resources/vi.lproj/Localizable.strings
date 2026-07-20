@@ -103,3 +103,6 @@
 "Add an app by bundle id:" = "Thêm app theo bundle id:";
 "Recently used — pick a mode to override:" = "Mở gần đây — chọn chế độ để ép:";
 "Pinned:" = "Đã ép:";
+"Recently used app" = "App mở gần đây";
+"Choose an app…" = "Chọn một app…";
+"…or enter a bundle id:" = "…hoặc nhập bundle id:";
