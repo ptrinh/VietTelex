@@ -1,31 +1,31 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ViệtTelex — Bộ gõ tiếng Việt cho macOS</title>
-<meta name="description" content="ViệtTelex — bộ gõ tiếng Việt Telex miễn phí cho macOS. Không gạch chân, gõ mượt ~130ns/phím, gõ được trong Terminal/iTerm/Chrome. Cài bằng installer hoặc Homebrew.">
-<meta name="keywords" content="bộ gõ tiếng Việt, gõ tiếng Việt macOS, Telex, bộ gõ Mac, Vietnamese input method, ViệtTelex, VietTelex, unikey mac, gõ tiếng việt terminal">
-<link rel="canonical" href="https://ptrinh.github.io/viettelex/">
+<title>VietTelex — Vietnamese input method for macOS</title>
+<meta name="description" content="VietTelex (ViệtTelex) — a free, open-source Telex Vietnamese input method for macOS. No underline, smooth ~130ns/key, works in Terminal/iTerm/Chrome. Install via installer or Homebrew.">
+<meta name="keywords" content="Vietnamese input method, type Vietnamese macOS, Telex, Mac input method, ViệtTelex, VietTelex, unikey mac, vietnamese typing terminal">
+<link rel="canonical" href="https://ptrinh.github.io/viettelex/en/">
 <link rel="alternate" hreflang="vi" href="https://ptrinh.github.io/viettelex/">
 <link rel="alternate" hreflang="en" href="https://ptrinh.github.io/viettelex/en/">
 <link rel="alternate" hreflang="x-default" href="https://ptrinh.github.io/viettelex/">
-<link rel="icon" href="assets/VietTelex-logo.png">
+<link rel="icon" href="../assets/VietTelex-logo.png">
 <meta property="og:type" content="website">
-<meta property="og:title" content="ViệtTelex — Bộ gõ tiếng Việt cho macOS">
-<meta property="og:description" content="Bộ gõ Telex miễn phí, mã nguồn mở: không gạch chân, mượt, gõ được cả trong Terminal và Chrome.">
+<meta property="og:title" content="VietTelex — Vietnamese input method for macOS">
+<meta property="og:description" content="A free, open-source Telex input method: no underline, smooth, works in Terminal and Chrome too.">
 <meta property="og:image" content="https://ptrinh.github.io/viettelex/assets/VietTelex-logo.png">
-<meta property="og:url" content="https://ptrinh.github.io/viettelex/">
-<meta property="og:locale" content="vi_VN">
+<meta property="og:url" content="https://ptrinh.github.io/viettelex/en/">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "ViệtTelex",
+  "name": "VietTelex",
   "operatingSystem": "macOS 14+",
   "applicationCategory": "UtilitiesApplication",
-  "description": "Bộ gõ tiếng Việt Telex cho macOS: không gạch chân, con trỏ luôn ở cuối, gõ được trong Terminal/iTerm/Chrome.",
+  "description": "A Telex Vietnamese input method for macOS: no underline, caret always at the end, works in Terminal/iTerm/Chrome.",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "author": { "@type": "Person", "name": "Phil Trịnh" },
   "downloadUrl": "https://github.com/ptrinh/viettelex/releases/latest",
@@ -133,39 +133,39 @@
 <body>
 
 <header class="hero">
-  <nav class="langswitch"><a href="en/" hreflang="en" lang="en">English</a></nav>
+  <nav class="langswitch"><a href="../" hreflang="vi" lang="vi">Tiếng Việt</a></nav>
   <div class="hero-inner">
-    <img class="logo" src="assets/VietTelex-logo.png" alt="Logo ViệtTelex — phím keycap đỏ chữ VT" width="96" height="96">
-    <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>đúng như nó <span class="accent">phải thế</span>.</h1>
-    <p class="sub">ViệtTelex (VietTelex / ViếtTelex) là bộ gõ Telex miễn phí, mã nguồn mở cho macOS, được xây dựng trên InputMethodKit của Apple để tích hợp sâu — không gạch chân từ đang gõ, con trỏ luôn ở cuối, và gõ được cả trong Terminal lẫn Chrome.</p>
-    <p class="philosophy"><span>Tối giản</span> · <span>Trực quan</span> · <span>Nhanh</span> — chỉ Telex, chỉ Unicode dựng sẵn.</p>
+    <img class="logo" src="../assets/VietTelex-logo.png" alt="VietTelex logo — red keycap with the letters VT" width="96" height="96">
+    <h1>Type Vietnamese on your&nbsp;Mac,<br>the way it <span class="accent">should be</span>.</h1>
+    <p class="sub">VietTelex (ViệtTelex) is a free, open-source Telex input method for macOS, built on Apple's InputMethodKit for deep integration — no underline under the word you're typing, the caret always stays at the end, and it works in Terminal and Chrome too.</p>
+    <p class="philosophy"><span>Minimalist</span> · <span>Intuitive</span> · <span>Performant</span> — Telex only, precomposed Unicode only.</p>
 
-    <div class="typebox" aria-label="Mô phỏng gõ Telex">
+    <div class="typebox" aria-label="Telex typing demo">
       <div class="keys" id="keys">&nbsp;</div>
       <div class="out"><span id="out"></span><span class="caret" aria-hidden="true"></span></div>
     </div>
 
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">⬇︎ Tải bản mới nhất (.pkg)</a>
-      <button class="brew" id="brewbtn" type="button" aria-label="Copy lệnh Homebrew">
+      <a class="btn btn-primary" href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">⬇︎ Download latest (.pkg)</a>
+      <button class="brew" id="brewbtn" type="button" aria-label="Copy the Homebrew command">
         <span>$ brew install --cask ptrinh/viettelex/viettelex</span>
         <span class="copied" id="copied"></span>
       </button>
     </div>
-    <p class="meta">Miễn phí · Mã nguồn mở (MIT) · Đã notarized bởi Apple · macOS 14+</p>
+    <p class="meta">Free · Open source (MIT) · Notarized by Apple · macOS 14+</p>
   </div>
 </header>
 
 <section id="features">
   <div class="wrap">
-    <h2>Vì sao ViệtTelex?</h2>
-    <p class="lead">Viết lại từ đầu sau gần 20 năm dùng macOS mà chưa tìm được bộ gõ tiếng Việt nào thật sự ngon, chuẩn, mượt.</p>
+    <h2>Why VietTelex?</h2>
+    <p class="lead">Rewritten from scratch after nearly 20 years on macOS without a Vietnamese input method that felt truly good, correct and smooth.</p>
     <div class="grid">
-      <div class="card"><h3><span class="dot">●</span> Chuẩn IMKit của macOS</h3><p>Là input method thật của hệ thống, không phải app chặn phím — tự đổi kiểu gõ theo từng app, chính tả/dự đoán/undo/VoiceOver đều hoạt động đúng.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Nhanh — ~130 nano giây/phím</h3><p>Luật chính tả compile thành máy trạng thái, không cấp phát bộ nhớ khi gõ. Gõ nhanh cỡ nào cũng mượt, không mất hay loạn ký tự.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Gõ được trong Terminal &amp; Chrome</h3><p>Terminal/iTerm giữ nguyên autocomplete của shell; thanh địa chỉ Chrome, ô Excel, Spotlight đều gõ đúng — nơi các bộ gõ khác thường vỡ.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Thông minh với English &amp; code</h3><p>Tự khôi phục <code>google</code>, <code>github</code>…; nhận token camelCase (<code>OmS</code>, <code>JavaScript</code>) để không bỏ dấu nhầm; có chế độ Telex nghiêm ngặt cho dev.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Nhẹ &amp; riêng tư</h3><p>Không chạy nền tốn CPU, không kết nối mạng, không thu thập bất kỳ dữ liệu nào.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Native to Apple's IMKit</h3><p>A real system input method, not a key-blocking app — so per-app typing modes, macOS spelling/prediction/undo/VoiceOver all work correctly.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Fast — ~130 nanoseconds/key</h3><p>Spelling rules compiled into a state machine, zero allocation while typing. Type as fast as you like — no lost or scrambled characters.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Works in Terminal &amp; Chrome</h3><p>Terminal/iTerm keep the shell's autocomplete; Chrome's address bar, Excel cells and Spotlight all type correctly — where other input methods often break.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Smart with English &amp; code</h3><p>Auto-restores <code>google</code>, <code>github</code>…; recognizes camelCase tokens (<code>OmS</code>, <code>JavaScript</code>) so it won't add tone marks by mistake; strict Telex mode for devs.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Light &amp; private</h3><p>No background CPU drain, no network connections, collects no data whatsoever.</p></div>
     </div>
   </div>
 </section>
@@ -173,48 +173,48 @@
 <section id="shots" style="padding-top:0">
   <div class="wrap">
     <div class="shots">
-      <figure><img src="assets/Menu-Bar-Screenshot.png" alt="Menu ViệtTelex trên thanh menu macOS" loading="lazy"><figcaption>Badge VT trên thanh menu — chọn nguồn gõ như bộ gõ hệ thống.</figcaption></figure>
-      <figure><img src="assets/Settings-Screenshot.png" alt="Cửa sổ Cài đặt của ViệtTelex" loading="lazy"><figcaption>Cài đặt: Simple Telex, bỏ dấu tự do, kiểu cũ/mới, kiểm tra chính tả, gõ tắt.</figcaption></figure>
+      <figure><img src="../assets/Menu-Bar-Screenshot.png" alt="VietTelex menu in the macOS menu bar" loading="lazy"><figcaption>The VT badge in the menu bar — pick the input source like any system one.</figcaption></figure>
+      <figure><img src="../assets/Settings-Screenshot.png" alt="VietTelex Settings window" loading="lazy"><figcaption>Settings: Simple Telex, free tone placement, old/new style, spell-check, shortcuts.</figcaption></figure>
     </div>
   </div>
 </section>
 
 <section id="install">
   <div class="wrap">
-    <h2>Cài đặt trong một phút</h2>
-    <p class="lead">Trình cài đặt tự đặt app vào đúng chỗ, đăng ký bộ gõ và mở sẵn System Settings — không cần kéo thả, không cần đăng xuất.</p>
+    <h2>Install in a minute</h2>
+    <p class="lead">The installer places the app, registers the input method and opens System Settings for you — no drag-and-drop, no logout.</p>
     <div class="steps">
-      <div class="step"><strong>Tải và chạy trình cài đặt</strong><p>Tải <a href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">VietTelex-x.y.z.pkg</a> (đã ký + notarized bởi Apple) rồi double-click. Hoặc dùng Homebrew: <code>brew install --cask ptrinh/viettelex/viettelex</code></p></div>
-      <div class="step"><strong>Thêm bộ gõ</strong><p>System Settings → Keyboard → Input Sources → <b>Edit… / ＋</b> → Vietnamese → <b>ViệtTelex</b> → Add.</p>
-        <img src="assets/instructions-2.png" alt="Thêm ViệtTelex trong Input Sources" loading="lazy" style="max-width:560px"></div>
-      <div class="step"><strong>Gõ thử</strong><p>Chuyển sang ViệtTelex bằng phím 🌐 hoặc ⌃Space. Muốn gõ trong Terminal/iTerm/Chrome thì bật quyền Accessibility cho VietTelex (Privacy &amp; Security → Accessibility).</p></div>
+      <div class="step"><strong>Download and run the installer</strong><p>Download <a href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener">VietTelex-x.y.z.pkg</a> (signed + notarized by Apple) and double-click. Or use Homebrew: <code>brew install --cask ptrinh/viettelex/viettelex</code></p></div>
+      <div class="step"><strong>Add the input method</strong><p>System Settings → Keyboard → Input Sources → <b>Edit… / ＋</b> → Vietnamese → <b>ViệtTelex</b> → Add.</p>
+        <img src="../assets/instructions-2.png" alt="Adding ViệtTelex in Input Sources" loading="lazy" style="max-width:560px"></div>
+      <div class="step"><strong>Give it a try</strong><p>Switch to ViệtTelex with the 🌐 key or ⌃Space. To type in Terminal/iTerm/Chrome, grant Accessibility to VietTelex (Privacy &amp; Security → Accessibility).</p></div>
     </div>
   </div>
 </section>
 
 <section id="support" style="padding-top:0">
   <div class="wrap">
-    <h2>Ủng hộ &amp; phản hồi</h2>
-    <p class="lead">Dự án miễn phí, mã nguồn mở. Nếu thấy hữu ích, bạn có thể ủng hộ tác giả — hoặc gửi góp ý, báo lỗi.</p>
+    <h2>Support &amp; feedback</h2>
+    <p class="lead">A free, open-source project. If you find it useful you can support the author — or send feedback and bug reports.</p>
     <div class="grid">
       <div class="card support-links">
-        <h3><span class="dot">›</span> Phản hồi</h3>
-        <p>Liên hệ: <a href="https://trinh.uk/contact" rel="noopener">trinh.uk/contact →</a></p>
-        <p style="margin-top:8px">Báo lỗi, đề xuất tính năng: <a href="https://github.com/ptrinh/viettelex/issues" rel="noopener">GitHub Issues →</a></p>
+        <h3><span class="dot">›</span> Feedback</h3>
+        <p>Contact: <a href="https://trinh.uk/contact" rel="noopener">trinh.uk/contact →</a></p>
+        <p style="margin-top:8px">Bugs, feature requests: <a href="https://github.com/ptrinh/viettelex/issues" rel="noopener">GitHub Issues →</a></p>
       </div>
       <div class="card support-links">
-        <a class="vietqr-link" href="assets/vietqr-mb.png" target="_blank" rel="noopener"
-           title="Mở ảnh QR (phóng to để quét)">
-          <img class="vietqr" src="assets/vietqr-mb.png"
-               alt="Mã VietQR chuyển khoản MB Bank" width="150" loading="lazy">
+        <a class="vietqr-link" href="../assets/vietqr-mb.png" target="_blank" rel="noopener"
+           title="Open the QR image (zoom to scan)">
+          <img class="vietqr" src="../assets/vietqr-mb.png"
+               alt="VietQR code for MB Bank transfer" width="150" loading="lazy">
         </a>
-        <h3><span class="dot">›</span> Ủng hộ</h3>
+        <h3><span class="dot">›</span> Support</h3>
         <p><a href="https://ko-fi.com/ptrinh" rel="noopener">☕ Ko-fi — ko-fi.com/ptrinh →</a></p>
-        <p style="margin-top:10px">🏦 Chuyển khoản: quét VietQR (MB) →</p>
+        <p style="margin-top:10px">🏦 Bank transfer: scan the VietQR (MB) →</p>
         <p style="margin-top:10px">₿ Bitcoin:
           <button class="copybtn" type="button"
                   data-copy="bc1ps44wjx3wpu4s0xj746gz2lu45nspsm9059d3ym8xz0nrhu4psyasdgwwhx"
-                  title="Bấm để copy địa chỉ BTC" aria-label="Copy địa chỉ Bitcoin">
+                  title="Click to copy the BTC address" aria-label="Copy the Bitcoin address">
             <code>bc1ps4…gwwhx</code> <span class="copyhint">copy</span>
           </button>
         </p>
@@ -224,11 +224,11 @@
 </section>
 
 <footer>
-  <p>ViệtTelex — dự án mã nguồn mở của Phil Trịnh · <a href="https://github.com/ptrinh/viettelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/viettelex/blob/main/LICENSE" rel="noopener">MIT License</a> · <a href="https://trinh.uk/contact" rel="noopener">Liên hệ</a></p>
+  <p>VietTelex — an open-source project by Phil Trịnh · <a href="https://github.com/ptrinh/viettelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/viettelex/blob/main/LICENSE" rel="noopener">MIT License</a> · <a href="https://trinh.uk/contact" rel="noopener">Contact</a></p>
 </footer>
 
 <script>
-// Demo gõ sống: mô phỏng cách engine biến đổi từng phím (phím gõ -> chuỗi hiển thị).
+// Live typing demo: mimic how the engine transforms each key (typed keys -> displayed string).
 const words = [
   ["vieejt",   [["v","v"],["i","vi"],["e","vie"],["e","viê"],["j","việ"],["t","việt"]]],
   ["truowngf", [["t","t"],["r","tr"],["u","tru"],["o","truo"],["w","trươ"],["n","trươn"],["g","trương"],["f","trường"]]],
@@ -264,7 +264,7 @@ if (reduced) {
 }
 document.getElementById("brewbtn").addEventListener("click", () => {
   navigator.clipboard.writeText("brew install --cask ptrinh/viettelex/viettelex").then(() => {
-    document.getElementById("copied").textContent = "đã copy ✓";
+    document.getElementById("copied").textContent = "copied ✓";
     setTimeout(() => document.getElementById("copied").textContent = "", 2000);
   });
 });
@@ -275,7 +275,7 @@ document.querySelectorAll("[data-copy]").forEach((el) => {
       const hint = el.querySelector(".copyhint");
       if (!hint) return;
       const prev = hint.textContent;
-      hint.textContent = "đã copy ✓";
+      hint.textContent = "copied ✓";
       setTimeout(() => { hint.textContent = prev; }, 2000);
     });
   });
