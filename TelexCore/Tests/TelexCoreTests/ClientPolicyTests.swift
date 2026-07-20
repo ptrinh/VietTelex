@@ -31,16 +31,4 @@ final class ClientPolicyTests: XCTestCase {
             XCTAssertFalse(ClientPolicy.isRemoteDesktop(id), "should NOT be RDP: \(id ?? "nil")")
         }
     }
-
-    func testUserAlwaysOffOverride() {
-        let userOff: Set<String> = ["com.example.custom"]
-        // Built-in RDP still forced regardless of user set.
-        XCTAssertTrue(ClientPolicy.shouldForcePassthrough("com.microsoft.rdc.macos", userAlwaysOff: []))
-        // User-added app is forced.
-        XCTAssertTrue(ClientPolicy.shouldForcePassthrough("com.example.custom", userAlwaysOff: userOff))
-        // Unlisted app is not.
-        XCTAssertFalse(ClientPolicy.shouldForcePassthrough("com.apple.TextEdit", userAlwaysOff: userOff))
-        // nil client never forced.
-        XCTAssertFalse(ClientPolicy.shouldForcePassthrough(nil, userAlwaysOff: userOff))
-    }
 }

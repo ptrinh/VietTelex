@@ -577,6 +577,49 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(g.backspace(), .passthrough)
     }
 
+    // Data-loss guard: past capacity (32 raw keys) the word is "overflowed" — its
+    // 32-char engine view is a stale prefix of the longer on-screen text. The engine
+    // must stop composing so it never diffs the short view against the screen and
+    // drops the overflow: overflow keys pass through, backspace passes through, and
+    // the boundary neither auto-restores nor rewrites (would scramble/delete text).
+    func testOverflowStopsComposing() {
+        // A word with an early transform ("nguyeenx"→"nguyễn") plus filler past 32.
+        let word = "nguyeenx" + String(repeating: "a", count: 32)   // 40 keys
+        var e = TelexEngine()
+        var pastCapAllPassthrough = true
+        for (i, ch) in word.enumerated() {
+            let action = e.feed(ch)
+            // (a) every key from the 33rd on passes through (never recorded/diffed).
+            if i >= 32, action != .passthrough { pastCapAllPassthrough = false }
+        }
+        XCTAssertTrue(pastCapAllPassthrough, "keys past capacity must pass through")
+
+        // (b) backspace after overflow passes through (app deletes natively).
+        XCTAssertEqual(e.backspace(), .passthrough)
+
+        // (c) boundary must not restore/rewrite: commitBoundary -> .none,
+        // commitText -> composed (never rawKeystrokes).
+        var b = TelexEngine()
+        for ch in word { _ = b.feed(ch) }
+        XCTAssertEqual(b.commitBoundary(autoRestore: true), .none)
+
+        var t = TelexEngine()
+        for ch in word { _ = t.feed(ch) }
+        let composedBefore = t.composed          // commitText resets, so snapshot first
+        let rawBefore = t.rawKeystrokes
+        let committed = t.commitText(autoRestore: true)
+        XCTAssertEqual(committed, composedBefore)
+        XCTAssertNotEqual(committed, rawBefore)
+    }
+
+    // No regression: a normal (non-overflowed) invalid word still auto-restores.
+    func testOverflowDoesNotBreakNormalRestore() {
+        var e = TelexEngine()
+        for ch in "retore" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "retỏe")
+        XCTAssertEqual(e.commitText(autoRestore: true), "retore")
+    }
+
     func testActionShapes() {
         var e = TelexEngine()
         // plain consonant -> passthrough (system inserts)
