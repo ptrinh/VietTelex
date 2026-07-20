@@ -71,6 +71,33 @@ Record medians in ms; IME cost = VietTelex − ABC.
 | Spotlight | tap-selection | | | | |
 | Excel | emptyReset | | | | |
 
+### A2 baseline measured — 2026-07-20, v1.2.0 (installed release), M-series
+
+Automated run: `stress-typing.swift` at 15 keys/s into a real focused app while
+`measure-signposts.sh 25` recorded. Output text verified character-exact
+(8 × "đây là tiếng việt rất hay", no lost/mis-toned chars).
+
+| Interval · group | count | p50 | p90 | p99 | max |
+| --- | --- | --- | --- | --- | --- |
+| TextEdit — imk.handle (in-place) | 280 | 1.93 ms | 2.35 ms | 2.97 ms | 6.01 ms |
+| Terminal — imk.handle (tap-defer) | 202 | 13.4 µs | 18.6 µs | 23.2 µs | 31.0 µs |
+| Terminal — tap.handle | 273 | 18.2 µs | 84.5 µs | 318.9 µs | 457.1 µs |
+| Terminal — tap.emit bs=1 | 56 | 55.4 µs | 78.5 µs | 410.7 µs | 434.0 µs |
+| Terminal — tap.emit bs=2 | 7 | 62.5 µs | 74.1 µs | 80.0 µs | 80.7 µs |
+| Terminal — tap.emit bs=3 | 8 | 80.7 µs | 110.9 µs | 118.9 µs | 119.8 µs |
+
+Reading:
+
+- **The IMKit in-place path is the expensive one inside our code**: ~1.9 ms
+  p50 per keystroke, dominated by the synchronous `insertText`/`selectedRange`
+  XPC to the client — not the engine (0.2 µs) and not the tap (≤ 0.1 ms).
+- The tap path is cheap end-to-end in-process; `tap.emit` measures only the
+  posting call, not the window-server round trip to pixels — A1
+  (keystroke-photon) still needed for the felt latency per strategy.
+- Strategy labels for `imk.handle`/`tap.handle` show `<private>` on the v1.2.0
+  build; the `.public` fix is on main and will label the next release.
+  `tap.emit`'s numeric `bs=` labels export fine even on 1.2.0.
+
 Notes on reading A1:
 
 - The sampler prints its own capture resolution (~ms/capture). Treat the
