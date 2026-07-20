@@ -61,7 +61,10 @@ final class TelexInputController: IMKInputController {
         var spMode = "passthrough"
         let spState = Signposts.poster.beginInterval("imk.handle",
                                                      id: Signposts.poster.makeSignpostID())
-        defer { Signposts.poster.endInterval("imk.handle", spState, "\(spMode)") }
+        // privacy: .public — os_signpost redacts interpolated strings to "<private>"
+        // by default, which collapses the per-strategy breakdown in xctrace exports.
+        // The label is an internal strategy name, never user text.
+        defer { Signposts.poster.endInterval("imk.handle", spState, "\(spMode, privacy: .public)") }
 
         // Our own terminal tap-mode output (synthetic Backspace / Unicode) loops back
         // through the input system. Pass it straight to the app WITHOUT re-feeding the

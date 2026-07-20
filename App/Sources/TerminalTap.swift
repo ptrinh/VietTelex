@@ -229,7 +229,9 @@ enum SyntheticKeyboard {
         // real milliseconds (every posted event round-trips the window server).
         let spState = Signposts.poster.beginInterval("tap.emit",
                                                      id: Signposts.poster.makeSignpostID())
-        defer { Signposts.poster.endInterval("tap.emit", spState, "bs=\(backspaces) ins=\(text.count)") }
+        // privacy: .public — counts only (burst size), no user text; without it the
+        // xctrace export shows "<private>" and the bs-bucket analysis can't populate.
+        defer { Signposts.poster.endInterval("tap.emit", spState, "bs=\(backspaces, privacy: .public) ins=\(text.count, privacy: .public)") }
         if mode == .selection, backspaces > 0, !text.isEmpty {
             for _ in 0..<backspaces { postSelectLeft() }
             postUnicode(text)
@@ -469,7 +471,8 @@ final class TerminalTapController {
         defer {
             let mode = emitMode == .selection ? "selection"
                      : emitMode == .emptyReset ? "emptyReset" : "backspace"
-            Signposts.poster.endInterval("tap.handle", spState, "\(mode)")
+            // privacy: .public — internal emit-mode name, never user text (see imk.handle).
+            Signposts.poster.endInterval("tap.handle", spState, "\(mode, privacy: .public)")
         }
 
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
