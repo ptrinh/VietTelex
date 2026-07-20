@@ -80,12 +80,18 @@ final class TelexInputController: IMKInputController {
         // Our own terminal tap-mode output (synthetic Backspace / Unicode) loops back
         // through the input system. Pass it straight to the app WITHOUT re-feeding the
         // engine (a synthetic Backspace would otherwise re-enter as kDelete).
-        if SyntheticKeyboard.isSynthetic(event) { return false }
-
-        // Confirm handle() is even reached for this app (deduped separately from the
-        // routing decision, so it survives regardless of which exit the keys take).
+        // Confirm handle() is reached BEFORE the synthetic guard, and record whether
+        // this real key is being mistaken for one of ours (isSynthetic) and why
+        // (source pid vs our pid). Deduped per app so it's one line, not per-key.
+        let synth = SyntheticKeyboard.isSynthetic(event)
         let entryID = AppState.shared.currentBundleID ?? FrontmostApp.shared.bundleID ?? "?"
-        if entryID != lastEntryLog { lastEntryLog = entryID; DebugLog.log("handle ENTER app=\(entryID)") }
+        if entryID != lastEntryLog {
+            lastEntryLog = entryID
+            let srcPid = event.cgEvent?.getIntegerValueField(.eventSourceUnixProcessID) ?? -1
+            DebugLog.log("handle ENTER app=\(entryID) synthetic=\(synth) srcPid=\(srcPid) myPid=\(getpid())")
+        }
+
+        if synth { return false }
 
         // Secure input active (password field, or an app holding secure input like
         // some chat apps): DROP the pending composition without rewriting it, then
