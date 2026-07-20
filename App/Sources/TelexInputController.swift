@@ -130,13 +130,24 @@ final class TelexInputController: IMKInputController {
             discardComposition(); return false
         }
 
-        // Remote-desktop / VM / screen-share apps forward raw scancodes, so a
-        // synthesized composition is wrong there — behave as if OFF (technical
-        // necessity, kept even though there is no user VI/EN toggle any more).
-        // Same reason as the secure-input branch: drop, never boundary()/rewrite —
-        // the anchor belongs to the previous field, and this window forwards raw keys.
-        if ClientPolicy.isRemoteDesktop(AppState.shared.currentBundleID) {
-            logDecision("handle \(AppState.shared.currentBundleID ?? "?"): remote-desktop → discard (raw passthrough)")
+        // Passthrough resolution. Manual .passthrough = unconditional IME-off for the
+        // app. Remote-desktop / VM / screen-share apps (built-in list) forward raw
+        // scancodes for the SESSION canvas — but their OWN chrome (PC-name field,
+        // search box) is ordinary text input, so with Accessibility we compose there:
+        // only when the focused element's AX role is a real text input; unsure →
+        // passthrough (composing into the canvas would type garbage into the guest
+        // OS, while the reverse merely loses Vietnamese in a name field).
+        // Same as the secure-input branch: drop, never boundary()/rewrite — the
+        // anchor belongs to the previous field, and this window forwards raw keys.
+        let earlyID = AppState.shared.currentBundleID
+        let earlyManual = AppState.shared.manualMode(earlyID)
+        if earlyManual == .passthrough {
+            logDecision("handle \(earlyID ?? "?"): manual passthrough → discard (raw)")
+            discardComposition(); return false
+        }
+        if earlyManual == nil, ClientPolicy.isRemoteDesktop(earlyID),
+           !(Accessibility.isTrusted && FocusedFieldDetector.isTextInput) {
+            logDecision("handle \(earlyID ?? "?"): remote-desktop → discard (raw passthrough)")
             discardComposition(); return false
         }
 

@@ -131,6 +131,11 @@ final class SettingsModel: ObservableObject {
         ids.formUnion(AppState.builtInSpecialApps.filter {
             NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
         })
+        // Remote-desktop / VM apps (installed only): default Passthrough, shown so
+        // the behavior is visible and overridable like everything else.
+        ids.formUnion(ClientPolicy.forcePassthroughBundleIDs.filter {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
+        })
         ids.formUnion(addedApps)
         var rows = ids
             .map { AppModeRow(id: $0, name: Self.appName(for: $0)) }
@@ -173,6 +178,7 @@ final class SettingsModel: ObservableObject {
         case .selection: return loc("Selection-replace")
         case .emptyReset: return loc("Empty-reset")
         case .axDetect: return loc("Per-field (AX)")   // browsers default to per-field
+        case .passthrough: return loc("Passthrough")   // remote-desktop class
         case .auto, nil: return loc("not detected yet")
         }
     }
@@ -187,6 +193,7 @@ final class SettingsModel: ObservableObject {
         case .selection: return loc("Selection-replace")
         case .emptyReset: return loc("Empty-reset")
         case .axDetect: return loc("Per-field (AX)")
+        case .passthrough: return loc("Passthrough")
         case .auto, nil: return loc("Auto")
         }
     }
@@ -374,6 +381,7 @@ struct ModeTableTab: View {
                         Text(model.loc("In-place")).tag("inPlace")
                         Text(model.loc("Selection-replace")).tag("selection")
                         Text(model.loc("Empty-reset")).tag("emptyReset")
+                        Text(model.loc("Passthrough")).tag("passthrough")
                     }
                     .labelsHidden()
                     .disabled(row.id == SettingsModel.spotlightRowID)   // fixed strategy

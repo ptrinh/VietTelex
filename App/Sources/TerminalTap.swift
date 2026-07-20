@@ -212,15 +212,67 @@ enum FocusedFieldDetector {
         return value
     }
 
-    private static func scan() -> Bool {
-        guard AXIsProcessTrusted() else { return true }
+    // MARK: is the focused element a REAL text input? (remote-desktop per-field)
+    //
+    // Remote-desktop apps forward raw scancodes for the SESSION canvas, but their own
+    // chrome (PC-name field, search box) is ordinary Cocoa text input where the IME
+    // works fine. Distinguish by the focused element's role. Unknown/unavailable →
+    // NOT a text input, i.e. passthrough — misclassifying the canvas as a field would
+    // compose garbage into the guest OS, while the reverse merely keeps the status quo
+    // (no Vietnamese in a name field).
+    private static var cachedTextInput = false
+    private static var lastTextCheckNs: UInt64 = 0
+    private static var refreshingText = false
+    private static let textInputRoles: Set<String> =
+        ["AXTextField", "AXTextArea", "AXSearchField", "AXComboBox"]
+
+    static var isTextInput: Bool {
+        let now = DispatchTime.now().uptimeNanoseconds
+        let (stale, value): (Bool, Bool) = lock.withLock {
+            let needsRefresh = now &- lastTextCheckNs >= ttlNs && !refreshingText
+            if needsRefresh { refreshingText = true }
+            return (needsRefresh, cachedTextInput)
+        }
+        if stale {
+            scanQueue.async {
+                let isText = scanTextInput()
+                lock.withLock {
+                    cachedTextInput = isText
+                    lastTextCheckNs = DispatchTime.now().uptimeNanoseconds
+                    refreshingText = false
+                }
+            }
+        }
+        return value
+    }
+
+    private static func scanTextInput() -> Bool {
+        guard let element = focusedElementForScan() else { return false }
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+              let role = roleRef as? String
+        else { return false }
+        return textInputRoles.contains(role)
+    }
+
+    /// System-wide focused element with the 50ms timeout, or nil (untrusted / no
+    /// focus). Shared by both scans.
+    private static func focusedElementForScan() -> AXUIElement? {
+        guard AXIsProcessTrusted() else { return nil }
         let systemWide = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(systemWide, 0.05)
         var focusedRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
               let focused = focusedRef, CFGetTypeID(focused) == AXUIElementGetTypeID()
-        else { return true }
-        var element = focused as! AXUIElement
+        else { return nil }
+        let element = focused as! AXUIElement
+        AXUIElementSetMessagingTimeout(element, 0.05)
+        return element
+    }
+
+    private static func scan() -> Bool {
+        guard let focused = focusedElementForScan() else { return true }
+        var element = focused
         // Walk up a bounded ancestor chain. 12 hops covers real browser hierarchies
         // (web content sits many groups deep) while still bounding the AX round trips.
         for _ in 0..<12 {

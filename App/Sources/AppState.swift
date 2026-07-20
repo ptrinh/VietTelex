@@ -5,6 +5,7 @@
 // per-app input-source memory).
 
 import Foundation
+import TelexCore   // ClientPolicy (remote-desktop passthrough class)
 
 extension Notification.Name {
     /// Posted by the mouse tap on any click: the caret may have moved, so any active
@@ -44,8 +45,9 @@ final class AppState: @unchecked Sendable {
     /// text without it (never silently to in-place — that loses diacritics).
     /// `.axDetect` resolves per focused FIELD via the Accessibility tree (address
     /// bar → selection-replace, page content → in-place); see FocusedFieldDetector.
+    /// `.passthrough` = IME behaves as OFF (remote-desktop class — raw scancodes).
     enum AppMode: String, CaseIterable {
-        case auto, inPlace, marked, tap, selection, emptyReset, axDetect
+        case auto, inPlace, marked, tap, selection, emptyReset, axDetect, passthrough
     }
 
     // In-memory caches (loaded once). All guarded by `lock` (see above).
@@ -343,7 +345,7 @@ final class AppState: @unchecked Sendable {
                 // its in-place half works fine without AX, but without AX the field
                 // walk can't run either, so the safe blanket is marked text too.
                 case .tap, .selection, .emptyReset, .axDetect: return !trusted
-                case .inPlace, .auto: return false
+                case .inPlace, .auto, .passthrough: return false
                 }
             }
             return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
@@ -443,6 +445,7 @@ final class AppState: @unchecked Sendable {
     func autoResolvedMode(_ bundleID: String?) -> AppMode? {
         guard let id = bundleID else { return nil }
         let trusted = Accessibility.isTrusted
+        if ClientPolicy.isRemoteDesktop(id) { return .passthrough }
         return lock.withLock {
             // Browsers resolve per field when the AX walk is possible; without
             // Accessibility they fall through to whatever the probe learned.
