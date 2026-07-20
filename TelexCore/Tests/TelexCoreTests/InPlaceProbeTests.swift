@@ -3,26 +3,30 @@ import XCTest
 
 // The input controller edits text in place with insertText(_:replacementRange:).
 // A compliant app REPLACES; some apps (Terminal, iTerm2's CJK IMKit path, Mac
-// Catalyst like WhatsApp) ignore the range and APPEND at the caret, so tone edits
-// pile up without replacing and diacritics never render.
+// Catalyst like WhatsApp, Electron/CEF like Slack & Lark) ignore the range and
+// APPEND at the caret, so tone edits pile up without replacing and diacritics never
+// render.
 //
-// These tests drive the REAL TelexEngine and replay its actions through two
-// simulated clients — one honoring the range, one appending — then feed the exact
-// read-backs to InPlaceProbe. They pin down that:
-//   • reading the TARGET region [start, start+len) catches the append app, and
-//   • the OLD approach (reading before the CARET) would have false-positived it —
-//     the precise regression that silently broke iTerm2/WhatsApp.
+// These tests drive the REAL TelexEngine and replay its actions through simulated
+// clients — one honoring the range, one appending honestly, and one that appends
+// but ECHOES its read-back (models Slack/Lark/iTerm) — then feed the exact caret +
+// read-back to InPlaceProbe.verdict. They pin down that:
+//   • the caret catches the append apps even when the read-back is echoed, and
+//   • text read-back alone (the old signal) false-positives the echoing app —
+//     the precise regression that silently broke iTerm2, then Slack & Lark.
 final class InPlaceProbeTests: XCTestCase {
+
+    private enum Mode { case honor, append, appendEcho }
 
     /// Simulated input client. NSString offsets match IMKit; every composed
     /// Vietnamese scalar is a single BMP UTF-16 unit, so offsets line up 1:1.
     private final class Client {
-        let honorsRange: Bool
+        let mode: Mode
         let doc = NSMutableString()
         var caret = 0
-        init(honorsRange: Bool) { self.honorsRange = honorsRange }
+        init(_ mode: Mode) { self.mode = mode }
         func insert(_ s: String, at loc: Int, length bs: Int) {
-            if honorsRange {
+            if mode == .honor {
                 doc.replaceCharacters(in: NSRange(location: loc, length: bs), with: s)
                 caret = loc + (s as NSString).length
             } else {
@@ -30,47 +34,43 @@ final class InPlaceProbeTests: XCTestCase {
                 caret += (s as NSString).length
             }
         }
-        func readback(at loc: Int, length len: Int) -> String? {
+        /// Read-back for [loc, loc+len). An echoing app pretends it holds `inserted`
+        /// there regardless of what actually happened.
+        func readback(at loc: Int, length len: Int, echo: String) -> String? {
+            if mode == .appendEcho { return echo }
             guard loc >= 0, len >= 0, loc + len <= doc.length else { return nil }
             return doc.substring(with: NSRange(location: loc, length: len))
         }
     }
 
-    private struct ProbePoint {
-        let start: Int
-        let inserted: String
-        let regionGood: String?     // compliant client, TARGET region read-back (the fix)
-        let regionBad: String?      // append client,   TARGET region read-back (the fix)
-        let caretBad: String?       // append client,   BEFORE-caret read-back (the old probe)
+    private struct Probe {
+        let start: Int, bs: Int, insLen: Int, inserted: String
+        let caret: Int
+        let region: String?
     }
 
-    /// Replay the controller's TRACKING in-place applier over `keys` (fresh empty
-    /// field: anchor 0, no selection), feeding a compliant and an append client.
-    /// Returns the first probe-eligible replace and the read-backs at that instant.
-    private func firstProbe(_ keys: String) -> ProbePoint? {
+    /// Replay the controller's tracking in-place applier over `keys` against a client
+    /// in `mode`, returning the first probe-eligible replace + that client's caret
+    /// and target-region read-back at that instant.
+    private func firstProbe(_ keys: String, _ mode: Mode) -> Probe? {
         var e = TelexEngine(); e.liveSpellCheck = true; e.simpleTelex = true
-        let good = Client(honorsRange: true)
-        let bad = Client(honorsRange: false)
+        let c = Client(mode)
         var onLen = 0
         for ch in keys {
             switch e.feed(ch) {
             case .passthrough:
                 let s = String(ch)
-                good.insert(s, at: onLen, length: 0)
-                bad.insert(s, at: onLen, length: 0)
+                c.insert(s, at: onLen, length: 0)
                 onLen += (s as NSString).length
             case let .replace(bs, insert):
                 let start = onLen - bs
-                good.insert(insert, at: start, length: bs)
-                bad.insert(insert, at: start, length: bs)
+                c.insert(insert, at: start, length: bs)
                 let insLen = (insert as NSString).length
                 onLen += insLen - bs
                 if InPlaceProbe.shouldProbe(insertLength: insLen, bs: bs, clear: 0, needsProbe: true) {
-                    return ProbePoint(
-                        start: start, inserted: insert,
-                        regionGood: good.readback(at: start, length: insLen),
-                        regionBad: bad.readback(at: start, length: insLen),
-                        caretBad: bad.readback(at: bad.caret - insLen, length: insLen))
+                    return Probe(start: start, bs: bs, insLen: insLen, inserted: insert,
+                                 caret: c.caret,
+                                 region: c.readback(at: start, length: insLen, echo: insert))
                 }
             case .none:
                 break
@@ -79,42 +79,69 @@ final class InPlaceProbeTests: XCTestCase {
         return nil
     }
 
-    // A spread of Telex sequences whose first modifier/tone key is a real replace.
+    private func verdict(_ p: Probe) -> InPlaceProbe.Verdict {
+        InPlaceProbe.verdict(caret: p.caret, start: p.start, bs: p.bs,
+                             insertLength: p.insLen, regionReadback: p.region, inserted: p.inserted)
+    }
+
+    // Telex sequences whose first modifier/tone key is a real replace.
     private let cases = [
         "cas", "caf", "awn", "cowm", "thuw", "ddi", "gox", "maj",
         "vieejt", "truowngf", "hoas", "nguoiwf", "dduowngf", "quaf",
     ]
 
-    func testCompliantAppReadsBackInserted() {
+    func testCompliantAppStaysInPlace() {
         for keys in cases {
-            guard let p = firstProbe(keys) else { XCTFail("no probe point: \(keys)"); continue }
-            XCTAssertNotNil(p.regionGood, "compliant read-back nil: \(keys)")
-            XCTAssertTrue(InPlaceProbe.inPlaceHonored(readback: p.regionGood ?? "", inserted: p.inserted),
-                          "compliant app should look honored for \(keys)")
+            guard let p = firstProbe(keys, .honor) else { XCTFail("no probe: \(keys)"); continue }
+            XCTAssertEqual(verdict(p), .honored, "compliant app should be honored: \(keys)")
         }
     }
 
-    func testAppendAppDetectedByRegionReadback() {
+    func testHonestAppendAppDetected() {
         for keys in cases {
-            guard let p = firstProbe(keys) else { XCTFail("no probe point: \(keys)"); continue }
-            // The fix: the target region still holds the OLD char, so it is NOT honored.
-            XCTAssertFalse(InPlaceProbe.inPlaceHonored(readback: p.regionBad ?? "", inserted: p.inserted),
-                           "append app must NOT look honored under region read-back: \(keys)")
+            guard let p = firstProbe(keys, .append) else { XCTFail("no probe: \(keys)"); continue }
+            XCTAssertEqual(verdict(p), .appended, "honest append app must be caught: \(keys)")
         }
     }
 
-    func testOldCaretReadbackWouldFalsePositiveAppendApp() {
-        // Why the fix was needed: reading before the CARET, the append app's text IS
-        // the inserted string — so the old probe confirmed these broken apps "good".
+    func testEchoingAppendAppStillDetectedByCaret() {
+        // Slack/Lark/iTerm: append AND echo the read-back. The caret (start+bs+len)
+        // still exposes the append even though the region read-back returns `inserted`.
         for keys in cases {
-            guard let p = firstProbe(keys) else { XCTFail("no probe point: \(keys)"); continue }
-            XCTAssertTrue(InPlaceProbe.inPlaceHonored(readback: p.caretBad ?? "", inserted: p.inserted),
-                          "documents the old false-positive (before-caret read-back) for \(keys)")
+            guard let p = firstProbe(keys, .appendEcho) else { XCTFail("no probe: \(keys)"); continue }
+            XCTAssertEqual(p.region, p.inserted, "sanity: echo client returns inserted")
+            XCTAssertEqual(verdict(p), .appended, "echoing append app must be caught by caret: \(keys)")
         }
+    }
+
+    func testTextReadbackAloneWouldFalsePositiveEchoingApp() {
+        // Documents WHY caret is needed: with no caret, the echoed read-back looks
+        // honored — the exact false-positive that broke Slack & Lark.
+        for keys in cases {
+            guard let p = firstProbe(keys, .appendEcho) else { XCTFail("no probe: \(keys)"); continue }
+            let readbackOnly = InPlaceProbe.verdict(caret: nil, start: p.start, bs: p.bs,
+                                                    insertLength: p.insLen, regionReadback: p.region,
+                                                    inserted: p.inserted)
+            XCTAssertEqual(readbackOnly, .honored, "read-back alone false-positives the echo app: \(keys)")
+        }
+    }
+
+    func testInconclusiveWhenNoCaretAndNoReadback() {
+        // No evidence either way → never condemn a (probably working) in-place app.
+        let v = InPlaceProbe.verdict(caret: nil, start: 2, bs: 1, insertLength: 1,
+                                     regionReadback: nil, inserted: "ê")
+        XCTAssertEqual(v, .inconclusive)
+    }
+
+    func testUntrustedCaretFallsBackToReadback() {
+        // Caret present but neither expected value (untrusted): defer to read-back.
+        XCTAssertEqual(InPlaceProbe.verdict(caret: 999, start: 2, bs: 1, insertLength: 1,
+                                            regionReadback: "ê", inserted: "ê"), .honored)
+        XCTAssertEqual(InPlaceProbe.verdict(caret: 999, start: 2, bs: 1, insertLength: 1,
+                                            regionReadback: "e", inserted: "ê"), .appended)
     }
 
     func testShouldProbeGating() {
-        // Only a real, clean replace of an unclassified app is a usable probe.
         XCTAssertTrue(InPlaceProbe.shouldProbe(insertLength: 1, bs: 1, clear: 0, needsProbe: true))
         XCTAssertFalse(InPlaceProbe.shouldProbe(insertLength: 1, bs: 0, clear: 0, needsProbe: true),
                        "pure insert (bs==0) must never confirm — this was the false-positive")
@@ -124,18 +151,5 @@ final class InPlaceProbeTests: XCTestCase {
                        "empty insert is not a probe")
         XCTAssertFalse(InPlaceProbe.shouldProbe(insertLength: 1, bs: 1, clear: 0, needsProbe: false),
                        "already classified — do not re-probe")
-    }
-
-    func testInsertedFirstCharDiffersFromOldCharAtStart() {
-        // The discriminator relies on the engine stripping the common prefix, so
-        // inserted[0] differs from the old char at `start`. Verify that structurally:
-        // the append client's region read-back (old chars) never equals inserted[0..].
-        for keys in cases {
-            guard let p = firstProbe(keys), let bad = p.regionBad, let good = p.regionGood else {
-                XCTFail("no probe point: \(keys)"); continue
-            }
-            XCTAssertNotEqual(bad.first, good.first,
-                              "first char of target region must differ (replace vs append) for \(keys)")
-        }
     }
 }

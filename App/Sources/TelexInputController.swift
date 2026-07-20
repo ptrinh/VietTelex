@@ -283,23 +283,34 @@ final class TelexInputController: IMKInputController {
     /// A failure switches the app to marked-text mode.
     private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput) {
         let len = (inserted as NSString).length
-        var ok = false
-        if start >= 0 {
-            let range = NSRange(location: start, length: len)
-            if let sub = client.attributedSubstring(from: range) {
-                ok = InPlaceProbe.inPlaceHonored(readback: sub.string, inserted: inserted)
-            }
+        // Primary signal: the post-edit caret (hard for an app to fake — it needs it
+        // to place its candidate window). Fallback: the target-region read-back, used
+        // only when the caret is unavailable (some apps echo it, so it must never
+        // override a caret that says "appended").
+        let sel = client.selectedRange()
+        let caret: Int? = sel.location == NSNotFound ? nil : sel.location
+        var region: String? = nil
+        if start >= 0, let sub = client.attributedSubstring(from: NSRange(location: start, length: len)) {
+            region = sub.string
         }
+        let verdict = InPlaceProbe.verdict(caret: caret, start: start, bs: bs,
+                                           insertLength: len, regionReadback: region,
+                                           inserted: inserted)
+        // Structural diagnostics only — never the typed text itself. `regionMatch`
+        // is a bool (did the read-back equal what we inserted), not the content.
+        DebugLog.log("probe \(AppState.shared.currentBundleID ?? "?"): start=\(start) bs=\(bs) len=\(len) "
+            + "caret=\(caret.map(String.init) ?? "none") expReplace=\(start + len) expAppend=\(start + bs + len) "
+            + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
         let id = AppState.shared.currentBundleID
-        if ok {
+        switch verdict {
+        case .honored:
             AppState.shared.markInPlaceGood(id)
             if let id { probeFailures[id] = nil }   // a good read clears the streak
-        } else {
+        case .appended:
             // Don't condemn on a single failure (the app may just have been busy):
             // count consecutive failures and only switch to marked text on the 2nd.
             // Either way abandon the glitched word so it doesn't linger half-written;
-            // on the first failure leave the app UNCLASSIFIED so the next word
-            // re-probes (needsProbe stays true until markUsesMarkedText runs).
+            // on the first failure leave the app UNCLASSIFIED so the next word re-probes.
             if let id {
                 let n = (probeFailures[id] ?? 0) + 1
                 if n >= 2 {
@@ -309,11 +320,15 @@ final class TelexInputController: IMKInputController {
                     probeFailures[id] = n
                 }
             } else {
-                // No bundleID to key the streak on: fall back to the old behavior.
                 AppState.shared.markUsesMarkedText(id)
             }
             engine.reset()
             tracking = false
+        case .inconclusive:
+            // Can't tell (no caret AND no read-back). Leave the app unclassified so it
+            // re-probes next word, and DON'T touch the composition — the in-place
+            // default is right for the vast majority, so never condemn on no evidence.
+            break
         }
     }
 
