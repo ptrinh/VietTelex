@@ -140,7 +140,7 @@
   <nav class="langswitch"><a href="en/" hreflang="en" lang="en">English</a></nav>
   <div class="hero-inner">
     <img class="logo" src="assets/VietTelex-logo.png" alt="Logo ViệtTelex — phím keycap đỏ chữ VT" width="96" height="96">
-    <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>nhanh, mượt, <span class="accent">chuẩn <span id="year">2026</span></span></h1>
+    <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>nhanh, mượt, <span class="accent">chuẩn 2026</span></h1>
     <p class="sub">ViệtTelex (VietTelex / ViếtTelex) là bộ gõ Telex miễn phí, mã nguồn mở cho macOS, được xây dựng trên InputMethodKit của Apple để tích hợp sâu — không gạch chân từ đang gõ, con trỏ luôn ở cuối, và gõ được cả trong Terminal lẫn Chrome.</p>
 
     <div class="typebox" aria-label="Mô phỏng gõ Telex">
@@ -237,45 +237,37 @@
 
 <script>
 // Demo gõ sống: mô phỏng cách engine biến đổi từng phím (phím gõ -> chuỗi hiển thị).
-const phrases = [
-  [["T","T"],["i","Ti"],["e","Tie"],["e","Tiê"],["n","Tiên"],["g","Tiêng"],["s","Tiếng"],
-   [" ","Tiếng "],["V","Tiếng V"],["i","Tiếng Vi"],["e","Tiếng Vie"],["e","Tiếng Viê"],["j","Tiếng Việ"],["t","Tiếng Việt"]],
-  [["w","w"],["e","we"],["b","web"],["s","webs"],["i","websi"],["t","websit"],["e","website"],
-   [" ","website "],["d","website d"],["d","website đ"],["e","website đe"],["p","website đep"],["j","website đẹp"],
-   [" ","website đẹp "],["q","website đẹp q"],["u","website đẹp qu"],["a","website đẹp qua"],["s","website đẹp quá"]],
-  [["t","t"],["u","tu"],["y","tuy"],["e","tuye"],["e","tuyê"],["j","tuyệ"],["t","tuyệt"],
-   [" ","tuyệt "],["q","tuyệt q"],["u","tuyệt qu"],["a","tuyệt qua"],["s","tuyệt quá"],
-   [" ","tuyệt quá "],["d","tuyệt quá d"],["z","tuyệt quá dz"],["i","tuyệt quá dzi"],["j","tuyệt quá dzị"]],
-];
-const TYPE_MS = 1800, HOLD_MS = 3000;
+// Type "tiếng Việt" (keys "tieengs Vieejt") over ~2s, then hold with the caret
+// blinking in place ~3s, then loop.
+const phrase =
+  [["t","t"],["i","ti"],["e","tie"],["e","tiê"],["n","tiên"],["g","tiêng"],["s","tiếng"],
+   [" ","tiếng "],["V","tiếng V"],["i","tiếng Vi"],["e","tiếng Vie"],["e","tiếng Viê"],["j","tiếng Việ"],["t","tiếng Việt"]];
+const TYPE_MS = 2000, HOLD_MS = 3000;
 const outEl = document.getElementById("out");
 const keysEl = document.getElementById("keys");
-const yearEl = document.getElementById("year");
-if (yearEl) yearEl.textContent = new Date().getFullYear();
-// Cycle phrases: type each in ~1.8s, hold with the caret blinking 3s, then next; loop.
-// Plays even under prefers-reduced-motion (by request).
-let pi = 0;
-function play() {
-  const frames = phrases[pi % phrases.length];
-  const stepMs = TYPE_MS / frames.length;
-  let i = 0, typed = "";
-  keysEl.textContent = " ";
-  outEl.textContent = "";
-  function tick() {
-    if (i < frames.length) {
-      typed += frames[i][0];
-      keysEl.textContent = typed.split("").join(" ");
-      outEl.textContent = frames[i][1];
-      i++;
-      setTimeout(tick, stepMs);
-    } else {
-      pi++;
-      setTimeout(play, HOLD_MS);
-    }
-  }
-  tick();
+if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // Respect reduced motion: show the finished result, no typing animation.
+  keysEl.textContent = "t i e e n g s   V i e e j t";
+  outEl.textContent = "tiếng Việt";
+} else {
+  const stepMs = TYPE_MS / phrase.length;
+  (function play() {
+    let i = 0, typed = "";
+    keysEl.textContent = " ";
+    outEl.textContent = "";
+    (function tick() {
+      if (i < phrase.length) {
+        typed += phrase[i][0];
+        keysEl.textContent = typed.split("").join(" ");
+        outEl.textContent = phrase[i][1];
+        i++;
+        setTimeout(tick, stepMs);
+      } else {
+        setTimeout(play, HOLD_MS);
+      }
+    })();
+  })();
 }
-play();
 document.getElementById("brewbtn").addEventListener("click", () => {
   navigator.clipboard.writeText("brew install --cask ptrinh/viettelex/viettelex").then(() => {
     document.getElementById("copied").textContent = "đã copy ✓";
