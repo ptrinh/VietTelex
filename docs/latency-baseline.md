@@ -98,6 +98,37 @@ Reading:
   build; the `.public` fix is on main and will label the next release.
   `tap.emit`'s numeric `bs=` labels export fine even on 1.2.0.
 
+### A1-alternative measured — pty-arrival latency (no Screen Recording needed)
+
+`Scripts/pty-reader.py` (runs raw-mode inside the target terminal, timestamps
+every arriving byte on CLOCK_UPTIME_RAW) + `Scripts/pty-poster.swift` (posts
+a/s/space samples, stamping the same clock). Delta = OS → tap → synthetic →
+app text arrival — everything the IME influences; only rendering (IME-
+independent) is excluded. Beware macOS per-app input-source memory: activate
+the terminal FIRST, then select the comparison layout, or the run silently
+re-selects VietTelex (detect by byte count: a tone run yields 5 bytes/sample
+vs 3).
+
+Measured 2026-07-20, v1.2.0, Terminal.app, 30 samples (US run n≈20, clean):
+
+| Key | VietTelex p50 | US-layout p50 | IME cost p50 |
+| --- | --- | --- | --- |
+| letter (pass-through) | 6.9 ms | 1.9 ms | **+5.0 ms** |
+| tone edit `s` → DEL+á burst (to last byte) | 17.2 ms | 4.2 ms | **+13.0 ms** |
+| space (boundary) | 7.6 ms | 3.7 ms | +3.9 ms |
+
+Reading:
+
+- Even a NATIVE pass-through letter costs ~+5 ms with VietTelex active — the
+  synchronous IMKit round trip through our process happens for every key even
+  when the controller just returns false (tap-defer). The tap callback itself
+  is µs; the pipeline hop dominates.
+- The tone-edit burst lands ~13 ms after a plain key would — the
+  session-tap re-post round trip (what B3/postToPid would attack). At p50 it
+  is under one 60 Hz frame; p90 ≈ 24 ms is just over.
+- B1 (modify-in-place) should cut the w→ư class of edits to pass-through
+  cost; re-run this harness against a main-build dev-install to confirm.
+
 Notes on reading A1:
 
 - The sampler prints its own capture resolution (~ms/capture). Treat the
