@@ -9,7 +9,31 @@ packages:
   TelexCore:
     path: TelexCore
 
+schemes:
+  VietTelex:
+    build:
+      targets:
+        VietTelex: all
+    test:
+      targets:
+        - VietTelexTests
+
 targets:
+  VietTelexTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: VietTelex
+    settings:
+      base:
+        # Hosted tests: @testable import VietTelex needs the app module loaded.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/VietTelex.app/Contents/MacOS/VietTelex
+        BUNDLE_LOADER: $(TEST_HOST)
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: "YES"
+
   VietTelex:
     type: application
     platform: macOS
