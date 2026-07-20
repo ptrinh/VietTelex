@@ -811,6 +811,7 @@ final class TerminalTapController {
         thread.qualityOfService = .userInteractive
         thread.start()
         _ = ready.wait(timeout: .now() + 2)
+        engine.reset()   // stale composition from a previous tap life; safe pre-enable
         CGEvent.tapEnable(tap: tap, enable: true)
         stateLock.withLock {
             self.tap = tap
@@ -838,6 +839,18 @@ final class TerminalTapController {
             teardown()                                      // dead port -> recreate
         }
         start()
+    }
+
+    /// Accessibility was revoked while the tap was live: kill the machinery entirely
+    /// (MAIN thread — lifecycle owner). ensureRunning()/start() are trust-guarded, so
+    /// nothing resurrects it until the user re-grants; the AX-change notification
+    /// (main.swift) restarts it then.
+    func stopForRevokedTrust() {
+        Accessibility.invalidateCache()
+        guard !Accessibility.isTrusted else { return }   // stale disable, still trusted
+        teardown()
+        SyntheticKeyboard.resetBreaker()
+        DebugLog.log("tap stopped (Accessibility revoked)")
     }
 
     private func teardown() {
@@ -885,9 +898,24 @@ final class TerminalTapController {
             return pass
         }
 
-        // The system disables a tap that is too slow or gets user input; re-enable.
+        // The system disables a tap that is too slow or gets user input; re-enable —
+        // but ONLY while still Accessibility-trusted. When the user REVOKES the
+        // permission, macOS disables the tap with tapDisabledByUserInput and will
+        // disable it again on every re-enable; blindly re-enabling fought the OS in
+        // a ping-pong that wedged ALL input (keyboard + mouse are both in our mask)
+        // — the reported full-input hang. Revoked → tear the whole tap down (on
+        // main; lifecycle is main-owned) and let every event flow natively.
+        // Direct AXIsProcessTrusted() call, NOT the TTL cache — the cache can say
+        // "trusted" for up to 2s after the toggle, which re-arms the fight.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let tap = stateLock.withLock({ tap }) { CGEvent.tapEnable(tap: tap, enable: true) }
+            if AXIsProcessTrusted() {
+                if let tap = stateLock.withLock({ tap }) { CGEvent.tapEnable(tap: tap, enable: true) }
+            } else {
+                Accessibility.invalidateCache()
+                engine.reset()
+                DebugLog.log("tap disabled + Accessibility revoked → full teardown, input native")
+                DispatchQueue.main.async { TerminalTapController.shared.stopForRevokedTrust() }
+            }
             return pass
         }
 

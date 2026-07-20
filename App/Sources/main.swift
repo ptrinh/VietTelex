@@ -42,6 +42,23 @@ inputSourceObserver = DistributedNotificationCenter.default().addObserver(
     TerminalTapController.shared.selectionChanged(isVietTelex: TelexInputController.isVietTelexSelected())
 }
 
+// Accessibility permission toggled (System Settings): react IMMEDIATELY, not on the
+// next keystroke. Revoke while the tap is live used to leave a tap macOS keeps
+// disabling while we kept re-enabling — a ping-pong that wedged ALL input (keyboard
+// AND mouse are in the tap mask). Now: revoked → full teardown (events flow native);
+// granted → start the tap without needing an input-source cycle.
+var axChangeObserver: NSObjectProtocol?
+axChangeObserver = DistributedNotificationCenter.default().addObserver(
+    forName: NSNotification.Name("com.apple.accessibility.api"),
+    object: nil, queue: .main) { _ in
+    Accessibility.invalidateCache()
+    if Accessibility.isTrusted {
+        TerminalTapController.shared.ensureRunning()
+    } else {
+        TerminalTapController.shared.stopForRevokedTrust()
+    }
+}
+
 // Standard editing key equivalents (⌘A/⌘C/⌘V/⌘X/⌘Z, ⌘W) inside our OWN Settings
 // window. macOS dispatches key equivalents through the app's main menu — an
 // LSUIElement agent has no visible menu bar, but without a mainMenu object the
