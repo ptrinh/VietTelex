@@ -66,7 +66,7 @@
   .hero p.sub { margin: 18px auto 0; max-width: 34em; color: #c6ccdb; font-size: 1.06rem; }
 
   .typebox { margin: 40px auto 0; max-width: 560px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 22px 26px; text-align: left; }
-  .typebox .keys { font-family: var(--mono); font-size: .82rem; color: #8b94ab; letter-spacing: .18em; min-height: 1.4em; }
+  .typebox .keys { font-family: var(--mono); font-size: .82rem; color: #8b94ab; letter-spacing: .18em; min-height: 1.4em; white-space: pre-wrap; }
   .typebox .out { font-family: var(--mono); font-size: clamp(1.5rem, 4.4vw, 2.2rem); font-weight: 700; color: #fff; min-height: 1.5em; }
   .typebox .out .caret { display: inline-block; width: 2px; height: 1.15em; background: var(--gold); vertical-align: text-bottom; margin-left: 2px; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
@@ -237,32 +237,38 @@
 
 <script>
 // Live typing demo: mimic how the engine transforms each key (typed keys -> displayed string).
-// Type "tiếng Việt" (keys "tieengs Vieejt") over ~2s, then hold with the caret
-// blinking in place ~3s, then loop.
-const phrase =
-  [["t","t"],["i","ti"],["e","tie"],["e","tiê"],["n","tiên"],["g","tiêng"],["s","tiếng"],
-   [" ","tiếng "],["V","tiếng V"],["i","tiếng Vi"],["e","tiếng Vie"],["e","tiếng Viê"],["j","tiếng Việ"],["t","tiếng Việt"]];
-const TYPE_MS = 2000, HOLD_MS = 3000;
+// Typing demo: cycle these phrases — each typed key transforms live like the engine,
+// then the caret blinks in place, then the next phrase; loops. ~2× faster than before
+// (per-key step and hold both halved).
+const phrases = [
+  [["g","g"],["o","go"],["x","gõ"],[" ","gõ "],["T","gõ T"],["i","gõ Ti"],["e","gõ Tie"],["e","gõ Tiê"],["n","gõ Tiên"],["g","gõ Tiêng"],["s","gõ Tiếng"],[" ","gõ Tiếng "],["V","gõ Tiếng V"],["i","gõ Tiếng Vi"],["e","gõ Tiếng Vie"],["e","gõ Tiếng Viê"],["j","gõ Tiếng Việ"],["t","gõ Tiếng Việt"]],
+  [["w","w"],["e","we"],["b","web"],["s","webs"],["i","websi"],["t","websit"],["e","website"],[" ","website "],["n","website n"],["a","website na"],["y","website nay"],["f","website này"],[" ","website này "],["d","website này d"],["d","website này đ"],["u","website này đu"],["w","website này đư"],["o","website này đưo"],["w","website này đươ"],["c","website này đươc"],["j","website này được"],[" ","website này được "],["d","website này được d"],["d","website này được đ"],["a","website này được đa"],["a","website này được đâ"],["y","website này được đây"],["s","website này được đấy"]],
+  [["t","t"],["u","tu"],["y","tuy"],["e","tuye"],["e","tuyê"],["j","tuyệ"],["t","tuyệt"],[" ","tuyệt "],["q","tuyệt q"],["u","tuyệt qu"],["a","tuyệt qua"],["s","tuyệt quá"],[" ","tuyệt quá "],["d","tuyệt quá d"],["z","tuyệt quá dz"],["i","tuyệt quá dzi"],["j","tuyệt quá dzị"]],
+  [["t","t"],["h","th"],["o","tho"],["o","thô"],["n","thôn"],["g","thông"],[" ","thông "],["m","thông m"],["i","thông mi"],["n","thông min"],["h","thông minh"],[" ","thông minh "],["g","thông minh g"],["h","thông minh gh"],["e","thông minh ghe"],["e","thông minh ghê"]],
+];
+const STEP_MS = 70, HOLD_MS = 1500;
 const outEl = document.getElementById("out");
 const keysEl = document.getElementById("keys");
 if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-  // Respect reduced motion: show the finished result, no typing animation.
-  keysEl.textContent = "t i e e n g s   V i e e j t";
-  outEl.textContent = "tiếng Việt";
+  // Respect reduced motion: show the first phrase finished, no typing animation.
+  keysEl.textContent = "g o x   T i e e n g s   V i e e j t";
+  outEl.textContent = "gõ Tiếng Việt";
 } else {
-  const stepMs = TYPE_MS / phrase.length;
+  let pi = 0;
   (function play() {
+    const frames = phrases[pi % phrases.length];
     let i = 0, typed = "";
     keysEl.textContent = " ";
     outEl.textContent = "";
     (function tick() {
-      if (i < phrase.length) {
-        typed += phrase[i][0];
+      if (i < frames.length) {
+        typed += frames[i][0];
         keysEl.textContent = typed.split("").join(" ");
-        outEl.textContent = phrase[i][1];
+        outEl.textContent = frames[i][1];
         i++;
-        setTimeout(tick, stepMs);
+        setTimeout(tick, STEP_MS);
       } else {
+        pi++;
         setTimeout(play, HOLD_MS);
       }
     })();
