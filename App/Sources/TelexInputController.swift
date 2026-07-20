@@ -50,6 +50,7 @@ final class TelexInputController: IMKInputController {
     // is logged only when it changes, so the debug log shows one line per app/mode
     // transition instead of one per keystroke.
     private var lastDecisionLog = ""
+    private var lastEntryLog = ""
     private func logDecision(_ s: String) {
         guard s != lastDecisionLog else { return }
         lastDecisionLog = s
@@ -81,6 +82,11 @@ final class TelexInputController: IMKInputController {
         // engine (a synthetic Backspace would otherwise re-enter as kDelete).
         if SyntheticKeyboard.isSynthetic(event) { return false }
 
+        // Confirm handle() is even reached for this app (deduped separately from the
+        // routing decision, so it survives regardless of which exit the keys take).
+        let entryID = AppState.shared.currentBundleID ?? FrontmostApp.shared.bundleID ?? "?"
+        if entryID != lastEntryLog { lastEntryLog = entryID; DebugLog.log("handle ENTER app=\(entryID)") }
+
         // Secure input active (password field, or an app holding secure input like
         // some chat apps): DROP the pending composition without rewriting it, then
         // pass through untouched. We must NOT call boundary() here: boundary runs
@@ -90,7 +96,10 @@ final class TelexInputController: IMKInputController {
         // engine drop is the only safe teardown. (endComposition is also wrong: its
         // marked-text branch finalizes with insertText(engine.composed), the very
         // injection we must avoid in a secure field.)
-        if IsSecureEventInputEnabled() { discardComposition(); return false }
+        if IsSecureEventInputEnabled() {
+            logDecision("handle \(AppState.shared.currentBundleID ?? "?"): secure-input → discard (raw passthrough)")
+            discardComposition(); return false
+        }
 
         // Remote-desktop / VM / screen-share apps forward raw scancodes, so a
         // synthesized composition is wrong there — behave as if OFF (technical
@@ -98,6 +107,7 @@ final class TelexInputController: IMKInputController {
         // Same reason as the secure-input branch: drop, never boundary()/rewrite —
         // the anchor belongs to the previous field, and this window forwards raw keys.
         if ClientPolicy.isRemoteDesktop(AppState.shared.currentBundleID) {
+            logDecision("handle \(AppState.shared.currentBundleID ?? "?"): remote-desktop → discard (raw passthrough)")
             discardComposition(); return false
         }
 

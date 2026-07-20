@@ -252,6 +252,13 @@ struct ExperimentalTab: View {
     private func debugHeader() -> [String] {
         let s = AppState.shared
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        // Build timestamp = executable mtime — uniquely identifies THIS build, so we
+        // can confirm the newest install is actually running (version string alone
+        // doesn't change between rebuilds).
+        let exePath = (Bundle.main.executableURL ?? Bundle.main.bundleURL).path
+        let buildDate = (try? FileManager.default.attributesOfItem(atPath: exePath)[.modificationDate]) as? Date ?? Date()
+        let bf = DateFormatter(); bf.dateFormat = "dd/MM HH:mm:ss"
+        let build = bf.string(from: buildDate)
         let id = s.currentBundleID
         let frontID = FrontmostApp.shared.bundleID
         let mode: String
@@ -262,7 +269,7 @@ struct ExperimentalTab: View {
         let inPlace = s.learnedInPlaceApps
         let fallback = s.learnedFallbackApps
         return [
-            "VietTelex debug log — v\(version)",
+            "VietTelex debug log — v\(version) (build \(build))",
             "accessibility: \(Accessibility.isTrusted ? "granted" : "MISSING")",
             "tap running: \(TerminalTapController.shared.isRunning)",
             "current app: \(id ?? "?")  frontmost: \(frontID ?? "?")",
