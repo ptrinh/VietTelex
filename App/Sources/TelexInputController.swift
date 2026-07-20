@@ -228,8 +228,9 @@ final class TelexInputController: IMKInputController {
     // MARK: - In-place mode (default: no marked text, caret stays at end)
 
     /// Replace `bs` chars before the caret with `insert`, using our locally tracked
-    /// position (no per-key selectedRange()). Unclassified apps are probed once
-    /// (read-back); apps that ignore replacementRange (Terminal) flip to marked text.
+    /// position (no per-key selectedRange()). Unclassified apps are probed on the
+    /// first real replace (read-back at the target region); apps that ignore
+    /// replacementRange (Terminal) flip to marked text.
     private func applyInPlace(bs: Int, insert: String, _ client: IMKTextInput) {
         let id = AppState.shared.currentBundleID
         let start: Int
@@ -259,20 +260,30 @@ final class TelexInputController: IMKInputController {
         client.insertText(insert, replacementRange: NSRange(location: start, length: bs + clear))
         onLen += (insert as NSString).length - bs
 
-        if !insert.isEmpty, AppState.shared.needsProbe(id) {
-            probeInPlace(inserted: insert, client)
+        // Probe ONLY on a real, clean replacement (bs > 0, no pending selection).
+        // A pure insert (bs == 0) lands identically whether or not the app honors
+        // replacementRange, so it must never CONFIRM "in-place good" — that premature
+        // confirm on a plain insert was the false-positive that locked iTerm2/WhatsApp
+        // onto the broken in-place path. Only a replace distinguishes the two.
+        if !insert.isEmpty, bs > 0, clear == 0, AppState.shared.needsProbe(id) {
+            probeInPlace(inserted: insert, start: start, bs: bs, client)
         }
     }
 
-    /// After the first in-place replace into an unknown app, read the text back. If
-    /// the app ignored replacementRange (valid caret but no actual replace, e.g.
-    /// Terminal), remember it and switch to marked-text mode.
-    private func probeInPlace(inserted: String, _ client: IMKTextInput) {
+    /// After a real in-place REPLACE into an unknown app, verify the old characters
+    /// were actually replaced (not appended). Read back the region we targeted,
+    /// `[start, start+len)`: a compliant app now holds `inserted` there; an app that
+    /// ignored `replacementRange` (Terminal, iTerm2's CJK IMKit path, Catalyst) still
+    /// holds the OLD characters. Because the engine strips the common prefix, the
+    /// first char of `inserted` is guaranteed to differ from the old char at `start`,
+    /// so this discriminates even on a 1-char window — unlike the old probe, which
+    /// read back the text before the CARET (present in BOTH cases → false-positive).
+    /// A failure switches the app to marked-text mode.
+    private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput) {
         let len = (inserted as NSString).length
-        let sel = client.selectedRange()
         var ok = false
-        if sel.location != NSNotFound, sel.location >= len {
-            let range = NSRange(location: sel.location - len, length: len)
+        if start >= 0 {
+            let range = NSRange(location: start, length: len)
             if let sub = client.attributedSubstring(from: range) {
                 ok = (sub.string == inserted)
             }
