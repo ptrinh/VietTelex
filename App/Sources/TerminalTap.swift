@@ -205,6 +205,32 @@ enum AXTextEdit {
         else { return false }
         return AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success
     }
+
+    /// Ground-truth read for the in-place probe: the ACTUAL text the focused element
+    /// holds at `[start, start+length)`, via the Accessibility tree — a channel
+    /// INDEPENDENT of the IMKit read-back (attributedSubstring / selectedRange) that
+    /// some apps (Lark) fake or report inconsistently. Returns nil if AX is untrusted
+    /// or any read fails, so the caller falls back to the read-back signals. Short 50ms
+    /// messaging timeout: this runs on the IMKit key path.
+    static func readString(at start: Int, length: Int) -> String? {
+        guard start >= 0, length > 0, AXIsProcessTrusted() else { return nil }
+        let systemWide = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(systemWide, 0.05)
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focused = focusedRef, CFGetTypeID(focused) == AXUIElementGetTypeID()
+        else { return nil }
+        let element = focused as! AXUIElement
+        AXUIElementSetMessagingTimeout(element, 0.05)
+        var range = CFRange(location: start, length: length)
+        guard let rangeVal = AXValueCreate(.cfRange, &range) else { return nil }
+        var result: CFTypeRef?
+        guard AXUIElementCopyParameterizedAttributeValue(
+                element, kAXStringForRangeParameterizedAttribute as CFString, rangeVal, &result) == .success,
+              let str = result as? String
+        else { return nil }
+        return str
+    }
 }
 
 enum SyntheticKeyboard {
