@@ -367,7 +367,15 @@ enum SyntheticKeyboard {
             // class). ANY AX failure → replaceTrailing returns false and we fall through
             // to the posted-events path unchanged. Signpost so measure-signposts.sh can
             // confirm the round trips collapsed to one.
-            if AppState.shared.axSelectionReplace, SyntheticKeyboard.queueDrained() {
+            //
+            // SPOTLIGHT ONLY: a Chromium omnibox does NOT register an AX kAXSelectedText
+            // mutation as user input, so its autocomplete model keeps the pre-edit text
+            // and an immediate Enter submits the stale match ("chó"→"cho"). Browsers must
+            // use the posted select+overtype below (real key events Chrome treats as user
+            // input). Detect Spotlight (the other .selection app) by the window-list scan;
+            // anything else in .selection mode is a browser → skip the AX path.
+            if AppState.shared.axSelectionReplace, SpotlightDetector.isVisible,
+               SyntheticKeyboard.queueDrained() {
                 let axState = Signposts.poster.beginInterval("ax.replace",
                                                              id: Signposts.poster.makeSignpostID())
                 let ok = AXTextEdit.replaceTrailing(backspaces: backspaces, with: text)
