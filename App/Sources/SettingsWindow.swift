@@ -70,6 +70,8 @@ final class SettingsModel: ObservableObject {
     @Published var shortcuts: [ShortcutRow] = []
     @Published var fallbackApps: [String] = []
     @Published var inPlaceApps: [String] = []
+    @Published var manualModes: [String: String] = [:]   // bundleID -> AppMode.rawValue
+    @Published var newModeAppID: String = ""              // Experimental: bundle id to pin
 
     init(selected: SettingsTab) {
         selectedTab = selected
@@ -94,6 +96,25 @@ final class SettingsModel: ObservableObject {
     func reloadLearnedApps() {
         fallbackApps = AppState.shared.learnedFallbackApps
         inPlaceApps = AppState.shared.learnedInPlaceApps
+        manualModes = AppState.shared.manualModes
+    }
+
+    /// Apps to show in the App-mode override list: everything learned or pinned.
+    var knownApps: [String] {
+        Array(Set(fallbackApps + inPlaceApps + Array(manualModes.keys))).sorted()
+    }
+    /// Current override for `id` as an AppMode raw value ("auto" when unset).
+    func appMode(_ id: String) -> String { manualModes[id] ?? "auto" }
+    func setAppMode(_ id: String, _ raw: String) {
+        guard let mode = AppState.AppMode(rawValue: raw) else { return }
+        AppState.shared.setManualMode(mode, for: id)
+        reloadLearnedApps()
+    }
+    func pinNewApp(_ raw: String) {
+        let id = newModeAppID.trimmingCharacters(in: .whitespaces)
+        guard !id.isEmpty else { return }
+        setAppMode(id, raw)
+        newModeAppID = ""
     }
 
     func reloadShortcuts() {
@@ -217,6 +238,28 @@ struct ExperimentalTab: View {
                 Toggle(model.loc("Cascade circuit breaker"), isOn: $model.tapCascadeBreaker)
                 Text(model.loc("Keep this ON. Stops the terminal tap if it ever floods the keyboard with synthetic events, so a bug can’t freeze typing."))
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(model.loc("App mode")) {
+                Text(model.loc("Force how VietTelex types in a specific app. Auto = detect automatically. Use Tap (real keystrokes, no underline) if an app types wrong or shows underlines; Marked text is the safe fallback."))
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    TextField(model.loc("App bundle id (e.g. com.larksuite.larkApp)"), text: $model.newModeAppID)
+                    Button(model.loc("Pin as Tap")) { model.pinNewApp("tap") }
+                        .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                ForEach(model.knownApps, id: \.self) { id in
+                    Picker(id, selection: Binding(get: { model.appMode(id) },
+                                                  set: { model.setAppMode(id, $0) })) {
+                        Text(model.loc("Auto")).tag("auto")
+                        Text(model.loc("In-place")).tag("inPlace")
+                        Text(model.loc("Marked text")).tag("marked")
+                        Text(model.loc("Tap")).tag("tap")
+                    }
+                }
+                if model.knownApps.isEmpty {
+                    Text(model.loc("No apps yet — type in one first, or add a bundle id above."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             Section(model.loc("Diagnostics")) {
                 Toggle(model.loc("Record debug log"), isOn: $model.debugLogging)

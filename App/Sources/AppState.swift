@@ -26,12 +26,20 @@ final class AppState: @unchecked Sendable {
         static let shortcuts = "shortcuts"
         static let fallbackApps = "fallbackApps"      // learned: ignore replacementRange
         static let probedApps = "probedApps"          // learned: verified good
+        static let manualModes = "manualAppModes"     // user override: bundleID -> AppMode
+    }
+
+    /// A user-forced per-app handling strategy (Experimental → App mode). Overrides the
+    /// learned/probed classification entirely. `.auto` = no override (probe decides).
+    enum AppMode: String, CaseIterable {
+        case auto, inPlace, marked, tap
     }
 
     // In-memory caches (loaded once).
     private var shortcutsCache: [String: String]
     private var fallbackAppsCache: Set<String>
     private var probedAppsCache: Set<String>
+    private var manualModesCache: [String: String]
 
     /// Bundle id of the frontmost client, set in activateServer.
     var currentBundleID: String?
@@ -54,6 +62,7 @@ final class AppState: @unchecked Sendable {
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
         fallbackAppsCache = Set(defaults.stringArray(forKey: Key.fallbackApps) ?? [])
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
+        manualModesCache = (defaults.dictionary(forKey: Key.manualModes) as? [String: String]) ?? [:]
         for key in Self.legacyKeys { defaults.removeObject(forKey: key) }
     }
 
@@ -231,9 +240,25 @@ final class AppState: @unchecked Sendable {
     static let markedTextApps: Set<String> = [
     ]
 
+    // MARK: - Manual per-app mode override (Experimental → App mode)
+
+    /// The user-forced mode for `bundleID`, or nil when set to auto / unset.
+    func manualMode(_ bundleID: String?) -> AppMode? {
+        guard let id = bundleID, let raw = manualModesCache[id],
+              let m = AppMode(rawValue: raw), m != .auto else { return nil }
+        return m
+    }
+    func setManualMode(_ mode: AppMode, for bundleID: String) {
+        if mode == .auto { manualModesCache[bundleID] = nil }
+        else { manualModesCache[bundleID] = mode.rawValue }
+        defaults.set(manualModesCache, forKey: Key.manualModes)
+    }
+    var manualModes: [String: String] { manualModesCache }
+
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
+        if let m = manualMode(id) { return m == .marked }   // user override wins
         return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
             || Self.markedTextApps.contains(id)
     }
@@ -245,6 +270,7 @@ final class AppState: @unchecked Sendable {
     /// markedTextApps are excluded: they must stay on marked text even when trusted.
     func usesTapMode(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
+        if let m = manualMode(id) { return m == .tap && Accessibility.isTrusted }  // user override wins
         return (fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id))
             && !Self.markedTextApps.contains(id) && Accessibility.isTrusted
     }
@@ -286,6 +312,7 @@ final class AppState: @unchecked Sendable {
     /// fallback app — it's known-broken in-place and would false-positive the probe.
     func needsProbe(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
+        if manualMode(id) != nil { return false }   // user pinned it; never probe
         return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
             && !Self.builtInFallbackApps.contains(id) && !Self.markedTextApps.contains(id)
     }

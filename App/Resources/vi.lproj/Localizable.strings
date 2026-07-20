@@ -89,3 +89,14 @@
 "Saved to %@" = "Đã lưu vào %@";
 "Couldn’t save the file." = "Không lưu được file.";
 "Apply tone edits in Chrome and Spotlight with one Accessibility edit instead of a burst of Shift+Left key events. Experimental — off by default." = "Bỏ dấu trong Chrome và Spotlight bằng một thao tác Accessibility thay vì một loạt phím Shift+Trái. Thử nghiệm — mặc định tắt.";
+
+/* App mode override (Experimental) */
+"App mode" = "Chế độ ứng dụng";
+"Force how VietTelex types in a specific app. Auto = detect automatically. Use Tap (real keystrokes, no underline) if an app types wrong or shows underlines; Marked text is the safe fallback." = "Ép cách VietTelex gõ trong một ứng dụng cụ thể. Auto = tự nhận diện. Dùng Tap (gõ phím thật, không gạch chân) nếu app gõ sai hoặc bị gạch chân; Marked text là phương án an toàn.";
+"App bundle id (e.g. com.larksuite.larkApp)" = "Bundle id của app (vd com.larksuite.larkApp)";
+"Pin as Tap" = "Ép sang Tap";
+"Auto" = "Tự động";
+"In-place" = "Gõ trực tiếp";
+"Marked text" = "Marked text";
+"Tap" = "Tap";
+"No apps yet — type in one first, or add a bundle id above." = "Chưa có app nào — gõ thử trong một app, hoặc thêm bundle id ở trên.";
