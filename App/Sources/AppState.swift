@@ -227,6 +227,12 @@ final class AppState: @unchecked Sendable {
         "com.apple.Terminal",     // Terminal.app
         "com.googlecode.iterm2",  // iTerm2
         "com.macromates.TextMate",// TextMate
+        // Lark (Electron): its in-place is broken AND it fakes every probe signal
+        // (caret, read-back, even the AX tree), so auto-detection provably can't
+        // classify it — verified against a clean 1.1.2 too. Pin it: tap backspace-
+        // retype when Accessibility is granted (real characters, no underline), else
+        // marked text.
+        "com.larksuite.larkApp",  // Lark
     ]
 
     /// Apps FORCED to marked-text — never in-place, and never tap (even with
