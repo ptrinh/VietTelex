@@ -42,8 +42,10 @@ final class AppState: @unchecked Sendable {
     /// decides). All 5 typing strategies are selectable; the three tap-family modes
     /// (`tap`, `selection`, `emptyReset`) need Accessibility and fall back to marked
     /// text without it (never silently to in-place — that loses diacritics).
+    /// `.axDetect` resolves per focused FIELD via the Accessibility tree (address
+    /// bar → selection-replace, page content → in-place); see FocusedFieldDetector.
     enum AppMode: String, CaseIterable {
-        case auto, inPlace, marked, tap, selection, emptyReset
+        case auto, inPlace, marked, tap, selection, emptyReset, axDetect
     }
 
     // In-memory caches (loaded once). All guarded by `lock` (see above).
@@ -337,8 +339,10 @@ final class AppState: @unchecked Sendable {
                 case .marked: return true
                 // Tap-family override without Accessibility: marked text is the safe
                 // degradation (in-place would silently drop diacritics on an app the
-                // user explicitly said is broken).
-                case .tap, .selection, .emptyReset: return !trusted
+                // user explicitly said is broken). axDetect is only PARTLY tap-family —
+                // its in-place half works fine without AX, but without AX the field
+                // walk can't run either, so the safe blanket is marked text too.
+                case .tap, .selection, .emptyReset, .axDetect: return !trusted
                 case .inPlace, .auto: return false
                 }
             }
@@ -387,13 +391,24 @@ final class AppState: @unchecked Sendable {
     ]
 
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
+    /// For `.axDetect` apps the answer flips per focused FIELD (address bar yes,
+    /// page content no) — resolved OUTSIDE our lock (the detector has its own).
     func usesSelectionReplace(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        let wants: Bool = lock.withLock {
-            if let m = _manualMode(id) { return m == .selection }   // user override wins
-            return Self.selectionApps.contains(id)
+        enum Want { case yes, no, perField }
+        let w: Want = lock.withLock {
+            if let m = _manualMode(id) {                            // user override wins
+                if m == .selection { return .yes }
+                if m == .axDetect { return .perField }
+                return .no
+            }
+            return Self.selectionApps.contains(id) ? .yes : .no
         }
-        return wants && Accessibility.isTrusted
+        switch w {
+        case .no: return false
+        case .yes: return Accessibility.isTrusted
+        case .perField: return Accessibility.isTrusted && FocusedFieldDetector.wantsSelection
+        }
     }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).

@@ -158,7 +158,7 @@ final class SettingsModel: ObservableObject {
         case .tap: return loc("Tap (backspace)")
         case .selection: return loc("Selection-replace")
         case .emptyReset: return loc("Empty-reset")
-        case .auto, nil: return loc("not detected yet")
+        case .auto, .axDetect, nil: return loc("not detected yet")   // axDetect never comes from Auto
         }
     }
 
@@ -171,6 +171,7 @@ final class SettingsModel: ObservableObject {
         case .tap: return loc("Tap (backspace)")
         case .selection: return loc("Selection-replace")
         case .emptyReset: return loc("Empty-reset")
+        case .axDetect: return loc("Per-field (AX)")
         case .auto, nil: return loc("Auto")
         }
     }
@@ -354,6 +355,7 @@ struct ModeTableTab: View {
                         Text(model.loc("Tap (backspace)")).tag("tap")
                         Text(model.loc("Marked text")).tag("marked")
                         Divider()
+                        Text(model.loc("Per-field (AX)")).tag("axDetect")
                         Text(model.loc("In-place")).tag("inPlace")
                         Text(model.loc("Selection-replace")).tag("selection")
                         Text(model.loc("Empty-reset")).tag("emptyReset")

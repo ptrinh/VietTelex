@@ -169,6 +169,78 @@ enum SpotlightDetector {
     }
 }
 
+/// Per-FIELD mode resolution for apps pinned to `.axDetect` (Bảng chế độ gõ →
+/// "Tự dò theo ô"): a browser's address/search bar needs selection-replace (its
+/// inline autocomplete races in-place edits — the Safari smart-search bug), while
+/// fields INSIDE the page work best on the fast IMKit in-place path. Distinguish
+/// them structurally through the Accessibility tree: walk the focused element's
+/// ancestors — hit AXWebArea → page content (in-place); hit AXToolbar → a chrome/
+/// toolbar field (selection). Unknown → selection, the mode that works everywhere
+/// (same "when unsure, pick what always works" rule as the probe).
+///
+/// Same threading/caching design as SpotlightDetector: the AX walk (cross-process,
+/// 50ms-capped calls) never runs on a keystroke — reads return the cached verdict
+/// and kick ONE background refresh when the 200ms TTL lapses, so a focus change is
+/// seen at most one keystroke late. Cache + gate live under one lock (read on both
+/// the tap thread and main).
+enum FocusedFieldDetector {
+    private static let lock = NSLock()
+    private static var cached = true            // unknown → selection (always works)
+    private static var lastCheckNs: UInt64 = 0
+    private static var refreshing = false
+    private static let ttlNs: UInt64 = 200_000_000
+    private static let scanQueue = DispatchQueue(label: "com.viettelex.field-scan", qos: .userInitiated)
+
+    /// True → the focused field should use selection-replace; false → in-place.
+    static var wantsSelection: Bool {
+        let now = DispatchTime.now().uptimeNanoseconds
+        let (stale, value): (Bool, Bool) = lock.withLock {
+            let needsRefresh = now &- lastCheckNs >= ttlNs && !refreshing
+            if needsRefresh { refreshing = true }
+            return (needsRefresh, cached)
+        }
+        if stale {
+            scanQueue.async {
+                let wants = scan()
+                lock.withLock {
+                    cached = wants
+                    lastCheckNs = DispatchTime.now().uptimeNanoseconds
+                    refreshing = false
+                }
+            }
+        }
+        return value
+    }
+
+    private static func scan() -> Bool {
+        guard AXIsProcessTrusted() else { return true }
+        let systemWide = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(systemWide, 0.05)
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focused = focusedRef, CFGetTypeID(focused) == AXUIElementGetTypeID()
+        else { return true }
+        var element = focused as! AXUIElement
+        // Walk up a bounded ancestor chain. 12 hops covers real browser hierarchies
+        // (web content sits many groups deep) while still bounding the AX round trips.
+        for _ in 0..<12 {
+            AXUIElementSetMessagingTimeout(element, 0.05)
+            var roleRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+               let role = roleRef as? String {
+                if role == "AXWebArea" { return false }   // page content → in-place
+                if role == "AXToolbar" { return true }    // address/search bar → selection
+            }
+            var parentRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parentRef) == .success,
+                  let parent = parentRef, CFGetTypeID(parent) == AXUIElementGetTypeID()
+            else { return true }
+            element = parent as! AXUIElement
+        }
+        return true
+    }
+}
+
 /// How a tone edit is emitted to the app:
 /// - `backspace`: Backspace ×N then type (terminals).
 /// - `selection`: Shift+Left ×N to select then overtype (Chromium omnibox / Spotlight
