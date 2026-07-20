@@ -13,7 +13,7 @@
 
 **VietTelex** (ViệtTelex / ViếtTelex) là bộ gõ tiếng Việt **Telex** cho macOS, được xây dựng trên **InputMethodKit** của Apple để tích hợp sâu — thay vì chỉ là một lớp chặn sự kiện bàn phím bên ngoài. Không gạch chân từ đang gõ, con trỏ luôn ở cuối, dấu bỏ trực tiếp vào chữ, và gõ được cả trong **Terminal / iTerm** mà không phá autocomplete của shell. Triết lý: **tối giản, nhanh, ổn định, mã nguồn mở** — cài xong là gõ, hầu như không phải chỉnh gì thêm.
 
-> Dự án của **Phil Trịnh** (ViệtTelex / ViếtTelex), viết lại từ đầu sau nhiều năm dùng macOS mà chưa thấy bộ gõ tiếng Việt nào thật sự *ngon, chuẩn, mượt*.
+> Dự án của **Phil Trịnh**, viết lại từ đầu sau gần 20 năm dùng macOS mà chưa thấy bộ gõ tiếng Việt nào thật sự *ngon, chuẩn, mượt*.
 
 ## Điểm nổi bật
 
