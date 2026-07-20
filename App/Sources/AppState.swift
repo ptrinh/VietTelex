@@ -195,14 +195,29 @@ final class AppState: @unchecked Sendable {
     // MARK: - Learned typing strategy (in-place replacementRange vs marked text)
 
     /// Apps where the in-place replacementRange path is known-broken but the learned
-    /// probe can't catch it. WhatsApp is a Mac Catalyst app: it returns a valid caret
-    /// (so it never falls back on a NotFound selectedRange) AND echoes the inserted
-    /// text on read-back (so `probeInPlace` false-positives and marks it "good"), yet
-    /// it ignores `replacementRange` — tone edits get inserted WITHOUT replacing, so
-    /// diacritics never render. Force these off in-place: → tap backspace-retype when
-    /// Accessibility is granted, else marked text. Built-in, never probed.
+    /// probe can't be trusted to catch it. Two failure classes:
+    ///
+    ///  • Terminals (Terminal.app, iTerm2) — the CANONICAL fallback apps: they ignore
+    ///    in-place `replacementRange` entirely, so they MUST run tap backspace-retype
+    ///    (or marked text). They used to rely purely on the learned `fallbackAppsCache`,
+    ///    but that cache is per-install UserDefaults: a reinstall/upgrade wipes it, and
+    ///    until the app is re-probed (and iff the probe fails, which it doesn't always —
+    ///    iTerm2 implements IMKit text input for CJK and can echo the read-back, so
+    ///    `probeInPlace` false-positives and locks it to the broken in-place path) the
+    ///    user silently loses Vietnamese in their terminal. Terminal support is a core
+    ///    promise, so it is built in, never left to the probe.
+    ///
+    ///  • WhatsApp — a Mac Catalyst app: returns a valid caret (never falls back on a
+    ///    NotFound selectedRange) AND echoes inserted text on read-back (so the probe
+    ///    false-positives), yet ignores `replacementRange` so diacritics never render.
+    ///
+    /// TextMate has the same in-place breakage in practice. All force off in-place: →
+    /// tap backspace-retype when Accessibility is granted, else marked text. Never probed.
     static let builtInFallbackApps: Set<String> = [
         "net.whatsapp.WhatsApp",
+        "com.apple.Terminal",     // Terminal.app
+        "com.googlecode.iterm2",  // iTerm2
+        "com.macromates.TextMate",// TextMate
     ]
 
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
