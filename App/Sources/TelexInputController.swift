@@ -354,6 +354,15 @@ final class TelexInputController: IMKInputController {
     /// so this discriminates even on a 1-char window — unlike the old probe, which
     /// read back the text before the CARET (present in BOTH cases → false-positive).
     /// A failure switches the app to marked-text mode.
+    /// Serial queue for the probe's Accessibility ground-truth read. The AX call has
+    /// a 50ms messaging timeout — running it synchronously inside probeInPlace put a
+    /// potential 50ms stall on the keystroke that probes a new app. The verdict only
+    /// affects FUTURE keystrokes, so the read is inherently deferrable. Deferring is
+    /// also MORE accurate: Chromium-class apps build their AX tree lazily/async, so a
+    /// T+0 read races a stale cache (measured — the Lark experiment) while a read a
+    /// beat later sees the settled tree.
+    private static let axProbeQueue = DispatchQueue(label: "com.viettelex.ax-probe", qos: .userInitiated)
+
     private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput,
                               shadow: Bool = false) {
         let len = (inserted as NSString).length
@@ -367,11 +376,10 @@ final class TelexInputController: IMKInputController {
         if start >= 0, let sub = client.attributedSubstring(from: NSRange(location: start, length: len)) {
             region = sub.string
         }
-        // Ground-truth read via the Accessibility tree (independent of the app's IMKit
-        // self-report). Authoritative when available — this is what auto-detects apps
-        // like Lark that fake the caret/read-back.
-        let axRegion = AXTextEdit.readString(at: start, length: len)
-        let verdict = InPlaceProbe.verdict(axRegion: axRegion, caret: caret, start: start, bs: bs,
+        // PRELIMINARY verdict from the self-reported signals only. The Accessibility
+        // ground-truth read happens ASYNC below and can override this verdict when it
+        // lands (axProbeQueue doc above) — it never blocks the keystroke.
+        let verdict = InPlaceProbe.verdict(axRegion: nil, caret: caret, start: start, bs: bs,
                                            insertLength: len, regionReadback: region,
                                            inserted: inserted)
         // Structural diagnostics only — never the typed text itself. `regionMatch`
@@ -379,48 +387,52 @@ final class TelexInputController: IMKInputController {
         DebugLog.log("probe\(shadow ? "(shadow)" : "") \(AppState.shared.currentBundleID ?? "?"): "
             + "start=\(start) bs=\(bs) len=\(len) "
             + "caret=\(caret.map(String.init) ?? "none") expReplace=\(start + len) expAppend=\(start + bs + len) "
-            + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") "
-            + "axMatch=\(axRegion.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
+            + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
         let id = AppState.shared.currentBundleID
         // EXPERIMENT: arm the deferred re-read for the next keyDown (debugLogging only —
         // the extra AX calls must never run on a stock hot path).
         if AppState.shared.debugLogging {
             pendingReprobe = (id, start, len, bs, inserted, verdict)
         }
+
+        // Async ground-truth read. Fired for shadow probes too (log-only there).
+        Self.axProbeQueue.async { [weak self] in
+            let axRegion = AXTextEdit.readString(at: start, length: len)
+            guard axRegion != nil else { return }   // AX unavailable → preliminary stands
+            DispatchQueue.main.async {
+                self?.applyAXVerdict(axRegion: axRegion, inserted: inserted, id: id, shadow: shadow)
+            }
+        }
+
         // A shadow probe is data-gathering only: log + arm the re-read, never touch
         // the classification or the engine.
         if shadow { return }
+        applyPreliminaryVerdict(verdict, id: id, expReplace: start + len)
+    }
+
+    /// Classification from the SELF-REPORTED signals (caret / read-back) — the part
+    /// that must never lock an app in on thin evidence. Honored commits only after two
+    /// confirmations at DISTINCT offsets (Lark's constant garbage caret reads honored
+    /// whenever expReplace coincides with it — see InPlaceProbe.HonorTracker); appended
+    /// needs two in a row (a single failure may just be the app being busy).
+    private func applyPreliminaryVerdict(_ verdict: InPlaceProbe.Verdict, id: String?, expReplace: Int) {
         switch verdict {
         case .honored:
-            // An AX-backed honored is ground truth → commit immediately. A SELF-reported
-            // honored (caret/read-back) needs a second confirmation at a DIFFERENT
-            // offset first: Lark's constant garbage caret (always 1) reads honored
-            // whenever expReplace coincides with it, and a single-probe commit is what
-            // locked it onto the broken in-place path. See InPlaceProbe.HonorTracker.
-            if axRegion != nil {
-                AppState.shared.markInPlaceGood(id)
-            } else if let id {
+            if let id {
                 var tracker = probeHonors[id] ?? InPlaceProbe.HonorTracker()
-                if tracker.recordHonored(expReplace: start + len) {
+                if tracker.recordHonored(expReplace: expReplace) {
                     AppState.shared.markInPlaceGood(id)
                     probeHonors[id] = nil
                 } else {
                     probeHonors[id] = tracker   // keep probing until a distinct offset confirms
                 }
+                probeFailures[id] = nil         // a good read clears the streak
             }
-            if let id { probeFailures[id] = nil }   // a good read clears the streak
         case .appended:
             // A failure also voids any half-collected honored confirmation: the next
             // honored (if any) must start the two-distinct-offsets count over.
-            if let id { probeHonors[id] = nil }
-            // An AX-backed verdict is GROUND TRUTH, not a transient read — condemn
-            // immediately (one glitched word, then the app is on the fallback path for
-            // good). Without AX (caret/read-back only), a single failure may just be the
-            // app being busy, so require TWO in a row before switching.
-            if axRegion != nil {
-                if let id { probeFailures[id] = nil }
-                AppState.shared.markUsesMarkedText(id)
-            } else if let id {
+            if let id {
+                probeHonors[id] = nil
                 let n = (probeFailures[id] ?? 0) + 1
                 if n >= 2 {
                     probeFailures[id] = nil
@@ -433,6 +445,30 @@ final class TelexInputController: IMKInputController {
             }
             engine.reset()
             tracking = false
+        }
+    }
+
+    /// The deferred Accessibility ground truth landed (main thread). It is
+    /// authoritative: it reports the field's REAL content independent of the app's
+    /// IMKit self-report, and it read the tree after it settled. It overrides whatever
+    /// the preliminary verdict did — including un-committing an in-place promotion.
+    private func applyAXVerdict(axRegion: String?, inserted: String, id: String?, shadow: Bool) {
+        let match = axRegion == inserted
+        DebugLog.log("probe(ax\(shadow ? "·shadow" : "")) \(id ?? "?"): axMatch=\(match ? "yes" : "no")")
+        guard !shadow else { return }
+        if match {
+            AppState.shared.markInPlaceGood(id)
+            if let id { probeFailures[id] = nil; probeHonors[id] = nil }
+        } else {
+            AppState.shared.unmarkInPlaceGood(id)   // reverse a self-report-based commit
+            AppState.shared.markUsesMarkedText(id)
+            if let id { probeFailures[id] = nil; probeHonors[id] = nil }
+            // Abandon the composition ONLY if the user is still in the condemned app —
+            // by the time the read lands, focus (and the engine) may belong elsewhere.
+            if AppState.shared.currentBundleID == id {
+                engine.reset()
+                tracking = false
+            }
         }
     }
 
@@ -568,10 +604,13 @@ final class TelexInputController: IMKInputController {
         TerminalTapController.shared.ensureRunning()
 
         if resetObserver == nil {
-            // queue: nil → runs synchronously on the poster's thread (the tap's main-
-            // thread callback), so the reset lands BEFORE the next key is handled.
+            // queue: .main — the poster is the TAP thread now, and this block mutates
+            // the controller's engine/tracking, which are MAIN-thread state. Ordering
+            // is preserved: the click/⌘-combo that triggers the post physically
+            // precedes the next keystroke, so its main-queue block is enqueued before
+            // IMK delivers that key to handle() through the same main run loop.
             resetObserver = NotificationCenter.default.addObserver(
-                forName: .telexResetComposition, object: nil, queue: nil) { [weak self] _ in
+                forName: .telexResetComposition, object: nil, queue: .main) { [weak self] _ in
                 self?.engine.reset()
                 self?.tracking = false
                 self?.onLen = 0

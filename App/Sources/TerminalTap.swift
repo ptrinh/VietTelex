@@ -29,6 +29,8 @@ enum Accessibility {
     // hit up to twice per keystroke (usesSelectionReplace on the hot path). Cache
     // with a short TTL — a grant/revoke shows up within ttlNs, and requestIfNeeded
     // invalidates immediately after prompting.
+    // Locked: read on BOTH the main thread (controller/Settings) and the tap thread.
+    private static let lock = NSLock()
     private static var cached = false
     private static var lastCheckNs: UInt64 = 0
     private static let ttlNs: UInt64 = 2_000_000_000
@@ -37,13 +39,21 @@ enum Accessibility {
     /// the sandboxed build — it can never be granted.
     static var isTrusted: Bool {
         let now = DispatchTime.now().uptimeNanoseconds
-        if lastCheckNs != 0, now &- lastCheckNs < ttlNs { return cached }
-        lastCheckNs = now
-        cached = AXIsProcessTrusted()
-        return cached
+        let fresh: Bool? = lock.withLock {
+            (lastCheckNs != 0 && now &- lastCheckNs < ttlNs) ? cached : nil
+        }
+        if let fresh { return fresh }
+        // TCC check OUTSIDE the lock (out-of-process call; a concurrent duplicate
+        // check is harmless, a blocked lock on the key path is not).
+        let trusted = AXIsProcessTrusted()
+        lock.withLock {
+            cached = trusted
+            lastCheckNs = now
+        }
+        return trusted
     }
 
-    static func invalidateCache() { lastCheckNs = 0 }
+    static func invalidateCache() { lock.withLock { lastCheckNs = 0 } }
 
     /// Prompt for Accessibility permission (opens System Settings). Safe when already
     /// trusted (returns true, no prompt).
@@ -65,21 +75,27 @@ enum Accessibility {
 final class FrontmostApp {
     static let shared = FrontmostApp()
 
-    private(set) var bundleID: String?
+    /// Locked: written by the NSWorkspace observer on MAIN, read per-key on the TAP
+    /// thread (and by the controller on main).
+    private let lock = NSLock()
+    private var _bundleID: String?
+    var bundleID: String? { lock.withLock { _bundleID } }
 
     /// Most-recently-activated apps (newest first, distinct), EXCLUDING VietTelex
     /// itself — so Settings can offer "recent apps" to pin without typing a bundle id.
+    /// MAIN-thread only (observer writes, Settings UI reads) — no lock needed.
     private(set) var recent: [(id: String, name: String)] = []
     private static let selfID = "com.viettelex.inputmethod.telex"
 
     private init() {
-        bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        _bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil, queue: .main) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            self?.bundleID = app?.bundleIdentifier
-            guard let self, let id = app?.bundleIdentifier, id != Self.selfID else { return }
+            guard let self else { return }
+            self.lock.withLock { self._bundleID = app?.bundleIdentifier }
+            guard let id = app?.bundleIdentifier, id != Self.selfID else { return }
             self.recent.removeAll { $0.id == id }
             self.recent.insert((id, app?.localizedName ?? id), at: 0)
             if self.recent.count > 10 { self.recent.removeLast() }
@@ -105,10 +121,11 @@ enum SpotlightDetector {
     // simultaneous with typing into it, so being one keystroke stale is invisible while
     // removing a multi-ms spike from the hot path.
     //
-    // Threading: the cached bool + timestamp are read/written on MAIN only (the tap run
-    // loop source and the IMKit controller both live there); only the CGWindowList call
-    // itself runs off-main. `refreshing` gates against launching a second scan while one
-    // is in flight — it too is main-only, so no lock is needed.
+    // Threading: read on both the TAP thread (per key) and MAIN (controller), refresh
+    // result lands from the utility queue — so the cached bool + timestamp +
+    // `refreshing` gate all live under one lock. Only the CGWindowList call itself
+    // runs outside it.
+    private static let lock = NSLock()
     private static var cached = false
     private static var lastCheckNs: UInt64 = 0
     private static var refreshing = false
@@ -117,18 +134,22 @@ enum SpotlightDetector {
 
     static var isVisible: Bool {
         let now = DispatchTime.now().uptimeNanoseconds
-        if now &- lastCheckNs >= ttlNs, !refreshing {
-            refreshing = true
+        let (stale, value): (Bool, Bool) = lock.withLock {
+            let needsRefresh = now &- lastCheckNs >= ttlNs && !refreshing
+            if needsRefresh { refreshing = true }
+            return (needsRefresh, cached)
+        }
+        if stale {
             scanQueue.async {
                 let visible = scan()                       // heavy call, off the hot path
-                DispatchQueue.main.async {
+                lock.withLock {
                     cached = visible
                     lastCheckNs = DispatchTime.now().uptimeNanoseconds
                     refreshing = false
                 }
             }
         }
-        return cached
+        return value
     }
 
     private static func scan() -> Bool {
@@ -315,6 +336,12 @@ enum SyntheticKeyboard {
         event.cgEvent.map(isSyntheticMagic) ?? false
     }
 
+    /// One lock for every mutable static below (stamp, in-flight counter, breaker
+    /// window). The posting paths run on the TAP thread; resetBreaker() is called
+    /// from MAIN (start/ensureRunning). Uncontended NSLock is tens of ns — noise
+    /// next to a window-server post.
+    private static let lock = NSLock()
+
     /// Strictly-increasing timestamp for posted events. CGEvent.post orders delivery
     /// by timestamp, and events we create back-to-back can get equal/near-equal
     /// mach-time stamps — the window server then reorders same-stamp events, so a
@@ -322,9 +349,12 @@ enum SyntheticKeyboard {
     /// "nuẵ" = "nuawx"). Stamping each event mach-time-or-last+1 forces FIFO.
     private static var lastStamp: UInt64 = 0
     private static func stamp(_ event: CGEvent) {
-        let now = mach_absolute_time()
-        lastStamp = now > lastStamp ? now : lastStamp &+ 1
-        event.timestamp = CGEventTimestamp(lastStamp)
+        let stampValue: UInt64 = lock.withLock {
+            let now = mach_absolute_time()
+            lastStamp = now > lastStamp ? now : lastStamp &+ 1
+            return lastStamp
+        }
+        event.timestamp = CGEventTimestamp(stampValue)
     }
 
     // MARK: In-flight tracking (native fast-path ordering guard)
@@ -334,7 +364,7 @@ enum SyntheticKeyboard {
     // delivered ahead of a still-queued synthetic edit reorders the text (the
     // historical "nuwax"→"nuẵ" corruption). Once the queue is drained, plain
     // letters go through natively again — zero synthetic events on the common
-    // path. Main-thread only (the tap's run loop source lives there).
+    // path. Guarded by `lock` (tap thread posts/observes; main resets).
     private static var inFlightKeyDowns = 0
     private static var lastPostNs: UInt64 = 0
 
@@ -357,63 +387,73 @@ enum SyntheticKeyboard {
     // clear gap, not precision. On trip we stop emitting and call the controller to
     // disable the tap + reset (keys go native — Vietnamese-in-terminal off, keyboard
     // never dead). Gated behind AppState.tapCascadeBreaker (default ON) as a kill switch.
-    // Window state is main-thread-only like the rest of this type, so no locking.
+    // Window state shares `lock` with the in-flight counter above.
     private static let breakerWindowNs: UInt64 = 500_000_000
     private static let breakerThreshold = 256
     private static var windowStartNs: UInt64 = 0
     private static var postsInWindow = 0
-    private(set) static var tripped = false
+    private static var _tripped = false
+    static var tripped: Bool { lock.withLock { _tripped } }
 
     /// Re-arm after the controller has torn down / rebuilt a healthy tap.
     static func resetBreaker() {
-        tripped = false
-        inFlightKeyDowns = 0
-        postsInWindow = 0
-        windowStartNs = 0
+        lock.withLock {
+            _tripped = false
+            inFlightKeyDowns = 0
+            postsInWindow = 0
+            windowStartNs = 0
+        }
     }
 
     @inline(__always)
     private static func notePostedKeyDown() {
-        inFlightKeyDowns += 1
-        lastPostNs = DispatchTime.now().uptimeNanoseconds
-        noteBreakerPost()
-    }
-
-    /// Count one posted keyDown into the sliding window and trip if the post rate is
-    /// superhuman. Called from every emit path via notePostedKeyDown.
-    @inline(__always)
-    private static func noteBreakerPost() {
-        guard AppState.shared.tapCascadeBreaker, !tripped else { return }
-        let now = lastPostNs   // set by the caller immediately above
-        if now &- windowStartNs > breakerWindowNs {
-            windowStartNs = now
-            postsInWindow = 0
+        let breakerEnabled = AppState.shared.tapCascadeBreaker   // own lock — outside ours
+        let justTripped: Bool = lock.withLock {
+            inFlightKeyDowns += 1
+            let now = DispatchTime.now().uptimeNanoseconds
+            lastPostNs = now
+            // Count one posted keyDown into the sliding window; trip if the post rate
+            // is superhuman (see the breaker doc above).
+            guard breakerEnabled, !_tripped else { return false }
+            if now &- windowStartNs > breakerWindowNs {
+                windowStartNs = now
+                postsInWindow = 0
+            }
+            postsInWindow += 1
+            if postsInWindow > breakerThreshold {
+                _tripped = true
+                return true
+            }
+            return false
         }
-        postsInWindow += 1
-        if postsInWindow > breakerThreshold {
-            tripped = true
-            Signposts.log.fault("cascade breaker TRIPPED: \(postsInWindow, privacy: .public) synthetic posts within \(breakerWindowNs / 1_000_000, privacy: .public)ms — disabling tap, keys pass through natively")
+        if justTripped {
+            Signposts.log.fault("cascade breaker TRIPPED: >\(breakerThreshold, privacy: .public) synthetic posts within \(breakerWindowNs / 1_000_000, privacy: .public)ms — disabling tap, keys pass through natively")
             // Stop the storm at the source: disable the tap + reset the engine now,
             // rather than waiting for the next re-entered event to reach handle().
+            // OUTSIDE the lock: emergencyStop takes the controller's state lock.
             TerminalTapController.shared.emergencyStop()
         }
     }
 
     /// Called by the tap when one of our own keyDowns comes back around.
     static func noteObservedSynthetic() {
-        if inFlightKeyDowns > 0 { inFlightKeyDowns -= 1 }
+        lock.withLock {
+            if inFlightKeyDowns > 0 { inFlightKeyDowns -= 1 }
+        }
     }
 
     /// True when no synthetic keyDown is still in flight. Self-heals: if an event
     /// was dropped (tap flapped mid-burst), a 500ms silence resets the counter so
     /// we can't get wedged in all-synthetic mode.
     static func queueDrained() -> Bool {
-        if inFlightKeyDowns == 0 { return true }
-        if DispatchTime.now().uptimeNanoseconds &- lastPostNs > 500_000_000 {
-            inFlightKeyDowns = 0
-            return true
+        lock.withLock {
+            if inFlightKeyDowns == 0 { return true }
+            if DispatchTime.now().uptimeNanoseconds &- lastPostNs > 500_000_000 {
+                inFlightKeyDowns = 0
+                return true
+            }
+            return false
         }
-        return false
     }
 
     /// Replace `backspaces` trailing chars with `text`. Two strategies:
@@ -540,44 +580,63 @@ final class TerminalTapController {
     /// while true (so switching to ABC/US inside a terminal really types English).
     /// Driven by IMK activate/deactivate AND the TIS selection notification, resolved
     /// through `IMEActivation` so an out-of-order deactivate can't clobber it (see
-    /// IMEActivation.swift). Hot-path read stays a plain bool load.
+    /// IMEActivation.swift). Locked: the mark* lifecycle calls run on MAIN, the
+    /// per-key read runs on the TAP thread.
+    private let activationLock = NSLock()
     private var activation = IMEActivation()
-    var imeActive: Bool { activation.isActive }
+    var imeActive: Bool { activationLock.withLock { activation.isActive } }
 
     /// activateServer: VietTelex active for the focused client.
-    func markActive() { activation.activate(); DebugLog.log("markActive → imeActive=\(activation.isActive)") }
+    func markActive() {
+        let active = activationLock.withLock { activation.activate(); return activation.isActive }
+        DebugLog.log("markActive → imeActive=\(active)")
+    }
 
     /// deactivateServer: `stillSelected` = is VietTelex still the OS-selected source
     /// right now (queried via TIS by the caller). Ignores a stale late deactivate.
     func markInactive(stillSelected: Bool) {
-        activation.deactivate(stillSelected: stillSelected)
-        DebugLog.log("markInactive(stillSelected=\(stillSelected)) → imeActive=\(activation.isActive)")
+        let active = activationLock.withLock {
+            activation.deactivate(stillSelected: stillSelected); return activation.isActive
+        }
+        DebugLog.log("markInactive(stillSelected=\(stillSelected)) → imeActive=\(active)")
     }
 
     /// TIS selection-changed notification: authoritative recompute.
     func selectionChanged(isVietTelex: Bool) {
-        activation.selectionChanged(isVietTelex: isVietTelex)
-        DebugLog.log("selectionChanged(isVietTelex=\(isVietTelex)) → imeActive=\(activation.isActive)")
+        let active = activationLock.withLock {
+            activation.selectionChanged(isVietTelex: isVietTelex); return activation.isActive
+        }
+        DebugLog.log("selectionChanged(isVietTelex=\(isVietTelex)) → imeActive=\(active)")
     }
 
+    /// TAP-thread confined: only ever touched inside the tap callback (and
+    /// emergencyStop, which fires from the posting path on the same thread).
     private var engine = TelexEngine()
+
+    /// Tap machinery. Guarded by `stateLock`: lifecycle (start/ensureRunning/teardown)
+    /// runs on MAIN, while the callback's rare tapEnable branches (tripped / re-enable
+    /// after timeout) and emergencyStop run on the TAP thread.
+    private let stateLock = NSLock()
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
+    /// The dedicated thread's run loop, captured at thread start; nil while stopped.
+    private var tapRunLoop: CFRunLoop?
 
     /// True only if the tap exists AND is actually enabled/intercepting. A tap object
     /// can linger after its mach port dies (e.g. Accessibility was toggled off/on),
     /// so `tap != nil` alone is misleading — check `tapIsEnabled`.
     var isRunning: Bool {
-        guard let tap else { return false }
+        guard let tap = stateLock.withLock({ tap }) else { return false }
         return CGEvent.tapIsEnabled(tap: tap)
     }
 
     /// Emit mode for the CURRENT key: false = Backspace+retype (terminals), true =
     /// Shift+Left select + overtype (Chrome omnibox / Spotlight). Set per event in
-    /// handle() before any edit is emitted.
+    /// handle() before any edit is emitted. TAP-thread confined.
     private var emitMode: TapEmit = .backspace
 
-    // Throttle for the imeActive self-heal reconcile (see handle()). Main-thread only.
+    // Throttle for the imeActive self-heal reconcile (see handle()). TAP-thread
+    // confined (only touched inside the callback).
     private var lastReconcileNs: UInt64 = 0
     private let reconcileWindowNs: UInt64 = 750_000_000
 
@@ -588,8 +647,16 @@ final class TerminalTapController {
     /// Create and enable the tap. No-op if already running or not Accessibility-
     /// trusted (sandboxed build, or permission not yet granted). Idempotent — called
     /// at launch and again on activate so granting AX later starts it without relaunch.
+    ///
+    /// THREADING: the tap's run loop source lives on a DEDICATED thread, not main.
+    /// On main it queued behind every ~2ms IMKit XPC round trip and any Settings UI
+    /// work — jittering terminal keystrokes and, worse, risking the slow-callback
+    /// path where macOS disables the tap (tapDisabledByTimeout → leaked keys). The
+    /// thread is event-driven (parked in mach_msg, zero CPU when idle) — it is the
+    /// tap's equivalent of the main run loop, not a polling worker, so it does not
+    /// violate the "no persistent background work" rule in DESIGN.md.
     func start() {
-        guard tap == nil, Accessibility.isTrusted else { return }
+        guard stateLock.withLock({ tap == nil }), Accessibility.isTrusted else { return }
         let mask = CGEventMask((1 << CGEventType.keyDown.rawValue)
                              | (1 << CGEventType.leftMouseDown.rawValue)
                              | (1 << CGEventType.rightMouseDown.rawValue))
@@ -605,12 +672,28 @@ final class TerminalTapController {
         ) else { return }
 
         let src = CFMachPortCreateRunLoopSource(nil, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
+        // Park the source on the dedicated thread's run loop. Wait (bounded) for the
+        // run loop reference so teardown() always has something to stop — the thread
+        // reaches the semaphore in microseconds.
+        let ready = DispatchSemaphore(value: 0)
+        let thread = Thread { [weak self] in
+            let rl = CFRunLoopGetCurrent()
+            self?.stateLock.withLock { self?.tapRunLoop = rl }
+            CFRunLoopAddSource(rl, src, .commonModes)
+            ready.signal()
+            CFRunLoopRun()   // returns after CFRunLoopStop in teardown()
+        }
+        thread.name = "com.viettelex.event-tap"
+        thread.qualityOfService = .userInteractive
+        thread.start()
+        _ = ready.wait(timeout: .now() + 2)
         CGEvent.tapEnable(tap: tap, enable: true)
-        self.tap = tap
-        self.source = src
+        stateLock.withLock {
+            self.tap = tap
+            self.source = src
+        }
         SyntheticKeyboard.resetBreaker()   // fresh machinery — clear any prior trip
-        DebugLog.log("tap created + enabled")
+        DebugLog.log("tap created + enabled (dedicated thread)")
     }
 
     /// Ensure a HEALTHY (enabled) tap. Recovers from the two ways a tap silently dies:
@@ -620,7 +703,7 @@ final class TerminalTapController {
     /// so switching input source / focusing a terminal self-heals a dead tap.
     func ensureRunning() {
         guard Accessibility.isTrusted else { return }
-        if let tap {
+        if let tap = stateLock.withLock({ tap }) {
             // A tripped breaker disabled the tap on purpose. Re-enabling + re-arming is
             // safe now: pid-based isSynthetic no longer fails open, so the cascade that
             // tripped it can't recur. Clear the breaker whenever we leave with a healthy
@@ -634,10 +717,18 @@ final class TerminalTapController {
     }
 
     private func teardown() {
-        if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
+        let (tap, source, runLoop) = stateLock.withLock {
+            let t = (self.tap, self.source, self.tapRunLoop)
+            self.tap = nil
+            self.source = nil
+            self.tapRunLoop = nil
+            return t
+        }
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
-        source = nil
-        tap = nil
+        if let runLoop {
+            if let source { CFRunLoopRemoveSource(runLoop, source, .commonModes) }
+            CFRunLoopStop(runLoop)   // CFRunLoopRun returns → the dedicated thread exits
+        }
         DebugLog.log("tap torn down (dead port / recreate)")
     }
 
@@ -646,10 +737,10 @@ final class TerminalTapController {
     /// immediately, at the moment of the trip rather than on the next re-entered event.
     /// The tap object is kept so a later activateServer → ensureRunning() can re-enable
     /// and re-arm the breaker once the machinery is healthy again. Called from
-    /// SyntheticKeyboard's post site; safe to call from inside the tap callback (that is
-    /// exactly what the tapDisabled/tripped branches in handle() already do).
+    /// SyntheticKeyboard's post site — i.e. on the TAP thread, so touching `engine`
+    /// (tap-thread confined) here is safe.
     func emergencyStop() {
-        if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+        if let tap = stateLock.withLock({ tap }) { CGEvent.tapEnable(tap: tap, enable: false) }
         engine.reset()
         DebugLog.log("EMERGENCY STOP — cascade breaker tripped, tap disabled, keys native")
     }
@@ -666,13 +757,13 @@ final class TerminalTapController {
         // Checked before the tapDisabled re-enable below so a tripped tap stays down.
         if SyntheticKeyboard.tripped {
             engine.reset()
-            if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+            if let tap = stateLock.withLock({ tap }) { CGEvent.tapEnable(tap: tap, enable: false) }
             return pass
         }
 
         // The system disables a tap that is too slow or gets user input; re-enable.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            if let tap = stateLock.withLock({ tap }) { CGEvent.tapEnable(tap: tap, enable: true) }
             return pass
         }
 
@@ -705,21 +796,33 @@ final class TerminalTapController {
         // else re-checks, so re-verify here, throttled. Only while active: the common
         // English case (imeActive already false) returns just below at zero cost; the
         // turn-ON direction stays covered by the unconditional activateServer→markActive.
-        // TIS copy is cheap and this runs at most once per window, so it stays off the
-        // real hot path even while composing.
-        if activation.isActive {
+        // TIS copy runs at most once per window — but TIS is NOT documented safe off
+        // the main thread, so with the tap on its own thread the check hops to MAIN
+        // asynchronously. The correction lands via the locked selectionChanged() and
+        // takes effect on the NEXT keystroke — one key later than the old synchronous
+        // check, which is fine for a ≤750ms-throttled self-heal of an already-stale flag.
+        if imeActive {
             let now = DispatchTime.now().uptimeNanoseconds
             if now &- lastReconcileNs > reconcileWindowNs {
                 lastReconcileNs = now
-                if !TelexInputController.isVietTelexSelected() {
-                    activation.selectionChanged(isVietTelex: false)
-                    engine.reset()
-                    DebugLog.log("reconcile: VietTelex not selected → tap dormant (healed stale imeActive)")
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    if !TelexInputController.isVietTelexSelected() {
+                        self.selectionChanged(isVietTelex: false)
+                        DebugLog.log("reconcile: VietTelex not selected → tap dormant (healed stale imeActive)")
+                    }
                 }
             }
         }
 
-        guard imeActive else { return pass }
+        guard imeActive else {
+            // Went inactive with a word half-composed (e.g. the async reconcile above
+            // just corrected a stale flag): abandon it so a later re-activate can't
+            // resume a stale composition. `engine` is tap-thread confined — reset here,
+            // never from the main-thread paths that flip the flag.
+            if !engine.isEmpty { engine.reset() }
+            return pass
+        }
 
         // A ⌘/⌃/⌥ combo (⌘A select-all, ⌘C, ⌃C…) is never Telex input, and IMK does
         // NOT route ⌘-combos to the IMKit controller — so the controller cannot drop

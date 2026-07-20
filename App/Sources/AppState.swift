@@ -17,6 +17,14 @@ final class AppState: @unchecked Sendable {
 
     private let defaults = UserDefaults(suiteName: "com.viettelex.settings") ?? .standard
 
+    /// Guards every mutable cache + flag below. Needed since the event tap moved to
+    /// its own thread: Settings/controller write on MAIN while the tap callback reads
+    /// on the TAP thread (usesTapMode/usesSelectionReplace/shortcuts/flags are on its
+    /// per-key path). NSLock (non-recursive!) — public methods lock ONCE and call only
+    /// unlocked `_helpers` inside; never call another locked member while holding it.
+    /// Uncontended cost is tens of ns, invisible next to the ~ms XPC/event round trips.
+    private let lock = NSLock()
+
     private enum Key {
         static let autoRestore = "autoRestore"
         static let freeMarking = "freeMarking"
@@ -35,13 +43,15 @@ final class AppState: @unchecked Sendable {
         case auto, inPlace, marked, tap
     }
 
-    // In-memory caches (loaded once).
+    // In-memory caches (loaded once). All guarded by `lock` (see above).
     private var shortcutsCache: [String: String]
     private var fallbackAppsCache: Set<String>
     private var probedAppsCache: Set<String>
     private var manualModesCache: [String: String]
 
-    /// Bundle id of the frontmost client, set in activateServer.
+    /// Bundle id of the frontmost client, set in activateServer. MAIN-thread only
+    /// (IMKit lifecycle + controller + Settings) — the tap thread uses
+    /// FrontmostApp.shared.bundleID instead, so this needs no lock.
     var currentBundleID: String?
 
     // Defaults keys from the old VI/EN enable-disable + hotkey design, no longer read.
@@ -52,13 +62,11 @@ final class AppState: @unchecked Sendable {
 
     private init() {
         tapNativeFastPath = (defaults.object(forKey: "tapNativeFastPath") as? Bool) ?? true
-        // didSet does not fire on init assignment, so these read the stored value
-        // without writing it back. (See the property docs below.)
-        tapModifyEventInPlace = (defaults.object(forKey: "tapModifyEventInPlace") as? Bool) ?? true
-        tapSkipSyntheticKeyUp = (defaults.object(forKey: "tapSkipSyntheticKeyUp") as? Bool) ?? true
-        axSelectionReplace = (defaults.object(forKey: "axSelectionReplace") as? Bool) ?? false
-        tapCascadeBreaker = (defaults.object(forKey: "tapCascadeBreaker") as? Bool) ?? true
-        debugLogging = (defaults.object(forKey: "debugLogging") as? Bool) ?? false
+        _tapModifyEventInPlace = (defaults.object(forKey: "tapModifyEventInPlace") as? Bool) ?? true
+        _tapSkipSyntheticKeyUp = (defaults.object(forKey: "tapSkipSyntheticKeyUp") as? Bool) ?? true
+        _axSelectionReplace = (defaults.object(forKey: "axSelectionReplace") as? Bool) ?? false
+        _tapCascadeBreaker = (defaults.object(forKey: "tapCascadeBreaker") as? Bool) ?? true
+        _debugLogging = (defaults.object(forKey: "debugLogging") as? Bool) ?? false
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
         fallbackAppsCache = Set(defaults.stringArray(forKey: Key.fallbackApps) ?? [])
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
@@ -141,20 +149,27 @@ final class AppState: @unchecked Sendable {
     /// insert (0 backspaces) in Backspace-emit mode and no synthetic burst is draining,
     /// the tap rewrites the physical CGEvent's unicode string and lets it pass instead
     /// of suppressing it and posting 2 synthetic events — real keycode/timing kept,
-    /// zero window-server round trips. Default ON. Cached stored var (per-key hot path,
-    /// no defaults hit); the didSet persists a Settings-toggle change immediately, so it
-    /// takes effect live on the next keystroke.
+    /// zero window-server round trips. Default ON. Cached in-memory (per-key hot path,
+    /// no defaults hit); the setter persists a Settings-toggle change immediately, so it
+    /// takes effect live on the next keystroke. Locked: Settings writes on main, the
+    /// tap thread reads per key.
+    private var _tapModifyEventInPlace: Bool
     var tapModifyEventInPlace: Bool {
-        didSet { defaults.set(tapModifyEventInPlace, forKey: "tapModifyEventInPlace") }
+        get { lock.withLock { _tapModifyEventInPlace } }
+        set { lock.withLock { _tapModifyEventInPlace = newValue }
+              defaults.set(newValue, forKey: "tapModifyEventInPlace") }
     }
 
     /// Task B2 — skip the synthetic keyUp on unicode inserts. Posts only the keyDown
     /// carrying the unicode string, halving posted events per insert to shave terminal
     /// typing latency. Ships ON; the toggle is a kill switch. Safe for the in-flight
     /// accounting: the tap mask is keyDown-only and the counter tracks downs only, so a
-    /// dropped up never unbalances it. Cached stored var; didSet persists live.
+    /// dropped up never unbalances it. Locked cache; setter persists live.
+    private var _tapSkipSyntheticKeyUp: Bool
     var tapSkipSyntheticKeyUp: Bool {
-        didSet { defaults.set(tapSkipSyntheticKeyUp, forKey: "tapSkipSyntheticKeyUp") }
+        get { lock.withLock { _tapSkipSyntheticKeyUp } }
+        set { lock.withLock { _tapSkipSyntheticKeyUp = newValue }
+              defaults.set(newValue, forKey: "tapSkipSyntheticKeyUp") }
     }
 
     /// D1 — AX selection-replace. For Chromium/Spotlight tone edits (`.selection` emit
@@ -167,8 +182,11 @@ final class AppState: @unchecked Sendable {
     /// immediately while native keys already past the tap can't be tracked — the
     /// "nuwax"→"nuẵ" reorder class) and any AX failure falls back to the posted-events
     /// path. Cached stored var (hot path, no defaults hit); didSet persists live.
+    private var _axSelectionReplace: Bool
     var axSelectionReplace: Bool {
-        didSet { defaults.set(axSelectionReplace, forKey: "axSelectionReplace") }
+        get { lock.withLock { _axSelectionReplace } }
+        set { lock.withLock { _axSelectionReplace = newValue }
+              defaults.set(newValue, forKey: "axSelectionReplace") }
     }
 
     /// Layer 3 — cascade circuit breaker. Kill switch (default ON) for the runaway
@@ -180,37 +198,43 @@ final class AppState: @unchecked Sendable {
     /// dead). ON by default; flip OFF only if it ever misfires:
     ///   defaults write com.viettelex.settings tapCascadeBreaker -bool false
     /// Cached stored var (hot path, no defaults hit); didSet persists live.
+    private var _tapCascadeBreaker: Bool
     var tapCascadeBreaker: Bool {
-        didSet { defaults.set(tapCascadeBreaker, forKey: "tapCascadeBreaker") }
+        get { lock.withLock { _tapCascadeBreaker } }
+        set { lock.withLock { _tapCascadeBreaker = newValue }
+              defaults.set(newValue, forKey: "tapCascadeBreaker") }
     }
 
     /// Debug logging (default OFF). Gates the in-memory `DebugLog` ring buffer of tap
     /// health events (create/teardown, breaker trips, emit counts — never typed text),
     /// which the user copies from Settings → Thử Nghiệm to share when reporting a hang.
     /// Off = `DebugLog.log` early-returns, so it costs nothing on the hot path.
+    private var _debugLogging: Bool
     var debugLogging: Bool {
-        didSet { defaults.set(debugLogging, forKey: "debugLogging") }
+        get { lock.withLock { _debugLogging } }
+        set { lock.withLock { _debugLogging = newValue }
+              defaults.set(newValue, forKey: "debugLogging") }
     }
 
     // MARK: - Shortcuts (bảng gõ tắt)
 
     /// Read-only snapshot used at word boundaries (no disk hit).
-    var shortcuts: [String: String] { shortcutsCache }
+    var shortcuts: [String: String] { lock.withLock { shortcutsCache } }
 
     func setShortcuts(_ dict: [String: String]) {
-        shortcutsCache = dict
+        lock.withLock { shortcutsCache = dict }
         defaults.set(dict, forKey: Key.shortcuts)
     }
 
     func upsertShortcut(key: String, value: String) {
         guard !key.isEmpty else { return }
-        shortcutsCache[key] = value
-        defaults.set(shortcutsCache, forKey: Key.shortcuts)
+        let snapshot = lock.withLock { shortcutsCache[key] = value; return shortcutsCache }
+        defaults.set(snapshot, forKey: Key.shortcuts)
     }
 
     func removeShortcut(key: String) {
-        shortcutsCache.removeValue(forKey: key)
-        defaults.set(shortcutsCache, forKey: Key.shortcuts)
+        let snapshot = lock.withLock { shortcutsCache.removeValue(forKey: key); return shortcutsCache }
+        defaults.set(snapshot, forKey: Key.shortcuts)
     }
 
     // MARK: - Learned typing strategy (in-place replacementRange vs marked text)
@@ -262,33 +286,44 @@ final class AppState: @unchecked Sendable {
 
     // MARK: - Manual per-app mode override (Experimental → App mode)
 
-    /// The user-forced mode for `bundleID`, or nil when set to auto / unset.
-    func manualMode(_ bundleID: String?) -> AppMode? {
-        guard let id = bundleID, let raw = manualModesCache[id],
+    /// Unlocked core of manualMode — call ONLY while holding `lock`.
+    private func _manualMode(_ id: String) -> AppMode? {
+        guard let raw = manualModesCache[id],
               let m = AppMode(rawValue: raw), m != .auto else { return nil }
         return m
     }
-    func setManualMode(_ mode: AppMode, for bundleID: String) {
-        if mode == .auto { manualModesCache[bundleID] = nil }
-        else { manualModesCache[bundleID] = mode.rawValue }
-        defaults.set(manualModesCache, forKey: Key.manualModes)
+
+    /// The user-forced mode for `bundleID`, or nil when set to auto / unset.
+    func manualMode(_ bundleID: String?) -> AppMode? {
+        guard let id = bundleID else { return nil }
+        return lock.withLock { _manualMode(id) }
     }
-    var manualModes: [String: String] { manualModesCache }
+    func setManualMode(_ mode: AppMode, for bundleID: String) {
+        let snapshot: [String: String] = lock.withLock {
+            if mode == .auto { manualModesCache[bundleID] = nil }
+            else { manualModesCache[bundleID] = mode.rawValue }
+            return manualModesCache
+        }
+        defaults.set(snapshot, forKey: Key.manualModes)
+    }
+    var manualModes: [String: String] { lock.withLock { manualModesCache } }
 
     /// True if this app already has a fixed (non-auto) mode — a manual override OR a
     /// built-in pin. Used to hide already-configured apps from the "recent apps" picker.
     func isModeConfigured(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return manualMode(id) != nil
+        return lock.withLock { _manualMode(id) != nil }
             || Self.builtInFallbackApps.contains(id) || Self.markedTextApps.contains(id)
     }
 
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        if let m = manualMode(id) { return m == .marked }   // user override wins
-        return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
-            || Self.markedTextApps.contains(id)
+        return lock.withLock {
+            if let m = _manualMode(id) { return m == .marked }   // user override wins
+            return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
+                || Self.markedTextApps.contains(id)
+        }
     }
 
     /// Terminal tap-mode: an app that ignores replacementRange (would otherwise get
@@ -298,9 +333,15 @@ final class AppState: @unchecked Sendable {
     /// markedTextApps are excluded: they must stay on marked text even when trusted.
     func usesTapMode(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        if let m = manualMode(id) { return m == .tap && Accessibility.isTrusted }  // user override wins
-        return (fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id))
-            && !Self.markedTextApps.contains(id) && Accessibility.isTrusted
+        // Membership under our lock; Accessibility.isTrusted OUTSIDE it (it has its
+        // own lock — never nest them).
+        enum Wants { case tap, no, fallback }
+        let w: Wants = lock.withLock {
+            if let m = _manualMode(id) { return m == .tap ? .tap : .no }  // user override wins
+            return (fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id))
+                && !Self.markedTextApps.contains(id) ? .fallback : .no
+        }
+        return w != .no && Accessibility.isTrusted
     }
 
     /// Chromium browsers: inline omnibox autocomplete corrupts a Backspace-retype
@@ -340,35 +381,59 @@ final class AppState: @unchecked Sendable {
     /// fallback app — it's known-broken in-place and would false-positive the probe.
     func needsProbe(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        if manualMode(id) != nil { return false }   // user pinned it; never probe
-        return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
-            && !Self.builtInFallbackApps.contains(id) && !Self.markedTextApps.contains(id)
+        return lock.withLock {
+            if _manualMode(id) != nil { return false }   // user pinned it; never probe
+            return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
+                && !Self.builtInFallbackApps.contains(id) && !Self.markedTextApps.contains(id)
+        }
     }
 
     /// In-place replacement verified working for this app.
     func markInPlaceGood(_ bundleID: String?) {
-        guard let id = bundleID, !probedAppsCache.contains(id) else { return }
-        probedAppsCache.insert(id)
-        defaults.set(Array(probedAppsCache), forKey: Key.probedApps)
+        guard let id = bundleID else { return }
+        guard let snapshot: [String] = lock.withLock({
+            guard !probedAppsCache.contains(id) else { return nil }
+            probedAppsCache.insert(id)
+            return Array(probedAppsCache)
+        }) else { return }
+        defaults.set(snapshot, forKey: Key.probedApps)
+    }
+
+    /// Ground-truth reversal: a deferred AX read proved in-place does NOT work here,
+    /// overriding an earlier self-reported honored that may already have committed.
+    func unmarkInPlaceGood(_ bundleID: String?) {
+        guard let id = bundleID else { return }
+        guard let snapshot: [String] = lock.withLock({
+            guard probedAppsCache.contains(id) else { return nil }
+            probedAppsCache.remove(id)
+            return Array(probedAppsCache)
+        }) else { return }
+        defaults.set(snapshot, forKey: Key.probedApps)
     }
 
     /// This app must use marked text (in-place replacement doesn't work).
     func markUsesMarkedText(_ bundleID: String?) {
-        guard let id = bundleID, !fallbackAppsCache.contains(id) else { return }
-        fallbackAppsCache.insert(id)
-        defaults.set(Array(fallbackAppsCache), forKey: Key.fallbackApps)
+        guard let id = bundleID else { return }
+        guard let snapshot: [String] = lock.withLock({
+            guard !fallbackAppsCache.contains(id) else { return nil }
+            fallbackAppsCache.insert(id)
+            return Array(fallbackAppsCache)
+        }) else { return }
+        defaults.set(snapshot, forKey: Key.fallbackApps)
     }
 
     /// Learned lists, for the Settings UI (Tương thích ứng dụng).
-    var learnedFallbackApps: [String] { fallbackAppsCache.sorted() }
-    var learnedInPlaceApps: [String] { probedAppsCache.sorted() }
+    var learnedFallbackApps: [String] { lock.withLock { fallbackAppsCache.sorted() } }
+    var learnedInPlaceApps: [String] { lock.withLock { probedAppsCache.sorted() } }
 
     /// Forget everything learned about apps. A bad one-shot probe (app busy during
     /// the read-back) otherwise downgrades an app to marked text forever; this lets
     /// the user re-probe from scratch.
     func resetLearnedApps() {
-        fallbackAppsCache = []
-        probedAppsCache = []
+        lock.withLock {
+            fallbackAppsCache = []
+            probedAppsCache = []
+        }
         defaults.removeObject(forKey: Key.fallbackApps)
         defaults.removeObject(forKey: Key.probedApps)
     }
@@ -377,8 +442,10 @@ final class AppState: @unchecked Sendable {
     /// / empty-reset strategies)? Membership only — ignores the current trust state.
     func wantsAccessibility(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
-        return Self.selectionApps.contains(id) || Self.emptyResetApps.contains(id)
-            || fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
+        return lock.withLock {
+            Self.selectionApps.contains(id) || Self.emptyResetApps.contains(id)
+                || fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
+        }
     }
 
     /// One-time "grant Accessibility" prompt already shown (first focus of an app

@@ -1,7 +1,10 @@
 // main.swift
 // Process entry point. macOS launches this bundle when the user selects the
 // Vietnamese input source; we start an IMKServer and run the event loop.
-// No timers, no background threads — everything is event driven.
+// No timers, no polling — everything is event driven. The one persistent thread
+// besides main is the event tap's run loop (TerminalTapController.start), which
+// parks in mach_msg at zero CPU and exists so tap callbacks never queue behind
+// main-thread IMKit/UI work.
 
 import Cocoa
 import InputMethodKit

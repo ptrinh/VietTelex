@@ -32,7 +32,12 @@ VietTelex.app  (một bundle duy nhất, LSUIElement)
 Quy tắc cứng:
 1. **Một process duy nhất.** Không helper app, không XPC, không login item (input method
    được macOS tự khởi động).
-2. **Không timer, không polling, không background thread thường trực.** Toàn bộ event-driven.
+2. **Không timer, không polling.** Toàn bộ event-driven. Ngoài main có đúng MỘT
+   thread thường trực: run loop của event tap (ngủ trong mach_msg, zero CPU khi
+   idle) — để callback tap không xếp hàng sau XPC IMKit ~2ms/phím trên main
+   (jitter terminal + nguy cơ macOS disable tap vì callback chậm). Shared state
+   giữa hai thread đều có lock (AppState, Accessibility, SpotlightDetector,
+   FrontmostApp, SyntheticKeyboard, activation).
 3. **Không NSStatusItem.** Dùng menu do IMK cung cấp: dòng tình trạng (quyền
    Accessibility) + Cài đặt….
 4. Settings UI chỉ instantiate khi user mở; đóng là giải phóng.
