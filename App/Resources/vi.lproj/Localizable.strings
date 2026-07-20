@@ -31,8 +31,10 @@
 "Advanced" = "Nâng cao";
 "Modify key events in place" = "Sửa sự kiện phím tại chỗ";
 "In terminals, apply a one-letter tone edit (w→ư) by rewriting the real keystroke instead of posting two synthetic events — lower latency." = "Trong terminal, sửa một ký tự (w→ư) bằng cách viết lại phím thật thay vì gửi hai sự kiện tổng hợp — giảm độ trễ.";
-"Skip synthetic key-up (experimental)" = "Bỏ qua key-up tổng hợp (thử nghiệm)";
-"Experimental: post only the key-down for inserted letters in terminals, halving events per keystroke. Off by default." = "Thử nghiệm: chỉ gửi key-down cho ký tự chèn trong terminal, giảm nửa số sự kiện mỗi phím. Mặc định tắt.";
+"Skip synthetic key-up" = "Bỏ qua key-up tổng hợp";
+"Post only the key-down for inserted letters in terminals, halving events per keystroke." = "Chỉ gửi key-down cho ký tự chèn trong terminal, giảm nửa số sự kiện mỗi phím.";
+"AX replace (Chrome/Spotlight)" = "Thay thế qua AX (Chrome/Spotlight)";
+"Apply tone edits in Chrome and Spotlight with one Accessibility edit instead of a burst of Shift+Left key events — lower latency." = "Sửa dấu trong Chrome và Spotlight bằng một thao tác Accessibility thay vì loạt phím Shift+Trái — giảm độ trễ.";
 
 /* About tab */
 "Version %@ · %@" = "Version %@ ngày %@";
@@ -72,3 +74,18 @@
 "VietTelex needs Accessibility to type Vietnamese in Terminal/iTerm and browsers.\n\nOpen System Settings → Privacy & Security → Accessibility and enable VietTelex (if it’s already there, untick then tick it again)." = "VietTelex cần quyền Accessibility để gõ tiếng Việt trong Terminal/iTerm và các trình duyệt.\n\nMở System Settings → Privacy & Security → Accessibility, rồi bật VietTelex (nếu đã có thì bỏ tick và tick lại).";
 "Open Settings" = "Mở Cài đặt";
 "Close" = "Đóng";
+
+/* Experimental tab (Thử Nghiệm) */
+"Experimental" = "Thử nghiệm";
+"Terminal typing latency" = "Độ trễ gõ trong terminal";
+"Safety" = "An toàn";
+"Cascade circuit breaker" = "Bộ ngắt chống tràn sự kiện";
+"Keep this ON. Stops the terminal tap if it ever floods the keyboard with synthetic events, so a bug can’t freeze typing." = "Nên để BẬT. Tự ngắt tap terminal nếu nó phát quá nhiều sự kiện phím, để lỗi không thể làm treo bàn phím.";
+"Diagnostics" = "Chẩn đoán";
+"Record debug log" = "Ghi nhật ký gỡ lỗi";
+"Records tap health events in memory (never the text you type). Turn it on, reproduce the problem, then Save debug log and send us the file." = "Ghi lại các sự kiện của tap trong bộ nhớ (không ghi nội dung bạn gõ). Bật lên, tái hiện lỗi, rồi Lưu nhật ký và gửi file cho bọn mình.";
+"Save debug log…" = "Lưu nhật ký gỡ lỗi…";
+"Clear" = "Xoá";
+"Saved to %@" = "Đã lưu vào %@";
+"Couldn’t save the file." = "Không lưu được file.";
+"Apply tone edits in Chrome and Spotlight with one Accessibility edit instead of a burst of Shift+Left key events. Experimental — off by default." = "Bỏ dấu trong Chrome và Spotlight bằng một thao tác Accessibility thay vì một loạt phím Shift+Trái. Thử nghiệm — mặc định tắt.";

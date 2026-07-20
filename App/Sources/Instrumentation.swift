@@ -13,10 +13,18 @@
 //   imk.handle — one IMKit keystroke, message = strategy that handled it
 //   tap.handle — one CGEventTap keystroke (terminal-class apps)
 //   tap.emit   — one synthesized edit burst (backspaces+insert posted)
+//   ax.replace — one Accessibility text edit (D1 selection-replace fast path)
 
 import os
 
 enum Signposts {
     static let poster = OSSignposter(subsystem: "com.viettelex.inputmethod.telex",
                                      category: "keystroke")
+
+    /// Fault-level log for safety events (currently the cascade circuit breaker
+    /// firing — Layer 3 in TerminalTap). Rare by construction, so a real log line
+    /// (not just a signpost) is worth it: it's the breadcrumb that explains why
+    /// Vietnamese-in-terminal went quiet after a synthetic-event storm was stopped.
+    static let log = Logger(subsystem: "com.viettelex.inputmethod.telex",
+                            category: "safety")
 }

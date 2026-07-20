@@ -47,7 +47,10 @@ final class AppState: @unchecked Sendable {
         // didSet does not fire on init assignment, so these read the stored value
         // without writing it back. (See the property docs below.)
         tapModifyEventInPlace = (defaults.object(forKey: "tapModifyEventInPlace") as? Bool) ?? true
-        tapSkipSyntheticKeyUp = (defaults.object(forKey: "tapSkipSyntheticKeyUp") as? Bool) ?? false
+        tapSkipSyntheticKeyUp = (defaults.object(forKey: "tapSkipSyntheticKeyUp") as? Bool) ?? true
+        axSelectionReplace = (defaults.object(forKey: "axSelectionReplace") as? Bool) ?? false
+        tapCascadeBreaker = (defaults.object(forKey: "tapCascadeBreaker") as? Bool) ?? true
+        debugLogging = (defaults.object(forKey: "debugLogging") as? Bool) ?? false
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
         fallbackAppsCache = Set(defaults.stringArray(forKey: Key.fallbackApps) ?? [])
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
@@ -124,13 +127,48 @@ final class AppState: @unchecked Sendable {
         didSet { defaults.set(tapModifyEventInPlace, forKey: "tapModifyEventInPlace") }
     }
 
-    /// Task B2 — skip the synthetic keyUp on unicode inserts (EXPERIMENTAL, default
-    /// OFF). Posts only the keyDown carrying the unicode string, halving posted events
-    /// per insert to shave terminal typing latency. Safe for the in-flight accounting:
-    /// the tap mask is keyDown-only and the counter tracks downs only, so a dropped up
-    /// never unbalances it. Cached stored var; didSet persists live.
+    /// Task B2 — skip the synthetic keyUp on unicode inserts. Posts only the keyDown
+    /// carrying the unicode string, halving posted events per insert to shave terminal
+    /// typing latency. Ships ON; the toggle is a kill switch. Safe for the in-flight
+    /// accounting: the tap mask is keyDown-only and the counter tracks downs only, so a
+    /// dropped up never unbalances it. Cached stored var; didSet persists live.
     var tapSkipSyntheticKeyUp: Bool {
         didSet { defaults.set(tapSkipSyntheticKeyUp, forKey: "tapSkipSyntheticKeyUp") }
+    }
+
+    /// D1 — AX selection-replace. For Chromium/Spotlight tone edits (`.selection` emit
+    /// mode) collapse the Shift+Left ×N select + overtype burst — 2(N+1) posted events,
+    /// ~3ms each — into ONE Accessibility text edit on the focused element. Default OFF:
+    /// it runs a synchronous cross-process AX call INSIDE the tap callback, i.e. new
+    /// hang surface, and it shipped right after a keyboard-hang fix — so it stays opt-in
+    /// (Settings → Advanced) until proven not to stall the callback in the field. When
+    /// on it only fires with the synthetic queue drained (the AX write mutates the field
+    /// immediately while native keys already past the tap can't be tracked — the
+    /// "nuwax"→"nuẵ" reorder class) and any AX failure falls back to the posted-events
+    /// path. Cached stored var (hot path, no defaults hit); didSet persists live.
+    var axSelectionReplace: Bool {
+        didSet { defaults.set(axSelectionReplace, forKey: "axSelectionReplace") }
+    }
+
+    /// Layer 3 — cascade circuit breaker. Kill switch (default ON) for the runaway
+    /// guard in SyntheticKeyboard: if the tap posts more key events than any human
+    /// could in a short window (> ~256 within 500ms), synthetic self-recognition has
+    /// failed and our own events are storming back through handle() — the dead-keyboard
+    /// hang. The breaker stops emitting, resets the engine, and disables the tap so keys
+    /// pass through NATIVELY (Vietnamese-in-terminal off, but the keyboard is never
+    /// dead). ON by default; flip OFF only if it ever misfires:
+    ///   defaults write com.viettelex.settings tapCascadeBreaker -bool false
+    /// Cached stored var (hot path, no defaults hit); didSet persists live.
+    var tapCascadeBreaker: Bool {
+        didSet { defaults.set(tapCascadeBreaker, forKey: "tapCascadeBreaker") }
+    }
+
+    /// Debug logging (default OFF). Gates the in-memory `DebugLog` ring buffer of tap
+    /// health events (create/teardown, breaker trips, emit counts — never typed text),
+    /// which the user copies from Settings → Thử Nghiệm to share when reporting a hang.
+    /// Off = `DebugLog.log` early-returns, so it costs nothing on the hot path.
+    var debugLogging: Bool {
+        didSet { defaults.set(debugLogging, forKey: "debugLogging") }
     }
 
     // MARK: - Shortcuts (bảng gõ tắt)

@@ -148,6 +148,65 @@ enum SpotlightDetector {
 ///   adjacent cell instead of characters).
 enum TapEmit { case backspace, selection, emptyReset }
 
+/// D1 — replace trailing text via the Accessibility API instead of a posted-event
+/// burst. For a Chromium omnibox / Spotlight tone edit the `.selection` path posts
+/// Shift+Left ×N then an overtype = 2(N+1) window-server round trips (~3ms each, so
+/// ~25ms for a 3-char edit). ONE AX edit — set the selected range to the trailing N
+/// chars, then set its text — does the same in a single out-of-process round trip.
+///
+/// ORDERING: the AX write mutates the field the instant it lands, so native letters
+/// that already passed the tap and are still queued in the app can reorder against it
+/// (the historical "nuwax"→"nuẵ" class). We can't track keys that already went native,
+/// which is exactly why the caller gates this on `queueDrained()` and it sits behind a
+/// flag. Within one key it is safe: the tap callback is serial and these AX calls are
+/// synchronous, so the edit finishes before we return nil for the current keystroke.
+enum AXTextEdit {
+    /// Replace the `backspaces` chars before the caret with `text` on the system-wide
+    /// focused element. Every AX call is checked — ANY failure returns false so the
+    /// caller falls back to the posted-events path; returns true only when BOTH the
+    /// range set and the text set succeeded.
+    static func replaceTrailing(backspaces: Int, with text: String) -> Bool {
+        guard backspaces > 0 else { return false }
+
+        // Focused UI element (system-wide, so it works across app boundaries / overlays
+        // like Spotlight).
+        let systemWide = AXUIElementCreateSystemWide()
+        // 50ms messaging timeout — the DEFAULT is seconds, and this runs inside the
+        // tap callback: a busy/hung target would block the callback long enough for
+        // macOS to disable the tap (leaked keys). Better to time out fast and fall
+        // back to the posted-events path than to stall the tap.
+        AXUIElementSetMessagingTimeout(systemWide, 0.05)
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focused = focusedRef, CFGetTypeID(focused) == AXUIElementGetTypeID()
+        else { return false }
+        let element = focused as! AXUIElement
+        AXUIElementSetMessagingTimeout(element, 0.05)   // same 50ms cap (not inherited)
+
+        // Current selection (normally a caret: length 0). Read it as an AXValue wrapping
+        // a CFRange so we know the caret location to reach back from.
+        var rangeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeRef) == .success,
+              let rangeVal = rangeRef, CFGetTypeID(rangeVal) == AXValueGetTypeID()
+        else { return false }
+        var selected = CFRange(location: 0, length: 0)
+        guard AXValueGetValue(rangeVal as! AXValue, .cfRange, &selected) else { return false }
+
+        // Target = the N chars before the caret, plus any existing (non-caret) selection.
+        // Guard against underflow: if the caret sits at/inside the first N chars we can't
+        // reach back that far — bail so the caller uses the posted-events path.
+        guard selected.location >= backspaces else { return false }
+        var target = CFRange(location: selected.location - backspaces,
+                             length: backspaces + selected.length)
+        guard let targetVal = AXValueCreate(.cfRange, &target) else { return false }
+
+        // Select the target range, then overwrite it with `text` — one coherent edit.
+        guard AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, targetVal) == .success
+        else { return false }
+        return AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success
+    }
+}
+
 enum SyntheticKeyboard {
     /// Stamp identifying events we post. "TLXTAP" packed into an Int64.
     static let magic: Int64 = 0x54_4C_58_54_41_50
@@ -162,8 +221,20 @@ enum SyntheticKeyboard {
     }()
 
     /// True if `event` (CGEvent) is one we posted.
+    ///
+    /// Recognizing our own output is LOAD-BEARING for loop prevention: if it ever
+    /// returns false for an event we posted, that event re-enters handle(), is fed to
+    /// the engine as a real key, and emits MORE synthetic events → an unbounded storm
+    /// that consumes every keystroke (dead keyboard, live mouse — the reported hang).
+    /// So we check the ROBUST signal first: the posting process id. CGEvent.post stamps
+    /// the emitting process's pid into `.eventSourceUnixProcessID`, and it round-trips
+    /// reliably — unlike the source `userData` magic (which the file header notes is
+    /// fragile, and which is simply absent if the private `source` failed to build).
+    /// Only OUR process posts synthetic keys, so pid == getpid() is exact. The magic
+    /// stays as a secondary check (harmless, and cheap belt-and-suspenders).
     static func isSynthetic(_ event: CGEvent) -> Bool {
-        event.getIntegerValueField(.eventSourceUserData) == magic
+        if event.getIntegerValueField(.eventSourceUnixProcessID) == Int64(getpid()) { return true }
+        return event.getIntegerValueField(.eventSourceUserData) == magic
     }
 
     /// True if `event` (NSEvent, in IMKit handle()) is one we posted.
@@ -194,10 +265,65 @@ enum SyntheticKeyboard {
     private static var inFlightKeyDowns = 0
     private static var lastPostNs: UInt64 = 0
 
+    // MARK: Cascade circuit breaker (Layer 3)
+    //
+    // Last-resort guard against the dead-keyboard hang: if self-recognition
+    // (isSynthetic) ever fails open, every synthetic event we post re-enters handle()
+    // as a "real" key, drives the engine, and posts MORE synthetic events → an
+    // unbounded storm that eats every keystroke. This breaker does NOT depend on
+    // isSynthetic (the thing that can break); it just counts events we POST in a
+    // sliding window. A cascade re-enters handle() and drives NEW posts, so counting
+    // at the shared post site (notePostedKeyDown, below) catches the runaway whether or
+    // not recognition still works.
+    //
+    // Threshold has a LARGE margin over any legit burst: one apply() posts at most ~33
+    // keyDowns (engine caps a word at 32 chars → ≤32 backspaces + 1 insert), and fast
+    // typing can stack a few bursts before they drain — realistically < ~100 posts in
+    // any 500ms. A human simply cannot generate hundreds of key events in half a second,
+    // so > 256 posts within a 500ms window can ONLY be a runaway. Numbers chosen for a
+    // clear gap, not precision. On trip we stop emitting and call the controller to
+    // disable the tap + reset (keys go native — Vietnamese-in-terminal off, keyboard
+    // never dead). Gated behind AppState.tapCascadeBreaker (default ON) as a kill switch.
+    // Window state is main-thread-only like the rest of this type, so no locking.
+    private static let breakerWindowNs: UInt64 = 500_000_000
+    private static let breakerThreshold = 256
+    private static var windowStartNs: UInt64 = 0
+    private static var postsInWindow = 0
+    private(set) static var tripped = false
+
+    /// Re-arm after the controller has torn down / rebuilt a healthy tap.
+    static func resetBreaker() {
+        tripped = false
+        inFlightKeyDowns = 0
+        postsInWindow = 0
+        windowStartNs = 0
+    }
+
     @inline(__always)
     private static func notePostedKeyDown() {
         inFlightKeyDowns += 1
         lastPostNs = DispatchTime.now().uptimeNanoseconds
+        noteBreakerPost()
+    }
+
+    /// Count one posted keyDown into the sliding window and trip if the post rate is
+    /// superhuman. Called from every emit path via notePostedKeyDown.
+    @inline(__always)
+    private static func noteBreakerPost() {
+        guard AppState.shared.tapCascadeBreaker, !tripped else { return }
+        let now = lastPostNs   // set by the caller immediately above
+        if now &- windowStartNs > breakerWindowNs {
+            windowStartNs = now
+            postsInWindow = 0
+        }
+        postsInWindow += 1
+        if postsInWindow > breakerThreshold {
+            tripped = true
+            Signposts.log.fault("cascade breaker TRIPPED: \(postsInWindow, privacy: .public) synthetic posts within \(breakerWindowNs / 1_000_000, privacy: .public)ms — disabling tap, keys pass through natively")
+            // Stop the storm at the source: disable the tap + reset the engine now,
+            // rather than waiting for the next re-entered event to reach handle().
+            TerminalTapController.shared.emergencyStop()
+        }
     }
 
     /// Called by the tap when one of our own keyDowns comes back around.
@@ -225,6 +351,7 @@ enum SyntheticKeyboard {
     ///   suggestion). A pure deletion
     ///   (empty `text`) has nothing to overtype, so it falls back to real Backspaces.
     static func apply(backspaces: Int, insert text: String, mode: TapEmit = .backspace) {
+        if tripped { return }   // recognition failed — emitting more would storm the keyboard
         // Signpost each synthesized edit burst — this is where a tone edit pays
         // real milliseconds (every posted event round-trips the window server).
         let spState = Signposts.poster.beginInterval("tap.emit",
@@ -233,6 +360,21 @@ enum SyntheticKeyboard {
         // xctrace export shows "<private>" and the bs-bucket analysis can't populate.
         defer { Signposts.poster.endInterval("tap.emit", spState, "bs=\(backspaces, privacy: .public) ins=\(text.count, privacy: .public)") }
         if mode == .selection, backspaces > 0, !text.isEmpty {
+            // D1 fast path: one AX text edit instead of the Shift+Left ×N select +
+            // overtype burst. Only when the synthetic queue is drained — the AX write
+            // mutates the field immediately, and native letters that already passed the
+            // tap can't be tracked, so taking it mid-burst could reorder ("nuwax"→"nuẵ"
+            // class). ANY AX failure → replaceTrailing returns false and we fall through
+            // to the posted-events path unchanged. Signpost so measure-signposts.sh can
+            // confirm the round trips collapsed to one.
+            if AppState.shared.axSelectionReplace, SyntheticKeyboard.queueDrained() {
+                let axState = Signposts.poster.beginInterval("ax.replace",
+                                                             id: Signposts.poster.makeSignpostID())
+                let ok = AXTextEdit.replaceTrailing(backspaces: backspaces, with: text)
+                // privacy: .public — burst size only, never user text (see tap.emit).
+                Signposts.poster.endInterval("ax.replace", axState, "bs=\(backspaces, privacy: .public)")
+                if ok { return }
+            }
             for _ in 0..<backspaces { postSelectLeft() }
             postUnicode(text)
             return
@@ -253,6 +395,12 @@ enum SyntheticKeyboard {
 
     /// Shift+LeftArrow: extend the selection one char left (used by selectionReplace).
     private static func postSelectLeft() {
+        // Layer 2: a nil private source means CGEvent(keyboardEventSource: nil,…) would
+        // post an UNSTAMPED event — exactly what feeds the re-entrancy cascade. A nil
+        // source is near-impossible, but if it ever happens, dropping the edit (the
+        // terminal just gets no tone change) is the safe degradation. Same guard in
+        // postVirtual/postUnicode.
+        guard source != nil else { return }
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_LeftArrow), keyDown: false)
         else { return }
@@ -264,6 +412,7 @@ enum SyntheticKeyboard {
     }
 
     private static func postVirtual(_ key: CGKeyCode) {
+        guard source != nil else { return }            // Layer 2: never post unstamped (see postSelectLeft)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
         else { return }
@@ -273,6 +422,7 @@ enum SyntheticKeyboard {
     }
 
     private static func postUnicode(_ text: String) {
+        guard source != nil else { return }            // Layer 2: never post unstamped (see postSelectLeft)
         let utf16 = Array(text.utf16)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
         else { return }
@@ -314,14 +464,20 @@ final class TerminalTapController {
     var imeActive: Bool { activation.isActive }
 
     /// activateServer: VietTelex active for the focused client.
-    func markActive() { activation.activate() }
+    func markActive() { activation.activate(); DebugLog.log("markActive → imeActive=\(activation.isActive)") }
 
     /// deactivateServer: `stillSelected` = is VietTelex still the OS-selected source
     /// right now (queried via TIS by the caller). Ignores a stale late deactivate.
-    func markInactive(stillSelected: Bool) { activation.deactivate(stillSelected: stillSelected) }
+    func markInactive(stillSelected: Bool) {
+        activation.deactivate(stillSelected: stillSelected)
+        DebugLog.log("markInactive(stillSelected=\(stillSelected)) → imeActive=\(activation.isActive)")
+    }
 
     /// TIS selection-changed notification: authoritative recompute.
-    func selectionChanged(isVietTelex: Bool) { activation.selectionChanged(isVietTelex: isVietTelex) }
+    func selectionChanged(isVietTelex: Bool) {
+        activation.selectionChanged(isVietTelex: isVietTelex)
+        DebugLog.log("selectionChanged(isVietTelex=\(isVietTelex)) → imeActive=\(activation.isActive)")
+    }
 
     private var engine = TelexEngine()
     private var tap: CFMachPort?
@@ -368,6 +524,8 @@ final class TerminalTapController {
         CGEvent.tapEnable(tap: tap, enable: true)
         self.tap = tap
         self.source = src
+        SyntheticKeyboard.resetBreaker()   // fresh machinery — clear any prior trip
+        DebugLog.log("tap created + enabled")
     }
 
     /// Ensure a HEALTHY (enabled) tap. Recovers from the two ways a tap silently dies:
@@ -378,9 +536,13 @@ final class TerminalTapController {
     func ensureRunning() {
         guard Accessibility.isTrusted else { return }
         if let tap {
-            if CGEvent.tapIsEnabled(tap: tap) { return }   // healthy
+            // A tripped breaker disabled the tap on purpose. Re-enabling + re-arming is
+            // safe now: pid-based isSynthetic no longer fails open, so the cascade that
+            // tripped it can't recur. Clear the breaker whenever we leave with a healthy
+            // enabled tap, or the next keystroke would just disable it again.
+            if CGEvent.tapIsEnabled(tap: tap), !SyntheticKeyboard.tripped { return }  // healthy
             CGEvent.tapEnable(tap: tap, enable: true)       // try a simple re-enable
-            if CGEvent.tapIsEnabled(tap: tap) { return }
+            if CGEvent.tapIsEnabled(tap: tap) { SyntheticKeyboard.resetBreaker(); return }
             teardown()                                      // dead port -> recreate
         }
         start()
@@ -391,11 +553,37 @@ final class TerminalTapController {
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
         source = nil
         tap = nil
+        DebugLog.log("tap torn down (dead port / recreate)")
+    }
+
+    /// Layer 3 — hard stop when the cascade breaker trips. Disable the tap (keys pass
+    /// through NATIVELY — degraded, never a dead keyboard) and drop any composition,
+    /// immediately, at the moment of the trip rather than on the next re-entered event.
+    /// The tap object is kept so a later activateServer → ensureRunning() can re-enable
+    /// and re-arm the breaker once the machinery is healthy again. Called from
+    /// SyntheticKeyboard's post site; safe to call from inside the tap callback (that is
+    /// exactly what the tapDisabled/tripped branches in handle() already do).
+    func emergencyStop() {
+        if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+        engine.reset()
+        DebugLog.log("EMERGENCY STOP — cascade breaker tripped, tap disabled, keys native")
     }
 
     // Returning nil suppresses the key; returning the event passes it through.
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         let pass = Unmanaged.passUnretained(event)
+
+        // Circuit breaker tripped: synthetic events stopped being recognized as ours
+        // and were cascading (the dead-keyboard hang). DISABLE the tap immediately so
+        // every key — real and any still-queued synthetic — passes through natively;
+        // the keyboard is never dead. A later activateServer → ensureRunning()
+        // re-enables and re-arms the breaker once the machinery is healthy again.
+        // Checked before the tapDisabled re-enable below so a tripped tap stays down.
+        if SyntheticKeyboard.tripped {
+            engine.reset()
+            if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+            return pass
+        }
 
         // The system disables a tap that is too slow or gets user input; re-enable.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {

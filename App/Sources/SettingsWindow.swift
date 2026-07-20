@@ -11,7 +11,7 @@ import AppKit
 import SwiftUI
 import TelexCore
 
-enum SettingsTab: Hashable { case general, shortcuts, about }
+enum SettingsTab: Hashable { case general, shortcuts, experimental, about }
 
 // MARK: - Window controller
 
@@ -61,6 +61,9 @@ final class SettingsModel: ObservableObject {
     /// Advanced (terminal tap latency) — see AppState for the full semantics.
     @Published var tapModifyEventInPlace: Bool { didSet { AppState.shared.tapModifyEventInPlace = tapModifyEventInPlace } }
     @Published var tapSkipSyntheticKeyUp: Bool { didSet { AppState.shared.tapSkipSyntheticKeyUp = tapSkipSyntheticKeyUp } }
+    @Published var axSelectionReplace: Bool { didSet { AppState.shared.axSelectionReplace = axSelectionReplace } }
+    @Published var tapCascadeBreaker: Bool { didSet { AppState.shared.tapCascadeBreaker = tapCascadeBreaker } }
+    @Published var debugLogging: Bool { didSet { AppState.shared.debugLogging = debugLogging } }
     /// UI language: "system" / "en" / "vi". Changing it re-renders every view that
     /// observes this model (they call `loc(_:)`), so the switch is live — no relaunch.
     @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
@@ -77,6 +80,9 @@ final class SettingsModel: ObservableObject {
         simpleTelex = AppState.shared.simpleTelex
         tapModifyEventInPlace = AppState.shared.tapModifyEventInPlace
         tapSkipSyntheticKeyUp = AppState.shared.tapSkipSyntheticKeyUp
+        axSelectionReplace = AppState.shared.axSelectionReplace
+        tapCascadeBreaker = AppState.shared.tapCascadeBreaker
+        debugLogging = AppState.shared.debugLogging
         uiLanguage = AppState.shared.uiLanguage
         reloadShortcuts()
         reloadLearnedApps()
@@ -121,6 +127,7 @@ struct SettingsView: View {
         TabView(selection: $model.selectedTab) {
             GeneralTab().tabItem { Text(model.loc("Settings")) }.tag(SettingsTab.general)
             ShortcutsTab().tabItem { Text(model.loc("Shortcuts")) }.tag(SettingsTab.shortcuts)
+            ExperimentalTab().tabItem { Text(model.loc("Experimental")) }.tag(SettingsTab.experimental)
             AboutTab().tabItem { Text(model.loc("About")) }.tag(SettingsTab.about)
         }
         .padding(16)
@@ -175,14 +182,6 @@ struct GeneralTab: View {
                 Text(model.loc("VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section(model.loc("Advanced")) {
-                Toggle(model.loc("Modify key events in place"), isOn: $model.tapModifyEventInPlace)
-                Text(model.loc("In terminals, apply a one-letter tone edit (w→ư) by rewriting the real keystroke instead of posting two synthetic events — lower latency."))
-                    .font(.caption).foregroundStyle(.secondary)
-                Toggle(model.loc("Skip synthetic key-up (experimental)"), isOn: $model.tapSkipSyntheticKeyUp)
-                Text(model.loc("Experimental: post only the key-down for inserted letters in terminals, halving events per keystroke. Off by default."))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
             Section(model.loc("Language")) {
                 Picker(model.loc("Language"), selection: $model.uiLanguage) {
                     Text(model.loc("System")).tag("system")
@@ -192,6 +191,75 @@ struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Tab: Thử Nghiệm
+
+struct ExperimentalTab: View {
+    @EnvironmentObject var model: SettingsModel
+    @State private var saveResult: String?
+
+    var body: some View {
+        Form {
+            Section(model.loc("Terminal typing latency")) {
+                Toggle(model.loc("Modify key events in place"), isOn: $model.tapModifyEventInPlace)
+                Text(model.loc("In terminals, apply a one-letter tone edit (w→ư) by rewriting the real keystroke instead of posting two synthetic events — lower latency."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle(model.loc("Skip synthetic key-up"), isOn: $model.tapSkipSyntheticKeyUp)
+                Text(model.loc("Post only the key-down for inserted letters in terminals, halving events per keystroke."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle(model.loc("AX replace (Chrome/Spotlight)"), isOn: $model.axSelectionReplace)
+                Text(model.loc("Apply tone edits in Chrome and Spotlight with one Accessibility edit instead of a burst of Shift+Left key events. Experimental — off by default."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(model.loc("Safety")) {
+                Toggle(model.loc("Cascade circuit breaker"), isOn: $model.tapCascadeBreaker)
+                Text(model.loc("Keep this ON. Stops the terminal tap if it ever floods the keyboard with synthetic events, so a bug can’t freeze typing."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(model.loc("Diagnostics")) {
+                Toggle(model.loc("Record debug log"), isOn: $model.debugLogging)
+                Text(model.loc("Records tap health events in memory (never the text you type). Turn it on, reproduce the problem, then Save debug log and send us the file."))
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Button(model.loc("Save debug log…")) { saveLog() }
+                    Button(model.loc("Clear")) { DebugLog.clear(); saveResult = nil }
+                }
+                if let saveResult {
+                    Text(saveResult).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func saveLog() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = "VietTelex-debug.txt"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let text = DebugLog.snapshot(header: debugHeader())
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            saveResult = String(format: model.loc("Saved to %@"), url.lastPathComponent)
+        } catch {
+            saveResult = model.loc("Couldn’t save the file.")
+        }
+    }
+
+    /// Current runtime state prepended to the log for context (no typed text).
+    private func debugHeader() -> [String] {
+        let s = AppState.shared
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        return [
+            "VietTelex debug log — v\(version)",
+            "accessibility: \(Accessibility.isTrusted ? "granted" : "MISSING")",
+            "tap running: \(TerminalTapController.shared.isRunning)",
+            "current app: \(s.currentBundleID ?? "?")",
+            "flags: modifyInPlace=\(s.tapModifyEventInPlace) skipKeyUp=\(s.tapSkipSyntheticKeyUp) axReplace=\(s.axSelectionReplace) breaker=\(s.tapCascadeBreaker)",
+            "settings: simpleTelex=\(s.simpleTelex) freeMarking=\(s.freeMarking) modern=\(s.modernOrthography) liveSpell=\(s.liveSpellCheck) autoRestore=\(s.autoRestore)",
+        ]
     }
 }
 
