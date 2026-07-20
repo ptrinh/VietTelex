@@ -99,9 +99,10 @@ final class SettingsModel: ObservableObject {
         manualModes = AppState.shared.manualModes
     }
 
-    /// Apps to show in the App-mode override list: everything learned or pinned.
+    /// Apps to show in the App-mode override list: ONLY those the user has pinned
+    /// (auto apps aren't listed — add one via the bundle-id field).
     var knownApps: [String] {
-        Array(Set(fallbackApps + inPlaceApps + Array(manualModes.keys))).sorted()
+        manualModes.keys.sorted()
     }
     /// Current override for `id` as an AppMode raw value ("auto" when unset).
     func appMode(_ id: String) -> String { manualModes[id] ?? "auto" }
@@ -311,6 +312,7 @@ struct ExperimentalTab: View {
         else { mode = "IMKit · in-place" }
         let inPlace = s.learnedInPlaceApps
         let fallback = s.learnedFallbackApps
+        let manual = s.manualModes.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }
         return [
             "VietTelex debug log — v\(version) (build \(build))",
             "accessibility: \(Accessibility.isTrusted ? "granted" : "MISSING")",
@@ -322,6 +324,7 @@ struct ExperimentalTab: View {
             "  needsProbe=\(s.needsProbe(id)) spotlightVisible=\(SpotlightDetector.isVisible)",
             "learned in-place OK: \(inPlace.isEmpty ? "(none)" : inPlace.joined(separator: ", "))",
             "learned marked-text: \(fallback.isEmpty ? "(none)" : fallback.joined(separator: ", "))",
+            "manual overrides: \(manual.isEmpty ? "(none)" : manual.joined(separator: ", "))",
             "flags: modifyInPlace=\(s.tapModifyEventInPlace) skipKeyUp=\(s.tapSkipSyntheticKeyUp) axReplace=\(s.axSelectionReplace) breaker=\(s.tapCascadeBreaker)",
             "settings: simpleTelex=\(s.simpleTelex) freeMarking=\(s.freeMarking) modern=\(s.modernOrthography) liveSpell=\(s.liveSpellCheck) autoRestore=\(s.autoRestore)",
         ]
