@@ -14,8 +14,12 @@ import Carbon.HIToolbox
 var telexServer: IMKServer?
 var inputSourceObserver: NSObjectProtocol?
 
+// MUST be "<bundle id>_Connection" (modern macOS NSConnection convention for input
+// methods). The old arbitrary name "VietTelex_Connection" silently broke SANDBOXED
+// clients: WhatsApp (MAS) could never connect — no activateServer, no menu section,
+// every keystroke swallowed — while non-sandboxed apps (Terminal, Chrome) worked.
 let connectionName = (Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String)
-    ?? "VietTelex_Connection"
+    ?? "com.viettelex.inputmethod.telex_Connection"
 
 telexServer = IMKServer(name: connectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
 
