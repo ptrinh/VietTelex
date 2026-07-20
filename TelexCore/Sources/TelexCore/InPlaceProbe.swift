@@ -26,9 +26,8 @@
 public enum InPlaceProbe {
 
     public enum Verdict {
-        case honored        // app replaced correctly → stay on the in-place path
-        case appended       // app ignored the range → switch to marked text
-        case inconclusive   // can't tell → leave unclassified, retry, don't condemn
+        case honored        // caret CONFIRMS the replace → keep the (underline-free) in-place path
+        case appended       // anything else → fall back to marked text (always renders, shows underline)
     }
 
     /// Whether this edit is a usable probe. Only a REAL replace (bs > 0) with no
@@ -49,23 +48,22 @@ public enum InPlaceProbe {
     ///   OVERRIDE a caret that says "appended".
     /// - `inserted`: the string we asked the client to place.
     ///
-    /// Caret wins when present: exactly `start+len` → honored, exactly
-    /// `start+bs+len` → appended. Only when the caret is absent/ambiguous do we fall
-    /// back to the read-back, and a missing read-back stays inconclusive (never a
-    /// condemnation — the in-place default is right for the vast majority of apps).
+    /// Safety-first: keep the underline-free in-place path ONLY when there is
+    /// positive proof the replace happened — the caret landed exactly at `start+len`.
+    /// Everything else (caret at the append position, caret elsewhere, or no caret
+    /// with a read-back that doesn't match) returns `.appended` → marked text, which
+    /// ALWAYS renders Vietnamese (just with an underline). This is the right default:
+    /// a wrong in-place guess silently drops diacritics, whereas marked text only
+    /// costs a cosmetic underline — so when unsure, prefer the mode that always works.
     public static func verdict(caret: Int?, start: Int, bs: Int, insertLength: Int,
                                regionReadback: String?, inserted: String) -> Verdict {
         let expectedReplace = start + insertLength
-        let expectedAppend  = start + bs + insertLength
         if let c = caret {
-            if bs > 0 && c == expectedAppend { return .appended }
-            if c == expectedReplace { return .honored }
-            // Caret present but neither expected value — untrusted; fall through to
-            // the read-back rather than guessing.
+            return c == expectedReplace ? .honored : .appended
         }
-        if let r = regionReadback {
-            return r == inserted ? .honored : .appended
-        }
-        return .inconclusive
+        // No caret at all: the read-back is the only signal. Confirm in-place only on
+        // a positive match; anything else falls back to the safe marked-text mode.
+        if let r = regionReadback, r == inserted { return .honored }
+        return .appended
     }
 }

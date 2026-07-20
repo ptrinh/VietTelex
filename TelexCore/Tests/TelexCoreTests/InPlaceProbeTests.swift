@@ -126,19 +126,21 @@ final class InPlaceProbeTests: XCTestCase {
         }
     }
 
-    func testInconclusiveWhenNoCaretAndNoReadback() {
-        // No evidence either way → never condemn a (probably working) in-place app.
-        let v = InPlaceProbe.verdict(caret: nil, start: 2, bs: 1, insertLength: 1,
-                                     regionReadback: nil, inserted: "ê")
-        XCTAssertEqual(v, .inconclusive)
-    }
-
-    func testUntrustedCaretFallsBackToReadback() {
-        // Caret present but neither expected value (untrusted): defer to read-back.
+    func testSafeFallbackToMarkedTextWhenUnconfirmed() {
+        // Safety-first: only a caret at start+len keeps in-place; everything else →
+        // marked text, which always renders Vietnamese (this is the behavior the app
+        // relied on when Accessibility was missing: it worked, just with an underline).
+        // No evidence at all → marked text (never silently break in-place).
+        XCTAssertEqual(InPlaceProbe.verdict(caret: nil, start: 2, bs: 1, insertLength: 1,
+                                            regionReadback: nil, inserted: "ê"), .appended)
+        // Caret present but not the clean-replace position (untrusted) → marked text,
+        // EVEN IF the read-back is echoed to match. Silently dropping diacritics is
+        // worse than a cosmetic underline.
         XCTAssertEqual(InPlaceProbe.verdict(caret: 999, start: 2, bs: 1, insertLength: 1,
+                                            regionReadback: "ê", inserted: "ê"), .appended)
+        // No caret, but a positive read-back match → trust it and keep in-place.
+        XCTAssertEqual(InPlaceProbe.verdict(caret: nil, start: 2, bs: 1, insertLength: 1,
                                             regionReadback: "ê", inserted: "ê"), .honored)
-        XCTAssertEqual(InPlaceProbe.verdict(caret: 999, start: 2, bs: 1, insertLength: 1,
-                                            regionReadback: "e", inserted: "ê"), .appended)
     }
 
     func testShouldProbeGating() {

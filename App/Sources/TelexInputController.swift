@@ -46,6 +46,16 @@ final class TelexInputController: IMKInputController {
     // only (no persistence): a fresh launch re-probes from scratch, which is fine.
     private var probeFailures: [String: Int] = [:]
 
+    // Last per-key routing decision logged (deduped): the strategy chosen in handle()
+    // is logged only when it changes, so the debug log shows one line per app/mode
+    // transition instead of one per keystroke.
+    private var lastDecisionLog = ""
+    private func logDecision(_ s: String) {
+        guard s != lastDecisionLog else { return }
+        lastDecisionLog = s
+        DebugLog.log(s)
+    }
+
     // Observes the mouse tap's reset signal: a click moved the caret, so drop any
     // composition (the tap can't reach this controller's private engine directly).
     private var resetObserver: NSObjectProtocol?
@@ -124,8 +134,16 @@ final class TelexInputController: IMKInputController {
             // autocomplete corrupts the text, so raw passthrough is the lesser evil.
             // Do not "fix" this by gating on Accessibility.isTrusted.
             spMode = "tap-defer"
+            logDecision("handle \(id ?? "?")/front=\(frontID ?? "?"): tap-defer "
+                + "(tap=\(AppState.shared.usesTapMode(frontID) || AppState.shared.usesTapMode(id)) "
+                + "sel=\(AppState.shared.usesSelectionReplace(frontID) || AppState.shared.usesSelectionReplace(id)) "
+                + "empty=\(AppState.shared.usesEmptyReset(frontID) || AppState.shared.usesEmptyReset(id)) "
+                + "spotlight=\(SpotlightDetector.isVisible))")
             return false
         }
+        logDecision("handle \(id ?? "?")/front=\(frontID ?? "?"): "
+            + "\(AppState.shared.usesMarkedText(id) ? "marked" : "in-place") "
+            + "needsProbe=\(AppState.shared.needsProbe(id))")
         spMode = AppState.shared.usesMarkedText(id) ? "marked"
                : (tracking || engine.isEmpty ? "in-place" : "in-place-per-op")
 
@@ -324,11 +342,6 @@ final class TelexInputController: IMKInputController {
             }
             engine.reset()
             tracking = false
-        case .inconclusive:
-            // Can't tell (no caret AND no read-back). Leave the app unclassified so it
-            // re-probes next word, and DON'T touch the composition — the in-place
-            // default is right for the vast majority, so never condemn on no evidence.
-            break
         }
     }
 

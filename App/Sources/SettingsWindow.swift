@@ -252,11 +252,26 @@ struct ExperimentalTab: View {
     private func debugHeader() -> [String] {
         let s = AppState.shared
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let id = s.currentBundleID
+        let frontID = FrontmostApp.shared.bundleID
+        let mode: String
+        if s.usesSelectionReplace(id) { mode = "tap · selection-replace" }
+        else if s.usesTapMode(id) { mode = "tap · backspace" }
+        else if s.usesMarkedText(id) { mode = "IMKit · marked text" }
+        else { mode = "IMKit · in-place" }
+        let inPlace = s.learnedInPlaceApps
+        let fallback = s.learnedFallbackApps
         return [
             "VietTelex debug log — v\(version)",
             "accessibility: \(Accessibility.isTrusted ? "granted" : "MISSING")",
             "tap running: \(TerminalTapController.shared.isRunning)",
-            "current app: \(s.currentBundleID ?? "?")",
+            "current app: \(id ?? "?")  frontmost: \(frontID ?? "?")",
+            "handling: \(mode)",
+            "  usesTapMode(id)=\(s.usesTapMode(id)) usesTapMode(front)=\(s.usesTapMode(frontID))",
+            "  usesMarkedText=\(s.usesMarkedText(id)) selectionReplace=\(s.usesSelectionReplace(id)) emptyReset=\(s.usesEmptyReset(id))",
+            "  needsProbe=\(s.needsProbe(id)) spotlightVisible=\(SpotlightDetector.isVisible)",
+            "learned in-place OK: \(inPlace.isEmpty ? "(none)" : inPlace.joined(separator: ", "))",
+            "learned marked-text: \(fallback.isEmpty ? "(none)" : fallback.joined(separator: ", "))",
             "flags: modifyInPlace=\(s.tapModifyEventInPlace) skipKeyUp=\(s.tapSkipSyntheticKeyUp) axReplace=\(s.axSelectionReplace) breaker=\(s.tapCascadeBreaker)",
             "settings: simpleTelex=\(s.simpleTelex) freeMarking=\(s.freeMarking) modern=\(s.modernOrthography) liveSpell=\(s.liveSpellCheck) autoRestore=\(s.autoRestore)",
         ]
