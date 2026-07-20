@@ -242,38 +242,33 @@
 // (per-key step and hold both halved).
 const phrases = [
   [["g","g"],["o","go"],["x","gõ"],[" ","gõ "],["T","gõ T"],["i","gõ Ti"],["e","gõ Tie"],["e","gõ Tiê"],["n","gõ Tiên"],["g","gõ Tiêng"],["s","gõ Tiếng"],[" ","gõ Tiếng "],["V","gõ Tiếng V"],["i","gõ Tiếng Vi"],["e","gõ Tiếng Vie"],["e","gõ Tiếng Viê"],["j","gõ Tiếng Việ"],["t","gõ Tiếng Việt"]],
-  [["w","w"],["e","we"],["b","web"],["s","webs"],["i","websi"],["t","websit"],["e","website"],[" ","website "],["n","website n"],["a","website na"],["y","website nay"],["f","website này"],[" ","website này "],["d","website này d"],["d","website này đ"],["u","website này đu"],["w","website này đư"],["o","website này đưo"],["w","website này đươ"],["c","website này đươc"],["j","website này được"],[" ","website này được "],["d","website này được d"],["d","website này được đ"],["a","website này được đa"],["a","website này được đâ"],["y","website này được đây"],["s","website này được đấy"]],
+  [["w","w"],["e","we"],["b","web"],[" ","web "],["n","web n"],["a","web na"],["y","web nay"],["f","web này"],[" ","web này "],["d","web này d"],["d","web này đ"],["u","web này đu"],["w","web này đư"],["o","web này đưo"],["w","web này đươ"],["c","web này đươc"],["j","web này được"]],
   [["t","t"],["u","tu"],["y","tuy"],["e","tuye"],["e","tuyê"],["j","tuyệ"],["t","tuyệt"],[" ","tuyệt "],["q","tuyệt q"],["u","tuyệt qu"],["a","tuyệt qua"],["s","tuyệt quá"],[" ","tuyệt quá "],["d","tuyệt quá d"],["z","tuyệt quá dz"],["i","tuyệt quá dzi"],["j","tuyệt quá dzị"]],
   [["t","t"],["h","th"],["o","tho"],["o","thô"],["n","thôn"],["g","thông"],[" ","thông "],["m","thông m"],["i","thông mi"],["n","thông min"],["h","thông minh"],[" ","thông minh "],["g","thông minh g"],["h","thông minh gh"],["e","thông minh ghe"],["e","thông minh ghê"]],
 ];
-const STEP_MS = 70, HOLD_MS = 1500;
+const STEP_MS = 40, HOLD_MS = 1500;
 const outEl = document.getElementById("out");
 const keysEl = document.getElementById("keys");
-if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-  // Respect reduced motion: show the first phrase finished, no typing animation.
-  keysEl.textContent = "g o x   T i e e n g s   V i e e j t";
-  outEl.textContent = "gõ Tiếng Việt";
-} else {
-  let pi = 0;
-  (function play() {
-    const frames = phrases[pi % phrases.length];
-    let i = 0, typed = "";
-    keysEl.textContent = " ";
-    outEl.textContent = "";
-    (function tick() {
-      if (i < frames.length) {
-        typed += frames[i][0];
-        keysEl.textContent = typed.split("").join(" ");
-        outEl.textContent = frames[i][1];
-        i++;
-        setTimeout(tick, STEP_MS);
-      } else {
-        pi++;
-        setTimeout(play, HOLD_MS);
-      }
-    })();
+// The typing demo always runs, including under prefers-reduced-motion (by request).
+let pi = 0;
+(function play() {
+  const frames = phrases[pi % phrases.length];
+  let i = 0, typed = "";
+  keysEl.textContent = " ";
+  outEl.textContent = "";
+  (function tick() {
+    if (i < frames.length) {
+      typed += frames[i][0];
+      keysEl.textContent = typed.split("").join(" ");
+      outEl.textContent = frames[i][1];
+      i++;
+      setTimeout(tick, STEP_MS);
+    } else {
+      pi++;
+      setTimeout(play, HOLD_MS);
+    }
   })();
-}
+})();
 document.getElementById("brewbtn").addEventListener("click", () => {
   navigator.clipboard.writeText("brew install --cask ptrinh/viettelex/viettelex").then(() => {
     document.getElementById("copied").textContent = "đã copy ✓";
