@@ -265,7 +265,9 @@ final class TelexInputController: IMKInputController {
         // replacementRange, so it must never CONFIRM "in-place good" — that premature
         // confirm on a plain insert was the false-positive that locked iTerm2/WhatsApp
         // onto the broken in-place path. Only a replace distinguishes the two.
-        if !insert.isEmpty, bs > 0, clear == 0, AppState.shared.needsProbe(id) {
+        if InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
+                                    bs: bs, clear: clear,
+                                    needsProbe: AppState.shared.needsProbe(id)) {
             probeInPlace(inserted: insert, start: start, bs: bs, client)
         }
     }
@@ -285,7 +287,7 @@ final class TelexInputController: IMKInputController {
         if start >= 0 {
             let range = NSRange(location: start, length: len)
             if let sub = client.attributedSubstring(from: range) {
-                ok = (sub.string == inserted)
+                ok = InPlaceProbe.inPlaceHonored(readback: sub.string, inserted: inserted)
             }
         }
         let id = AppState.shared.currentBundleID
