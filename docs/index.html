@@ -95,6 +95,11 @@
   .card p { font-size: .92rem; color: var(--ink-soft); }
   .card code, .step code { font-family: var(--mono); font-size: .84em; background: #f3f1ea; padding: 1px 5px; border-radius: 5px; }
 
+  .philosophy-panel { background: linear-gradient(160deg, var(--navy), var(--navy-2)); color: #eef; border-radius: 16px; padding: 28px 30px; margin-bottom: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .philosophy-panel .phi-key { display: block; color: var(--gold); font-weight: 800; font-size: 1.15rem; margin-bottom: 4px; }
+  .philosophy-panel .phi-desc { font-size: .9rem; color: #c6ccdb; }
+  @media (max-width: 620px) { .philosophy-panel { grid-template-columns: 1fr; gap: 16px; padding: 22px; } }
+
   .shots { display: grid; grid-template-columns: 1fr 2fr; gap: 18px; align-items: start; }
   .shots figure { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
   .shots img { border-radius: 8px; }
@@ -136,7 +141,7 @@
   <nav class="langswitch"><a href="en/" hreflang="en" lang="en">English</a></nav>
   <div class="hero-inner">
     <img class="logo" src="assets/VietTelex-logo.png" alt="Logo ViệtTelex — phím keycap đỏ chữ VT" width="96" height="96">
-    <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>đúng như nó <span class="accent">phải thế</span>.</h1>
+    <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>nhanh, mượt, <span class="accent">chuẩn 2026</span></h1>
     <p class="sub">ViệtTelex (VietTelex / ViếtTelex) là bộ gõ Telex miễn phí, mã nguồn mở cho macOS, được xây dựng trên InputMethodKit của Apple để tích hợp sâu — không gạch chân từ đang gõ, con trỏ luôn ở cuối, và gõ được cả trong Terminal lẫn Chrome.</p>
     <p class="philosophy"><span>Tối giản</span> · <span>Trực quan</span> · <span>Nhanh</span> — chỉ Telex, chỉ Unicode dựng sẵn.</p>
 
@@ -160,6 +165,11 @@
   <div class="wrap">
     <h2>Vì sao ViệtTelex?</h2>
     <p class="lead">Viết lại từ đầu sau gần 20 năm dùng macOS mà chưa tìm được bộ gõ tiếng Việt nào thật sự ngon, chuẩn, mượt.</p>
+    <div class="philosophy-panel" aria-label="Triết lý: Tối giản · Trực quan · Nhanh">
+      <div><span class="phi-key">Tối giản</span><span class="phi-desc">Chỉ Telex, chỉ Unicode dựng sẵn — không tính năng thừa.</span></div>
+      <div><span class="phi-key">Trực quan</span><span class="phi-desc">Hoạt động đúng như bộ gõ hệ thống, không cần học lại.</span></div>
+      <div><span class="phi-key">Nhanh</span><span class="phi-desc">~130 ns/phím, không chạy nền — gõ nhanh cỡ nào cũng mượt.</span></div>
+    </div>
     <div class="grid">
       <div class="card"><h3><span class="dot">●</span> Chuẩn IMKit của macOS</h3><p>Là input method thật của hệ thống, không phải app chặn phím — tự đổi kiểu gõ theo từng app, chính tả/dự đoán/undo/VoiceOver đều hoạt động đúng.</p></div>
       <div class="card"><h3><span class="dot">●</span> Nhanh — ~130 nano giây/phím</h3><p>Luật chính tả compile thành máy trạng thái, không cấp phát bộ nhớ khi gõ. Gõ nhanh cỡ nào cũng mượt, không mất hay loạn ký tự.</p></div>

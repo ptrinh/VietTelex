@@ -95,6 +95,11 @@
   .card p { font-size: .92rem; color: var(--ink-soft); }
   .card code, .step code { font-family: var(--mono); font-size: .84em; background: #f3f1ea; padding: 1px 5px; border-radius: 5px; }
 
+  .philosophy-panel { background: linear-gradient(160deg, var(--navy), var(--navy-2)); color: #eef; border-radius: 16px; padding: 28px 30px; margin-bottom: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .philosophy-panel .phi-key { display: block; color: var(--gold); font-weight: 800; font-size: 1.15rem; margin-bottom: 4px; }
+  .philosophy-panel .phi-desc { font-size: .9rem; color: #c6ccdb; }
+  @media (max-width: 620px) { .philosophy-panel { grid-template-columns: 1fr; gap: 16px; padding: 22px; } }
+
   .shots { display: grid; grid-template-columns: 1fr 2fr; gap: 18px; align-items: start; }
   .shots figure { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
   .shots img { border-radius: 8px; }
@@ -136,7 +141,7 @@
   <nav class="langswitch"><a href="../" hreflang="vi" lang="vi">Tiếng Việt</a></nav>
   <div class="hero-inner">
     <img class="logo" src="../assets/VietTelex-logo.png" alt="VietTelex logo — red keycap with the letters VT" width="96" height="96">
-    <h1>Type Vietnamese on your&nbsp;Mac,<br>the way it <span class="accent">should be</span>.</h1>
+    <h1>Type Vietnamese on your&nbsp;Mac,<br>fast, smooth, <span class="accent">right for 2026</span></h1>
     <p class="sub">VietTelex (ViệtTelex) is a free, open-source Telex input method for macOS, built on Apple's InputMethodKit for deep integration — no underline under the word you're typing, the caret always stays at the end, and it works in Terminal and Chrome too.</p>
     <p class="philosophy"><span>Minimalist</span> · <span>Intuitive</span> · <span>Performant</span> — Telex only, precomposed Unicode only.</p>
 
@@ -160,6 +165,11 @@
   <div class="wrap">
     <h2>Why VietTelex?</h2>
     <p class="lead">Rewritten from scratch after nearly 20 years on macOS without a Vietnamese input method that felt truly good, correct and smooth.</p>
+    <div class="philosophy-panel" aria-label="Philosophy: Minimalist · Intuitive · Performant">
+      <div><span class="phi-key">Minimalist</span><span class="phi-desc">Telex only, precomposed Unicode only — no extra features.</span></div>
+      <div><span class="phi-key">Intuitive</span><span class="phi-desc">Behaves exactly like a system input method — nothing to relearn.</span></div>
+      <div><span class="phi-key">Performant</span><span class="phi-desc">~130 ns/key, no background process — smooth no matter how fast you type.</span></div>
+    </div>
     <div class="grid">
       <div class="card"><h3><span class="dot">●</span> Native to Apple's IMKit</h3><p>A real system input method, not a key-blocking app — so per-app typing modes, macOS spelling/prediction/undo/VoiceOver all work correctly.</p></div>
       <div class="card"><h3><span class="dot">●</span> Fast — ~130 nanoseconds/key</h3><p>Spelling rules compiled into a state machine, zero allocation while typing. Type as fast as you like — no lost or scrambled characters.</p></div>
