@@ -300,66 +300,38 @@ final class TelexInputController: IMKInputController {
         client.insertText(insert, replacementRange: NSRange(location: start, length: bs + clear))
         onLen += (insert as NSString).length - bs
 
-        // Probe ONLY on a real, clean replacement (bs > 0, no pending selection).
-        // A pure insert (bs == 0) lands identically whether or not the app honors
-        // replacementRange, so it must never CONFIRM "in-place good" — that premature
-        // confirm on a plain insert was the false-positive that locked iTerm2/WhatsApp
-        // onto the broken in-place path. Only a replace distinguishes the two.
-        if InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
-                                    bs: bs, clear: clear,
-                                    needsProbe: AppState.shared.needsProbe(id)) {
-            probeInPlace(inserted: insert, start: start, bs: bs, client)
+        if !insert.isEmpty, AppState.shared.needsProbe(id) {
+            probeInPlace(inserted: insert, client)
         }
     }
 
-    /// After a real in-place REPLACE into an unknown app, verify the old characters
-    /// were actually replaced (not appended). Read back the region we targeted,
-    /// `[start, start+len)`: a compliant app now holds `inserted` there; an app that
-    /// ignored `replacementRange` (Terminal, iTerm2's CJK IMKit path, Catalyst) still
-    /// holds the OLD characters. Because the engine strips the common prefix, the
-    /// first char of `inserted` is guaranteed to differ from the old char at `start`,
-    /// so this discriminates even on a 1-char window — unlike the old probe, which
-    /// read back the text before the CARET (present in BOTH cases → false-positive).
-    /// A failure switches the app to marked-text mode.
-    private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput) {
+    /// After the first in-place replace into an unknown app, read the text back. If
+    /// the app ignored replacementRange (valid caret but no actual replace, e.g.
+    /// Terminal), remember it and switch to marked-text mode. (Restored to the 1.2.0
+    /// behavior: the caret/region/AX rework of this session perturbed Chromium/Electron
+    /// apps — reading their AX tree mid-composition flips their input path and broke
+    /// in-place — for no net gain, since the real Slack/Lark regression was the pid
+    /// synthetic-check, now fixed. Apps that genuinely need a different mode can be
+    /// pinned in Experimental → App mode.)
+    private func probeInPlace(inserted: String, _ client: IMKTextInput) {
         let len = (inserted as NSString).length
-        // Primary signal: the post-edit caret (hard for an app to fake — it needs it
-        // to place its candidate window). Fallback: the target-region read-back, used
-        // only when the caret is unavailable (some apps echo it, so it must never
-        // override a caret that says "appended").
         let sel = client.selectedRange()
-        let caret: Int? = sel.location == NSNotFound ? nil : sel.location
-        var region: String? = nil
-        if start >= 0, let sub = client.attributedSubstring(from: NSRange(location: start, length: len)) {
-            region = sub.string
+        var ok = false
+        if sel.location != NSNotFound, sel.location >= len {
+            let range = NSRange(location: sel.location - len, length: len)
+            if let sub = client.attributedSubstring(from: range) {
+                ok = (sub.string == inserted)
+            }
         }
-        // Ground-truth read via the Accessibility tree (independent of the app's IMKit
-        // self-report). Authoritative when available — this is what auto-detects apps
-        // like Lark that fake the caret/read-back.
-        let axRegion = AXTextEdit.readString(at: start, length: len)
-        let verdict = InPlaceProbe.verdict(axRegion: axRegion, caret: caret, start: start, bs: bs,
-                                           insertLength: len, regionReadback: region,
-                                           inserted: inserted)
-        // Structural diagnostics only — never the typed text itself. `regionMatch`
-        // is a bool (did the read-back equal what we inserted), not the content.
-        DebugLog.log("probe \(AppState.shared.currentBundleID ?? "?"): start=\(start) bs=\(bs) len=\(len) "
-            + "caret=\(caret.map(String.init) ?? "none") expReplace=\(start + len) expAppend=\(start + bs + len) "
-            + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") "
-            + "axMatch=\(axRegion.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
         let id = AppState.shared.currentBundleID
-        switch verdict {
-        case .honored:
+        DebugLog.log("probe \(id ?? "?"): ok=\(ok)")
+        if ok {
             AppState.shared.markInPlaceGood(id)
             if let id { probeFailures[id] = nil }   // a good read clears the streak
-        case .appended:
-            // An AX-backed verdict is GROUND TRUTH, not a transient read — condemn
-            // immediately (one glitched word, then the app is on the fallback path for
-            // good). Without AX (caret/read-back only), a single failure may just be the
-            // app being busy, so require TWO in a row before switching.
-            if axRegion != nil {
-                if let id { probeFailures[id] = nil }
-                AppState.shared.markUsesMarkedText(id)
-            } else if let id {
+        } else {
+            // Don't condemn on a single failure (the app may just have been busy):
+            // count consecutive failures and only switch to marked text on the 2nd.
+            if let id {
                 let n = (probeFailures[id] ?? 0) + 1
                 if n >= 2 {
                     probeFailures[id] = nil
