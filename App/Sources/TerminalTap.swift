@@ -496,6 +496,10 @@ final class TerminalTapController {
     /// handle() before any edit is emitted.
     private var emitMode: TapEmit = .backspace
 
+    // Throttle for the imeActive self-heal reconcile (see handle()). Main-thread only.
+    private var lastReconcileNs: UInt64 = 0
+    private let reconcileWindowNs: UInt64 = 750_000_000
+
     private let kDelete = 51, kReturn = 36, kEnter = 76, kTab = 48, kEscape = 53
 
     private init() {}
@@ -608,6 +612,30 @@ final class TerminalTapController {
         if SyntheticKeyboard.isSynthetic(event) {
             SyntheticKeyboard.noteObservedSynthetic()
             return pass
+        }
+
+        // Self-heal the latched imeActive against the authoritative selected source.
+        // imeActive is a cache flipped by activate / deactivate / the TIS notification,
+        // and every OFF path depends on isVietTelexSelected() →
+        // TISCopyCurrentKeyboardInputSource(), which can still report the OUTGOING
+        // source at the instant of a switch. So a VietTelex→English switch can be missed
+        // by BOTH the deactivate and notification paths, latching imeActive true — the
+        // tap then transforms in English forever ("gõ ra dấu" in English mode). Nothing
+        // else re-checks, so re-verify here, throttled. Only while active: the common
+        // English case (imeActive already false) returns just below at zero cost; the
+        // turn-ON direction stays covered by the unconditional activateServer→markActive.
+        // TIS copy is cheap and this runs at most once per window, so it stays off the
+        // real hot path even while composing.
+        if activation.isActive {
+            let now = DispatchTime.now().uptimeNanoseconds
+            if now &- lastReconcileNs > reconcileWindowNs {
+                lastReconcileNs = now
+                if !TelexInputController.isVietTelexSelected() {
+                    activation.selectionChanged(isVietTelex: false)
+                    engine.reset()
+                    DebugLog.log("reconcile: VietTelex not selected → tap dormant (healed stale imeActive)")
+                }
+            }
         }
 
         guard imeActive else { return pass }
