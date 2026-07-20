@@ -44,6 +44,10 @@ final class AppState: @unchecked Sendable {
 
     private init() {
         tapNativeFastPath = (defaults.object(forKey: "tapNativeFastPath") as? Bool) ?? true
+        // didSet does not fire on init assignment, so these read the stored value
+        // without writing it back. (See the property docs below.)
+        tapModifyEventInPlace = (defaults.object(forKey: "tapModifyEventInPlace") as? Bool) ?? true
+        tapSkipSyntheticKeyUp = (defaults.object(forKey: "tapSkipSyntheticKeyUp") as? Bool) ?? false
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
         fallbackAppsCache = Set(defaults.stringArray(forKey: Key.fallbackApps) ?? [])
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
@@ -108,6 +112,26 @@ final class AppState: @unchecked Sendable {
     ///   defaults write com.viettelex.settings tapNativeFastPath -bool false
     /// Read once at launch (per-key hot path).
     let tapNativeFastPath: Bool
+
+    /// Task B1 — tap modify-event-in-place. When a tone edit is a pure single-char
+    /// insert (0 backspaces) in Backspace-emit mode and no synthetic burst is draining,
+    /// the tap rewrites the physical CGEvent's unicode string and lets it pass instead
+    /// of suppressing it and posting 2 synthetic events — real keycode/timing kept,
+    /// zero window-server round trips. Default ON. Cached stored var (per-key hot path,
+    /// no defaults hit); the didSet persists a Settings-toggle change immediately, so it
+    /// takes effect live on the next keystroke.
+    var tapModifyEventInPlace: Bool {
+        didSet { defaults.set(tapModifyEventInPlace, forKey: "tapModifyEventInPlace") }
+    }
+
+    /// Task B2 — skip the synthetic keyUp on unicode inserts (EXPERIMENTAL, default
+    /// OFF). Posts only the keyDown carrying the unicode string, halving posted events
+    /// per insert to shave terminal typing latency. Safe for the in-flight accounting:
+    /// the tap mask is keyDown-only and the counter tracks downs only, so a dropped up
+    /// never unbalances it. Cached stored var; didSet persists live.
+    var tapSkipSyntheticKeyUp: Bool {
+        didSet { defaults.set(tapSkipSyntheticKeyUp, forKey: "tapSkipSyntheticKeyUp") }
+    }
 
     // MARK: - Shortcuts (bảng gõ tắt)
 
