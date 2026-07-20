@@ -125,6 +125,7 @@ final class SettingsModel: ObservableObject {
         ids.formUnion(AppState.shared.learnedFallbackApps)
         ids.formUnion(AppState.shared.learnedInPlaceApps)
         ids.formUnion(AppState.builtInFallbackApps)
+        ids.formUnion(AppState.builtInInPlaceApps)
         // Built-in special-strategy apps (browsers → per-field, Excel → empty-reset):
         // only the ones actually installed, so the table shows real defaults without
         // listing every browser we know of.

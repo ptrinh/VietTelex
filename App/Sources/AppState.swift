@@ -274,23 +274,36 @@ final class AppState: @unchecked Sendable {
     /// TextMate has the same in-place breakage in practice. All force off in-place: →
     /// tap backspace-retype when Accessibility is granted, else marked text. Never probed.
     static let builtInFallbackApps: Set<String> = [
-        // ONLY terminals remain pinned: they ignore replacementRange by design, and
-        // Vietnamese-in-terminal is a core promise that must survive a wiped learned
-        // cache (per-install UserDefaults) — never left to the probe.
+        // Terminals: ignore replacementRange by design, and Vietnamese-in-terminal
+        // is a core promise that must survive a wiped learned cache (per-install
+        // UserDefaults) — never left to the probe.
         "com.apple.Terminal",     // Terminal.app
         "com.googlecode.iterm2",  // iTerm2
-        //
-        // Everything else was unpinned once probe v2 could be trusted with them:
-        // • Lark (2026-07-21): its "fake" probe signals turned out to be a CONSTANT
-        //   garbage caret (always 1) — the two-distinct-offsets rule
-        //   (InPlaceProbe.HonorTracker) makes that unable to lock in-place, so the
-        //   probe classifies it correctly (appended ×2 → fallback).
-        // • WhatsApp + TextMate (2026-07-21): field-verified typing fine IN-PLACE —
-        //   the pin evidence was stale (WhatsApp's Catalyst app, which echoed
-        //   read-backs, has since been replaced by the native rewrite). If either
-        //   ever regresses, the probe demotes it automatically: honored can't commit
-        //   without 2 distinct offsets, 2 appended strikes → fallback, and the async
-        //   AX ground-truth read can reverse a wrong commit (unmarkInPlaceGood).
+        // Electron/CEF class, field-verified broken in-place (manual pin testing,
+        // 2026-07-21). The probe WOULD classify these (appended ×2 → fallback; even
+        // Lark's constant garbage caret can't lock in-place under the HonorTracker
+        // two-offset rule) — pinning just ships the right behavior to every install
+        // with zero glitched first words.
+        "com.larksuite.larkApp",       // Lark
+        "com.tinyspeck.slackmacgap",   // Slack
+        "com.hnc.Discord",             // Discord
+        "com.microsoft.VSCode",        // Visual Studio Code
+    ]
+
+    /// Apps field-verified GOOD in-place (manual pin testing, 2026-07-21): skip the
+    /// probe and take the underline-free in-place path directly — first tone edit in
+    /// a fresh install renders right away, no probe round. Deliberately small and
+    /// conservative (Apple staples + verified stable apps): a wrong entry here means
+    /// silent diacritic loss with no probe to catch it, so only add apps a human has
+    /// actually typed Vietnamese in. Users can still override per app in the table.
+    static let builtInInPlaceApps: Set<String> = [
+        "com.apple.Notes",
+        "com.apple.finder",
+        "com.apple.ActivityMonitor",
+        "com.microsoft.Word",
+        "com.macromates.TextMate",       // pre-2026 pin to tap was stale — verified in-place
+        "net.whatsapp.WhatsApp",         // native rewrite honors replacementRange
+        "com.viettelex.inputmethod.telex", // our own Settings window
     ]
 
     /// Apps FORCED to marked-text — never in-place, and never tap (even with
@@ -334,6 +347,7 @@ final class AppState: @unchecked Sendable {
         guard let id = bundleID else { return false }
         return lock.withLock { _manualMode(id) != nil }
             || Self.builtInFallbackApps.contains(id) || Self.markedTextApps.contains(id)
+            || Self.builtInInPlaceApps.contains(id)
     }
 
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
@@ -460,7 +474,7 @@ final class AppState: @unchecked Sendable {
             if fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id) {
                 return trusted ? .tap : .marked
             }
-            if probedAppsCache.contains(id) { return .inPlace }
+            if probedAppsCache.contains(id) || Self.builtInInPlaceApps.contains(id) { return .inPlace }
             return nil
         }
     }
@@ -473,6 +487,7 @@ final class AppState: @unchecked Sendable {
             if _manualMode(id) != nil { return false }   // user pinned it; never probe
             return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
                 && !Self.builtInFallbackApps.contains(id) && !Self.markedTextApps.contains(id)
+                && !Self.builtInInPlaceApps.contains(id) // verified good — skip the probe
         }
     }
 
