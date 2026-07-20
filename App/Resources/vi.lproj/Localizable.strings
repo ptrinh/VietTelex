@@ -22,7 +22,7 @@
 "Stop adding tones as soon as a word can’t be Vietnamese (google, github…) instead of waiting for word end." = "Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt (google, github…) thay vì đợi hết từ.";
 "App compatibility" = "Tương thích ứng dụng";
 "No apps learned yet." = "Chưa có ứng dụng nào được ghi nhớ.";
-"Marked text: %@" = "Dùng marked text: %@";
+"No in-place (tap / marked text): %@" = "Không gõ in-place được (tap khi có quyền Trợ năng, marked text khi không): %@";
 "In-place OK: %@" = "Gõ trực tiếp OK: %@";
 "Reset (re-probe)" = "Đặt lại (dò lại từ đầu)";
 "VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe." = "VietTelex tự học cách gõ phù hợp cho từng ứng dụng. Nếu một ứng dụng gõ bị gạch chân hoặc sai, bấm Đặt lại để dò lại.";

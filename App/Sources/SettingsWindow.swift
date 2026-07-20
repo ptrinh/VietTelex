@@ -193,7 +193,11 @@ struct GeneralTab: View {
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     if !model.fallbackApps.isEmpty {
-                        Text(String(format: model.loc("Marked text: %@"), model.fallbackApps.joined(separator: ", ")))
+                        // fallbackApps = "in-place is broken here". The RUNTIME mode
+                        // depends on Accessibility: granted → tap backspace-retype,
+                        // missing → marked text. Label both so the list doesn't read
+                        // as "these apps show underlines" on a tap-capable install.
+                        Text(String(format: model.loc("No in-place (tap / marked text): %@"), model.fallbackApps.joined(separator: ", ")))
                             .font(.caption).foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
@@ -349,7 +353,7 @@ struct ExperimentalTab: View {
             "  usesMarkedText=\(s.usesMarkedText(id)) selectionReplace=\(s.usesSelectionReplace(id)) emptyReset=\(s.usesEmptyReset(id))",
             "  needsProbe=\(s.needsProbe(id)) spotlightVisible=\(SpotlightDetector.isVisible)",
             "learned in-place OK: \(inPlace.isEmpty ? "(none)" : inPlace.joined(separator: ", "))",
-            "learned marked-text: \(fallback.isEmpty ? "(none)" : fallback.joined(separator: ", "))",
+            "learned fallback (tap/marked): \(fallback.isEmpty ? "(none)" : fallback.joined(separator: ", "))",
             "manual overrides: \(manual.isEmpty ? "(none)" : manual.joined(separator: ", "))",
             "flags: modifyInPlace=\(s.tapModifyEventInPlace) skipKeyUp=\(s.tapSkipSyntheticKeyUp) axReplace=\(s.axSelectionReplace) breaker=\(s.tapCascadeBreaker)",
             "settings: simpleTelex=\(s.simpleTelex) freeMarking=\(s.freeMarking) modern=\(s.modernOrthography) liveSpell=\(s.liveSpellCheck) autoRestore=\(s.autoRestore)",
