@@ -274,18 +274,23 @@ final class AppState: @unchecked Sendable {
     /// TextMate has the same in-place breakage in practice. All force off in-place: →
     /// tap backspace-retype when Accessibility is granted, else marked text. Never probed.
     static let builtInFallbackApps: Set<String> = [
-        "net.whatsapp.WhatsApp",
+        // ONLY terminals remain pinned: they ignore replacementRange by design, and
+        // Vietnamese-in-terminal is a core promise that must survive a wiped learned
+        // cache (per-install UserDefaults) — never left to the probe.
         "com.apple.Terminal",     // Terminal.app
         "com.googlecode.iterm2",  // iTerm2
-        "com.macromates.TextMate",// TextMate
-        // Lark is NOT pinned any more. The deferred-reprobe experiment (2026-07-21)
-        // showed its probe signals aren't smart fakes but a CONSTANT garbage caret
-        // (always 1) with no AX text interface at all — the old single-probe rule
-        // locked it in-place only when the first tone edit happened at the start of
-        // an empty field (expReplace = 1 = the garbage value). The two-distinct-
-        // offsets rule (InPlaceProbe.HonorTracker) makes that coincidence unable to
-        // commit, so the normal probe now classifies Lark: appended ×2 → fallback
-        // (tap with Accessibility, marked text without).
+        //
+        // Everything else was unpinned once probe v2 could be trusted with them:
+        // • Lark (2026-07-21): its "fake" probe signals turned out to be a CONSTANT
+        //   garbage caret (always 1) — the two-distinct-offsets rule
+        //   (InPlaceProbe.HonorTracker) makes that unable to lock in-place, so the
+        //   probe classifies it correctly (appended ×2 → fallback).
+        // • WhatsApp + TextMate (2026-07-21): field-verified typing fine IN-PLACE —
+        //   the pin evidence was stale (WhatsApp's Catalyst app, which echoed
+        //   read-backs, has since been replaced by the native rewrite). If either
+        //   ever regresses, the probe demotes it automatically: honored can't commit
+        //   without 2 distinct offsets, 2 appended strikes → fallback, and the async
+        //   AX ground-truth read can reverse a wrong commit (unmarkInPlaceGood).
     ]
 
     /// Apps FORCED to marked-text — never in-place, and never tap (even with
