@@ -83,12 +83,18 @@ final class TelexInputController: IMKInputController {
         // Confirm handle() is reached BEFORE the synthetic guard, and record whether
         // this real key is being mistaken for one of ours (isSynthetic) and why
         // (source pid vs our pid). Deduped per app so it's one line, not per-key.
-        let synth = SyntheticKeyboard.isSynthetic(event)
+        // Recognize OUR output by the magic userData only — NOT the posting pid.
+        // Chromium/Electron (Slack, Lark) hand real keys to the IME stamped with our
+        // pid, which the pid check dropped as synthetic (untypable Vietnamese).
+        let synth = SyntheticKeyboard.isSyntheticMagic(event)
         let entryID = AppState.shared.currentBundleID ?? FrontmostApp.shared.bundleID ?? "?"
         if entryID != lastEntryLog {
             lastEntryLog = entryID
-            let srcPid = event.cgEvent?.getIntegerValueField(.eventSourceUnixProcessID) ?? -1
-            DebugLog.log("handle ENTER app=\(entryID) synthetic=\(synth) srcPid=\(srcPid) myPid=\(getpid())")
+            let cg = event.cgEvent
+            let srcPid = cg?.getIntegerValueField(.eventSourceUnixProcessID) ?? -1
+            let ud = cg?.getIntegerValueField(.eventSourceUserData) ?? -1
+            DebugLog.log("handle ENTER app=\(entryID) synthetic=\(synth) magic=\(ud == SyntheticKeyboard.magic) "
+                + "srcPid=\(srcPid) myPid=\(getpid())")
         }
 
         if synth { return false }

@@ -242,6 +242,23 @@ enum SyntheticKeyboard {
         event.cgEvent.map(isSynthetic) ?? false
     }
 
+    /// IMKit-path recognizer: match ONLY on the private source's `magic` userData,
+    /// never the posting pid. Chromium/Electron apps (Slack, Lark) deliver REAL
+    /// keydowns to the input method with `eventSourceUnixProcessID == getpid()`, so
+    /// the pid-based `isSynthetic` misread them as our own output and dropped them —
+    /// Vietnamese became untypable there (raw "vieejt"). Magic is set only by our
+    /// source, so a real key never carries it. A false NEGATIVE here is harmless:
+    /// our synthetic output only ever targets tap-mode apps, and the controller
+    /// defers those to the tap (usesTapMode) before it would ever compose the event.
+    /// The pid signal stays PRIMARY in the tap's own cascade guard (`isSynthetic`),
+    /// where a synthetic that lost its magic must still be caught to avoid the hang.
+    static func isSyntheticMagic(_ event: CGEvent) -> Bool {
+        event.getIntegerValueField(.eventSourceUserData) == magic
+    }
+    static func isSyntheticMagic(_ event: NSEvent) -> Bool {
+        event.cgEvent.map(isSyntheticMagic) ?? false
+    }
+
     /// Strictly-increasing timestamp for posted events. CGEvent.post orders delivery
     /// by timestamp, and events we create back-to-back can get equal/near-equal
     /// mach-time stamps — the window server then reorders same-stamp events, so a
