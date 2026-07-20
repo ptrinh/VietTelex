@@ -104,6 +104,10 @@ enum SpotlightDetector {
         guard let windows = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]]
         else { return false }
         for w in windows {
+            // WATCH-ITEM: matches the owning process name literally. This is
+            // version-sensitive — a macOS release that renames the Spotlight process
+            // would silently break detection (Spotlight edits fall back to Backspace
+            // mode) with no error. Revisit if Spotlight support regresses on a new OS.
             if let owner = w[kCGWindowOwnerName as String] as? String, owner == "Spotlight" {
                 return true
             }
@@ -265,9 +269,23 @@ enum SyntheticKeyboard {
 final class TerminalTapController {
     static let shared = TerminalTapController()
 
-    /// Set by the IMKit controller: only act while VietTelex is the active input
-    /// source (so switching to ABC/US inside a terminal really types English).
-    var imeActive = false
+    /// Whether VietTelex is the active input source: the tap only transforms keys
+    /// while true (so switching to ABC/US inside a terminal really types English).
+    /// Driven by IMK activate/deactivate AND the TIS selection notification, resolved
+    /// through `IMEActivation` so an out-of-order deactivate can't clobber it (see
+    /// IMEActivation.swift). Hot-path read stays a plain bool load.
+    private var activation = IMEActivation()
+    var imeActive: Bool { activation.isActive }
+
+    /// activateServer: VietTelex active for the focused client.
+    func markActive() { activation.activate() }
+
+    /// deactivateServer: `stillSelected` = is VietTelex still the OS-selected source
+    /// right now (queried via TIS by the caller). Ignores a stale late deactivate.
+    func markInactive(stillSelected: Bool) { activation.deactivate(stillSelected: stillSelected) }
+
+    /// TIS selection-changed notification: authoritative recompute.
+    func selectionChanged(isVietTelex: Bool) { activation.selectionChanged(isVietTelex: isVietTelex) }
 
     private var engine = TelexEngine()
     private var tap: CFMachPort?
@@ -378,7 +396,9 @@ final class TerminalTapController {
         // Runs for ALL apps, before the tap-mode gate.
         let flags = event.flags
         if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
-            engine.reset()
+            if !engine.isEmpty { engine.reset() }   // skip the no-op reset when nothing composes
+            // ALWAYS notify: the IMKit controller's engine state is invisible from here,
+            // so we cannot gate this on our own emptiness.
             NotificationCenter.default.post(name: .telexResetComposition, object: nil)
             return pass
         }
@@ -473,8 +493,18 @@ final class TerminalTapController {
         }
         let ch = Character(scalar)
         guard let ascii = ch.asciiValue, isLetterAscii(ascii) else {
-            // Non-letter boundary. Brackets skip auto-restore (code context).
-            emitBoundary(suppressAutoRestore: isBracketUnichar(buf[0]))
+            // Non-letter boundary (space, digit, punctuation). Brackets skip
+            // auto-restore (code context). Mirror the Return/Tab handling above: only
+            // when a rewrite ACTUALLY happened (emitBoundary → true) or a synthetic
+            // burst is still draining must we suppress + re-emit synthetically, so the
+            // boundary key lands AFTER the async edit. Otherwise pass the REAL keyDown
+            // through — no two window-server round trips per space, and the app sees a
+            // genuine key (keycode intact), not a text-only keycode-0 event. Respects
+            // tapNativeFastPath like the letter fast-path below.
+            let rewrote = emitBoundary(suppressAutoRestore: isBracketUnichar(buf[0]))
+            if !rewrote, AppState.shared.tapNativeFastPath, SyntheticKeyboard.queueDrained() {
+                return pass
+            }
             reemit(keyCode: keyCode, string: String(ch))
             return nil
         }
@@ -507,9 +537,19 @@ final class TerminalTapController {
     @discardableResult
     private func emitBoundary(suppressAutoRestore: Bool) -> Bool {
         guard !engine.isEmpty else { engine.reset(); return false }
+        // Capture BOTH forms before reset() wipes them. The composed word is what's on
+        // screen (drives the backspace count); the raw keystrokes are what the user
+        // actually typed.
         let word = engine.composed
+        let rawWord = engine.rawKeystrokes
         let onScreen = word.unicodeScalars.count
-        if !word.isEmpty, let expansion = AppState.shared.shortcuts[word] {
+        // Shortcut expansion: try the COMPOSED form first, then fall back to the RAW
+        // keystrokes. A shortcut key containing Telex triggers (s f r x j w, doubled
+        // vowels) is transformed by composition and so can NEVER match on `composed`
+        // ("ddc" composes to "đc"); the raw form recovers it. Backspaces are always the
+        // on-screen composed scalar count regardless of which form matched.
+        if let expansion = (word.isEmpty ? nil : AppState.shared.shortcuts[word])
+                        ?? AppState.shared.shortcuts[rawWord] {
             engine.reset()
             SyntheticKeyboard.apply(backspaces: onScreen, insert: expansion, mode: emitMode)
             return true

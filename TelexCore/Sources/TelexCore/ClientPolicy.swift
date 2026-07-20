@@ -30,12 +30,4 @@ public enum ClientPolicy {
         guard let id = bundleID else { return false }
         return forcePassthroughBundleIDs.contains(id)
     }
-
-    /// Final gate used by the controller: force passthrough if the client is a known
-    /// remote-desktop app OR the user has marked it "always off".
-    public static func shouldForcePassthrough(_ bundleID: String?,
-                                              userAlwaysOff: Set<String>) -> Bool {
-        guard let id = bundleID else { return false }
-        return forcePassthroughBundleIDs.contains(id) || userAlwaysOff.contains(id)
-    }
 }

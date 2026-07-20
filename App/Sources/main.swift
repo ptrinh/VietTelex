@@ -5,9 +5,11 @@
 
 import Cocoa
 import InputMethodKit
+import Carbon.HIToolbox
 
 // Held for the process lifetime.
 var telexServer: IMKServer?
+var inputSourceObserver: NSObjectProtocol?
 
 let connectionName = (Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String)
     ?? "VietTelex_Connection"
@@ -26,5 +28,15 @@ _ = FrontmostApp.shared
 // (iTerm, Terminal…). No-op unless Accessibility is granted (Developer ID build);
 // re-attempted from activateServer once permission is granted.
 TerminalTapController.shared.ensureRunning()
+
+// Authoritative gate for the tap: whenever macOS switches the selected keyboard input
+// source, recompute whether VietTelex is active. This catches per-document switching
+// (which can restore VietTelex on focus-return without an activateServer call) and
+// makes the tap's state independent of the flaky activate/deactivate call ordering.
+inputSourceObserver = DistributedNotificationCenter.default().addObserver(
+    forName: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
+    object: nil, queue: .main) { _ in
+    TerminalTapController.shared.selectionChanged(isVietTelex: TelexInputController.isVietTelexSelected())
+}
 
 NSApplication.shared.run()

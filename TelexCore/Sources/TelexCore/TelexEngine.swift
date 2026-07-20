@@ -73,6 +73,14 @@ public struct TelexEngine {
     private var raw: [UInt8]
     private var rawCount = 0
 
+    // Set once `rawCount` hits capacity: the word is longer than the engine can
+    // hold, so its 32-char view is a stale prefix of what the caller has on screen.
+    // While overflowed the word is treated as non-composable — backspace passes
+    // through (the app deletes natively) and the boundary neither auto-restores nor
+    // rewrites — so the engine never diffs its short view against the longer screen
+    // and silently drops the overflow characters. Reset per word.
+    private var overflowed = false
+
     // Current on-screen composition (scalar values) — kept to diff against.
     private var out: [UInt32]
     private var outCount = 0
@@ -151,7 +159,7 @@ public struct TelexEngine {
         guard let ascii = ch.asciiValue, isLetter(ascii) else {
             return .passthrough
         }
-        guard rawCount < Self.capacity else { return .passthrough }
+        guard rawCount < Self.capacity else { overflowed = true; return .passthrough }
 
         raw[rawCount] = ascii
         rawCount += 1
@@ -208,6 +216,10 @@ public struct TelexEngine {
     /// produced the last displayed letter (tracked via `rawLetter` provenance).
     public mutating func backspace() -> TelexAction {
         guard rawCount > 0 else { return .passthrough }
+        // Overflowed: the engine's 32-char view is a stale prefix of the screen, so
+        // any rebuild/diff would rewrite the whole range with the short composition
+        // and drop the overflow. Let the app delete the last char natively instead.
+        if overflowed { return .passthrough }
 
         // Editing the word re-opens transforms; a still-invalid word simply re-disables
         // on the next forward key (backspace itself never adds a transform). The
@@ -242,6 +254,9 @@ public struct TelexEngine {
     public mutating func commitBoundary(autoRestore: Bool) -> TelexAction {
         defer { reset() }
         guard rawCount > 0 else { return .none }
+        // Overflowed: the 32-char view is stale vs. the screen, so `outCount`
+        // backspaces would hit the wrong characters. No restore, no rewrite.
+        if overflowed { return .none }
         // Skip restore when the user cancelled a diacritic on purpose ("iss"→is).
         // Validation runs on letter classes + tone (no String); Strings are built
         // only when a restore actually happens.
@@ -259,6 +274,9 @@ public struct TelexEngine {
     /// Used by the marked-text controller path.
     public mutating func commitText(autoRestore: Bool) -> String {
         defer { reset() }
+        // Overflowed: never restore to `rawKeystrokes` (only the first 32 keys) —
+        // return the composed prefix unchanged; the caller keeps the rest on screen.
+        if overflowed { return composed }
         if autoRestore, !markCancelled, outCount > 0,
            forceRestoreUpperTone || !composedIsValidSyllable() {
             return rawKeystrokes
@@ -307,6 +325,7 @@ public struct TelexEngine {
         outCount = 0
         markCancelled = false
         upperToneKey = false
+        overflowed = false
         disabledAtCount = Int.max
         pCount = 0
         pTone = .none

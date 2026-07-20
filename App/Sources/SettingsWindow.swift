@@ -33,11 +33,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             win.setContentSize(NSSize(width: 580, height: 440))
             win.delegate = self
             win.isReleasedWhenClosed = false
+            win.center() // only on first creation — later shows keep the user's position
             self.window = win
             self.model = model
         }
         model?.selectedTab = tab
-        window?.center()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

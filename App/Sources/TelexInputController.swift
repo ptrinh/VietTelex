@@ -40,6 +40,12 @@ final class TelexInputController: IMKInputController {
     private var tracking = false  // is anchor/onLen valid for the current word?
     private var selToClear = 0    // selection length to overwrite on the first insert
 
+    // Consecutive failed in-place read-back probes per bundleID. A single failure is
+    // usually the app being busy during the probe, not a real incompatibility, so we
+    // require TWO in a row before condemning an app to marked text forever. In-memory
+    // only (no persistence): a fresh launch re-probes from scratch, which is fine.
+    private var probeFailures: [String: Int] = [:]
+
     // Observes the mouse tap's reset signal: a click moved the caret, so drop any
     // composition (the tap can't reach this controller's private engine directly).
     private var resetObserver: NSObjectProtocol?
@@ -63,14 +69,23 @@ final class TelexInputController: IMKInputController {
         if SyntheticKeyboard.isSynthetic(event) { return false }
 
         // Secure input active (password field, or an app holding secure input like
-        // some chat apps): finish anything pending, then pass through untouched.
-        if IsSecureEventInputEnabled() { boundary(client); return false }
+        // some chat apps): DROP the pending composition without rewriting it, then
+        // pass through untouched. We must NOT call boundary() here: boundary runs
+        // shortcut expansion / auto-restore via applyInPlace, i.e. an insertText into
+        // the CURRENT client — now a password field — using a stale anchor from the
+        // previous field, which would leak the old word into the secure input. A plain
+        // engine drop is the only safe teardown. (endComposition is also wrong: its
+        // marked-text branch finalizes with insertText(engine.composed), the very
+        // injection we must avoid in a secure field.)
+        if IsSecureEventInputEnabled() { discardComposition(); return false }
 
         // Remote-desktop / VM / screen-share apps forward raw scancodes, so a
         // synthesized composition is wrong there — behave as if OFF (technical
         // necessity, kept even though there is no user VI/EN toggle any more).
+        // Same reason as the secure-input branch: drop, never boundary()/rewrite —
+        // the anchor belongs to the previous field, and this window forwards raw keys.
         if ClientPolicy.isRemoteDesktop(AppState.shared.currentBundleID) {
-            boundary(client); return false
+            discardComposition(); return false
         }
 
         // Modifier combos (⌘⌃⌥) are never Telex input: finish and pass through.
@@ -99,6 +114,12 @@ final class TelexInputController: IMKInputController {
             || AppState.shared.usesSelectionReplace(frontID) || AppState.shared.usesSelectionReplace(id)
             || AppState.shared.usesEmptyReset(frontID) || AppState.shared.usesEmptyReset(id)
             || SpotlightDetector.isVisible {
+            // NOTE: SpotlightDetector.isVisible defers UNCONDITIONALLY, even when the
+            // tap is dormant (Accessibility not trusted / sandboxed build). That means
+            // Spotlight typing gets raw passthrough with NO composition at all. This is
+            // INTENTIONAL, not a bug: IMKit composing into Spotlight's inline
+            // autocomplete corrupts the text, so raw passthrough is the lesser evil.
+            // Do not "fix" this by gating on Accessibility.isTrusted.
             spMode = "tap-defer"
             return false
         }
@@ -209,8 +230,19 @@ final class TelexInputController: IMKInputController {
     private func applyInPlace(bs: Int, insert: String, _ client: IMKTextInput) {
         let id = AppState.shared.currentBundleID
         let start: Int
+        // A pending selection (e.g. after ⌘A) must be overwritten by this first
+        // replacement, exactly as the .passthrough branch does. selToClear is only set
+        // while tracking; fold it into the replacementRange so the selection is removed
+        // by the same insert, then clear it (a later insert must not re-scope to it).
+        // On a first-key replace bs == 0, so start == anchor and the range is
+        // (anchor, selToClear) — the whole selection. onLen must NOT subtract
+        // selToClear: the selection was never part of the composition length, so
+        // `onLen += insert.length - bs` stays correct after the removal.
+        var clear = 0
         if tracking {
             start = anchor + onLen - bs
+            clear = selToClear
+            selToClear = 0
         } else {
             let sel = client.selectedRange()
             guard sel.location != NSNotFound, sel.location >= bs else {
@@ -221,7 +253,7 @@ final class TelexInputController: IMKInputController {
         guard start >= 0 else {
             AppState.shared.markUsesMarkedText(id); engine.reset(); return
         }
-        client.insertText(insert, replacementRange: NSRange(location: start, length: bs))
+        client.insertText(insert, replacementRange: NSRange(location: start, length: bs + clear))
         onLen += (insert as NSString).length - bs
 
         if !insert.isEmpty, AppState.shared.needsProbe(id) {
@@ -242,11 +274,29 @@ final class TelexInputController: IMKInputController {
                 ok = (sub.string == inserted)
             }
         }
+        let id = AppState.shared.currentBundleID
         if ok {
-            AppState.shared.markInPlaceGood(AppState.shared.currentBundleID)
+            AppState.shared.markInPlaceGood(id)
+            if let id { probeFailures[id] = nil }   // a good read clears the streak
         } else {
-            AppState.shared.markUsesMarkedText(AppState.shared.currentBundleID)
-            engine.reset()   // abandon the glitched word; next word uses marked text
+            // Don't condemn on a single failure (the app may just have been busy):
+            // count consecutive failures and only switch to marked text on the 2nd.
+            // Either way abandon the glitched word so it doesn't linger half-written;
+            // on the first failure leave the app UNCLASSIFIED so the next word
+            // re-probes (needsProbe stays true until markUsesMarkedText runs).
+            if let id {
+                let n = (probeFailures[id] ?? 0) + 1
+                if n >= 2 {
+                    probeFailures[id] = nil
+                    AppState.shared.markUsesMarkedText(id)
+                } else {
+                    probeFailures[id] = n
+                }
+            } else {
+                // No bundleID to key the streak on: fall back to the old behavior.
+                AppState.shared.markUsesMarkedText(id)
+            }
+            engine.reset()
             tracking = false
         }
     }
@@ -283,15 +333,36 @@ final class TelexInputController: IMKInputController {
         onLen = 0
     }
 
+    /// Tear the composition down WITHOUT any rewrite, insertText, or setMarkedText —
+    /// used at boundaries where touching the client is unsafe (secure input, remote
+    /// desktop): the anchor may belong to a previous field and the target window must
+    /// not receive injected text. Unlike endComposition this never finalizes marked
+    /// text (no insertText(composed)); unlike boundary it never expands shortcuts or
+    /// auto-restores. Whatever was already on screen stays as-is; the engine forgets it.
+    private func discardComposition() {
+        engine.reset()
+        tracking = false
+        onLen = 0
+    }
+
     private func boundary(_ client: IMKTextInput, suppressAutoRestore: Bool = false) {
         defer { tracking = false; onLen = 0 }
         guard !engine.isEmpty else { engine.reset(); return }
         let marked = AppState.shared.usesMarkedText(AppState.shared.currentBundleID)
         let word = engine.composed
+        // Raw keystrokes must be read BEFORE engine.reset() clears them. A shortcut key
+        // that contains Telex triggers (s f r x j w, doubled vowels) never survives
+        // composition — "vn"→"vn" but "cf" composes away — so a shortcut whose key IS
+        // the raw form could never match on `word` alone.
+        let rawWord = engine.rawKeystrokes
         let onScreen = word.unicodeScalars.count
 
         // Shortcut expansion (bảng gõ tắt) takes precedence over the composed word.
-        if !word.isEmpty, let expansion = AppState.shared.shortcuts[word] {
+        // Try the composed word first, then fall back to the raw keystrokes so a
+        // shortcut key containing trigger letters still matches. On-screen backspace
+        // count stays `onScreen` (the composed scalar count) either way.
+        if !word.isEmpty,
+           let expansion = AppState.shared.shortcuts[word] ?? AppState.shared.shortcuts[rawWord] {
             engine.reset()
             if marked { client.insertText(expansion, replacementRange: kNoRange) }
             else { applyInPlace(bs: onScreen, insert: expansion, client) }
@@ -324,7 +395,7 @@ final class TelexInputController: IMKInputController {
         // stay dormant when the user switches to ABC/US). ensureRunning() also revives
         // a tap that died (Accessibility toggled off/on invalidates the mach port), so
         // focusing a terminal / re-selecting the source self-heals it.
-        TerminalTapController.shared.imeActive = true
+        TerminalTapController.shared.markActive()
         TerminalTapController.shared.ensureRunning()
 
         if resetObserver == nil {
@@ -353,9 +424,25 @@ final class TelexInputController: IMKInputController {
         tracking = false
         if let obs = resetObserver { NotificationCenter.default.removeObserver(obs); resetObserver = nil }
         // Input source switched away from VietTelex (or focus lost): the tap must not
-        // transform keys, so the user really types English in terminals.
-        TerminalTapController.shared.imeActive = false
+        // transform keys, so the user really types English in terminals. BUT with
+        // per-document input switching, IMK can call this on a stale client AFTER the
+        // newly focused client's activateServer — so only turn the tap off if VietTelex
+        // is genuinely no longer the OS-selected source (else we'd clobber the fresh
+        // activate and typing would pass through until a focus cycle; see IMEActivation).
+        TerminalTapController.shared.markInactive(stillSelected: Self.isVietTelexSelected())
         super.deactivateServer(sender)
+    }
+
+    /// True when the CURRENTLY selected keyboard input source is VietTelex — the single
+    /// source of truth the flaky activate/deactivate ordering must defer to. Called
+    /// only on lifecycle transitions / TIS notifications, never on the keystroke hot
+    /// path, so the Carbon TIS copy is fine here. Matches both the input source and its
+    /// `.vi` input mode by bundle-id prefix.
+    static func isVietTelexSelected() -> Bool {
+        guard let src = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
+              let ptr = TISGetInputSourceProperty(src, kTISPropertyInputSourceID) else { return false }
+        let id = Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
+        return id.hasPrefix("com.viettelex.inputmethod.telex")
     }
 
     // MARK: - Input-method menu (IMK-provided, no NSStatusItem)
