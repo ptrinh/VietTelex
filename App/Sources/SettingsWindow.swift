@@ -243,10 +243,14 @@ struct ExperimentalTab: View {
             Section(model.loc("App mode")) {
                 Text(model.loc("Force how VietTelex types in a specific app. Auto = detect automatically. Use Tap (real keystrokes, no underline) if an app types wrong or shows underlines; Marked text is the safe fallback."))
                     .font(.caption).foregroundStyle(.secondary)
-                HStack {
-                    TextField(model.loc("App bundle id (e.g. com.larksuite.larkApp)"), text: $model.newModeAppID)
-                    Button(model.loc("Pin as Tap")) { model.pinNewApp("tap") }
-                        .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(model.loc("Add an app by bundle id:")).font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        TextField("com.larksuite.larkApp", text: $model.newModeAppID)
+                            .textFieldStyle(.roundedBorder)
+                        Button(model.loc("Pin as Tap")) { model.pinNewApp("tap") }
+                            .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
                 }
                 ForEach(model.knownApps, id: \.self) { id in
                     Picker(id, selection: Binding(get: { model.appMode(id) },
