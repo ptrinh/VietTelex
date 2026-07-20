@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tập gõ Telex — ViệtTelex</title>
+<meta name="description" content="Tập gõ tiếng Việt kiểu Telex ngay trên trình duyệt. Bài học từ dễ đến khó, phản hồi tức thì, dành cho cả trẻ em. Dùng đúng bộ luật gõ của ViệtTelex.">
+<meta name="keywords" content="tập gõ Telex, học gõ tiếng Việt, luyện gõ Telex, gõ tiếng Việt cho trẻ em, Telex online, ViệtTelex">
+<link rel="canonical" href="https://ptrinh.github.io/viettelex/learn/">
+<link rel="icon" href="../assets/VietTelex-logo.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tập gõ Telex — ViệtTelex">
+<meta property="og:description" content="Học gõ tiếng Việt kiểu Telex ngay trên web: bài học từ dễ đến khó, phản hồi tức thì, dành cho cả trẻ em.">
+<meta property="og:image" content="https://ptrinh.github.io/viettelex/assets/VietTelex-logo.png">
+<meta property="og:url" content="https://ptrinh.github.io/viettelex/learn/">
+<meta property="og:locale" content="vi_VN">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #17233d; --navy-2: #1e2d4e;
+    --red: #c22727; --gold: #d4a94a;
+    --green: #1f9d63; --green-soft: #e6f6ee;
+    --paper: #fbfaf7; --ink: #1c2333; --ink-soft: #55607a;
+    --line: #e6e2d8; --sky: #eaf1fb;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    --sans: "Be Vietnam Pro", -apple-system, "Segoe UI", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: var(--red); }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; background: var(--navy); color: #eef; position: sticky; top: 0; z-index: 20; }
+  .topbar .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #eef; font-weight: 800; }
+  .topbar .brand img { width: 30px; height: 30px; }
+  .topbar .brand small { font-weight: 500; color: #aab4cc; font-size: .78rem; display: block; margin-top: -4px; }
+  .topbar .right { display: flex; align-items: center; gap: 14px; }
+  .stars { background: rgba(212,169,74,.16); border: 1px solid rgba(212,169,74,.4); color: var(--gold); border-radius: 999px; padding: 5px 13px; font-weight: 700; font-size: .9rem; white-space: nowrap; }
+  .topbar a.back { color: #cdd5e6; text-decoration: none; font-size: .86rem; font-weight: 500; }
+  .topbar a.back:hover { color: #fff; }
+
+  /* Hero + sandbox */
+  .hero { background: linear-gradient(170deg, var(--navy) 0%, var(--navy-2) 100%); color: #f2f0ea; padding: 52px 22px 64px; text-align: center; }
+  .hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+  .hero h1 .accent { color: var(--gold); }
+  .hero p.sub { margin: 16px auto 0; max-width: 32em; color: #c6ccdb; font-size: 1.04rem; }
+
+  .sandbox { max-width: 620px; margin: 34px auto 0; text-align: left; }
+  .sandbox .label { font-size: .78rem; text-transform: uppercase; letter-spacing: .14em; color: #8b94ab; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .field { background: rgba(0,0,0,.32); border: 2px solid rgba(255,255,255,.14); border-radius: 16px; padding: 20px 22px; min-height: 92px; font-size: clamp(1.5rem, 4.5vw, 2.1rem); font-weight: 700; color: #fff; cursor: text; outline: none; word-break: break-word; transition: border-color .15s; }
+  .field:focus { border-color: var(--gold); }
+  .field .active { background: rgba(212,169,74,.18); border-radius: 4px; }
+  .field .ph { color: #737e99; font-weight: 500; font-size: 1.1rem; }
+  .field .caret { display: none; width: 2px; height: 1.05em; background: var(--gold); vertical-align: text-bottom; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  .field:focus .caret { display: inline-block; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .keysline { font-family: var(--mono); font-size: .84rem; color: #8b94ab; letter-spacing: .12em; margin-top: 12px; min-height: 1.3em; word-break: break-all; }
+  .keysline b { color: #cdd5e6; font-weight: 700; }
+  .sandbox .tools { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .minibtn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #dfe4f0; border-radius: 9px; padding: 7px 14px; font-size: .85rem; font-weight: 600; cursor: pointer; font-family: var(--sans); }
+  .minibtn:hover { border-color: var(--gold); color: #fff; }
+  .kbd-note { margin-top: 14px; font-size: .8rem; color: #8b94ab; }
+
+  section { padding: 60px 22px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h2 { font-size: clamp(1.4rem, 3.4vw, 2rem); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .lead { color: var(--ink-soft); max-width: 42em; margin-bottom: 30px; }
+
+  /* Cheat sheet */
+  .cheat { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .chip { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; transition: transform .12s, box-shadow .12s, border-color .12s; }
+  .chip:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(23,35,61,.1); border-color: var(--gold); }
+  .chip .keys { font-family: var(--mono); font-weight: 700; color: var(--red); font-size: 1rem; }
+  .chip .arrow { color: var(--ink-soft); margin: 6px 0; font-size: .9rem; }
+  .chip .res { font-size: 1.9rem; font-weight: 800; color: var(--navy); line-height: 1.1; }
+  .chip .ex { font-size: .8rem; color: var(--ink-soft); margin-top: 6px; }
+  .cheat-group-title { grid-column: 1 / -1; font-weight: 700; color: var(--ink); margin-top: 8px; font-size: 1rem; }
+  .cheat-group-title:first-child { margin-top: 0; }
+
+  /* Lessons */
+  .lesson-wrap { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 8px; box-shadow: 0 12px 40px rgba(23,35,61,.06); }
+  .levels { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 14px 0; }
+  .level-btn { border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 9px 16px; font-size: .9rem; font-weight: 600; cursor: pointer; color: var(--ink-soft); font-family: var(--sans); display: flex; align-items: center; gap: 7px; }
+  .level-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .level-btn .done { color: var(--green); font-weight: 800; }
+  .level-btn.active .done { color: var(--gold); }
+
+  .practice { padding: 26px 26px 30px; }
+  .prog { height: 8px; background: var(--sky); border-radius: 999px; overflow: hidden; margin-bottom: 22px; }
+  .prog > i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), #37c07e); width: 0; transition: width .3s; }
+  .prompt { text-align: center; }
+  .prompt .task { font-size: .85rem; color: var(--ink-soft); margin-bottom: 6px; }
+  .prompt .target { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; color: var(--navy); letter-spacing: -0.01em; line-height: 1.1; }
+  .prompt .meaning { color: var(--ink-soft); font-size: .95rem; margin-top: 4px; min-height: 1.4em; }
+  .hint { margin-top: 8px; font-family: var(--mono); font-size: 1rem; color: var(--red); letter-spacing: .1em; min-height: 1.5em; }
+  .hint .muted { color: var(--ink-soft); opacity: .55; }
+
+  .lesson-field { margin: 22px auto 0; max-width: 460px; background: var(--paper); border: 2px solid var(--line); border-radius: 16px; padding: 16px 20px; min-height: 76px; font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 700; color: var(--navy); text-align: center; cursor: text; outline: none; transition: border-color .15s, background .15s; word-break: break-word; }
+  .lesson-field:focus { border-color: var(--gold); }
+  .lesson-field.ok { border-color: var(--green); background: var(--green-soft); }
+  .lesson-field.bad { border-color: #e6a3a3; }
+  .lesson-field .active { background: rgba(212,169,74,.2); border-radius: 4px; }
+  .lesson-field .caret { display: none; width: 2px; height: 1em; background: var(--gold); vertical-align: text-bottom; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  .lesson-field:focus .caret { display: inline-block; }
+  .lesson-field .ph { color: #a9b0c2; font-weight: 500; font-size: 1rem; }
+
+  .feedback { text-align: center; min-height: 2em; margin-top: 16px; font-weight: 700; font-size: 1.1rem; }
+  .feedback.win { color: var(--green); }
+  .feedback.retry { color: var(--red); }
+  .lesson-tools { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn { border-radius: 11px; padding: 11px 20px; font-weight: 700; font-size: .95rem; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--sans); }
+  .btn.primary { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn.primary:hover { background: #d63030; }
+  .btn:hover { border-color: var(--gold); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; overflow: hidden; }
+  .confetti i { position: absolute; width: 10px; height: 14px; top: -20px; opacity: .9; border-radius: 2px; animation: fall 1.9s linear forwards; }
+  @keyframes fall { to { transform: translateY(105vh) rotate(540deg); opacity: 0; } }
+
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 8px; }
+  .info { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .info h3 { font-size: 1rem; margin-bottom: 6px; }
+  .info h3 .e { margin-right: 6px; }
+  .info p { font-size: .92rem; color: var(--ink-soft); }
+
+  footer { background: var(--navy); color: #aab2c6; padding: 40px 22px; text-align: center; font-size: .88rem; }
+  footer a { color: var(--gold); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .caret, .confetti i { animation: none !important; }
+    .chip { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="../">
+    <img src="../assets/VietTelex-logo.png" alt="ViệtTelex">
+    <span>ViệtTelex<small>Tập gõ Telex</small></span>
+  </a>
+  <div class="right">
+    <span class="stars" id="stars">⭐ 0 sao</span>
+    <a class="back" href="../">← Trang chủ</a>
+  </div>
+</div>
+
+<header class="hero">
+  <h1>Tập gõ <span class="accent">Telex</span> tiếng Việt</h1>
+  <p class="sub">Gõ không dấu, ra chữ có dấu. Học từ dễ đến khó, phản hồi ngay lập tức — dùng đúng bộ luật gõ của ViệtTelex.</p>
+
+  <div class="sandbox">
+    <div class="label">✏️ Gõ thử ngay — nhập tiếng Việt kiểu Telex</div>
+    <div class="field" id="sandbox" tabindex="0" role="textbox" aria-label="Ô gõ thử Telex"></div>
+    <div class="keysline" id="sandboxKeys"></div>
+    <div class="tools">
+      <button class="minibtn" data-demo="Tieengs Vieejt tuyeejt vowif!">Ví dụ: Tiếng Việt</button>
+      <button class="minibtn" data-demo="Chaof buooir sasng ">Ví dụ: Chào buổi sáng</button>
+      <button class="minibtn" id="sandboxClear">Xoá</button>
+    </div>
+    <div class="kbd-note">💡 Dùng bàn phím thật nhé. Bấm <b>dấu cách</b> để kết thúc một từ.</div>
+  </div>
+</header>
+
+<!-- Cheat sheet -->
+<section>
+  <div class="wrap">
+    <h2>Bảng quy tắc Telex</h2>
+    <p class="lead">Bấm vào từng ô để xem nó gõ ra chữ gì trong ô thử ở trên. Chỉ cần nhớ mấy nhóm này là gõ được cả tiếng Việt.</p>
+    <div class="cheat" id="cheat"></div>
+  </div>
+</section>
+
+<!-- Lessons -->
+<section style="background:#f4f2ec;">
+  <div class="wrap">
+    <h2>Bài tập theo cấp độ</h2>
+    <p class="lead">Mỗi cấp một kỹ năng. Gõ đúng chữ hiện trên màn hình để qua từ mới và nhận sao ⭐.</p>
+    <div class="lesson-wrap">
+      <div class="levels" id="levels"></div>
+      <div class="practice">
+        <div class="prog"><i id="progBar"></i></div>
+        <div class="prompt">
+          <div class="task" id="taskLabel">Gõ chữ này:</div>
+          <div class="target" id="target">—</div>
+          <div class="meaning" id="meaning"></div>
+          <div class="hint" id="hint"></div>
+        </div>
+        <div class="lesson-field" id="lessonField" tabindex="0" role="textbox" aria-label="Ô làm bài"></div>
+        <div class="feedback" id="feedback"></div>
+        <div class="lesson-tools">
+          <button class="btn" id="hintBtn">Gợi ý phím 👀</button>
+          <button class="btn" id="skipBtn">Bỏ qua →</button>
+          <button class="btn primary" id="nextBtn" style="display:none;">Từ tiếp theo →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick why -->
+<section>
+  <div class="wrap">
+    <h2>Cần nhớ nhất</h2>
+    <div class="info-grid">
+      <div class="info"><h3><span class="e">🎵</span>Dấu thanh</h3><p><b>s f r x j</b> = sắc, huyền, hỏi, ngã, nặng. Gõ dấu ở cuối từ: <code>casa? </code> Ví dụ <code>caf</code> → cà, <code>hoir</code> → hỏi.</p></div>
+      <div class="info"><h3><span class="e">🔤</span>Nguyên âm đội mũ</h3><p>Gõ đúp: <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Thêm móc/ngoặc: <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p></div>
+      <div class="info"><h3><span class="e">✨</span>Chữ đ và xoá dấu</h3><p><b>dd</b>→đ. Gõ <b>z</b> để xoá dấu vừa bỏ. Gõ lại đúng phím dấu lần nữa cũng xoá dấu đó.</p></div>
+      <div class="info"><h3><span class="e">🧠</span>Gõ sai không sao</h3><p>Bộ gõ tự nhận từ không phải tiếng Việt (như <code>google</code>) và giữ nguyên. Cứ gõ tự nhiên, sai thì xoá gõ lại.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Một phần của <a href="../">ViệtTelex</a> — bộ gõ tiếng Việt mã nguồn mở cho macOS.<br>
+  Cùng bộ luật gõ chạy trong ứng dụng thật. © 2026 Phil Trịnh ·
+  <a href="https://github.com/ptrinh/viettelex">GitHub</a>
+</footer>
+
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+
+<script src="telex.js"></script>
+<script>
+(function () {
+  'use strict';
+  var Telex = window.Telex;
+  var PUNCT = ' .,!?;:\'"()-\n\t';
+
+  // ── Stars (localStorage) ───────────────────────────────────────────────
+  var starsEl = document.getElementById('stars');
+  function getStars() { return parseInt(localStorage.getItem('telex-learn-stars') || '0', 10) || 0; }
+  function setStars(n) { localStorage.setItem('telex-learn-stars', String(n)); renderStars(); }
+  function addStar() { setStars(getStars() + 1); }
+  function renderStars() { starsEl.textContent = '⭐ ' + getStars() + ' sao'; }
+  renderStars();
+
+  // ── TelexField: a lightweight IME surface driven by the ported engine ────
+  function TelexField(el, opts) {
+    opts = opts || {};
+    this.el = el;
+    this.engine = new Telex.TelexEngine(); // app defaults
+    this.committed = '';
+    this.keyLog = [];
+    this.placeholder = opts.placeholder || '';
+    this.onUpdate = opts.onUpdate || function () {};
+    var self = this;
+    el.addEventListener('keydown', function (e) { self._key(e); });
+    el.addEventListener('paste', function (e) { e.preventDefault(); });
+    this.render();
+  }
+  TelexField.prototype.fullText = function () { return this.committed + this.engine.composed; };
+  TelexField.prototype.reset = function () {
+    this.engine.reset(); this.committed = ''; this.keyLog = []; this.render(); this.onUpdate(this);
+  };
+  TelexField.prototype._key = function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return; // let shortcuts through
+    var k = e.key;
+    if (k === 'Backspace') {
+      e.preventDefault();
+      if (!this.engine.isEmpty) { this.engine.backspace(); this.keyLog.pop(); }
+      else if (this.committed.length) { this.committed = this.committed.slice(0, -1); this.keyLog.pop(); }
+      this.render(); this.onUpdate(this); return;
+    }
+    if (k === 'Enter') { e.preventDefault(); this._boundary('\n'); return; }
+    if (k.length !== 1) return; // arrows, shift, etc.
+    e.preventDefault();
+    if (/[a-zA-Z]/.test(k)) { this.engine.feed(k); this.keyLog.push(k); this.render(); this.onUpdate(this); return; }
+    // punctuation / space = word boundary
+    this._boundary(k);
+  };
+  TelexField.prototype._boundary = function (ch) {
+    this.committed += this.engine.commitText();
+    this.engine.reset();
+    this.committed += ch;
+    this.keyLog.push(ch);
+    this.render(); this.onUpdate(this);
+  };
+  TelexField.prototype.feedString = function (str) {
+    var self = this;
+    Array.prototype.forEach.call(str, function (ch) {
+      if (/[a-zA-Z]/.test(ch)) { self.engine.feed(ch); self.keyLog.push(ch); }
+      else { self._boundary(ch); }
+    });
+    this.render(); this.onUpdate(this);
+  };
+  TelexField.prototype.render = function () {
+    var el = this.el; el.textContent = '';
+    var committed = this.committed, composed = this.engine.composed;
+    if (!committed && !composed) {
+      var ph = document.createElement('span'); ph.className = 'ph'; ph.textContent = this.placeholder;
+      el.appendChild(ph);
+    } else {
+      // preserve newlines
+      committed.split('\n').forEach(function (line, i) {
+        if (i > 0) el.appendChild(document.createElement('br'));
+        el.appendChild(document.createTextNode(line));
+      });
+      if (composed) { var a = document.createElement('span'); a.className = 'active'; a.textContent = composed; el.appendChild(a); }
+    }
+    var caret = document.createElement('span'); caret.className = 'caret'; el.appendChild(caret);
+  };
+
+  // ── Sandbox ──────────────────────────────────────────────────────────────
+  var sandboxKeys = document.getElementById('sandboxKeys');
+  var sandbox = new TelexField(document.getElementById('sandbox'), {
+    placeholder: 'Gõ ở đây… ví dụ: xin chaof',
+    onUpdate: function (f) {
+      var keys = f.keyLog.join('').replace(/\n/g, '␊');
+      sandboxKeys.innerHTML = keys ? ('Phím bạn bấm: <b>' + escapeHtml(keys) + '</b>') : '';
+    }
+  });
+  document.querySelectorAll('.minibtn[data-demo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      sandbox.reset(); sandbox.el.focus(); sandbox.feedString(b.getAttribute('data-demo'));
+    });
+  });
+  document.getElementById('sandboxClear').addEventListener('click', function () { sandbox.reset(); sandbox.el.focus(); });
+
+  // ── Cheat sheet ────────────────────────────────────────────────────────
+  var CHEAT = [
+    { group: 'Dấu thanh (gõ ở cuối từ)' },
+    { keys: 's', res: 'á', ex: 'cá = ca + s', demo: 'cas ' },
+    { keys: 'f', res: 'à', ex: 'cà = ca + f', demo: 'caf ' },
+    { keys: 'r', res: 'ả', ex: 'cả = ca + r', demo: 'car ' },
+    { keys: 'x', res: 'ã', ex: 'mã = ma + x', demo: 'max ' },
+    { keys: 'j', res: 'ạ', ex: 'mạ = ma + j', demo: 'maj ' },
+    { group: 'Nguyên âm đội mũ ^' },
+    { keys: 'aa', res: 'â', ex: 'cân = caan', demo: 'caan ' },
+    { keys: 'ee', res: 'ê', ex: 'đêm = ddeem', demo: 'ddeem ' },
+    { keys: 'oo', res: 'ô', ex: 'cô = coo', demo: 'coo ' },
+    { group: 'Nguyên âm có móc/ngoặc' },
+    { keys: 'aw', res: 'ă', ex: 'ăn = awn', demo: 'awn ' },
+    { keys: 'ow', res: 'ơ', ex: 'cơm = cowm', demo: 'cowm ' },
+    { keys: 'uw', res: 'ư', ex: 'thư = thuw', demo: 'thuw ' },
+    { group: 'Đặc biệt' },
+    { keys: 'dd', res: 'đ', ex: 'đi = ddi', demo: 'ddi ' },
+    { keys: 'z', res: '⌫ dấu', ex: 'xoá dấu vừa bỏ', demo: 'casz ' },
+    { keys: 'uow', res: 'ươ', ex: 'được = dduowcj', demo: 'dduowcj ' }
+  ];
+  var cheatEl = document.getElementById('cheat');
+  CHEAT.forEach(function (c) {
+    if (c.group) {
+      var g = document.createElement('div'); g.className = 'cheat-group-title'; g.textContent = c.group;
+      cheatEl.appendChild(g); return;
+    }
+    var chip = document.createElement('div'); chip.className = 'chip'; chip.setAttribute('role', 'button'); chip.tabIndex = 0;
+    chip.innerHTML = '<div class="keys">' + escapeHtml(c.keys) + '</div><div class="arrow">↓</div>' +
+      '<div class="res">' + escapeHtml(c.res) + '</div><div class="ex">' + escapeHtml(c.ex) + '</div>';
+    function play() {
+      sandbox.reset(); sandbox.el.focus(); sandbox.feedString(c.demo);
+      sandbox.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    chip.addEventListener('click', play);
+    chip.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } });
+    cheatEl.appendChild(chip);
+  });
+
+  // ── Lessons ──────────────────────────────────────────────────────────────
+  // Each item: target Vietnamese text + meaning. Telex keys are DERIVED and verified.
+  var LESSONS = [
+    { name: 'Dấu thanh', emoji: '🎵', words: [
+      ['má', 'mẹ'], ['mà', 'nhưng'], ['mả', 'ngôi mả'], ['mã', 'con số / mã'], ['mạ', 'cây lúa non'],
+      ['cá', 'con cá'], ['gà', 'con gà'], ['bé', 'em bé'], ['cò', 'con cò'], ['lá', 'chiếc lá']
+    ] },
+    { name: 'Mũ â ê ô', emoji: '🔤', words: [
+      ['cô', 'cô giáo'], ['bố', 'người bố'], ['đêm', 'ban đêm'], ['mây', 'đám mây'], ['cây', 'cái cây'],
+      ['tôi', 'tôi / mình'], ['tết', 'ngày Tết'], ['ông', 'ông nội'], ['cần', 'cần thiết'], ['xôi', 'món xôi']
+    ] },
+    { name: 'Ă Ơ Ư', emoji: '✨', words: [
+      ['ăn', 'ăn cơm'], ['cơm', 'bát cơm'], ['thư', 'lá thư'], ['mưa', 'trời mưa'], ['sữa', 'ly sữa'],
+      ['chữ', 'con chữ'], ['vườn', 'khu vườn'], ['nước', 'nước uống'], ['tươi', 'tươi mới'], ['sương', 'sương mù']
+    ] },
+    { name: 'Chữ Đ', emoji: '🇻🇳', words: [
+      ['đi', 'đi bộ'], ['đá', 'hòn đá'], ['đỏ', 'màu đỏ'], ['đèn', 'cái đèn'], ['đũa', 'đôi đũa'],
+      ['đường', 'con đường'], ['đông', 'mùa đông'], ['đẹp', 'xinh đẹp'], ['đá bóng', 'chơi bóng đá'], ['đất nước', 'quê hương']
+    ] },
+    { name: 'Cả câu', emoji: '💬', words: [
+      ['xin chào', 'lời chào'], ['cảm ơn', 'nói lời cảm ơn'], ['tiếng Việt', 'ngôn ngữ của mình'],
+      ['con mèo', 'con mèo kêu meo meo'], ['quả táo', 'trái táo'], ['trường học', 'nơi đi học'],
+      ['yêu thương', 'tình cảm'], ['bầu trời', 'trên cao'], ['mặt trời', 'ông mặt trời'], ['ước mơ', 'điều mong muốn']
+    ] }
+  ];
+
+  // word -> telex keys (detone + mark-expand + trailing tone key), then verify.
+  var MARK_EXP = { 'â': 'aa', 'ă': 'aw', 'ê': 'ee', 'ô': 'oo', 'ơ': 'ow', 'ư': 'uw', 'đ': 'dd' };
+  var TONE_KEY = { 1: 's', 2: 'f', 3: 'r', 4: 'x', 5: 'j' };
+  var TG = ['aáàảãạ','ăắằẳẵặ','âấầẩẫậ','eéèẻẽẹ','êếềểễệ','iíìỉĩị','oóòỏõọ','ôốồổỗộ','ơớờởỡợ','uúùủũụ','ưứừửữự','yýỳỷỹỵ'];
+  var DETONE = {};
+  TG.forEach(function (g) { var cs = Array.from(g); cs.forEach(function (c, i) { DETONE[c] = { base: cs[0], tone: i }; }); });
+  function wordToKeys(word) {
+    return word.split(' ').map(function (tok) {
+      var out = '', tone = 0;
+      Array.from(tok).forEach(function (ch) {
+        var lower = ch.toLowerCase();
+        var up = ch !== lower;
+        var d = DETONE[lower];
+        var base = lower, t = 0;
+        if (d) { base = d.base; t = d.tone; }
+        if (t) tone = t;
+        var seg = MARK_EXP[base] || base;
+        out += up ? seg.toUpperCase() : seg;
+      });
+      if (tone) out += TONE_KEY[tone];
+      return out;
+    }).join(' ');
+  }
+  // Build + verify lesson keys; drop any word whose derived keys don't round-trip.
+  LESSONS.forEach(function (lvl) {
+    lvl.items = [];
+    lvl.words.forEach(function (w) {
+      var keys = wordToKeys(w[0]);
+      var got = Telex.transliterate(keys);
+      if (got === w[0]) lvl.items.push({ word: w[0], meaning: w[1], keys: keys });
+      else if (window.console) console.warn('Telex hint mismatch:', w[0], '→', keys, '→', got);
+    });
+  });
+
+  var levelsEl = document.getElementById('levels');
+  var progBar = document.getElementById('progBar');
+  var targetEl = document.getElementById('target');
+  var meaningEl = document.getElementById('meaning');
+  var hintEl = document.getElementById('hint');
+  var feedbackEl = document.getElementById('feedback');
+  var hintBtn = document.getElementById('hintBtn');
+  var skipBtn = document.getElementById('skipBtn');
+  var nextBtn = document.getElementById('nextBtn');
+
+  var curLevel = 0, curIdx = 0, solved = false, hintShown = false;
+  var levelDone = JSON.parse(localStorage.getItem('telex-learn-done') || '{}');
+
+  LESSONS.forEach(function (lvl, i) {
+    var b = document.createElement('button'); b.className = 'level-btn'; b.dataset.i = i;
+    b.innerHTML = lvl.emoji + ' ' + escapeHtml(lvl.name) + ' <span class="done"></span>';
+    b.addEventListener('click', function () { curLevel = i; curIdx = 0; renderLevels(); loadWord(); });
+    levelsEl.appendChild(b);
+  });
+  function renderLevels() {
+    Array.prototype.forEach.call(levelsEl.children, function (b, i) {
+      b.classList.toggle('active', i === curLevel);
+      var d = (levelDone[i] || 0);
+      b.querySelector('.done').textContent = d >= LESSONS[i].items.length && LESSONS[i].items.length ? '✓' : (d ? d + '/' + LESSONS[i].items.length : '');
+    });
+  }
+
+  var lessonField = new TelexField(document.getElementById('lessonField'), {
+    placeholder: 'Gõ vào đây…',
+    onUpdate: function (f) { checkAnswer(f); }
+  });
+
+  function loadWord() {
+    var lvl = LESSONS[curLevel];
+    if (curIdx >= lvl.items.length) { finishLevel(); return; }
+    var item = lvl.items[curIdx];
+    solved = false; hintShown = false;
+    targetEl.textContent = item.word;
+    meaningEl.textContent = item.meaning ? '(' + item.meaning + ')' : '';
+    hintEl.innerHTML = '';
+    feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
+    lessonField.el.className = 'lesson-field';
+    lessonField.reset();
+    nextBtn.style.display = 'none';
+    hintBtn.disabled = false;
+    var p = lvl.items.length ? (curIdx / lvl.items.length * 100) : 0;
+    progBar.style.width = p + '%';
+    document.getElementById('taskLabel').textContent = 'Gõ chữ này' + (item.word.indexOf(' ') >= 0 ? ' (nhớ dấu cách):' : ':');
+  }
+
+  function checkAnswer(f) {
+    if (solved) return;
+    var lvl = LESSONS[curLevel];
+    var item = lvl.items[curIdx];
+    var text = f.fullText();
+    var typed = f.keyLog.join('');
+    var win = text === item.word || text.toLowerCase() === item.word.toLowerCase();
+    if (win) {
+      solved = true;
+      lessonField.el.classList.remove('bad'); lessonField.el.classList.add('ok');
+      feedbackEl.textContent = pick(['Giỏi quá! 🎉', 'Chuẩn luôn! ⭐', 'Tuyệt vời! 👏', 'Xuất sắc! ✨']);
+      feedbackEl.className = 'feedback win';
+      addStar();
+      levelDone[curLevel] = Math.max(levelDone[curLevel] || 0, curIdx + 1);
+      localStorage.setItem('telex-learn-done', JSON.stringify(levelDone));
+      renderLevels();
+      progBar.style.width = ((curIdx + 1) / lvl.items.length * 100) + '%';
+      confetti();
+      nextBtn.style.display = ''; nextBtn.focus();
+    } else if (typed === '' || item.keys.toLowerCase().indexOf(typed.toLowerCase()) === 0) {
+      // typed keys are still a prefix of the expected keystrokes — on track, stay quiet
+      lessonField.el.classList.remove('bad');
+      feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
+    } else {
+      lessonField.el.classList.add('bad');
+      feedbackEl.textContent = 'Chưa đúng, thử lại nhé! 💪';
+      feedbackEl.className = 'feedback retry';
+    }
+  }
+
+  function finishLevel() {
+    targetEl.textContent = '🏆';
+    meaningEl.textContent = 'Hoàn thành cấp "' + LESSONS[curLevel].name + '"!';
+    hintEl.innerHTML = '';
+    feedbackEl.textContent = 'Chọn cấp khác ở trên để học tiếp nhé.';
+    feedbackEl.className = 'feedback win';
+    lessonField.el.className = 'lesson-field'; lessonField.reset();
+    nextBtn.style.display = 'none'; hintBtn.disabled = true;
+    progBar.style.width = '100%';
+    confetti();
+  }
+
+  hintBtn.addEventListener('click', function () {
+    hintShown = true;
+    var item = LESSONS[curLevel].items[curIdx];
+    hintEl.innerHTML = 'Gõ các phím: <span>' + escapeHtml(item.keys) + '</span>';
+    lessonField.el.focus();
+  });
+  skipBtn.addEventListener('click', function () { curIdx++; loadWord(); lessonField.el.focus(); });
+  nextBtn.addEventListener('click', function () { curIdx++; loadWord(); lessonField.el.focus(); });
+
+  // ── helpers ──
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function confetti() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var box = document.getElementById('confetti');
+    var colors = ['#c22727', '#d4a94a', '#1f9d63', '#2f6fd0', '#e07b39'];
+    for (var i = 0; i < 60; i++) {
+      var p = document.createElement('i');
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = (Math.random() * 0.3) + 's';
+      p.style.animationDuration = (1.5 + Math.random() * 0.9) + 's';
+      box.appendChild(p);
+      (function (node) { setTimeout(function () { node.remove(); }, 2600); })(p);
+    }
+  }
+
+  renderLevels();
+  loadWord();
+})();
+</script>
+</body>
+</html>
