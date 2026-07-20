@@ -83,19 +83,42 @@ final class FrontmostApp {
 /// on-screen window list for a window owned by the "Spotlight" process.
 enum SpotlightDetector {
     // CGWindowListCopyWindowInfo enumerates every on-screen window — too heavy to run
-    // on every keystroke (it slowed the tap callback enough to trip
+    // on the keystroke path (it slowed the tap callback enough to trip
     // tapDisabledByTimeout, leaking keys to the broken IMKit path → intermittent
     // garbage). Cache the result with a short TTL; Spotlight visibility doesn't change
     // per keystroke, so a ~200ms lag is invisible.
+    //
+    // The scan NEVER runs synchronously on the keystroke: isVisible always returns the
+    // cached bool immediately, and when the TTL has expired it kicks ONE background
+    // refresh (utility queue) whose result lands back on main. So a fresh scan is
+    // observed on the NEXT keystroke, not this one — visibility lags at most one key.
+    // That is acceptable: Spotlight open/close is a deliberate user action, never
+    // simultaneous with typing into it, so being one keystroke stale is invisible while
+    // removing a multi-ms spike from the hot path.
+    //
+    // Threading: the cached bool + timestamp are read/written on MAIN only (the tap run
+    // loop source and the IMKit controller both live there); only the CGWindowList call
+    // itself runs off-main. `refreshing` gates against launching a second scan while one
+    // is in flight — it too is main-only, so no lock is needed.
     private static var cached = false
     private static var lastCheckNs: UInt64 = 0
+    private static var refreshing = false
     private static let ttlNs: UInt64 = 200_000_000
+    private static let scanQueue = DispatchQueue(label: "com.viettelex.spotlight-scan", qos: .utility)
 
     static var isVisible: Bool {
         let now = DispatchTime.now().uptimeNanoseconds
-        if now &- lastCheckNs < ttlNs { return cached }
-        lastCheckNs = now
-        cached = scan()
+        if now &- lastCheckNs >= ttlNs, !refreshing {
+            refreshing = true
+            scanQueue.async {
+                let visible = scan()                       // heavy call, off the hot path
+                DispatchQueue.main.async {
+                    cached = visible
+                    lastCheckNs = DispatchTime.now().uptimeNanoseconds
+                    refreshing = false
+                }
+            }
+        }
         return cached
     }
 
@@ -249,16 +272,27 @@ enum SyntheticKeyboard {
 
     private static func postUnicode(_ text: String) {
         let utf16 = Array(text.utf16)
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
+        guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
         else { return }
         utf16.withUnsafeBufferPointer { buf in
             down.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
-            up.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
+        }
+        // Task B2 (experimental, default OFF): skip the keyUp on unicode inserts — post
+        // only the keyDown carrying the string, halving posted events per insert. The
+        // accounting stays balanced: the tap mask is keyDown-only, and the in-flight
+        // counter tracks/observes keyDowns only, so a dropped keyUp is never counted and
+        // never awaited. Unlike a virtual Delete (postVirtual, where the up matters for
+        // key-repeat semantics), a unicode-string keyUp carries no repeat behaviour.
+        let up = AppState.shared.tapSkipSyntheticKeyUp
+            ? nil : CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
+        if let up {
+            utf16.withUnsafeBufferPointer { buf in
+                up.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
+            }
         }
         notePostedKeyDown()
         stamp(down); down.post(tap: .cgSessionEventTap)
-        stamp(up);   up.post(tap: .cgSessionEventTap)
+        if let up { stamp(up); up.post(tap: .cgSessionEventTap) }
     }
 }
 
@@ -500,7 +534,9 @@ final class TerminalTapController {
             // boundary key lands AFTER the async edit. Otherwise pass the REAL keyDown
             // through — no two window-server round trips per space, and the app sees a
             // genuine key (keycode intact), not a text-only keycode-0 event. Respects
-            // tapNativeFastPath like the letter fast-path below.
+            // tapNativeFastPath like the letter fast-path below. (modifyInPlace adds
+            // nothing here: with no rewrite pending the untouched event is already
+            // exactly what should land, in every emit mode.)
             let rewrote = emitBoundary(suppressAutoRestore: isBracketUnichar(buf[0]))
             if !rewrote, AppState.shared.tapNativeFastPath, SyntheticKeyboard.queueDrained() {
                 return pass
@@ -527,9 +563,44 @@ final class TerminalTapController {
         case .none:
             break
         case let .replace(bs, insert):
+            // B1: a single-char transform (w→ư) rewrites this event in place; anything
+            // with backspaces, multi-char, or a draining burst keeps the synthetic path.
+            if modifyInPlace(event: event, backspaces: bs, insert: insert) { return pass }
             SyntheticKeyboard.apply(backspaces: bs, insert: insert, mode: emitMode)
         }
         return nil
+    }
+
+    /// Task B1 — modify the physical CGEvent in place instead of suppress + post.
+    /// When a tone edit is a pure single-character insert (0 backspaces) in .backspace
+    /// emit mode and no synthetic burst is still draining, rewrite the event the tap
+    /// callback is holding via keyboardSetUnicodeString and let it PASS. The event
+    /// keeps its real keycode and timing, so ZERO synthetic events are posted — two
+    /// window-server round trips saved per w→ư / boundary re-emit. Because it is never
+    /// posted it does NOT count as in-flight synthetic (correct: nothing to observe).
+    /// The modified NSEvent still reaches the IMKit controller, but terminals are
+    /// tap-mode-deferred there (usesTapMode → handle returns false) so the app inserts
+    /// it natively — never double-composed.
+    ///
+    /// Restricted to .backspace mode on purpose: .selection needs a Shift+Left select
+    /// first and .emptyReset needs the U+202F dance, neither expressible as a single
+    /// in-place rewrite. The queueDrained() guard preserves ordering — while a burst is
+    /// draining we decline so the caller keeps the old suppress+post path and the edit
+    /// still lands after the queued events.
+    /// Returns true iff it rewrote `event` (caller should then return it as pass).
+    @inline(__always)
+    private func modifyInPlace(event: CGEvent, backspaces: Int, insert: String) -> Bool {
+        guard AppState.shared.tapModifyEventInPlace,
+              emitMode == .backspace,
+              backspaces == 0,
+              insert.count == 1,               // single character (any UTF-16 length)
+              SyntheticKeyboard.queueDrained()
+        else { return false }
+        let utf16 = Array(insert.utf16)
+        utf16.withUnsafeBufferPointer { buf in
+            event.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
+        }
+        return true
     }
 
     /// Emit a shortcut expansion / auto-restore rewrite for the composed word. Returns

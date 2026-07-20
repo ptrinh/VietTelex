@@ -58,6 +58,9 @@ final class SettingsModel: ObservableObject {
     @Published var modernOrthography: Bool { didSet { AppState.shared.modernOrthography = modernOrthography } }
     @Published var liveSpellCheck: Bool { didSet { AppState.shared.liveSpellCheck = liveSpellCheck } }
     @Published var simpleTelex: Bool { didSet { AppState.shared.simpleTelex = simpleTelex } }
+    /// Advanced (terminal tap latency) — see AppState for the full semantics.
+    @Published var tapModifyEventInPlace: Bool { didSet { AppState.shared.tapModifyEventInPlace = tapModifyEventInPlace } }
+    @Published var tapSkipSyntheticKeyUp: Bool { didSet { AppState.shared.tapSkipSyntheticKeyUp = tapSkipSyntheticKeyUp } }
     /// UI language: "system" / "en" / "vi". Changing it re-renders every view that
     /// observes this model (they call `loc(_:)`), so the switch is live — no relaunch.
     @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
@@ -72,6 +75,8 @@ final class SettingsModel: ObservableObject {
         modernOrthography = AppState.shared.modernOrthography
         liveSpellCheck = AppState.shared.liveSpellCheck
         simpleTelex = AppState.shared.simpleTelex
+        tapModifyEventInPlace = AppState.shared.tapModifyEventInPlace
+        tapSkipSyntheticKeyUp = AppState.shared.tapSkipSyntheticKeyUp
         uiLanguage = AppState.shared.uiLanguage
         reloadShortcuts()
         reloadLearnedApps()
@@ -168,6 +173,14 @@ struct GeneralTab: View {
                     model.reloadLearnedApps()
                 }
                 Text(model.loc("VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(model.loc("Advanced")) {
+                Toggle(model.loc("Modify key events in place"), isOn: $model.tapModifyEventInPlace)
+                Text(model.loc("In terminals, apply a one-letter tone edit (w→ư) by rewriting the real keystroke instead of posting two synthetic events — lower latency."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle(model.loc("Skip synthetic key-up (experimental)"), isOn: $model.tapSkipSyntheticKeyUp)
+                Text(model.loc("Experimental: post only the key-down for inserted letters in terminals, halving events per keystroke. Off by default."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(model.loc("Language")) {

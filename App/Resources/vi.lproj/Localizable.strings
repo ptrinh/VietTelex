@@ -27,6 +27,13 @@
 "Reset (re-probe)" = "Đặt lại (dò lại từ đầu)";
 "VietTelex learns the right method per app. If an app shows underlines or types wrong, tap Reset to re-probe." = "VietTelex tự học cách gõ phù hợp cho từng ứng dụng. Nếu một ứng dụng gõ bị gạch chân hoặc sai, bấm Đặt lại để dò lại.";
 
+/* Advanced (terminal tap latency) */
+"Advanced" = "Nâng cao";
+"Modify key events in place" = "Sửa sự kiện phím tại chỗ";
+"In terminals, apply a one-letter tone edit (w→ư) by rewriting the real keystroke instead of posting two synthetic events — lower latency." = "Trong terminal, sửa một ký tự (w→ư) bằng cách viết lại phím thật thay vì gửi hai sự kiện tổng hợp — giảm độ trễ.";
+"Skip synthetic key-up (experimental)" = "Bỏ qua key-up tổng hợp (thử nghiệm)";
+"Experimental: post only the key-down for inserted letters in terminals, halving events per keystroke. Off by default." = "Thử nghiệm: chỉ gửi key-down cho ký tự chèn trong terminal, giảm nửa số sự kiện mỗi phím. Mặc định tắt.";
+
 /* About tab */
 "Version %@ · %@" = "Version %@ ngày %@";
 "Check for updates" = "Kiểm tra cập nhật";
