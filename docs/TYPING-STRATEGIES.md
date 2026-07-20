@@ -19,11 +19,21 @@ A2 signpost + pty-arrival trong `latency-baseline.md`; 1 frame 60 Hz ≈ 16.7 ms
 
 | # | Đường | Kênh | Cần AX? | MAS? | Underline? | Phím thường | Burst sửa dấu |
 |---|---|---|---|---|---|---|---|
-| 1 | **In-place** | IMKit `insertText(_:replacementRange:)` | Không | ✅ | Không | ~1.9 ms p50 (XPC `insertText`/`selectedRange`) | như phím thường (vẫn 1 call `insertText`) |
-| 2 | **Marked text** | IMKit `setMarkedText` | Không | ✅ | **Có** (khi đang gõ) | ~in-place (cùng kênh IMKit XPC) | ~in-place |
-| 3 | **Tap: backspace-retype** | CGEventTap + synthetic events | **Có** | ❌ | Không | +5 ms so với không IME (round-trip IMKit vẫn xảy ra dù tap-defer); callback tap chỉ ~18 µs | **~+13 ms p50** (pty đo, Terminal; p90 ~24 ms — vừa lố 1 frame) |
-| 4 | **Tap: selection-replace** | CGEventTap, Shift+←×N rồi ghi đè | **Có** | ❌ | Không | ~như #3 (cùng hạ tầng tap + fast-path) | **~3 ms × 2(N+1) events** → sửa dấu giữa từ 3 ký tự (N=3) ≈ 24 ms, chậm nhất 5 đường; D1 (1 AX write thay cả burst) tồn tại nhưng default OFF |
-| 5 | **Tap: empty-reset** | CGEventTap, chèn U+202F rồi backspace-retype | **Có** | ❌ | Không | ~như #3 | ~#3 + 2 events (~6 ms) cho chèn/xóa ký tự mồi → **~+19 ms** |
+| 1 | **In-place** | IMKit `insertText(_:replacementRange:)` | ❌ | ✅ | ❌ | ~2 ms | ~2 ms |
+| 2 | **Marked text** | IMKit `setMarkedText` | ❌ | ✅ | ✅ (khi đang gõ) | ~2 ms | ~2 ms |
+| 3 | **Tap: backspace-retype** | CGEventTap + synthetic events | ✅ | ❌ | ❌ | ~+5 ms | **~13–24 ms** |
+| 4 | **Tap: selection-replace** | CGEventTap, Shift+←×N rồi ghi đè | ✅ | ❌ | ❌ | ~+5 ms | **~12–24 ms** |
+| 5 | **Tap: empty-reset** | CGEventTap, chèn U+202F rồi backspace-retype | ✅ | ❌ | ❌ | ~+5 ms | **~19–30 ms** |
+
+Ghi chú:
+- #1/#2: một call XPC `insertText`/`setMarkedText`, p50 ~1.9 ms — burst dấu
+  không đắt hơn phím thường.
+- #3: pty đo trên Terminal: p50 +13 ms, p90 ~24 ms (vừa lố 1 frame 60 Hz).
+  Phím thường vẫn +5 ms vì round-trip IMKit xảy ra dù tap-defer.
+- #4: ngoại suy ~3 ms/event × 2(N+1); D1 (gộp cả burst thành 1 AX write)
+  tồn tại nhưng default OFF.
+- #5: như #3 + 2 events (~6 ms) chèn/xóa ký tự mồi. #4/#5 chưa đo trực tiếp —
+  hàng A1 tương ứng trong `latency-baseline.md` còn trống.
 
 (Ngoài 5 đường còn **passthrough** cho remote-desktop/VM — IME hành xử như tắt,
 xem `ClientPolicy.forcePassthroughBundleIDs`.)
