@@ -35,6 +35,20 @@ Ghi chú:
 - #5: như #3 + 2 events (~6 ms) chèn/xóa ký tự mồi. #4/#5 chưa đo trực tiếp —
   hàng A1 tương ứng trong `latency-baseline.md` còn trống.
 
+**Threading (từ `d7e44a0`)** — hai cải thiện không đổi con số trung vị trong
+bảng nhưng cắt đuôi phân phối (tail latency):
+
+- **Tap chạy trên thread riêng** (trước đó: main run loop). Callback tap không
+  còn xếp hàng sau XPC IMKit ~2 ms/phím của app khác hay SwiftUI Settings —
+  hết **jitter** cho #3/#4/#5 khi main bận, và giảm hẳn nguy cơ
+  `tapDisabledByTimeout` (macOS tự tắt tap chậm → phím lọt ra đường hỏng).
+  Các số +5 ms / 13–24 ms ở trên đo TRƯỚC thay đổi này — p50 dự kiến giữ
+  nguyên (chi phí là round-trip liên-process), p90/p99 dự kiến giảm; cần
+  chạy lại pty-harness để xác nhận.
+- **AX probe read chuyển sang queue nền**: keystroke probe một app mới không
+  còn stall tiềm ẩn 50 ms (timeout của AX call) — verdict sơ bộ tính ngay từ
+  caret/read-back, AX ground truth về sau và có quyền override.
+
 (Ngoài 5 đường còn **passthrough** cho remote-desktop/VM — IME hành xử như tắt,
 xem `ClientPolicy.forcePassthroughBundleIDs`.)
 
@@ -83,8 +97,9 @@ hỏng in-place); (c) app pin cứng trong `markedTextApps` (hiện rỗng).
 
 ### 3. Tap: backspace-retype
 
-**Dùng cho:** Terminal.app, iTerm2, TextMate, WhatsApp, Lark
-(`builtInFallbackApps`) + app học được (`fallbackApps`) — khi có AX.
+**Dùng cho:** Terminal.app, iTerm2, TextMate, WhatsApp (`builtInFallbackApps`)
++ app học được qua probe (`fallbackApps` — Lark, Slack, Discord tự vào đây) —
+khi có AX.
 
 **Cơ chế:** CGEventTap chặn phím trước khi tới app; sửa dấu = synth
 Backspace×N + keyDown mang chuỗi Unicode.
@@ -195,19 +210,27 @@ Thứ tự quyết định mỗi keystroke trong `TelexInputController.handle` +
 ```
 
 **Probe** (`InPlaceProbe`, chỉ chạy trên replace thật `bs > 0` — pure insert
-không phân biệt được):
-- Ground truth ưu tiên: **đọc AX tree** vùng đích — `axRegion == inserted`
-  → honored, khác → appended (Lark fake được caret lẫn read-back nhưng không
-  fake được AX tree… trừ khi fake nốt, nên Lark bị pin cứng).
-- Không có AX read: region read-back **mâu thuẫn** với text đã chèn → appended
-  (bằng chứng fail thắng caret). Rồi mới tới caret: `caret == start+len`
-  → honored, khác → appended.
-- Kết quả ghi vào UserDefaults: honored → `probedApps` (khóa in-place),
-  appended → `fallbackApps` (→ marked, và → tap nếu có AX).
-- `builtInFallbackApps` **không bao giờ probe**: Terminal/iTerm2/WhatsApp/Lark
-  từng false-positive probe (echo read-back, caret láo), mà cache learned là
-  per-install UserDefaults — reinstall là mất; Terminal là lời hứa cốt lõi nên
-  pin trong binary. Settings có "reset learned apps" cho probe hỏng vì app bận.
+không phân biệt được). Hai tầng:
+
+- **Verdict sơ bộ (sync, trên keystroke)** từ self-report của app: region
+  read-back **mâu thuẫn** với text đã chèn → appended (bằng chứng fail thắng
+  caret). Rồi tới caret: `caret == start+len` → honored, khác → appended.
+- **Honored sơ bộ KHÔNG commit ngay** (`HonorTracker`): cần honored ở **2
+  offset expReplace khác nhau** mới ghi `probedApps`. Lý do: Lark trả caret
+  rác hằng số (= 1, đo 2026-07-21) — trùng expReplace khi gõ đầu ô trống →
+  một-lần-probe từng lock nó vào in-place hỏng; caret hằng số không thể trùng
+  ở 2 offset. Appended cần 2 lần liên tiếp (một lần có thể do app bận).
+- **AX ground truth (async, queue nền)**: đọc AX tree vùng đích SAU khi tree
+  settle (Chromium dựng AX lazy — đọc tại T+0 dính cache stale). Khi về, nó
+  override verdict sơ bộ: match → commit in-place ngay; mismatch → rút lại cả
+  promotion đã lỡ commit (`unmarkInPlaceGood`) + đẩy vào `fallbackApps`.
+- Kết quả ghi UserDefaults: honored (đã confirm) → `probedApps`,
+  appended → `fallbackApps` (→ tap nếu có AX, marked nếu không).
+- `builtInFallbackApps` **không bao giờ probe**: Terminal/iTerm2 (lời hứa cốt
+  lõi — cache learned là per-install, reinstall là mất), WhatsApp/TextMate
+  (probe signal không tin được, chưa có data mới). **Lark đã ra khỏi danh sách
+  này** — rule 2-offset phân loại được nó tự động (appended ×2 → fallback).
+  Settings có "Đặt lại (dò lại từ đầu)" cho probe hỏng vì app bận.
 
 ## Fallback chain
 
