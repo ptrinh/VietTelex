@@ -357,6 +357,12 @@ struct ModeTableTab: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onAppear { model.reloadModeTable() }
+        // The user's flow is: keep Settings open → type a tone word in the target
+        // app → come back. Refresh when the Settings window regains key so the
+        // just-learned row appears without reopening the tab (event-driven, no timer).
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            model.reloadModeTable()
+        }
     }
 
     /// Import manual pins (bundleID → mode) from a String → String plist — the same
