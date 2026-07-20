@@ -115,15 +115,27 @@ final class SettingsModel: ObservableObject {
     /// Rebuild the mode table: every app VietTelex knows something about — manual
     /// overrides ∪ learned (probe) ∪ built-in pins ∪ rows added by hand — sorted by
     /// display name A-Z.
+    /// Synthetic row for Spotlight — it is a window overlay, not an app (detected by
+    /// window scan, not bundle id), so its strategy is fixed and the picker disabled.
+    static let spotlightRowID = "system.spotlight"
+
     func reloadModeTable() {
         manualModes = AppState.shared.manualModes
         var ids = Set(manualModes.keys)
         ids.formUnion(AppState.shared.learnedFallbackApps)
         ids.formUnion(AppState.shared.learnedInPlaceApps)
         ids.formUnion(AppState.builtInFallbackApps)
+        // Built-in special-strategy apps (browsers → per-field, Excel → empty-reset):
+        // only the ones actually installed, so the table shows real defaults without
+        // listing every browser we know of.
+        ids.formUnion(AppState.builtInSpecialApps.filter {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
+        })
         ids.formUnion(addedApps)
-        modeRows = ids
+        var rows = ids
             .map { AppModeRow(id: $0, name: Self.appName(for: $0)) }
+        rows.append(AppModeRow(id: Self.spotlightRowID, name: "Spotlight"))
+        modeRows = rows
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         // Up to 10 recently-focused apps not yet in the table — quick add candidates.
         recentApps = FrontmostApp.shared.recent
@@ -152,13 +164,16 @@ final class SettingsModel: ObservableObject {
     /// Label for what Auto resolves to right now ("In-place", "Tap (backspace)"…,
     /// or "chưa dò" when the probe hasn't classified the app yet).
     func autoLabel(_ id: String) -> String {
+        // Spotlight's strategy is fixed (window-scan detection, selection-replace).
+        if id == Self.spotlightRowID { return loc("Selection-replace") }
         switch AppState.shared.autoResolvedMode(id) {
         case .inPlace: return loc("In-place")
         case .marked: return loc("Marked text")
         case .tap: return loc("Tap (backspace)")
         case .selection: return loc("Selection-replace")
         case .emptyReset: return loc("Empty-reset")
-        case .auto, .axDetect, nil: return loc("not detected yet")   // axDetect never comes from Auto
+        case .axDetect: return loc("Per-field (AX)")   // browsers default to per-field
+        case .auto, nil: return loc("not detected yet")
         }
     }
 
@@ -361,6 +376,7 @@ struct ModeTableTab: View {
                         Text(model.loc("Empty-reset")).tag("emptyReset")
                     }
                     .labelsHidden()
+                    .disabled(row.id == SettingsModel.spotlightRowID)   // fixed strategy
                 }.width(min: 150)
             }
             .frame(minHeight: 230, maxHeight: .infinity)

@@ -122,9 +122,16 @@ Backspace×N + keyDown mang chuỗi Unicode.
 
 ### 4. Tap: selection-replace (Shift+←×N rồi ghi đè)
 
-**Dùng cho:** omnibox các trình duyệt Chromium (`selectionApps`: Chrome, Edge,
-Brave, Arc, Vivaldi, Opera, Chromium) và **Spotlight** (nhận diện qua window
-list, không phải bundle id) — khi có AX.
+**Dùng cho:** address/search bar của các browser (`selectionApps`: Chrome, Edge,
+Brave, Arc, Vivaldi, Opera, Chromium, **Safari**) và **Spotlight** (nhận diện
+qua window list, không phải bundle id) — khi có AX.
+
+**Per-field (từ 94083cc):** browser không còn đi selection-replace nguyên-app.
+`FocusedFieldDetector` đi ngược cây AX của element đang focus (cache TTL 200 ms,
+scan queue nền — không AX call nào trên keystroke): gặp `AXWebArea` → field
+trong trang → **in-place ~2 ms**; gặp `AXToolbar` → address bar → selection;
+không rõ → selection (đường luôn chạy). Mode `axDetect` này cũng chọn được thủ
+công trong Bảng chế độ gõ cho app lạ có cấu trúc tương tự.
 
 **Vì sao không dùng #3:** inline autocomplete của omnibox đua với
 backspace-retype → "gôgleogle". Chọn bằng Shift+← rồi overtype thì phần

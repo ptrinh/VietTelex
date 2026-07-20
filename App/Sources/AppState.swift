@@ -370,13 +370,18 @@ final class AppState: @unchecked Sendable {
     }
 
     /// Chromium browsers: inline omnibox autocomplete corrupts a Backspace-retype
-    /// ("gôgleogle"). Fixed with Shift+Left selection-replace via the tap. Spotlight
-    /// gets the same (detected by window list, not bundle id).
+    /// ("gôgleogle") and races in-place edits. Resolved PER FIELD (like `.axDetect`):
+    /// the omnibox gets Shift+Left selection-replace, page-content fields keep the
+    /// fast IMKit in-place path (Chromium honors replacementRange there). Spotlight
+    /// gets unconditional selection-replace (detected by window list, not bundle id).
     private static let selectionApps: Set<String> = [
         "com.google.Chrome", "com.google.Chrome.canary", "com.google.Chrome.beta",
         "org.chromium.Chromium", "com.brave.Browser", "com.brave.Browser.beta",
         "com.microsoft.edgemac", "com.microsoft.edgemac.Beta", "com.microsoft.Edge",
         "com.vivaldi.Vivaldi", "com.operasoftware.Opera", "company.thebrowser.Browser",
+        // Safari: same smart-search-field autocomplete race (verified 2026-07-21);
+        // page content honors replacementRange, so per-field is the right default.
+        "com.apple.Safari", "com.apple.SafariTechnologyPreview",
     ]
 
     /// Excel: cell autocomplete (from column values) races a Backspace-retype
@@ -402,7 +407,7 @@ final class AppState: @unchecked Sendable {
                 if m == .axDetect { return .perField }
                 return .no
             }
-            return Self.selectionApps.contains(id) ? .yes : .no
+            return Self.isPerFieldByDefault(id) ? .perField : .no
         }
         switch w {
         case .no: return false
@@ -410,6 +415,17 @@ final class AppState: @unchecked Sendable {
         case .perField: return Accessibility.isTrusted && FocusedFieldDetector.wantsSelection
         }
     }
+
+    /// Browsers resolve per field BY DEFAULT (no manual pin needed): omnibox/smart
+    /// search → selection-replace, page content → in-place. Shipped after the
+    /// Safari per-field pilot (2026-07-21) proved the AX field walk in the field.
+    private static func isPerFieldByDefault(_ id: String) -> Bool {
+        Self.selectionApps.contains(id)
+    }
+
+    /// Apps with a built-in special strategy (per-field browsers + Excel), for the
+    /// Settings mode table — it lists the installed ones so their default is visible.
+    static var builtInSpecialApps: Set<String> { selectionApps.union(emptyResetApps) }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).
     func usesEmptyReset(_ bundleID: String?) -> Bool {
@@ -428,7 +444,9 @@ final class AppState: @unchecked Sendable {
         guard let id = bundleID else { return nil }
         let trusted = Accessibility.isTrusted
         return lock.withLock {
-            if Self.selectionApps.contains(id) { return trusted ? .selection : .marked }
+            // Browsers resolve per field when the AX walk is possible; without
+            // Accessibility they fall through to whatever the probe learned.
+            if Self.isPerFieldByDefault(id), trusted { return .axDetect }
             if Self.emptyResetApps.contains(id) { return trusted ? .emptyReset : .marked }
             if Self.markedTextApps.contains(id) { return .marked }
             if fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id) {
