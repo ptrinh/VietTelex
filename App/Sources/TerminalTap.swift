@@ -67,6 +67,11 @@ final class FrontmostApp {
 
     private(set) var bundleID: String?
 
+    /// Most-recently-activated apps (newest first, distinct), EXCLUDING VietTelex
+    /// itself — so Settings can offer "recent apps" to pin without typing a bundle id.
+    private(set) var recent: [(id: String, name: String)] = []
+    private static let selfID = "com.viettelex.inputmethod.telex"
+
     private init() {
         bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -74,6 +79,10 @@ final class FrontmostApp {
             object: nil, queue: .main) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
             self?.bundleID = app?.bundleIdentifier
+            guard let self, let id = app?.bundleIdentifier, id != Self.selfID else { return }
+            self.recent.removeAll { $0.id == id }
+            self.recent.insert((id, app?.localizedName ?? id), at: 0)
+            if self.recent.count > 5 { self.recent.removeLast() }
         }
     }
 }

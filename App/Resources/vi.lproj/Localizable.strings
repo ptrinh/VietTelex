@@ -101,3 +101,5 @@
 "Tap" = "Tap";
 "No apps yet — type in one first, or add a bundle id above." = "Chưa có app nào — gõ thử trong một app, hoặc thêm bundle id ở trên.";
 "Add an app by bundle id:" = "Thêm app theo bundle id:";
+"Recently used — pick a mode to override:" = "Mở gần đây — chọn chế độ để ép:";
+"Pinned:" = "Đã ép:";

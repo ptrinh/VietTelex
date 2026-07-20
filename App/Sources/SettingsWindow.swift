@@ -72,6 +72,7 @@ final class SettingsModel: ObservableObject {
     @Published var inPlaceApps: [String] = []
     @Published var manualModes: [String: String] = [:]   // bundleID -> AppMode.rawValue
     @Published var newModeAppID: String = ""              // Experimental: bundle id to pin
+    @Published var recentApps: [(id: String, name: String)] = []  // recent, not-yet-pinned apps
 
     init(selected: SettingsTab) {
         selectedTab = selected
@@ -97,6 +98,10 @@ final class SettingsModel: ObservableObject {
         fallbackApps = AppState.shared.learnedFallbackApps
         inPlaceApps = AppState.shared.learnedInPlaceApps
         manualModes = AppState.shared.manualModes
+        // Up to 3 recently-focused apps that aren't already pinned — quick candidates.
+        recentApps = FrontmostApp.shared.recent
+            .filter { manualModes[$0.id] == nil }
+            .prefix(3).map { $0 }
     }
 
     /// Apps to show in the App-mode override list: ONLY those the user has pinned
@@ -252,16 +257,20 @@ struct ExperimentalTab: View {
                             .disabled(model.newModeAppID.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
-                ForEach(model.knownApps, id: \.self) { id in
-                    Picker(id, selection: Binding(get: { model.appMode(id) },
-                                                  set: { model.setAppMode(id, $0) })) {
-                        Text(model.loc("Auto")).tag("auto")
-                        Text(model.loc("In-place")).tag("inPlace")
-                        Text(model.loc("Marked text")).tag("marked")
-                        Text(model.loc("Tap")).tag("tap")
+                if !model.recentApps.isEmpty {
+                    Text(model.loc("Recently used — pick a mode to override:"))
+                        .font(.caption).foregroundStyle(.secondary)
+                    ForEach(model.recentApps, id: \.id) { app in
+                        modePicker(id: app.id, label: app.name)
                     }
                 }
-                if model.knownApps.isEmpty {
+                if !model.knownApps.isEmpty {
+                    Text(model.loc("Pinned:")).font(.caption).foregroundStyle(.secondary)
+                    ForEach(model.knownApps, id: \.self) { id in
+                        modePicker(id: id, label: id)
+                    }
+                }
+                if model.knownApps.isEmpty && model.recentApps.isEmpty {
                     Text(model.loc("No apps yet — type in one first, or add a bundle id above."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -280,6 +289,17 @@ struct ExperimentalTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    @ViewBuilder
+    private func modePicker(id: String, label: String) -> some View {
+        Picker(label, selection: Binding(get: { model.appMode(id) },
+                                         set: { model.setAppMode(id, $0) })) {
+            Text(model.loc("Auto")).tag("auto")
+            Text(model.loc("In-place")).tag("inPlace")
+            Text(model.loc("Marked text")).tag("marked")
+            Text(model.loc("Tap")).tag("tap")
+        }
     }
 
     private func saveLog() {
