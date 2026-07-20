@@ -223,14 +223,7 @@ enum AXTextEdit {
     /// messaging timeout: this runs on the IMKit key path.
     static func readString(at start: Int, length: Int) -> String? {
         guard start >= 0, length > 0, AXIsProcessTrusted() else { return nil }
-        let systemWide = AXUIElementCreateSystemWide()
-        AXUIElementSetMessagingTimeout(systemWide, 0.05)
-        var focusedRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
-              let focused = focusedRef, CFGetTypeID(focused) == AXUIElementGetTypeID()
-        else { return nil }
-        let element = focused as! AXUIElement
-        AXUIElementSetMessagingTimeout(element, 0.05)
+        guard let element = focusedElement() else { return nil }
         var range = CFRange(location: start, length: length)
         guard let rangeVal = AXValueCreate(.cfRange, &range) else { return nil }
         var result: CFTypeRef?
@@ -239,6 +232,34 @@ enum AXTextEdit {
               let str = result as? String
         else { return nil }
         return str
+    }
+
+    /// Deferred-probe experiment: the focused element's total character count via
+    /// kAXNumberOfCharacters. Content-independent append detector — an ignored
+    /// replacementRange leaves the field `bs` chars LONGER than a compliant replace
+    /// would. Log-only for now (see TelexInputController.reprobeDeferred).
+    static func readLength() -> Int? {
+        guard AXIsProcessTrusted(), let element = focusedElement() else { return nil }
+        var numRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXNumberOfCharactersAttribute as CFString, &numRef) == .success,
+              let n = numRef as? Int
+        else { return nil }
+        return n
+    }
+
+    /// System-wide focused element with the 50ms messaging timeout applied (the
+    /// DEFAULT is seconds; these calls run on key paths, so a hung target must time
+    /// out fast). Shared by the read/write helpers above.
+    private static func focusedElement() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(systemWide, 0.05)
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focused = focusedRef, CFGetTypeID(focused) == AXUIElementGetTypeID()
+        else { return nil }
+        let element = focused as! AXUIElement
+        AXUIElementSetMessagingTimeout(element, 0.05)
+        return element
     }
 }
 

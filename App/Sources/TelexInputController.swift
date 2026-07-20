@@ -61,6 +61,16 @@ final class TelexInputController: IMKInputController {
     // composition (the tap can't reach this controller's private engine directly).
     private var resetObserver: NSObjectProtocol?
 
+    // EXPERIMENT (log-only, gated on debugLogging): deferred re-probe context.
+    // Chromium-class apps (Lark) serve AX from an ASYNC browser-side cache that is
+    // built lazily on first query — the synchronous read inside probeInPlace can race
+    // a stale/optimistic tree, which is the suspected cause of Lark "faking" every
+    // probe signal. On the NEXT keyDown (hundreds of ms later, tree settled) re-read
+    // the same region + the field length and log whether the verdict would change.
+    // Never alters classification — data gathering for a future deferred verdict.
+    private var pendingReprobe: (id: String?, start: Int, len: Int, bs: Int,
+                                 inserted: String, verdict: InPlaceProbe.Verdict)?
+
     // MARK: - Event handling (hot path)
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
@@ -121,6 +131,13 @@ final class TelexInputController: IMKInputController {
         if ClientPolicy.isRemoteDesktop(AppState.shared.currentBundleID) {
             logDecision("handle \(AppState.shared.currentBundleID ?? "?"): remote-desktop → discard (raw passthrough)")
             discardComposition(); return false
+        }
+
+        // EXPERIMENT (log-only): deferred re-probe of the previous keystroke's edit,
+        // now that the app's AX tree has had time to settle. See `pendingReprobe`.
+        if let p = pendingReprobe {
+            pendingReprobe = nil
+            reprobeDeferred(p, client)
         }
 
         // Modifier combos (⌘⌃⌥) are never Telex input: finish and pass through.
@@ -305,10 +322,19 @@ final class TelexInputController: IMKInputController {
         // replacementRange, so it must never CONFIRM "in-place good" — that premature
         // confirm on a plain insert was the false-positive that locked iTerm2/WhatsApp
         // onto the broken in-place path. Only a replace distinguishes the two.
-        if InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
-                                    bs: bs, clear: clear,
-                                    needsProbe: AppState.shared.needsProbe(id)) {
-            probeInPlace(inserted: insert, start: start, bs: bs, client)
+        let realProbe = InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
+                                                 bs: bs, clear: clear,
+                                                 needsProbe: AppState.shared.needsProbe(id))
+        // EXPERIMENT: with debugLogging on, also SHADOW-probe apps that are already
+        // classified (or manually pinned to in-place) — same reads, same logs, but the
+        // verdict is never acted on. This is how the deferred re-probe can be exercised
+        // against Lark (pin it to In-place in Thử Nghiệm → App mode, enable Debug
+        // logging, type a few tone edits, copy the log).
+        let shadowProbe = !realProbe && AppState.shared.debugLogging
+            && InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
+                                        bs: bs, clear: clear, needsProbe: true)
+        if realProbe || shadowProbe {
+            probeInPlace(inserted: insert, start: start, bs: bs, client, shadow: shadowProbe)
         }
     }
 
@@ -321,7 +347,8 @@ final class TelexInputController: IMKInputController {
     /// so this discriminates even on a 1-char window — unlike the old probe, which
     /// read back the text before the CARET (present in BOTH cases → false-positive).
     /// A failure switches the app to marked-text mode.
-    private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput) {
+    private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput,
+                              shadow: Bool = false) {
         let len = (inserted as NSString).length
         // Primary signal: the post-edit caret (hard for an app to fake — it needs it
         // to place its candidate window). Fallback: the target-region read-back, used
@@ -342,11 +369,20 @@ final class TelexInputController: IMKInputController {
                                            inserted: inserted)
         // Structural diagnostics only — never the typed text itself. `regionMatch`
         // is a bool (did the read-back equal what we inserted), not the content.
-        DebugLog.log("probe \(AppState.shared.currentBundleID ?? "?"): start=\(start) bs=\(bs) len=\(len) "
+        DebugLog.log("probe\(shadow ? "(shadow)" : "") \(AppState.shared.currentBundleID ?? "?"): "
+            + "start=\(start) bs=\(bs) len=\(len) "
             + "caret=\(caret.map(String.init) ?? "none") expReplace=\(start + len) expAppend=\(start + bs + len) "
             + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") "
             + "axMatch=\(axRegion.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
         let id = AppState.shared.currentBundleID
+        // EXPERIMENT: arm the deferred re-read for the next keyDown (debugLogging only —
+        // the extra AX calls must never run on a stock hot path).
+        if AppState.shared.debugLogging {
+            pendingReprobe = (id, start, len, bs, inserted, verdict)
+        }
+        // A shadow probe is data-gathering only: log + arm the re-read, never touch
+        // the classification or the engine.
+        if shadow { return }
         switch verdict {
         case .honored:
             AppState.shared.markInPlaceGood(id)
@@ -373,6 +409,40 @@ final class TelexInputController: IMKInputController {
             engine.reset()
             tracking = false
         }
+    }
+
+    /// EXPERIMENT (log-only): re-read the previous probe's target region on the NEXT
+    /// keyDown — after the app's (possibly lazily-built, async) AX tree has settled —
+    /// and log whether each signal now agrees with the t0 verdict. Three outcomes we
+    /// are looking for on Lark (pinned to In-place + Debug logging on):
+    ///   • axMatch2=no while t0 said honored → the t0 AX read raced a stale cache;
+    ///     a deferred verdict WOULD auto-detect Lark (no hardcode needed).
+    ///   • axMatch2=yes → Lark's AX genuinely reports the inserted text; per-app /
+    ///     per-framework pinning stays the only option.
+    ///   • axMatch2=nil → AX unavailable until a real AT connects; same conclusion.
+    /// `axLen` is the content-independent cross-check: append leaves the field
+    /// longer than a replace by `bs` per edit. Logs carry match booleans and lengths
+    /// only — never the typed text.
+    private func reprobeDeferred(_ p: (id: String?, start: Int, len: Int, bs: Int,
+                                       inserted: String, verdict: InPlaceProbe.Verdict),
+                                 _ client: IMKTextInput) {
+        let nowID = AppState.shared.currentBundleID ?? FrontmostApp.shared.bundleID
+        guard nowID == p.id else {
+            DebugLog.log("reprobe \(p.id ?? "?"): skipped (focus now \(nowID ?? "?"))")
+            return
+        }
+        let ax2 = AXTextEdit.readString(at: p.start, length: p.len)
+        let axLen = AXTextEdit.readLength()
+        var imk2: String? = nil
+        if let sub = client.attributedSubstring(from: NSRange(location: p.start, length: p.len)) {
+            imk2 = sub.string
+        }
+        let sel = client.selectedRange()
+        DebugLog.log("reprobe \(p.id ?? "?"): t0=\(p.verdict) start=\(p.start) bs=\(p.bs) len=\(p.len) "
+            + "axMatch2=\(ax2.map { $0 == p.inserted ? "yes" : "no" } ?? "nil") "
+            + "imkMatch2=\(imk2.map { $0 == p.inserted ? "yes" : "no" } ?? "nil") "
+            + "axLen=\(axLen.map(String.init) ?? "nil") "
+            + "caret2=\(sel.location == NSNotFound ? "none" : String(sel.location))")
     }
 
     // MARK: - Marked-text mode (fallback for Terminal-like apps)
