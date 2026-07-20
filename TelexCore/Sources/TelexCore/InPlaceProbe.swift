@@ -76,4 +76,32 @@ public enum InPlaceProbe {
         // already handled above); nothing to go on → safe marked-text mode.
         return regionReadback != nil ? .honored : .appended
     }
+
+    /// Confirmation tracker for SELF-REPORTED honored verdicts (caret / read-back —
+    /// not an AX-backed read, which is ground truth and confirms on its own).
+    ///
+    /// Why: Lark returns a CONSTANT garbage caret (always 1, measured 2026-07-21 —
+    /// see the deferred-reprobe experiment log). A single-probe rule locked it to the
+    /// broken in-place path whenever the first tone edit happened to land where
+    /// `start + insertLength` coincided with the garbage value (typing at the start
+    /// of an empty message field: expReplace = 1). No fixed threshold can rule that
+    /// class out — but a constant caret cannot equal `start + insertLength` at TWO
+    /// DIFFERENT offsets, while a truthful caret always does. So: an app is only
+    /// committed to the (silent-failure-prone) in-place path after honored verdicts
+    /// at two distinct expected-caret positions.
+    public struct HonorTracker {
+        private var firstExpReplace: Int?
+
+        public init() {}
+
+        /// Record an honored probe whose expected post-replace caret was
+        /// `expReplace`. Returns true when in-place is CONFIRMED — i.e. this is the
+        /// second honored verdict at a *different* offset than the first. A repeat
+        /// at the same offset carries no new information and keeps waiting.
+        public mutating func recordHonored(expReplace: Int) -> Bool {
+            if let first = firstExpReplace, first != expReplace { return true }
+            firstExpReplace = expReplace
+            return false
+        }
+    }
 }

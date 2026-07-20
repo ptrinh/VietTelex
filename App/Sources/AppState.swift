@@ -64,6 +64,18 @@ final class AppState: @unchecked Sendable {
         probedAppsCache = Set(defaults.stringArray(forKey: Key.probedApps) ?? [])
         manualModesCache = (defaults.dictionary(forKey: Key.manualModes) as? [String: String]) ?? [:]
         for key in Self.legacyKeys { defaults.removeObject(forKey: key) }
+
+        // Probe-rule v2 migration (one-time): probedApps learned under the old
+        // single-confirmation rule can hold constant-caret false positives — Lark
+        // was locked to the broken in-place path exactly this way. Clear the whole
+        // learned in-place set; apps re-confirm cheaply (and more strictly) under
+        // the two-distinct-offsets rule. fallbackApps is kept: appended verdicts
+        // were positive failure evidence and remain trustworthy.
+        if !defaults.bool(forKey: "probeV2Reset") {
+            probedAppsCache = []
+            defaults.removeObject(forKey: Key.probedApps)
+            defaults.set(true, forKey: "probeV2Reset")
+        }
     }
 
     // MARK: - Options
@@ -227,12 +239,14 @@ final class AppState: @unchecked Sendable {
         "com.apple.Terminal",     // Terminal.app
         "com.googlecode.iterm2",  // iTerm2
         "com.macromates.TextMate",// TextMate
-        // Lark (Electron): its in-place is broken AND it fakes every probe signal
-        // (caret, read-back, even the AX tree), so auto-detection provably can't
-        // classify it — verified against a clean 1.1.2 too. Pin it: tap backspace-
-        // retype when Accessibility is granted (real characters, no underline), else
-        // marked text.
-        "com.larksuite.larkApp",  // Lark
+        // Lark is NOT pinned any more. The deferred-reprobe experiment (2026-07-21)
+        // showed its probe signals aren't smart fakes but a CONSTANT garbage caret
+        // (always 1) with no AX text interface at all — the old single-probe rule
+        // locked it in-place only when the first tone edit happened at the start of
+        // an empty field (expReplace = 1 = the garbage value). The two-distinct-
+        // offsets rule (InPlaceProbe.HonorTracker) makes that coincidence unable to
+        // commit, so the normal probe now classifies Lark: appended ×2 → fallback
+        // (tap with Accessibility, marked text without).
     ]
 
     /// Apps FORCED to marked-text — never in-place, and never tap (even with

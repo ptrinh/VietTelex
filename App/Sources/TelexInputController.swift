@@ -46,6 +46,13 @@ final class TelexInputController: IMKInputController {
     // only (no persistence): a fresh launch re-probes from scratch, which is fine.
     private var probeFailures: [String: Int] = [:]
 
+    // Pending SELF-REPORTED honored confirmations per bundleID: in-place is committed
+    // only after honored probes at two DISTINCT expected-caret offsets (a constant
+    // garbage caret — Lark reports 1, always — can coincide with one offset but never
+    // two). AX-backed honored verdicts skip this and commit immediately. In-memory
+    // only, like probeFailures.
+    private var probeHonors: [String: InPlaceProbe.HonorTracker] = [:]
+
     // Last per-key routing decision logged (deduped): the strategy chosen in handle()
     // is logged only when it changes, so the debug log shows one line per app/mode
     // transition instead of one per keystroke.
@@ -385,9 +392,27 @@ final class TelexInputController: IMKInputController {
         if shadow { return }
         switch verdict {
         case .honored:
-            AppState.shared.markInPlaceGood(id)
+            // An AX-backed honored is ground truth → commit immediately. A SELF-reported
+            // honored (caret/read-back) needs a second confirmation at a DIFFERENT
+            // offset first: Lark's constant garbage caret (always 1) reads honored
+            // whenever expReplace coincides with it, and a single-probe commit is what
+            // locked it onto the broken in-place path. See InPlaceProbe.HonorTracker.
+            if axRegion != nil {
+                AppState.shared.markInPlaceGood(id)
+            } else if let id {
+                var tracker = probeHonors[id] ?? InPlaceProbe.HonorTracker()
+                if tracker.recordHonored(expReplace: start + len) {
+                    AppState.shared.markInPlaceGood(id)
+                    probeHonors[id] = nil
+                } else {
+                    probeHonors[id] = tracker   // keep probing until a distinct offset confirms
+                }
+            }
             if let id { probeFailures[id] = nil }   // a good read clears the streak
         case .appended:
+            // A failure also voids any half-collected honored confirmation: the next
+            // honored (if any) must start the two-distinct-offsets count over.
+            if let id { probeHonors[id] = nil }
             // An AX-backed verdict is GROUND TRUTH, not a transient read — condemn
             // immediately (one glitched word, then the app is on the fallback path for
             // good). Without AX (caret/read-back only), a single failure may just be the

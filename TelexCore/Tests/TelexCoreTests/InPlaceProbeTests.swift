@@ -168,6 +168,28 @@ final class InPlaceProbeTests: XCTestCase {
                                             regionReadback: "ê", inserted: "ê"), .honored)
     }
 
+    func testHonorTrackerRequiresTwoDistinctOffsets() {
+        // A truthful caret confirms after two honored probes at different offsets.
+        var t = InPlaceProbe.HonorTracker()
+        XCTAssertFalse(t.recordHonored(expReplace: 5), "first honored never confirms")
+        XCTAssertTrue(t.recordHonored(expReplace: 12), "second honored at a new offset confirms")
+    }
+
+    func testHonorTrackerRejectsConstantGarbageCaret() {
+        // Lark's measured behavior: selectedRange().location == 1, always. It reads
+        // "honored" only when expReplace coincides with 1 (start of an empty field) —
+        // and can never produce a second honored at a DIFFERENT offset, so it is
+        // never committed to in-place. Repeats at the same offset must not confirm.
+        var t = InPlaceProbe.HonorTracker()
+        XCTAssertFalse(t.recordHonored(expReplace: 1))
+        XCTAssertFalse(t.recordHonored(expReplace: 1), "same offset repeat is no new information")
+        XCTAssertFalse(t.recordHonored(expReplace: 1))
+        // Mid-field the constant caret mismatches → verdict is appended (not honored),
+        // so the tracker is never even consulted; the 2-strike fallback catches it.
+        XCTAssertEqual(InPlaceProbe.verdict(axRegion: nil, caret: 1, start: 29, bs: 1, insertLength: 1,
+                                            regionReadback: nil, inserted: "á"), .appended)
+    }
+
     func testShouldProbeGating() {
         XCTAssertTrue(InPlaceProbe.shouldProbe(insertLength: 1, bs: 1, clear: 0, needsProbe: true))
         XCTAssertFalse(InPlaceProbe.shouldProbe(insertLength: 1, bs: 0, clear: 0, needsProbe: true),
