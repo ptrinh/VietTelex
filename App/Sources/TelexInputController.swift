@@ -59,7 +59,11 @@ final class TelexInputController: IMKInputController {
     private var lastDecisionLog = ""
     private var lastEntryLog = ""
     private func logDecision(_ s: String) {
-        guard s != lastDecisionLog else { return }
+        // Dedup keeps the ring buffer readable in normal use — but it also hid the
+        // per-key picture during the WhatsApp/Lark no-render diagnosis (state
+        // survives DebugLog.clear(), so a fresh log stayed empty). While the debug
+        // flag is on, log EVERY decision; 400 ring lines is plenty for a short repro.
+        guard AppState.shared.debugLogging || s != lastDecisionLog else { return }
         lastDecisionLog = s
         DebugLog.log(s)
     }
@@ -105,7 +109,7 @@ final class TelexInputController: IMKInputController {
         // pid, which the pid check dropped as synthetic (untypable Vietnamese).
         let synth = SyntheticKeyboard.isSyntheticMagic(event)
         let entryID = AppState.shared.currentBundleID ?? FrontmostApp.shared.bundleID ?? "?"
-        if entryID != lastEntryLog {
+        if entryID != lastEntryLog || AppState.shared.debugLogging {   // no dedupe while debugging
             lastEntryLog = entryID
             let cg = event.cgEvent
             let srcPid = cg?.getIntegerValueField(.eventSourceUnixProcessID) ?? -1
@@ -325,11 +329,15 @@ final class TelexInputController: IMKInputController {
         } else {
             let sel = client.selectedRange()
             guard sel.location != NSNotFound, sel.location >= bs else {
+                // The key is consumed with NOTHING inserted — if an app lands here on
+                // every keystroke, typing shows nothing at all. Log it loudly.
+                DebugLog.log("in-place ABORT \(id ?? "?"): selectedRange=\(sel.location == NSNotFound ? "NotFound" : String(sel.location)) bs=\(bs) → marked next word, key swallowed")
                 AppState.shared.markUsesMarkedText(id); engine.reset(); return
             }
             start = sel.location - bs
         }
         guard start >= 0 else {
+            DebugLog.log("in-place ABORT \(id ?? "?"): start=\(start) < 0, key swallowed")
             AppState.shared.markUsesMarkedText(id); engine.reset(); return
         }
         client.insertText(insert, replacementRange: NSRange(location: start, length: bs + clear))
@@ -525,6 +533,7 @@ final class TelexInputController: IMKInputController {
         let s = engine.composed
         let caret = NSRange(location: (s as NSString).length, length: 0)
         client.setMarkedText(s, selectionRange: caret, replacementRange: kNoRange)
+        DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
     }
 
     // MARK: - Word boundary (shortcuts + auto-restore), then reset
@@ -605,6 +614,9 @@ final class TelexInputController: IMKInputController {
         tracking = false
         if let client = sender as? IMKTextInput {
             AppState.shared.currentBundleID = client.bundleIdentifier()
+            // What identifier does this client REPORT? (Catalyst/Electron apps may not
+            // report what NSWorkspace says — a mismatch mis-routes every mode lookup.)
+            DebugLog.log("activateServer client=\(AppState.shared.currentBundleID ?? "nil") front=\(FrontmostApp.shared.bundleID ?? "?")")
             maybePromptAccessibility(AppState.shared.currentBundleID)
         }
         // VietTelex is the active input source now: let the terminal tap act (it must
