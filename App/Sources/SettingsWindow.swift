@@ -29,8 +29,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             let hosting = NSHostingController(rootView: root)
             let win = NSWindow(contentViewController: hosting)
             win.title = VTLocalized("VietTelex — Settings")
-            win.styleMask = [.titled, .closable, .miniaturizable]
-            win.setContentSize(NSSize(width: 580, height: 440))
+            win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            win.setContentSize(NSSize(width: 680, height: 560))
+            win.contentMinSize = NSSize(width: 640, height: 500)
             win.delegate = self
             win.isReleasedWhenClosed = false
             win.center() // only on first creation — later shows keep the user's position
@@ -80,6 +81,7 @@ final class SettingsModel: ObservableObject {
     @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
     @Published var shortcuts: [ShortcutRow] = []
     @Published var modeRows: [AppModeRow] = []            // Bảng chế độ gõ, sorted by name
+    @Published var modeFilter: String = ""                // live filter over the table
     @Published var manualModes: [String: String] = [:]   // bundleID -> AppMode.rawValue
     @Published var newModeAppID: String = ""              // mode table: bundle id to add
     @Published var recentApps: [(id: String, name: String)] = []  // recent, not-yet-listed apps
@@ -160,6 +162,32 @@ final class SettingsModel: ObservableObject {
         }
     }
 
+    /// Localized label of the manual pick for `id` ("Tự động" when unset) — also
+    /// what the filter matches against.
+    func manualLabel(_ id: String) -> String {
+        switch AppState.AppMode(rawValue: appMode(id)) {
+        case .inPlace: return loc("In-place")
+        case .marked: return loc("Marked text")
+        case .tap: return loc("Tap (backspace)")
+        case .selection: return loc("Selection-replace")
+        case .emptyReset: return loc("Empty-reset")
+        case .auto, nil: return loc("Auto")
+        }
+    }
+
+    /// Rows matching the live filter: app name, bundle id, detected-mode label, or
+    /// manual-mode label — one box searches everything visible in the table.
+    var filteredModeRows: [AppModeRow] {
+        let q = modeFilter.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return modeRows }
+        return modeRows.filter { row in
+            row.name.localizedCaseInsensitiveContains(q)
+                || row.id.localizedCaseInsensitiveContains(q)
+                || autoLabel(row.id).localizedCaseInsensitiveContains(q)
+                || manualLabel(row.id).localizedCaseInsensitiveContains(q)
+        }
+    }
+
     /// Add a row by hand (recent-apps picker or typed bundle id), mode = Auto.
     func addApp() {
         let id = newModeAppID.trimmingCharacters(in: .whitespaces)
@@ -233,7 +261,7 @@ struct SettingsView: View {
             AboutTab().tabItem { Text(model.loc("About")) }.tag(SettingsTab.about)
         }
         .padding(16)
-        .frame(width: 580, height: 440)
+        .frame(minWidth: 640, minHeight: 500)
     }
 }
 
@@ -289,7 +317,18 @@ struct ModeTableTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Table(model.modeRows) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField(model.loc("Filter by app name, bundle id, or mode"), text: $model.modeFilter)
+                    .textFieldStyle(.roundedBorder)
+                if !model.modeFilter.isEmpty {
+                    Button {
+                        model.modeFilter = ""
+                    } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.borderless)
+                }
+            }
+            Table(model.filteredModeRows) {
                 TableColumn(model.loc("App")) { row in
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.name)
@@ -322,7 +361,7 @@ struct ModeTableTab: View {
                     .labelsHidden()
                 }.width(min: 150)
             }
-            .frame(minHeight: 230)
+            .frame(minHeight: 230, maxHeight: .infinity)
 
             if model.modeRows.isEmpty {
                 Text(model.loc("Empty — type a few Vietnamese words in any app and it will appear here."))
@@ -346,8 +385,10 @@ struct ModeTableTab: View {
             }
 
             HStack {
+                // role .destructive alone doesn't tint a bordered macOS button —
+                // color the label explicitly so the destructive action reads as one.
                 Button(role: .destructive) { model.clearLearned() } label: {
-                    Text(model.loc("Clear & re-learn"))
+                    Text(model.loc("Clear & re-learn")).foregroundStyle(.red)
                 }
                 Spacer()
                 Button(model.loc("Import from plist…")) { importModes() }
