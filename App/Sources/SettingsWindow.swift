@@ -80,8 +80,12 @@ final class SettingsModel: ObservableObject {
     /// observes this model (they call `loc(_:)`), so the switch is live — no relaunch.
     @Published var uiLanguage: String { didSet { AppState.shared.uiLanguage = uiLanguage } }
     @Published var shortcuts: [ShortcutRow] = []
-    @Published var modeRows: [AppModeRow] = []            // Bảng chế độ gõ, sorted by name
+    @Published var modeRows: [AppModeRow] = []            // Bảng chế độ gõ
     @Published var modeFilter: String = ""                // live filter over the table
+    /// Header-click sort for the mode table (default: App name A-Z).
+    @Published var modeSortOrder: [KeyPathComparator<AppModeRow>] = [
+        KeyPathComparator(\AppModeRow.name),
+    ]
     @Published var manualModes: [String: String] = [:]   // bundleID -> AppMode.rawValue
     @Published var newModeAppID: String = ""              // mode table: bundle id to add
     @Published var recentApps: [(id: String, name: String)] = []  // recent, not-yet-listed apps
@@ -136,11 +140,9 @@ final class SettingsModel: ObservableObject {
         ids.formUnion(AppState.builtInInPlaceApps.filter(installed))
         ids.formUnion(AppState.builtInSpecialApps.filter(installed))
         ids.formUnion(ClientPolicy.forcePassthroughBundleIDs.filter(installed))
-        var rows = ids
-            .map { AppModeRow(id: $0, name: Self.appName(for: $0)) }
-        rows.append(AppModeRow(id: Self.spotlightRowID, name: "Spotlight"))
+        var rows = ids.map { makeRow(id: $0, name: Self.appName(for: $0)) }
+        rows.append(makeRow(id: Self.spotlightRowID, name: "Spotlight"))
         modeRows = rows
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         // Up to 10 recently-focused apps not yet in the table — quick add candidates.
         recentApps = FrontmostApp.shared.recent
             .filter { !ids.contains($0.id) }
@@ -231,17 +233,23 @@ final class SettingsModel: ObservableObject {
         }
     }
 
-    /// Rows matching the live filter: app name, bundle id, detected-mode label, or
-    /// manual-mode label — one box searches everything visible in the table.
-    var filteredModeRows: [AppModeRow] {
+    private func makeRow(id: String, name: String) -> AppModeRow {
+        AppModeRow(id: id, name: name,
+                   detected: autoLabel(id), manual: manualLabel(id),
+                   missingPermission: autoMissingPermission(id))
+    }
+
+    /// Rows matching the live filter (app name, bundle id, detected label, manual
+    /// label) in the header-click sort order.
+    var visibleModeRows: [AppModeRow] {
         let q = modeFilter.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return modeRows }
-        return modeRows.filter { row in
+        let filtered = q.isEmpty ? modeRows : modeRows.filter { row in
             row.name.localizedCaseInsensitiveContains(q)
                 || row.id.localizedCaseInsensitiveContains(q)
-                || autoLabel(row.id).localizedCaseInsensitiveContains(q)
-                || manualLabel(row.id).localizedCaseInsensitiveContains(q)
+                || row.detected.localizedCaseInsensitiveContains(q)
+                || row.manual.localizedCaseInsensitiveContains(q)
         }
+        return filtered.sorted(using: modeSortOrder)
     }
 
     /// Add a row by hand (recent-apps picker or typed bundle id), mode = Auto.
@@ -298,8 +306,16 @@ final class SettingsModel: ObservableObject {
 // id = key: selection survives reloads, and a row can be looked up by its key.
 struct ShortcutRow: Identifiable { var id: String { key }; let key: String; let value: String }
 
-/// One row of the mode table. `id` = bundle id (stable across reloads).
-struct AppModeRow: Identifiable { let id: String; let name: String }
+/// One row of the mode table. `id` = bundle id (stable across reloads). The label
+/// columns are precomputed at reload so the Table can sort by them (KeyPathComparator
+/// needs stored Comparable properties) and the filter can match them.
+struct AppModeRow: Identifiable {
+    let id: String
+    let name: String
+    let detected: String          // localized Detected-column label
+    let manual: String            // localized Manual-column label (current pick)
+    let missingPermission: Bool   // show the ⚠️ badge
+}
 
 // MARK: - Root view
 
@@ -384,8 +400,8 @@ struct ModeTableTab: View {
                         .buttonStyle(.borderless)
                 }
             }
-            Table(model.filteredModeRows) {
-                TableColumn(model.loc("App")) { row in
+            Table(model.visibleModeRows, sortOrder: $model.modeSortOrder) {
+                TableColumn(model.loc("App"), value: \.name) { row in
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.name)
                         if row.name != row.id {
@@ -393,20 +409,20 @@ struct ModeTableTab: View {
                         }
                     }
                 }
-                TableColumn(model.loc("Detected")) { row in
+                TableColumn(model.loc("Detected"), value: \.detected) { row in
                     // What Auto resolves to for this app right now. Grayed out when a
                     // manual pick overrides it. ⚠️ = degraded because Accessibility
                     // is missing (tooltip explains on hover).
                     HStack(spacing: 4) {
-                        Text(model.autoLabel(row.id))
+                        Text(row.detected)
                             .foregroundStyle(model.appMode(row.id) == "auto" ? .primary : .tertiary)
-                        if model.autoMissingPermission(row.id) {
+                        if row.missingPermission {
                             Text("⚠️")
                                 .help(model.loc("Missing Accessibility permission"))
                         }
                     }
                 }.width(min: 120)
-                TableColumn(model.loc("Manual")) { row in
+                TableColumn(model.loc("Manual"), value: \.manual) { row in
                     // Common picks first (Auto / Tap / Marked cover ~95% of real
                     // overrides); the specialist modes sit below the divider —
                     // Empty-reset exists for exactly one app (Excel), and picking it

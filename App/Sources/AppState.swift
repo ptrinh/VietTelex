@@ -315,6 +315,12 @@ final class AppState: @unchecked Sendable {
     /// If an app here turns out not to draw marked text, move it to builtInFallbackApps
     /// (→ tap) instead.
     static let markedTextApps: Set<String> = [
+        // Excel (field-tested 2026-07-21): marked text in cells is a good experience
+        // — with the near-invisible underline style it reads cleanest — and it needs
+        // no Accessibility. Retires the empty-reset tap dance (U+202F insert +
+        // backspace-retype racing cell autocomplete) as Excel's default; the
+        // mechanism remains available as a manual pick.
+        "com.microsoft.Excel",
     ]
 
     // MARK: - Manual per-app mode override (Experimental → App mode)
@@ -414,16 +420,12 @@ final class AppState: @unchecked Sendable {
         "com.apple.Safari", "com.apple.SafariTechnologyPreview",
     ]
 
-    /// Excel: cell autocomplete (from column values) races a Backspace-retype
-    /// ("Tiếngếng Việt"), but Shift+Left in a cell selects the ADJACENT CELL, not
-    /// characters — so it uses the empty-character trick (insert U+202F to cancel the
-    /// suggestion, then a normal Backspace-retype).
-    /// Only Excel: Word/PowerPoint body text has no inline autocomplete race, so they
-    /// stay on the fast IMKit in-place path (routing them through the tap only added
-    /// per-key latency → laggy cursor).
-    private static let emptyResetApps: Set<String> = [
-        "com.microsoft.Excel",
-    ]
+    /// Empty-reset (insert U+202F to cancel the inline suggestion, then
+    /// Backspace-retype) exists for grid apps whose cell autocomplete races a
+    /// backspace-retype AND where Shift+Left selects the adjacent CELL. No built-in
+    /// members since Excel moved to markedTextApps (2026-07-21 field test — marked
+    /// is the better experience there); reachable via the manual Empty-reset pick.
+    private static let emptyResetApps: Set<String> = []
 
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
     /// For `.axDetect` apps the answer flips per focused FIELD (address bar yes,
@@ -453,9 +455,12 @@ final class AppState: @unchecked Sendable {
         Self.selectionApps.contains(id)
     }
 
-    /// Apps with a built-in special strategy (per-field browsers + Excel), for the
-    /// Settings mode table — it lists the installed ones so their default is visible.
-    static var builtInSpecialApps: Set<String> { selectionApps.union(emptyResetApps) }
+    /// Apps with a built-in special strategy (per-field browsers, forced-marked like
+    /// Excel), for the Settings mode table — it lists the installed ones so their
+    /// default is visible.
+    static var builtInSpecialApps: Set<String> {
+        selectionApps.union(emptyResetApps).union(markedTextApps)
+    }
 
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).

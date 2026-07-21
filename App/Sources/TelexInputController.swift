@@ -78,6 +78,9 @@ final class TelexInputController: IMKInputController {
     // composition (the tap can't reach this controller's private engine directly).
     private var resetObserver: NSObjectProtocol?
 
+    // One-shot dump of every TSM hilite style's attribute dict (experiment 3).
+    private static var dumpedHiliteDicts = false
+
     // EXPERIMENT (log-only, gated on debugLogging): deferred re-probe context.
     // Chromium-class apps (Lark) serve AX from an ASYNC browser-side cache that is
     // built lazily on first query — the synchronous read inside probeInPlace can race
@@ -595,15 +598,33 @@ final class TelexInputController: IMKInputController {
     private func updateMarked(_ client: IMKTextInput) {
         let s = engine.composed
         let caret = NSRange(location: (s as NSString).length, length: 0)
-        // KNOWN LIMITATION — the composition underline CANNOT be removed by the IME.
-        // Definitive root cause (2026-07-21): even the blessed styling channel,
-        // mark(forStyle: kTSMHiliteNoHilite /* 9 */, at:), returns ONLY
-        // [NSMarkedClauseSegment: N] — clause boundaries, no drawing attributes.
-        // The client app decides entirely how composition is painted; arbitrary
-        // attributed keys (underlineStyle 0, clear/near-clear underlineColor) were
-        // also field-tested and change nothing. The underline-free experience is
-        // what the in-place/tap paths are for.
-        client.setMarkedText(s, selectionRange: caret, replacementRange: kNoRange)
+        // EXPERIMENT 3 — background instead of underline? TSM styles 6 (BlockFill)
+        // and 8 (SelectedText) are BACKGROUND hilite styles; their mark(forStyle:)
+        // dicts may carry more than style 9's bare clause segment. Log every style's
+        // dict once, render with BlockFill.
+        let len = (s as NSString).length
+        let range = NSRange(location: 0, length: len)
+        if AppState.shared.debugLogging, !Self.dumpedHiliteDicts {
+            Self.dumpedHiliteDicts = true
+            for style in 2...9 {
+                let d = mark(forStyle: style, at: range) as? [NSAttributedString.Key: Any] ?? [:]
+                DebugLog.log("markForStyle(\(style)) dict: \(d)")
+            }
+        }
+        // Near-invisible composition underline — SHIPPED (field-accepted 2026-07-21).
+        // The formula, derived the hard way: a VALID underline style (1 = thin) so
+        // clients honor the span at all — style 0 reads as "unspecified" and falls
+        // back to the default black underline (why every earlier attempt failed) —
+        // plus a near-invisible color: alpha ≈ 1/255, NOT fully clear (Chromium
+        // treats pure transparent as "use the text color"). Attribute transport was
+        // proven by field-testing style 5 → visibly thicker underline. Base dict
+        // from mark(forStyle:) keeps the clause segment the transport expects.
+        var attrs = mark(forStyle: 2 /* kTSMHiliteRawText */, at: range)
+            as? [NSAttributedString.Key: Any] ?? [:]
+        attrs[.underlineStyle] = 1
+        attrs[.underlineColor] = NSColor(calibratedWhite: 0, alpha: 0.004)
+        let attributed = NSAttributedString(string: s, attributes: attrs)
+        client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
     }
 
