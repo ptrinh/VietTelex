@@ -755,6 +755,7 @@ final class TelexInputController: IMKInputController {
             // report what NSWorkspace says — a mismatch mis-routes every mode lookup.)
             DebugLog.log("activateServer client=\(AppState.shared.currentBundleID ?? "nil") front=\(FrontmostApp.shared.bundleID ?? "?")")
             maybePromptAccessibility(AppState.shared.currentBundleID)
+            UpdateCheck.maybeAutoCheck()   // opt-in weekly; two cheap guards inside
         }
         // VietTelex is the active input source now: let the terminal tap act (it must
         // stay dormant when the user switches to ABC/US). ensureRunning() also revives
@@ -854,13 +855,12 @@ final class TelexInputController: IMKInputController {
         }
     }
 
-    /// One-time gentle prompt: the user just focused an app that needs the event tap
-    /// (terminal-class / Chromium / Excel) but Accessibility is missing — exactly the
-    /// moment typing would misbehave. Otherwise the permission is only discoverable
-    /// through the input-method menu. Shown once ever (axPromptShown).
+    /// One-time gentle prompt on the FIRST activation with the permission missing —
+    /// no longer waiting for the user to focus a tap-needing app (they'd type happily
+    /// in Notes, then hit Terminal days later and think the IME broke). Shown once
+    /// ever (axPromptShown); declining is remembered.
     private func maybePromptAccessibility(_ id: String?) {
         guard !AppState.shared.axPromptShown,
-              AppState.shared.wantsAccessibility(id),
               !Accessibility.isTrusted else { return }
         AppState.shared.axPromptShown = true
         DispatchQueue.main.async { [weak self] in

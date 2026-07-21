@@ -261,7 +261,7 @@ public struct TelexEngine {
         // Validation runs on letter classes + tone (no String); Strings are built
         // only when a restore actually happens.
         if autoRestore, !markCancelled, outCount > 0,
-           forceRestoreUpperTone || !composedIsValidSyllable() {
+           forceRestoreUpperTone || rawIsEnglishException() || !composedIsValidSyllable() {
             if compositionDiffersFromRaw() {
                 return .replace(backspaces: outCount, insert: rawKeystrokes)
             }
@@ -278,10 +278,27 @@ public struct TelexEngine {
         // return the composed prefix unchanged; the caller keeps the rest on screen.
         if overflowed { return composed }
         if autoRestore, !markCancelled, outCount > 0,
-           forceRestoreUpperTone || !composedIsValidSyllable() {
+           forceRestoreUpperTone || rawIsEnglishException() || !composedIsValidSyllable() {
             return rawKeystrokes
         }
         return composed
+    }
+
+    /// Common English words whose FULL-Telex transform collides with a VALID
+    /// Vietnamese syllable, so validity-based auto-restore keeps the Vietnamese
+    /// ("was"→ứa, "wow"→Ươ). Force-restored at the boundary instead — the reverse
+    /// of the "đc" whitelist. Zero-alloc byte compare on the raw keys; extend as
+    /// field reports arrive (candidate for a user-editable list later).
+    private static let englishExceptions: [[UInt8]] = [
+        Array("was".utf8), Array("wow".utf8),
+    ]
+    private func rawIsEnglishException() -> Bool {
+        outer: for word in Self.englishExceptions {
+            guard word.count == rawCount else { continue }
+            for i in 0..<rawCount where lowercased(raw[i]) != word[i] { continue outer }
+            return true
+        }
+        return false
     }
 
     /// Zero-allocation twin of `SyllableValidator.isValidSyllable(String)` on the

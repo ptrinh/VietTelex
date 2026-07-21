@@ -6,8 +6,39 @@
 // background polling — keeping the app's "no network unless you ask" stance.
 
 import Foundation
+import AppKit
 
 enum UpdateCheck {
+    /// Weekly auto-check — runs ONLY when the user opted in (Settings toggle,
+    /// default OFF, so the no-network stance still holds: the toggle is the ask).
+    /// Event-driven (called from activateServer, throttled by timestamp — no
+    /// timers), and each new version is announced at most once.
+    static func maybeAutoCheck() {
+        guard AppState.shared.autoUpdateCheck else { return }
+        let now = Date().timeIntervalSince1970
+        guard now - AppState.shared.lastAutoUpdateCheckAt > 7 * 24 * 3600 else { return }
+        AppState.shared.lastAutoUpdateCheckAt = now
+        Task {
+            guard case let .update(latest, url) = await check() else { return }
+            await MainActor.run {
+                guard AppState.shared.lastNotifiedUpdateVersion != latest else { return }
+                AppState.shared.lastNotifiedUpdateVersion = latest
+                let alert = NSAlert()
+                alert.messageText = String(format: VTLocalized("VietTelex %@ is available"), latest)
+                alert.informativeText = VTLocalized("You can download the update from the releases page. This check ran because weekly update checks are enabled in Settings.")
+                alert.addButton(withTitle: VTLocalized("Download update…"))
+                alert.addButton(withTitle: VTLocalized("Later"))
+                // Same accessory-app dance as the Accessibility alert: activate and
+                // float, or the panel opens behind the frontmost app.
+                NSApp.activate(ignoringOtherApps: true)
+                alert.window.level = .floating
+                alert.window.orderFrontRegardless()
+                if alert.runModal() == .alertFirstButtonReturn {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        }
+    }
     /// Canonical repo (matches the git remote). GitHub redirects other casings.
     static let repo = "ptrinh/VietTelex"
 

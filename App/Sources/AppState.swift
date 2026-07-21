@@ -152,6 +152,22 @@ final class AppState: @unchecked Sendable {
         set { defaults.set(newValue, forKey: "uiLanguage") }
     }
 
+    /// Weekly auto update check — OPT-IN, default OFF, preserving the "no network
+    /// unless you ask" stance (the toggle IS the ask). Main-thread only.
+    var autoUpdateCheck: Bool {
+        get { defaults.bool(forKey: "autoUpdateCheck") }
+        set { defaults.set(newValue, forKey: "autoUpdateCheck") }
+    }
+    var lastAutoUpdateCheckAt: Double {
+        get { defaults.double(forKey: "lastAutoUpdateCheckAt") }
+        set { defaults.set(newValue, forKey: "lastAutoUpdateCheckAt") }
+    }
+    /// Newest version the user has already been alerted about (never nag twice).
+    var lastNotifiedUpdateVersion: String {
+        get { defaults.string(forKey: "lastNotifiedUpdateVersion") ?? "" }
+        set { defaults.set(newValue, forKey: "lastNotifiedUpdateVersion") }
+    }
+
     /// Show the power-user surface (Bảng chế độ gõ + Thử Nghiệm tabs). Default OFF —
     /// the philosophy is "cài xong là gõ"; per-app strategy names are implementation
     /// vocabulary most users never need. Settings-UI only (main thread), no lock.
@@ -575,6 +591,20 @@ final class AppState: @unchecked Sendable {
     /// Learned lists, for the Settings UI (Tương thích ứng dụng).
     var learnedFallbackApps: [String] { lock.withLock { fallbackAppsCache.sorted() } }
     var learnedInPlaceApps: [String] { lock.withLock { probedAppsCache.sorted() } }
+
+    /// Forget ALL user data for ONE app: the manual pin and any learned
+    /// classification — the row's built-in default (if any) takes over again.
+    func forgetApp(_ id: String) {
+        setManualMode(.auto, for: id)
+        let snapshots: (fb: [String]?, pr: [String]?) = lock.withLock {
+            var f: [String]? = nil, p: [String]? = nil
+            if fallbackAppsCache.remove(id) != nil { f = Array(fallbackAppsCache) }
+            if probedAppsCache.remove(id) != nil { p = Array(probedAppsCache) }
+            return (f, p)
+        }
+        if let f = snapshots.fb { defaults.set(f, forKey: Key.fallbackApps) }
+        if let p = snapshots.pr { defaults.set(p, forKey: Key.probedApps) }
+    }
 
     /// Forget everything learned about apps. A bad one-shot probe (app busy during
     /// the read-back) otherwise downgrades an app to marked text forever; this lets

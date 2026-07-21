@@ -65,6 +65,7 @@ final class SettingsModel: ObservableObject {
     @Published var axSelectionReplace: Bool { didSet { AppState.shared.axSelectionReplace = axSelectionReplace } }
     @Published var tapCascadeBreaker: Bool { didSet { AppState.shared.tapCascadeBreaker = tapCascadeBreaker } }
     @Published var debugLogging: Bool { didSet { AppState.shared.debugLogging = debugLogging } }
+    @Published var autoUpdateCheck: Bool { didSet { AppState.shared.autoUpdateCheck = autoUpdateCheck } }
     /// Shows/hides the Bảng chế độ gõ + Thử Nghiệm tabs. When turned off while one
     /// of them is frontmost, selection falls back to Tùy chỉnh.
     @Published var advancedFeatures: Bool {
@@ -105,6 +106,7 @@ final class SettingsModel: ObservableObject {
         axSelectionReplace = AppState.shared.axSelectionReplace
         tapCascadeBreaker = AppState.shared.tapCascadeBreaker
         debugLogging = AppState.shared.debugLogging
+        autoUpdateCheck = AppState.shared.autoUpdateCheck
         advancedFeatures = AppState.shared.advancedFeatures
         uiLanguage = AppState.shared.uiLanguage
         reloadShortcuts()
@@ -230,9 +232,22 @@ final class SettingsModel: ObservableObject {
     }
 
     private func makeRow(id: String, name: String) -> AppModeRow {
-        AppModeRow(id: id, name: name,
-                   detected: autoLabel(id), manual: manualLabel(id),
-                   missingPermission: autoMissingPermission(id))
+        let hasUserData = manualModes[id] != nil
+            || AppState.shared.learnedFallbackApps.contains(id)
+            || AppState.shared.learnedInPlaceApps.contains(id)
+            || addedApps.contains(id)
+        return AppModeRow(id: id, name: name,
+                          detected: autoLabel(id), manual: manualLabel(id),
+                          missingPermission: autoMissingPermission(id),
+                          deletable: hasUserData)
+    }
+
+    /// Forget one row's user data (pin + learned + hand-added). A built-in default
+    /// underneath, if any, takes over — the row then stays with Auto semantics.
+    func deleteRow(_ id: String) {
+        AppState.shared.forgetApp(id)
+        addedApps.remove(id)
+        reloadModeTable()
     }
 
     /// Rows matching the live filter (app name, bundle id, detected label, manual
@@ -311,6 +326,7 @@ struct AppModeRow: Identifiable {
     let detected: String          // localized Detected-column label
     let manual: String            // localized Manual-column label (current pick)
     let missingPermission: Bool   // show the ⚠️ badge
+    let deletable: Bool           // has user data (pin/learned/hand-added) to forget
 }
 
 // MARK: - Root view
@@ -413,8 +429,15 @@ struct ModeTableTab: View {
                         Text(row.detected)
                             .foregroundStyle(model.appMode(row.id) == "auto" ? .primary : .tertiary)
                         if row.missingPermission {
-                            Text("⚠️")
-                                .help(model.loc("Missing Accessibility permission"))
+                            // Clickable: seeing the warning and FIXING it should be
+                            // one gesture, not a settings scavenger hunt.
+                            Button {
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: { Text("⚠️") }
+                                .buttonStyle(.borderless)
+                                .help(model.loc("Missing Accessibility permission — click to open System Settings"))
                         }
                     }
                 }.width(min: 120)
@@ -437,6 +460,15 @@ struct ModeTableTab: View {
                     }
                     .labelsHidden()
                 }.width(min: 150)
+                TableColumn("") { row in
+                    if row.deletable {
+                        Button(role: .destructive) { model.deleteRow(row.id) } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .help(model.loc("Forget this app (pin + learned data)"))
+                    }
+                }.width(28)
             }
             .frame(minHeight: 230, maxHeight: .infinity)
 
@@ -670,8 +702,12 @@ struct AboutTab: View {
                 if let status {
                     Text(status).font(.caption).foregroundStyle(.secondary)
                 }
+                // Opt-in weekly auto-check (default OFF): the toggle IS the user's
+                // consent, so the "no network unless you ask" stance holds.
+                Toggle(model.loc("Check weekly and notify me"), isOn: $model.autoUpdateCheck)
+                    .toggleStyle(.checkbox).font(.caption)
             }
-            .frame(height: 44)
+            .frame(height: 66)
 
             Text("© Phil Trinh \(String(currentYear))").foregroundStyle(.secondary)
             Spacer()

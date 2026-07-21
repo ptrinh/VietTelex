@@ -350,15 +350,18 @@ final class EngineGoldenTests: XCTestCase {
         // guard is Simple-Telex-only now); English w-words are recovered by
         // auto-restore at the word boundary instead of being blocked up front.
         XCTAssertEqual(compose("w"), "ư")
-        // KNOWN TRADE-OFF of full Telex (accepted with the default change): when
-        // the transformed word happens to be VALID Vietnamese, auto-restore keeps
-        // it — "was"→ứa, "Wow"→Ươ. Invalid ones restore as before.
-        XCTAssertEqual(commit("was"), "ứa")
+        // Valid-Vietnamese collisions ("was"→ứa, "Wow"→Ươ) are covered by the
+        // englishExceptions force-restore list, so common English w-words come
+        // back intact at the boundary; invalid ones restore via the validator.
+        XCTAssertEqual(commit("was"), "was")
         XCTAssertEqual(commit("web"), "web")
         XCTAssertEqual(commit("win"), "win")
         XCTAssertEqual(commit("write"), "write")
-        XCTAssertEqual(commit("Wow"), "Ươ")
+        XCTAssertEqual(commit("Wow"), "Wow")
         XCTAssertEqual(commit("would"), "would")
+        // The exception list must not shadow REAL typing of those syllables:
+        // "ưas"-by-hand ("uwas") still commits Vietnamese.
+        XCTAssertEqual(commit("uwas"), "ứa")
 
         // Allowed -> ư (valid Vietnamese onsets, must NOT regress).
         XCTAssertEqual(compose("cw"), "cư")

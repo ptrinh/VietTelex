@@ -132,3 +132,11 @@
 /* Advanced features toggle */
 "Show advanced features" = "Mở tính năng nâng cao";
 "Adds the Typing modes and Experimental tabs — per-app overrides, latency flags, debug log. Not needed for everyday typing." = "Hiện thêm tab Bảng cơ chế gõ và Thử nghiệm — ép chế độ theo app, cờ độ trễ, nhật ký gỡ lỗi. Dùng hằng ngày thì không cần.";
+
+/* UX batch 21/07 pm */
+"Missing Accessibility permission — click to open System Settings" = "Thiếu quyền Trợ năng — bấm để mở System Settings";
+"Check weekly and notify me" = "Tự kiểm tra hàng tuần và báo khi có bản mới";
+"VietTelex %@ is available" = "Đã có VietTelex %@";
+"You can download the update from the releases page. This check ran because weekly update checks are enabled in Settings." = "Bạn có thể tải bản mới từ trang releases. Lần kiểm tra này chạy vì bạn đã bật tự kiểm tra hàng tuần trong Cài đặt.";
+"Later" = "Để sau";
+"Forget this app (pin + learned data)" = "Quên app này (xoá ép tay + dữ liệu đã học)";
