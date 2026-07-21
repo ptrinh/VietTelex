@@ -377,6 +377,28 @@ public struct TelexEngine {
            renderLetters[1].base == UInt8(ascii: "c"), renderLetters[1].mark == .none {
             return true
         }
+        // ALL-CAPS abbreviation whose only transform is DD→Đ ("ĐSQ" = Đại Sứ Quán,
+        // "ĐHQG"…): the doubled D was deliberate, restoring to "DDSQ" is strictly
+        // worse (user report 2026-07-21). Conditions: every raw key uppercase,
+        // no tone, no vowel mark — only the đ bar. A literal all-caps DD is still
+        // reachable through the double-key cancel: DDD → DD (so DDDR → DDR).
+        if lastEffTone == .none, rawCount >= 2 {
+            var allUpper = true
+            for i in 0..<rawCount where raw[i] < UInt8(ascii: "A") || raw[i] > UInt8(ascii: "Z") {
+                allUpper = false
+                break
+            }
+            if allUpper {
+                var hasBar = false
+                var onlyBar = true
+                for k in 0..<pCount {
+                    let l = renderLetters[k]
+                    if l.base == UInt8(ascii: "d"), l.mark == .bar { hasBar = true }
+                    else if l.mark != .none { onlyBar = false; break }
+                }
+                if hasBar, onlyBar { return true }
+            }
+        }
         // Teencode onset: validate as if spelled canonically ("wá" checks as quá).
         if pCount < Self.capacity - 1, let (canon, skip) = teencodeOnset() {
             var n = 0

@@ -158,6 +158,21 @@ final class EngineGoldenTests: XCTestCase {
     }
 
     // Abbreviation whitelist: "đc" (= được) survives auto-restore.
+    /// ALL-CAPS abbreviations with đ survive auto-restore: ĐSQ stays ĐSQ
+    /// (not restored to DDSQ). Lowercase/mixed and marked words keep restoring.
+    func testUppercaseDAcronymSurvivesAutoRestore() {
+        XCTAssertEqual(commit("DDSQ"), "ĐSQ")      // Đại Sứ Quán
+        XCTAssertEqual(commit("DDHQG"), "ĐHQG")    // Đại Học Quốc Gia
+        XCTAssertEqual(commit("DDN"), "ĐN")        // Đà Nẵng
+        // escape hatch: the double-key cancel still yields a literal DD
+        XCTAssertEqual(commit("DDDR"), "DDR")
+        // lowercase invalid words keep restoring
+        XCTAssertEqual(commit("ddsq"), "ddsq")
+        // vowel marks in caps are NOT covered by the acronym rule; "Â" survives
+        // because the validator already accepts it as a syllable (pre-existing)
+        XCTAssertEqual(commit("AA"), "Â")
+    }
+
     func testDcAbbreviationSurvivesAutoRestore() {
         XCTAssertEqual(commit("ddc"), "đc")
         XCTAssertEqual(compose("ddc"), "đc")
