@@ -24,14 +24,15 @@ public enum SyllableValidator {
     static let onsets: Set<String> = [
         "", "b", "c", "ch", "d", "đ", "g", "gh", "gi", "h", "k", "kh", "l",
         "m", "n", "ng", "ngh", "nh", "p", "ph", "qu", "r", "s", "t", "th",
-        "tr", "v", "x", "z", "dz"
+        "tr", "v", "x", "z", "dz",
+        "kr",   // tên địa danh dân tộc thiểu số: Krông (Đắk Lắk)
     ]
 
     // Valid rimes = nucleus (+ coda), toneless, with marks. ~180 entries.
     static let rimes: Set<String> = {
         let list = """
-        a ac ach ai am an ang anh ao ap at au ay
-        ă ăc ăm ăn ăng ăp ăt
+        a ac ach ai am an ang anh ao ap at au ay ak
+        ă ăc ăm ăn ăng ăp ăt ăk
         â âc âm ân âng âp ât âu ây
         e ec em en eng eo ep et
         ê êch êm ên êng ênh êp êt êu
@@ -66,6 +67,7 @@ public enum SyllableValidator {
     /// (-p/-t/-c/-ch) only permit sắc/nặng; everything else permits all six.
     private static func toneMask(forRime r: String) -> UInt8 {
         let stop = r.hasSuffix("p") || r.hasSuffix("t") || r.hasSuffix("c") || r.hasSuffix("ch")
+            || r.hasSuffix("k")   // coda k (Đắk, Lắk): same stop-coda rule as c
         return stop ? (1 << Tone.acute.rawValue) | (1 << Tone.dot.rawValue) : 0b0011_1111
     }
 

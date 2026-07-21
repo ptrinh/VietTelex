@@ -801,7 +801,15 @@ final class TerminalTapController {
             if !AXIsProcessTrusted() {
                 Signposts.log.fault("watchdog: Accessibility revoked with a live tap — forcing teardown")
                 self.trustMayHaveChanged()
+                return
             }
+            // Trusted but the tap silently died: the tapDisabledByTimeout event is
+            // NOT guaranteed to arrive (a callback blocked mid-post never sees it —
+            // same field data as gonhanh's watchdog). ensureRunning is a single
+            // tapIsEnabled read when healthy; re-enables or rebuilds when not.
+            // Without this a dead tap only healed on the next activateServer
+            // (app switch) — typing in the SAME app stayed broken up to that point.
+            self.ensureRunning()
         }
         t.tolerance = 1
         RunLoop.main.add(t, forMode: .common)

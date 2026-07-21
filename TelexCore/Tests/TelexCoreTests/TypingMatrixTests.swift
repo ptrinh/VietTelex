@@ -51,12 +51,13 @@ final class TypingMatrixTests: XCTestCase {
     }
 
     private func compose(_ keys: String, _ configure: (inout TelexEngine) -> Void = { _ in }) -> String {
-        var e = TelexEngine(); configure(&e)
+        var e = TelexEngine(); e.englishWordRestore = false; configure(&e)
         for ch in keys { _ = e.feed(ch) }
         return e.composed
     }
     private func commit(_ keys: String) -> String {
         var e = TelexEngine()
+        e.englishWordRestore = false   // matrix tests validator behavior, not English policy
         for ch in keys { _ = e.feed(ch) }
         return e.commitText(autoRestore: true)
     }

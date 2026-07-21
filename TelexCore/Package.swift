@@ -6,7 +6,8 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "TelexCore", targets: ["TelexCore"]),
-        .executable(name: "gen-lessons", targets: ["GenLessons"])
+        .executable(name: "gen-lessons", targets: ["GenLessons"]),
+        .executable(name: "gen-english", targets: ["GenEnglish"])
     ],
     targets: [
         .target(
@@ -17,6 +18,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "GenLessons",
+            dependencies: ["TelexCore"]
+        ),
+        .executableTarget(
+            name: "GenEnglish",
             dependencies: ["TelexCore"]
         ),
         .testTarget(

@@ -57,7 +57,8 @@
 	<key>com.macromates.TextMate</key>       <string>inPlace</string>
 	<key>net.whatsapp.WhatsApp</key>         <string>inPlace</string>
 	<key>com.viettelex.inputmethod.telex</key> <string>inPlace</string>
-	<!-- App native chuẩn NSTextView — chưa tự field-test biên, probe sẽ bắt nếu sai -->
+	<!-- Nguồn: app matrix của gonhanh.org (docs/system-architecture.md) — app
+	     native chuẩn NSTextView; chưa tự field-test biên, probe sẽ bắt nếu sai -->
 	<key>com.microsoft.Powerpoint</key>      <string>inPlace</string>
 	<key>com.apple.iWork.Pages</key>         <string>inPlace</string>
 	<key>com.apple.iWork.Numbers</key>       <string>inPlace</string>
@@ -83,7 +84,7 @@
 	<key>company.thebrowser.Browser</key>    <string>axDetect</string>
 	<key>org.mozilla.firefox</key>           <string>axDetect</string>
 
-	<!-- JetBrains IDEs — autocomplete popup nuốt backspace;
+	<!-- JetBrains IDEs — autocomplete popup nuốt backspace (nguồn: gonhanh.org);
 	     selection cần quyền Trợ năng, thiếu quyền tự rơi về marked -->
 	<key>com.jetbrains.intellij</key>        <string>selection</string>
 	<key>com.jetbrains.intellij.ce</key>     <string>selection</string>
@@ -112,5 +113,8 @@
 	<key>com.teamviewer.TeamViewer</key>     <string>passthrough</string>
 	<key>com.realvnc.vncviewer</key>         <string>passthrough</string>
 	<key>com.nulana.remotixmac</key>         <string>passthrough</string>
+	<key>com.carriez.rustdesk</key>          <string>passthrough</string>
+	<key>com.philandro.anydesk</key>         <string>passthrough</string>
+	<key>com.apple.ScreenContinuity</key>    <string>passthrough</string>
 </dict>
 </plist>

@@ -287,19 +287,21 @@ final class EngineGoldenTests: XCTestCase {
     // gesture means "I want the literal", so "iss"→is must NOT be restored to "iss".
     // Trade-off (accepted): English double-letter words like miss/class also keep the
     // composed (shorter) form rather than restoring the raw keystrokes.
-    func testCancelledMarkSkipsRestore() {
-        XCTAssertEqual(commit("iss"), "is")     // double-s cancel -> keep, not "iss"
-        XCTAssertEqual(commit("ass"), "as")
-        XCTAssertEqual(commit("aff"), "af")     // double huyền cancel
-        XCTAssertEqual(commit("asz"), "a")      // z clears the á tone -> cancel, skip restore
-        XCTAssertEqual(commit("aaa"), "aa")     // triple a -> aa (circumflex cancel)
+    func testCancelledMarkFollowsValidityRule() {
+        // Invalid composed after cancel → the raw keys come back verbatim
+        // (English doubles survive: off/class/pass — the gonhanh 10.4 class).
+        XCTAssertEqual(commit("iss"), "iss")
+        XCTAssertEqual(commit("ass"), "ass")
+        XCTAssertEqual(commit("aff"), "aff")
+        XCTAssertEqual(commit("asz"), "a")      // z-cancel leaves valid "a" -> keep composed
+        XCTAssertEqual(commit("aaa"), "aaa")    // what you typed is what you get
 
         // After a cancel the rest of the word stays literal (English): a further tone
         // key does NOT re-apply a diacritic. "messs"→mess, not "més".
         XCTAssertEqual(compose("messs"), "mess")
         XCTAssertEqual(compose("asss"), "ass")
         XCTAssertEqual(compose("bossss"), "bosss") // b,o + s(sắc) s(cancel) s s literal
-        XCTAssertEqual(commit("messs"), "mess")
+        XCTAssertEqual(commit("messs"), "messs")   // invalid after cancel → raw
 
         // Not a cancel: a mangled word (diacritic applied, no cancel) still restores
         // to the raw keystrokes. "school" -> "schôl" (oo→ô) -> restored to "school".
@@ -493,14 +495,18 @@ final class EngineGoldenTests: XCTestCase {
             XCTAssertEqual(off.commitText(autoRestore: false), display, "off keeps VN: \(keys)")
         }
 
-        // A composed form that happens to be a valid syllable is NOT restored, even
-        // when the raw was English — rule-based can't tell "test"→"tét" (bánh tét)
-        // apart. Documents the known limitation.
+        // "test"→tét is a VALID syllable the validator can't refuse — the
+        // English-collision table (EnglishCollisions.swift) now restores it.
         var t = TelexEngine()
         for ch in "test" { _ = t.feed(ch) }
         XCTAssertEqual(t.composed, "tét")
         XCTAssertTrue(SyllableValidator.isValidSyllable("tét"))
-        XCTAssertEqual(t.commitText(autoRestore: true), "tét")
+        XCTAssertEqual(t.commitText(autoRestore: true), "test")
+        // …unless the table is switched off (gen-english measurement mode).
+        var t2 = TelexEngine()
+        t2.englishWordRestore = false
+        for ch in "test" { _ = t2.feed(ch) }
+        XCTAssertEqual(t2.commitText(autoRestore: true), "tét")
     }
 
     // C1: a trailing d converts the onset d to đ.
