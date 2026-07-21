@@ -16,7 +16,9 @@ function load() {
     s.xp = old * 5; // migrate the v1 star counter
   }
   if (s.track === undefined) s.track = null;
-  if (!s.lang) s.lang = (navigator.language || 'vi').toLowerCase().indexOf('vi') === 0 ? 'vi' : 'en';
+  if (s.autoSpeak === undefined) s.autoSpeak = false;
+  if (!s.langChosen) { s.lang = 'vi'; }
+  if (!s.lang) s.lang = 'vi';
   return s;
 }
 function save() { localStorage.setItem('vtlearn', JSON.stringify(store)); }
@@ -34,6 +36,7 @@ var STR = {
   vi: {
     days: 'ngày', badges: '🏅', enterClass: '🎓 Vào lớp học', backHome: '← Trang chủ',
     map: '← Bản đồ', listen: '🔊 Nghe', dict: '🎧 Nghe rồi gõ', dictOn: '🎧 Đang nghe-gõ',
+    autoSpk: '🗣️ Tự đọc: Tắt', autoSpkOn: '🗣️ Tự đọc: Bật',
     retry: '↻ Làm lại', next: 'Bài tiếp theo →', close: 'Đóng',
     badgeTitle: '🏅 Bộ sưu tập huy hiệu',
     r3: 'Xuất sắc! 🎉', r2: 'Giỏi lắm! 👏', r1: 'Hoàn thành! ✅',
@@ -65,6 +68,7 @@ var STR = {
   en: {
     days: 'day streak', badges: '🏅', enterClass: '🎓 Start learning', backHome: '← Home',
     map: '← Map', listen: '🔊 Listen', dict: '🎧 Listen & type', dictOn: '🎧 Dictation on',
+    autoSpk: '🗣️ Auto-speak: Off', autoSpkOn: '🗣️ Auto-speak: On',
     retry: '↻ Retry', next: 'Next lesson →', close: 'Close',
     badgeTitle: '🏅 Badge collection',
     r3: 'Excellent! 🎉', r2: 'Great job! 👏', r1: 'Done! ✅',
@@ -106,7 +110,7 @@ var STATIC_I18N = [
   ['#hands h2', null, { en: 'Hand position — touch typing' }],
   ['#hands .lead', null, { en: 'Before the lessons, place your hands right: each finger owns a few keys and returns to the <b>home row</b>. This is the foundation for everything below.' }],
   ['#hoc h2', null, { en: 'The Telex classroom 🎓' }],
-  ['#hoc .lead', null, { en: '6 chapters, from meeting the keyboard to full paragraphs. Earn at least ⭐ on a lesson to unlock the next. On an iPad without a keyboard, tap the on-screen keys inside each lesson.' }]
+  ['#hoc .lead', null, { en: '6 chapters, from meeting the keyboard to full paragraphs. Earn at least ⭐ on a lesson to unlock the next. On a tablet without a keyboard, tap the on-screen keys inside each lesson.' }]
 ];
 var HANDS_EN = [
   ['1️⃣ Find the F and J bumps', 'Feel the keyboard: <b>F</b> and <b>J</b> have small ridges. Rest your index fingers there — no looking! The other fingers sit on <b>A S D</b> (left) and <b>K L ;</b> (right); thumbs hover over the space bar.'],
@@ -285,7 +289,7 @@ function renderBar() {
 }
 gb.sound.addEventListener('click', function () { store.sound = !store.sound; save(); renderBar(); });
 gb.lang.addEventListener('click', function () {
-  store.lang = store.lang === 'en' ? 'vi' : 'en'; save();
+  store.lang = store.lang === 'en' ? 'vi' : 'en'; store.langChosen = true; save();
   renderBar(); applyStaticLang();
   if (DATA) renderMap();
   if (cur) { document.getElementById('pTitle').textContent = lessonTitle(cur.lesson);
@@ -402,11 +406,17 @@ function openLesson(ci, li) {
   document.getElementById('pTitle').textContent = lessonTitle(lesson);
   document.getElementById('pIntro').textContent = lessonIntro(lesson);
   document.getElementById('pBack').textContent = T().map;
-  document.getElementById('speakBtn').textContent = T().listen;
+  var speakable = lesson.type !== 'drill';   // c0 drills are not Vietnamese sounds
+  var sb = document.getElementById('speakBtn');
+  sb.style.display = speakable ? '' : 'none';
+  sb.textContent = T().listen;
   var db = document.getElementById('dictBtn');
-  db.style.display = lesson.speak ? '' : 'none';
+  db.style.display = (speakable && lesson.speak) ? '' : 'none';
   db.classList.remove('on');
   db.textContent = T().dict;
+  var ab = document.getElementById('autoSpkBtn');
+  ab.style.display = speakable ? '' : 'none';
+  refreshAutoSpk();
   document.getElementById('resultBox').hidden = true;
   document.getElementById('playBox').hidden = false;
   kb = buildKeyboard(document.getElementById('kbArea'), handleKey);
@@ -473,7 +483,7 @@ function renderStep(speakNew) {
     fh.innerHTML = esc(fingerName(ch)) + ' ' + T().fingerTo + ' <b>' + esc(keyName) + '</b>' +
       (ch !== ch.toLowerCase() ? ' ' + T().holdShift : '');
   } else fh.textContent = '';
-  if (speakNew && cur.dictation && it) speak(it.d);
+  if (speakNew && it && (cur.dictation || (store.autoSpeak && cur.lesson.type !== 'drill'))) speak(it.d);
 }
 
 function handleKey(ch) {
@@ -553,7 +563,7 @@ function finishLesson() {
     return '<span class="newbadge">' + b.e + ' ' + esc(b.t) + '</span>';
   }).join('');
   sWin();
-  if (window.confettiBurst) window.confettiBurst();
+  confettiBurst();
   document.getElementById('pProg').style.width = '100%';
 }
 
@@ -574,6 +584,16 @@ document.getElementById('speakBtn').addEventListener('click', function () {
   if (!cur) return;
   var ok = cur.lesson.speak ? speak(cur.lesson.speak) : (curItem() ? speak(curItem().d) : false);
   if (!ok) toast(T().noVoice);
+});
+function refreshAutoSpk() {
+  var ab = document.getElementById('autoSpkBtn');
+  ab.textContent = store.autoSpeak ? T().autoSpkOn : T().autoSpk;
+  ab.classList.toggle('on', store.autoSpeak);
+}
+document.getElementById('autoSpkBtn').addEventListener('click', function () {
+  store.autoSpeak = !store.autoSpeak; save();
+  refreshAutoSpk();
+  if (store.autoSpeak && cur && curItem()) speak(curItem().d);
 });
 document.getElementById('dictBtn').addEventListener('click', function () {
   if (!cur) return;
@@ -607,6 +627,21 @@ fetch('lessons.json').then(function (r) { return r.json(); }).then(function (d) 
 
 // ── misc ────────────────────────────────────────────────────────────────────
 function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function confettiBurst() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var box = document.getElementById('confetti');
+  if (!box) return;
+  var colors = ['#c22727', '#d4a94a', '#1f9d63', '#2f6fd0', '#e07b39'];
+  for (var i = 0; i < 60; i++) {
+    var pc = document.createElement('i');
+    pc.style.left = Math.random() * 100 + 'vw';
+    pc.style.background = colors[i % colors.length];
+    pc.style.animationDelay = (Math.random() * 0.3) + 's';
+    pc.style.animationDuration = (1.5 + Math.random() * 0.9) + 's';
+    box.appendChild(pc);
+    (function (node) { setTimeout(function () { node.remove(); }, 2600); })(pc);
+  }
+}
 function toast(msg) {
   var t = document.createElement('div');
   t.textContent = msg;

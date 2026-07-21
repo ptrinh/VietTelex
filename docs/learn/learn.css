@@ -100,3 +100,4 @@
   .kb .key { font-size: .8rem; border-radius: 6px; }
   .node { min-width: calc(50% - 5px); }
 }
+.speakbtn.on { background: var(--green-soft); border-color: var(--green); color: var(--green); }

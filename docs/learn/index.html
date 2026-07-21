@@ -63,6 +63,9 @@
   .minibtn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #dfe4f0; border-radius: 9px; padding: 7px 14px; font-size: .85rem; font-weight: 600; cursor: pointer; font-family: var(--sans); }
   .minibtn:hover { border-color: var(--gold); color: #fff; }
   .kbd-note { margin-top: 14px; font-size: .8rem; color: #8b94ab; }
+  .field:focus .ph { display: none; }
+  .cta-btn { display: inline-block; background: var(--red); color: #fff; text-decoration: none; font-weight: 800; font-size: 1.15rem; padding: 16px 38px; border-radius: 999px; box-shadow: 0 10px 30px rgba(194,39,39,.3); transition: transform .12s, box-shadow .12s; }
+  .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(194,39,39,.4); }
 
   section { padding: 60px 22px; }
   .wrap { max-width: 980px; margin: 0 auto; }
@@ -70,14 +73,15 @@
   .lead { color: var(--ink-soft); max-width: 42em; margin-bottom: 30px; }
 
   /* Cheat sheet */
-  .cheat { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-  .chip { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; transition: transform .12s, box-shadow .12s, border-color .12s; }
-  .chip:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(23,35,61,.1); border-color: var(--gold); }
-  .chip .keys { font-family: var(--mono); font-weight: 700; color: var(--red); font-size: 1rem; }
-  .chip .arrow { color: var(--ink-soft); margin: 6px 0; font-size: .9rem; }
-  .chip .res { font-size: 1.9rem; font-weight: 800; color: var(--navy); line-height: 1.1; }
-  .chip .ex { font-size: .8rem; color: var(--ink-soft); margin-top: 6px; }
-  .cheat-group-title { grid-column: 1 / -1; font-weight: 700; color: var(--ink); margin-top: 8px; font-size: 1rem; }
+  .cheat { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .chip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; cursor: pointer; display: flex; align-items: baseline; justify-content: center; gap: 7px; transition: border-color .12s; }
+  .chip:hover { border-color: var(--gold); }
+  .chip .keys { font-family: var(--mono); font-weight: 700; color: var(--red); font-size: .95rem; }
+  .chip .arrow { color: var(--ink-soft); font-size: .8rem; }
+  .chip .res { font-size: 1.25rem; font-weight: 800; color: var(--navy); line-height: 1.1; }
+  .chip .ex { display: none; }
+  .chip[title] { position: relative; }
+  .cheat-group-title { grid-column: 1 / -1; font-weight: 700; color: var(--ink); margin-top: 10px; font-size: .92rem; }
   .cheat-group-title:first-child { margin-top: 0; }
 
   /* Lessons */
@@ -136,7 +140,6 @@
     .chip { transition: none; }
   }
 </style>
-<link rel="stylesheet" href="learn.css">
 </head>
 <body>
 
@@ -146,7 +149,7 @@
     <span>ViệtTelex<small>Tập gõ Telex</small></span>
   </a>
   <div class="right">
-    <a class="back" href="#hoc">🎓 Vào lớp học</a>
+    <a class="back" href="lessons/">🎓 Vào lớp học</a>
     <a class="back" href="../">← Trang chủ</a>
   </div>
 </div>
@@ -164,7 +167,7 @@
       <button class="minibtn" data-demo="Chaof buooir sasng ">Ví dụ: Chào buổi sáng</button>
       <button class="minibtn" id="sandboxClear">Xoá</button>
     </div>
-    <div class="kbd-note">💡 Ô thử này cần bàn phím thật. Bấm <b>dấu cách</b> để kết thúc một từ. Trong <a href="#hoc" style="color:#d4a94a">lớp học</a> bên dưới có bàn phím trên màn hình — dùng được cả iPad.</div>
+    <div class="kbd-note">💡 Ô thử này cần bàn phím thật. Bấm <b>dấu cách</b> để kết thúc một từ. Trong <a href="lessons/" style="color:#d4a94a">lớp học</a> có bàn phím trên màn hình — dùng được cả máy tính bảng.</div>
   </div>
 </header>
 
@@ -172,104 +175,23 @@
 <section>
   <div class="wrap">
     <h2>Bảng quy tắc Telex</h2>
-    <p class="lead">Bấm vào từng ô để xem nó gõ ra chữ gì trong ô thử ở trên. Chỉ cần nhớ mấy nhóm này là gõ được cả tiếng Việt.</p>
+    <p class="lead">Bấm một ô để xem nó chạy trong ô gõ thử ở trên. Nhớ được mấy nhóm này là gõ được cả tiếng Việt.</p>
     <div class="cheat" id="cheat"></div>
   </div>
 </section>
 
-<!-- Posture & hands guide -->
-<section id="hands" style="background:#f4f2ec;">
+<!-- CTA: the classroom lives at lessons/ -->
+<section class="cta-sec" id="hoc" style="background:#f4f2ec; text-align:center;">
   <div class="wrap">
-    <h2>Đặt tay đúng — mười ngón</h2>
-    <p class="lead">Trước khi học gõ, hãy đặt tay đúng: mỗi ngón phụ trách vài phím, gõ xong quay về <b>hàng phím chính</b>. Đây là kỹ năng nền cho mọi bài học bên dưới.</p>
-    <div class="hands-emoji" aria-hidden="true">🫲 ⌨️ 🫱</div>
-    <div class="hands-grid">
-      <div class="hands-note"><h3>1️⃣ Tìm gờ nổi F và J</h3><p>Sờ mặt bàn phím: phím <b>F</b> và <b>J</b> có gờ nổi nhỏ. Đặt hai ngón trỏ lên đó — không cần nhìn! Các ngón còn lại nằm lên <b>A S D</b> (tay trái) và <b>K L ;</b> (tay phải), hai ngón cái đặt hờ lên dấu cách.</p></div>
-      <div class="hands-note"><h3>2️⃣ Mỗi ngón một vùng</h3><p>Bàn phím trong bài học tô màu theo ngón: ngón nào gõ phím nấy rồi <b>quay về chỗ cũ</b>. Ban đầu chậm là bình thường — tay sẽ tự nhớ.</p></div>
-      <div class="hands-note"><h3>3️⃣ Mắt nhìn màn hình</h3><p>Cố gắng không nhìn xuống phím. Bài học luôn <b>tô sáng phím kế tiếp</b> và nhắc tên ngón tay, nên bạn không cần tìm phím bằng mắt.</p></div>
-      <div class="hands-note"><h3>4️⃣ Ngồi thẳng, cổ tay thả lỏng</h3><p>Lưng thẳng, khuỷu tay gập ~90°, cổ tay thẳng và không tì mạnh xuống bàn. Nghỉ 5 phút sau mỗi 20 phút luyện.</p></div>
-    </div>
-    <div class="kb-legend" style="margin-top:18px">
-      <span><i style="background:#fde8e8"></i> út trái</span><span><i style="background:#fdf3e0"></i> áp út trái</span>
-      <span><i style="background:#eaf7e6"></i> giữa trái</span><span><i style="background:#e6f2fb"></i> trỏ trái</span>
-      <span><i style="background:#e9e9fb"></i> trỏ phải</span><span><i style="background:#f3e6fb"></i> giữa phải</span>
-      <span><i style="background:#fbe6f3"></i> áp út phải</span><span><i style="background:#e6fbf7"></i> út phải</span>
-    </div>
+    <h2>Sẵn sàng học bài bản? 🎓</h2>
+    <p class="lead" style="margin:10px auto 26px;">Khóa học 6 chương: đặt tay mười ngón → chữ đặc biệt → thanh điệu → gõ cả câu.<br>
+    Có sao ⭐, huy hiệu 🏅, giọng đọc mẫu 🔊 — và bàn phím trên màn hình cho máy tính bảng.</p>
+    <a class="cta-btn" href="lessons/">🚀 Bắt đầu học ngay</a>
+    <p style="margin-top:14px;font-size:.85rem;color:var(--ink-soft)">Miễn phí, không cần tài khoản — tiến độ lưu ngay trên máy bạn.</p>
   </div>
 </section>
 
-<!-- Lesson map + player -->
-<section id="hoc">
-  <div class="wrap">
-    <h2>Lớp học gõ Telex 🎓</h2>
-    <p class="lead">6 chương từ làm quen bàn phím đến gõ đoạn văn. Đạt ít nhất ⭐ mỗi bài để mở bài kế tiếp. Trên iPad không có bàn phím rời? Bấm thẳng lên bàn phím trong bài học.</p>
-    <div class="gamebar">
-      <span class="pill fire" id="gbStreak">🔥 0 ngày</span>
-      <span class="pill xp" id="gbXp">⭐ 0 XP</span>
-      <button class="pill badges" id="gbBadges">🏅 0/8</button>
-      <button class="pill" id="gbSound" title="Âm thanh / Sound">🔊</button>
-      <button class="pill" id="gbLang" title="Ngôn ngữ / Language">🌐 VI</button>
-      <button class="pill" id="gbTrack" title="Lộ trình / Track">🐣</button>
-    </div>
-    <div id="map"></div>
 
-    <div class="lesson-wrap" id="player" hidden>
-      <div class="phead">
-        <button class="btn" id="pBack">← Bản đồ</button>
-        <h3 id="pTitle"></h3>
-      </div>
-      <div class="practice" id="playBox">
-        <div class="prog"><i id="pProg"></i></div>
-        <div class="prompt">
-          <div class="task" id="pIntro"></div>
-          <div class="sentence-line" id="sentenceLine"></div>
-          <div class="target" id="pTarget">—</div>
-          <div class="speakrow">
-            <button class="speakbtn" id="speakBtn">🔊 Nghe</button>
-            <button class="speakbtn" id="dictBtn" style="display:none">🎧 Nghe rồi gõ</button>
-          </div>
-        </div>
-        <div class="typedbox" id="typedLine"></div>
-        <div class="fingerhint" id="fingerHint"></div>
-        <div class="kb" id="kbArea"></div>
-        <div tabindex="0" id="focusTrap" style="outline:none;height:0;overflow:hidden"></div>
-      </div>
-      <div class="result" id="resultBox" hidden>
-        <div class="bigstars" id="rStars"></div>
-        <h3 id="rTitle"></h3>
-        <div class="metrics" id="rMetrics"></div>
-        <div class="gained" id="rGained"></div>
-        <div id="rBadges"></div>
-        <div class="lesson-tools">
-          <button class="btn" id="rRetry">↻ Làm lại</button>
-          <button class="btn primary" id="rNext">Bài tiếp theo →</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="modal" id="trackModal" hidden>
-  <div class="card">
-    <h3 id="trackTitle">Bạn bắt đầu từ đâu?</h3>
-    <button class="node" id="trackNew" style="width:100%;margin-bottom:10px;padding:16px">
-      <span class="t" id="trackNewT"></span>
-      <small id="trackNewD" style="color:var(--ink-soft)"></small>
-    </button>
-    <button class="node" id="trackTypist" style="width:100%;padding:16px">
-      <span class="t" id="trackTypistT"></span>
-      <small id="trackTypistD" style="color:var(--ink-soft)"></small>
-    </button>
-  </div>
-</div>
-
-<div class="modal" id="badgeModal" hidden>
-  <div class="card">
-    <h3 id="badgeTitle">🏅 Bộ sưu tập huy hiệu</h3>
-    <div id="badgeList"></div>
-    <div class="lesson-tools"><button class="btn primary" id="badgeClose">Đóng</button></div>
-  </div>
-</div>
 
 <!-- Quick why -->
 <section>
@@ -293,7 +215,6 @@
 <div class="confetti" id="confetti" aria-hidden="true"></div>
 
 <script src="telex.js"></script>
-<script src="learn.js" defer></script>
 <script>
 (function () {
   'use strict';
@@ -410,8 +331,9 @@
       cheatEl.appendChild(g); return;
     }
     var chip = document.createElement('div'); chip.className = 'chip'; chip.setAttribute('role', 'button'); chip.tabIndex = 0;
-    chip.innerHTML = '<div class="keys">' + escapeHtml(c.keys) + '</div><div class="arrow">↓</div>' +
-      '<div class="res">' + escapeHtml(c.res) + '</div><div class="ex">' + escapeHtml(c.ex) + '</div>';
+    chip.title = c.ex;
+    chip.innerHTML = '<span class="keys">' + escapeHtml(c.keys) + '</span><span class="arrow">→</span>' +
+      '<span class="res">' + escapeHtml(c.res) + '</span>';
     function play() {
       sandbox.reset(); sandbox.el.focus(); sandbox.feedString(c.demo);
       sandbox.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
