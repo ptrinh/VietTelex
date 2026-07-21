@@ -39,6 +39,7 @@ final class TelexInputController: IMKInputController {
     private var onLen = 0         // UTF-16 length of the composition on screen
     private var tracking = false  // is anchor/onLen valid for the current word?
     private var selToClear = 0    // selection length to overwrite on the first insert
+    private var anchorVerified = false  // one-shot re-anchor done for this word?
 
     // Consecutive failed in-place read-back probes per bundleID. A single failure is
     // usually the app being busy during the probe, not a real incompatibility, so we
@@ -343,6 +344,7 @@ final class TelexInputController: IMKInputController {
                 // first key, not inserted-before. Remember its length and fold it
                 // into the first insert's replacementRange below.
                 anchor = sel.location; onLen = 0; tracking = true
+                anchorVerified = false
                 selToClear = sel.length
             } else {
                 tracking = false; selToClear = 0
@@ -392,6 +394,24 @@ final class TelexInputController: IMKInputController {
         // `onLen += insert.length - bs` stays correct after the removal.
         var clear = 0
         if tracking {
+            // One-shot RE-ANCHOR at the word's first replace. Right after a newline
+            // (Discord/Slate-class editors) the word-start selectedRange read is
+            // STALE — it still reports the pre-newline caret, so the anchor is short
+            // and the first tone edit writes into the wrong spot ("thử" typed on a
+            // fresh line came out "thuử"). By the first replace the editor has
+            // settled, so re-read once; trust the fresh caret ONLY when it is
+            // FURTHER RIGHT than expected — a smaller read is the old fast-typing
+            // staleness ("được"→"đựoc") that the once-per-word anchor exists to
+            // ignore.
+            if !anchorVerified {
+                anchorVerified = true
+                let fresh = client.selectedRange()
+                let expected = anchor + onLen
+                if fresh.location != NSNotFound, fresh.location > expected {
+                    DebugLog.log("re-anchor \(id ?? "?"): stale word-start caret, +\(fresh.location - expected)")
+                    anchor += fresh.location - expected
+                }
+            }
             start = anchor + onLen - bs
             clear = selToClear
             selToClear = 0
