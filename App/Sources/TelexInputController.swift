@@ -53,6 +53,23 @@ final class TelexInputController: IMKInputController {
     // only, like probeFailures.
     private var probeHonors: [String: InPlaceProbe.HonorTracker] = [:]
 
+    // Per-SESSION field probation for per-field apps WITHOUT Accessibility (browsers
+    // on the sandboxed/no-AX install). Each input context (address bar vs page
+    // content) gets its own verdict: start .probing on activateServer, verify with
+    // the permission-free caret/read-back probe, and flip to .marked ONLY for this
+    // session when in-place provably fails (autocomplete-racing address bar). Nothing
+    // here is ever persisted — the app's learned classification is untouched.
+    private enum SessionFieldMode { case off, probing, confirmed, marked }
+    private var sessionField: SessionFieldMode = .off
+    private var sessionHonors = InPlaceProbe.HonorTracker()
+    private var sessionFailures = 0
+
+    /// Marked-text decision for this keystroke: the app-level classification OR the
+    /// current field session's verdict.
+    private func usesMarked(_ id: String?) -> Bool {
+        AppState.shared.usesMarkedText(id) || sessionField == .marked
+    }
+
     // Last per-key routing decision logged (deduped): the strategy chosen in handle()
     // is logged only when it changes, so the debug log shows one line per app/mode
     // transition instead of one per keystroke.
@@ -203,9 +220,9 @@ final class TelexInputController: IMKInputController {
             return false
         }
         logDecision("handle \(id ?? "?")/front=\(frontID ?? "?"): "
-            + "\(AppState.shared.usesMarkedText(id) ? "marked" : "in-place") "
+            + "\(usesMarked(id) ? "marked" : "in-place") "
             + "needsProbe=\(AppState.shared.needsProbe(id))")
-        spMode = AppState.shared.usesMarkedText(id) ? "marked"
+        spMode = usesMarked(id) ? "marked"
                : (tracking || engine.isEmpty ? "in-place" : "in-place-per-op")
 
         // Reflect the current "bỏ dấu tự do" setting before any engine op (feed,
@@ -219,7 +236,7 @@ final class TelexInputController: IMKInputController {
         case kDelete:
             if engine.isEmpty { return false }   // not composing -> normal delete
             let action = engine.backspace()
-            if AppState.shared.usesMarkedText(id) { updateMarked(client); return true }
+            if usesMarked(id) { updateMarked(client); return true }
             if tracking {
                 // Rewrite the whole composition via insertText (ordered, non-empty);
                 // also handles tone re-placement on delete ("toán"->"tóa").
@@ -281,7 +298,7 @@ final class TelexInputController: IMKInputController {
         }
 
         let action = engine.feed(ch)
-        if AppState.shared.usesMarkedText(id) { updateMarked(client); return true }
+        if usesMarked(id) { updateMarked(client); return true }
         switch action {
         case .passthrough:
             // Insert the letter ourselves (do NOT return false to let the system
@@ -332,13 +349,13 @@ final class TelexInputController: IMKInputController {
                 // The key is consumed with NOTHING inserted — if an app lands here on
                 // every keystroke, typing shows nothing at all. Log it loudly.
                 DebugLog.log("in-place ABORT \(id ?? "?"): selectedRange=\(sel.location == NSNotFound ? "NotFound" : String(sel.location)) bs=\(bs) → marked next word, key swallowed")
-                AppState.shared.markUsesMarkedText(id); engine.reset(); return
+                inPlaceFailedHard(id); return
             }
             start = sel.location - bs
         }
         guard start >= 0 else {
             DebugLog.log("in-place ABORT \(id ?? "?"): start=\(start) < 0, key swallowed")
-            AppState.shared.markUsesMarkedText(id); engine.reset(); return
+            inPlaceFailedHard(id); return
         }
         client.insertText(insert, replacementRange: NSRange(location: start, length: bs + clear))
         onLen += (insert as NSString).length - bs
@@ -348,6 +365,18 @@ final class TelexInputController: IMKInputController {
         // replacementRange, so it must never CONFIRM "in-place good" — that premature
         // confirm on a plain insert was the false-positive that locked iTerm2/WhatsApp
         // onto the broken in-place path. Only a replace distinguishes the two.
+        // During a field-session probation the PERSISTED probe must stay silent —
+        // an address-bar failure would otherwise condemn the whole browser. The
+        // session probe uses the same replace-only gating but applies its verdict
+        // to sessionField exclusively.
+        if sessionField == .probing || sessionField == .confirmed {
+            if sessionField == .probing,
+               InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
+                                        bs: bs, clear: clear, needsProbe: true) {
+                probeInPlace(inserted: insert, start: start, bs: bs, client, kind: .session)
+            }
+            return
+        }
         let realProbe = InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
                                                  bs: bs, clear: clear,
                                                  needsProbe: AppState.shared.needsProbe(id))
@@ -360,8 +389,22 @@ final class TelexInputController: IMKInputController {
             && InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
                                         bs: bs, clear: clear, needsProbe: true)
         if realProbe || shadowProbe {
-            probeInPlace(inserted: insert, start: start, bs: bs, client, shadow: shadowProbe)
+            probeInPlace(inserted: insert, start: start, bs: bs, client, kind: shadowProbe ? .shadow : .real)
         }
+    }
+
+    /// In-place aborted before inserting anything (bogus selectedRange). Inside a
+    /// field session the verdict is session-scoped; otherwise it condemns the app
+    /// (persisted), as before.
+    private func inPlaceFailedHard(_ id: String?) {
+        if sessionField != .off {
+            sessionField = .marked
+            logDecision("session-field \(id ?? "?"): hard in-place failure → marked for this session")
+        } else {
+            AppState.shared.markUsesMarkedText(id)
+        }
+        engine.reset()
+        tracking = false
     }
 
     /// After a real in-place REPLACE into an unknown app, verify the old characters
@@ -382,8 +425,14 @@ final class TelexInputController: IMKInputController {
     /// beat later sees the settled tree.
     private static let axProbeQueue = DispatchQueue(label: "com.viettelex.ax-probe", qos: .userInitiated)
 
+    /// How a probe's verdict is applied: `.real` classifies the app (persisted),
+    /// `.shadow` only logs (debugLogging experiment), `.session` classifies just the
+    /// current field session (per-field browsers without Accessibility).
+    private enum ProbeKind { case real, shadow, session }
+
     private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput,
-                              shadow: Bool = false) {
+                              kind: ProbeKind) {
+        let shadow = kind == .shadow
         let len = (inserted as NSString).length
         // Primary signal: the post-edit caret (hard for an app to fake — it needs it
         // to place its candidate window). Fallback: the target-region read-back, used
@@ -423,10 +472,38 @@ final class TelexInputController: IMKInputController {
             }
         }
 
+        // Session probe: verdict scoped to the CURRENT field session only.
+        if kind == .session {
+            applySessionVerdict(verdict, id: id, expReplace: start + (inserted as NSString).length)
+            return
+        }
         // A shadow probe is data-gathering only: log + arm the re-read, never touch
         // the classification or the engine.
         if shadow { return }
         applyPreliminaryVerdict(verdict, id: id, expReplace: start + len)
+    }
+
+    /// Same two-distinct-offsets / two-strikes discipline as the app-level probe,
+    /// applied to `sessionField` only — an address bar failing in-place flips THIS
+    /// session to marked text; the app's persisted classification never moves.
+    private func applySessionVerdict(_ verdict: InPlaceProbe.Verdict, id: String?, expReplace: Int) {
+        switch verdict {
+        case .honored:
+            sessionFailures = 0
+            if sessionHonors.recordHonored(expReplace: expReplace) {
+                sessionField = .confirmed
+                logDecision("session-field \(id ?? "?"): in-place confirmed for this session")
+            }
+        case .appended:
+            sessionHonors = InPlaceProbe.HonorTracker()
+            sessionFailures += 1
+            if sessionFailures >= 2 {
+                sessionField = .marked
+                logDecision("session-field \(id ?? "?"): appended ×2 → marked for this session")
+                engine.reset()
+                tracking = false
+            }
+        }
     }
 
     /// Classification from the SELF-REPORTED signals (caret / read-back) — the part
@@ -549,7 +626,7 @@ final class TelexInputController: IMKInputController {
     /// In-place text is already on screen (we insert every key), so a reset suffices;
     /// marked text isn't real yet, so finalize it to the composed word first.
     private func endComposition(_ client: IMKTextInput) {
-        if !engine.isEmpty, AppState.shared.usesMarkedText(AppState.shared.currentBundleID) {
+        if !engine.isEmpty, usesMarked(AppState.shared.currentBundleID) {
             client.insertText(engine.composed, replacementRange: kNoRange)
             client.setMarkedText("", selectionRange: kNoRange, replacementRange: kNoRange)
         }
@@ -573,7 +650,7 @@ final class TelexInputController: IMKInputController {
     private func boundary(_ client: IMKTextInput, suppressAutoRestore: Bool = false) {
         defer { tracking = false; onLen = 0 }
         guard !engine.isEmpty else { engine.reset(); return }
-        let marked = AppState.shared.usesMarkedText(AppState.shared.currentBundleID)
+        let marked = usesMarked(AppState.shared.currentBundleID)
         let word = engine.composed
         // Raw keystrokes must be read BEFORE engine.reset() clears them. A shortcut key
         // that contains Telex triggers (s f r x j w, doubled vowels) never survives
@@ -618,6 +695,18 @@ final class TelexInputController: IMKInputController {
             // report what NSWorkspace says — a mismatch mis-routes every mode lookup.)
             DebugLog.log("activateServer client=\(AppState.shared.currentBundleID ?? "nil") front=\(FrontmostApp.shared.bundleID ?? "?")")
             maybePromptAccessibility(AppState.shared.currentBundleID)
+            // Per-SESSION field probation (per-field browsers without Accessibility):
+            // every activateServer = a (possibly) different field — address bar vs
+            // page content are separate input contexts — so each session re-proves
+            // itself. See sessionField.
+            if AppState.shared.usesSessionFieldProbe(AppState.shared.currentBundleID) {
+                sessionField = .probing
+                sessionHonors = InPlaceProbe.HonorTracker()
+                sessionFailures = 0
+                logDecision("session-field probation ON for \(AppState.shared.currentBundleID ?? "?")")
+            } else {
+                sessionField = .off
+            }
         }
         // VietTelex is the active input source now: let the terminal tap act (it must
         // stay dormant when the user switches to ABC/US). ensureRunning() also revives
@@ -653,6 +742,7 @@ final class TelexInputController: IMKInputController {
     override func deactivateServer(_ sender: Any!) {
         engine.reset()
         tracking = false
+        sessionField = .off   // the field session ends with its input context
         if let obs = resetObserver { NotificationCenter.default.removeObserver(obs); resetObserver = nil }
         // Input source switched away from VietTelex (or focus lost): the tap must not
         // transform keys, so the user really types English in terminals. BUT with

@@ -190,8 +190,19 @@ final class SettingsModel: ObservableObject {
         case .passthrough: base = loc("Passthrough")
         case .auto, nil: return loc("not detected yet")
         }
+        // Without the permission, show the mode ACTUALLY in effect right now (what
+        // the routing degrades to), with the reason — "Marked text — thiếu quyền",
+        // not the aspirational "Tap (backspace) — thiếu quyền".
         if needsAX && !Accessibility.isTrusted {
-            return String(format: loc("%@ — needs Accessibility"), base)
+            let actual: String
+            switch mode {
+            case .tap: actual = loc("Marked text")                       // fallback apps degrade to marked
+            case .selection: actual = loc("Passthrough")                 // Spotlight: deliberate raw passthrough
+            case .emptyReset: actual = loc("In-place")                   // Excel: plain probe path
+            case .axDetect: actual = loc("Per-field (session probe)")    // browsers: session probation
+            default: actual = base
+            }
+            return String(format: loc("%@ — needs Accessibility"), actual)
         }
         return base
     }

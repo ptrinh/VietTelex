@@ -360,11 +360,12 @@ final class AppState: @unchecked Sendable {
                 case .marked: return true
                 // Tap-family override without Accessibility: marked text is the safe
                 // degradation (in-place would silently drop diacritics on an app the
-                // user explicitly said is broken). axDetect is only PARTLY tap-family —
-                // its in-place half works fine without AX, but without AX the field
-                // walk can't run either, so the safe blanket is marked text too.
-                case .tap, .selection, .emptyReset, .axDetect: return !trusted
-                case .inPlace, .auto, .passthrough: return false
+                // user explicitly said is broken).
+                case .tap, .selection, .emptyReset: return !trusted
+                // axDetect without AX is NOT blanket-marked: the controller runs a
+                // per-SESSION probe instead (usesSessionFieldProbe) — in-place where
+                // it verifies, marked only for the field sessions that fail.
+                case .inPlace, .auto, .passthrough, .axDetect: return false
                 }
             }
             return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
@@ -447,6 +448,22 @@ final class AppState: @unchecked Sendable {
     /// Apps with a built-in special strategy (per-field browsers + Excel), for the
     /// Settings mode table — it lists the installed ones so their default is visible.
     static var builtInSpecialApps: Set<String> { selectionApps.union(emptyResetApps) }
+
+    /// Per-SESSION field probation: a per-field app WITHOUT Accessibility. The AX
+    /// field walk can't run, but every focus change between an address bar and page
+    /// content is still visible (each is its own input context → activateServer), so
+    /// the controller probes EACH session with the permission-free caret/read-back
+    /// signals: in-place where a session verifies, marked text only for the sessions
+    /// (address bar) that fail — never condemning the whole app. This is also what
+    /// the sandboxed MAS build gets for browsers.
+    func usesSessionFieldProbe(_ bundleID: String?) -> Bool {
+        guard let id = bundleID else { return false }
+        guard !Accessibility.isTrusted else { return false }   // AX walk handles it
+        return lock.withLock {
+            if let m = _manualMode(id) { return m == .axDetect }
+            return Self.isPerFieldByDefault(id)
+        }
+    }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).
     func usesEmptyReset(_ bundleID: String?) -> Bool {
