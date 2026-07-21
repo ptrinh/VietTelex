@@ -861,12 +861,24 @@ final class TerminalTapController {
             self.tapRunLoop = nil
             return t
         }
-        if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+        if let tap {
+            // Best effort — this CGS call FAILS once Accessibility is revoked…
+            CGEvent.tapEnable(tap: tap, enable: false)
+            // …so the AUTHORITATIVE removal is invalidating the mach port: the window
+            // server unhooks a dead port exactly as if the process had exited, and it
+            // needs no permission. Without this line, a revoked process that then
+            // stops its tap thread leaves an ENABLED tap nobody services — every
+            // keyDown/leftMouseDown/rightMouseDown in the session queues into the
+            // void: keyboard dead, clicks dead, mouse still moves (not in the mask),
+            // reboot territory. This was the v1.3.0(6) hang: the revoke handler tore
+            // the thread down but could no longer disable the tap it orphaned.
+            CFMachPortInvalidate(tap)
+        }
         if let runLoop {
             if let source { CFRunLoopRemoveSource(runLoop, source, .commonModes) }
-            CFRunLoopStop(runLoop)   // CFRunLoopRun returns → the dedicated thread exits
+            CFRunLoopStop(runLoop)   // ONLY after the port is invalid — never orphan a live tap
         }
-        DebugLog.log("tap torn down (dead port / recreate)")
+        DebugLog.log("tap torn down (port invalidated)")
     }
 
     /// Layer 3 — hard stop when the cascade breaker trips. Disable the tap (keys pass
