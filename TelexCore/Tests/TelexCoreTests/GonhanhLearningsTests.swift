@@ -57,4 +57,83 @@ final class EnglishCollisionTests: XCTestCase {
         XCTAssertEqual(commit("Lawks"), "Lắk")
         XCTAssertEqual(commit("Kroong"), "Krông")
     }
+
+    // Coda k follows the stop-coda tone rule (sắc/nặng only, like c):
+    // toneless or huyền forms are invalid and restore to raw.
+    func testCodaKToneRule() {
+        XCTAssertEqual(commit("DDawk"), "DDawk")    // toneless ăk → invalid
+        XCTAssertEqual(commit("lawkf"), "lawkf")    // huyền on stop coda → invalid
+        XCTAssertEqual(commit("lawkj"), "lặk")      // nặng allowed
+    }
+
+    // MARK: - Collision-table mechanics (item 4)
+
+    func testCollisionRestoreIsCaseInsensitive() {
+        XCTAssertEqual(commit("His"), "His")
+        XCTAssertEqual(commit("THIS"), "THIS")
+        XCTAssertEqual(commit("Off"), "Off")
+        XCTAssertEqual(commit("OFF"), "OFF")        // dict beats the all-caps cancel escape
+    }
+
+    func testCollisionTableCanBeDisabled() {
+        var e = TelexEngine()
+        e.freeMarking = true
+        e.englishWordRestore = false
+        for ch in "his" { _ = e.feed(ch) }
+        XCTAssertEqual(e.commitText(autoRestore: true), "hí")   // validator-only behavior
+    }
+
+    func testCollisionSkipsUntransformedWords() {
+        // words the engine never touched can't be "restored" (and must not be):
+        // no transform → composed == raw → commit is a no-op either way
+        for w in ["me", "do", "go", "no", "to", "and", "the"] {
+            XCTAssertEqual(commit(w), w)
+        }
+    }
+
+    // Regression net for future `gen-english` runs: the generated table must
+    // keep the pain words, and must NEVER contain a protected/junk raw.
+    func testGeneratedTableSanity() {
+        // NOTE: off/class/pass are NOT here — the cancel contract restores them
+        // structurally, so gen-english correctly leaves them out of the table.
+        for expected in ["his", "this", "see", "test", "of", "if", "is"] {
+            XCTAssertTrue(EnglishCollisions.words.contains(expected), "table lost '\(expected)'")
+        }
+        // protected: Vietnamese wins these raw sequences (sẽ=sex, ơn=own…)
+        for banned in ["sex", "teen", "been", "own", "car", "too", "its", "as",
+                       "low", "now", "how", "room", "box", "air", "bar", "beer",
+                       "bus", "lee", "max", "moon", "seen", "sir", "six", "tax", "ups"] {
+            XCTAssertFalse(EnglishCollisions.words.contains(banned), "protected '\(banned)' leaked into the table")
+        }
+        // web-corpus junk that would eat Vietnamese typing (sw = sư)
+        for junk in ["sw", "nw", "aa", "ee", "usr", "var", "www"] {
+            XCTAssertFalse(EnglishCollisions.words.contains(junk), "junk '\(junk)' leaked into the table")
+        }
+        // minimal means minimal: a few hundred words, not a dictionary
+        XCTAssertLessThan(EnglishCollisions.words.count, 400)
+        XCTAssertGreaterThan(EnglishCollisions.words.count, 80)
+    }
+
+    // MARK: - Cancel contract (item 5)
+
+    func testCancelContractMatrix() {
+        // valid Vietnamese after cancel → composed survives
+        XCTAssertEqual(commit("asz"), "a")
+        // all-caps acronym escape → composed survives (literal DD reachable)
+        XCTAssertEqual(commit("DDDR"), "DDR")
+        // invalid + not in dict → exact raw keys come back
+        XCTAssertEqual(commit("iss"), "iss")
+        XCTAssertEqual(commit("banhss"), "banhss")   // bánh + s-cancel → invalid → raw
+        // invalid + in dict → raw keys too (same visible result, dict path)
+        XCTAssertEqual(commit("boss"), "boss")
+    }
+
+    // MARK: - Remote-desktop passthrough ids (item 3)
+
+    func testNewPassthroughBundleIDs() {
+        for id in ["com.carriez.rustdesk", "com.philandro.anydesk", "com.apple.ScreenContinuity"] {
+            XCTAssertTrue(ClientPolicy.isRemoteDesktop(id), "\(id) must be passthrough")
+        }
+        XCTAssertFalse(ClientPolicy.isRemoteDesktop("com.apple.Terminal"))
+    }
 }
