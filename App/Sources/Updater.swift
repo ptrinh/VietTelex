@@ -13,13 +13,19 @@ enum UpdateCheck {
     /// default OFF, so the no-network stance still holds: the toggle is the ask).
     /// Event-driven (called from activateServer, throttled by timestamp — no
     /// timers), and each new version is announced at most once.
+    ///
+    /// It follows the STABLE channel, not the newest GitHub release: users are only
+    /// nudged toward versions the maintainer explicitly promoted by bumping
+    /// docs/stable.json on the website (deployed by GitHub Pages). The manual
+    /// About-tab button still checks releases/latest — that's the "I want it now"
+    /// path.
     static func maybeAutoCheck() {
         guard AppState.shared.autoUpdateCheck else { return }
         let now = Date().timeIntervalSince1970
         guard now - AppState.shared.lastAutoUpdateCheckAt > 7 * 24 * 3600 else { return }
         AppState.shared.lastAutoUpdateCheckAt = now
         Task {
-            guard case let .update(latest, url) = await check() else { return }
+            guard case let .update(latest, url) = await checkStable() else { return }
             await MainActor.run {
                 guard AppState.shared.lastNotifiedUpdateVersion != latest else { return }
                 AppState.shared.lastNotifiedUpdateVersion = latest
@@ -52,7 +58,34 @@ enum UpdateCheck {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
     }
 
-    /// Network happens ONLY here. Called from the About tab's button.
+    /// The STABLE channel: a tiny manifest the maintainer bumps BY HAND
+    /// (docs/stable.json → GitHub Pages). Newest release ≠ stable — a fresh
+    /// release soaks first; promoting it to every opted-in user is the explicit
+    /// one-line edit of this file.
+    static func checkStable() async -> Outcome {
+        let current = currentVersion()
+        guard let api = URL(string: "https://ptrinh.github.io/viettelex/stable.json") else {
+            return .failed("URL")
+        }
+        var req = URLRequest(url: api, timeoutInterval: 12)
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+            guard code == 200 else { return .failed("HTTP \(code)") }
+            guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let stable = obj["version"] as? String else { return .failed("dữ liệu lạ") }
+            let pageURL = (obj["url"] as? String).flatMap(URL.init(string:))
+                ?? URL(string: "https://github.com/\(repo)/releases/latest")!
+            return isNewer(stable, than: current) ? .update(latest: stable, url: pageURL)
+                                                  : .upToDate(current)
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+    }
+
+    /// Network happens ONLY here (and checkStable above). Called from the About
+    /// tab's button — the manual path checks the NEWEST release, stable or not.
     static func check() async -> Outcome {
         let current = currentVersion()
         guard let api = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else {
