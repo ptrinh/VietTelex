@@ -188,19 +188,18 @@ final class SettingsModel: ObservableObject {
         case .emptyReset: base = loc("Empty-reset"); needsAX = true
         case .axDetect: base = loc("Per-field (AX)"); needsAX = true
         case .passthrough: base = loc("Passthrough")
-        case .auto, nil: return loc("not detected yet")
+        case .auto, nil:
+            // Not classified: with the permission Auto will probe on first typing;
+            // without it the blunt policy runs marked text (no probing).
+            return Accessibility.isTrusted ? loc("not detected yet") : loc("Marked text")
         }
         // Without the permission, show the mode ACTUALLY in effect right now (what
         // the routing degrades to) — "Marked text", not the aspirational
         // "Tap (backspace)". The ⚠️ badge (autoMissingPermission) carries the reason.
+        // Untrusted policy is blunt by decision: everything not positively known
+        // in-place-good runs marked text (Spotlight alone is raw passthrough).
         if needsAX && !Accessibility.isTrusted {
-            switch mode {
-            case .tap: return loc("Marked text")                    // fallback apps degrade to marked
-            case .selection: return loc("Passthrough")              // Spotlight: deliberate raw passthrough
-            case .emptyReset: return loc("In-place")                // Excel: plain probe path
-            case .axDetect: return loc("Per-field (session probe)") // browsers: session probation
-            default: return base
-            }
+            return mode == .selection ? loc("Passthrough") : loc("Marked text")
         }
         return base
     }
@@ -212,6 +211,7 @@ final class SettingsModel: ObservableObject {
         let mode = id == Self.spotlightRowID ? .selection : AppState.shared.autoResolvedMode(id)
         switch mode {
         case .tap, .selection, .emptyReset, .axDetect: return true
+        case .auto, nil: return true   // would probe if trusted; runs marked instead
         default: return false
         }
     }

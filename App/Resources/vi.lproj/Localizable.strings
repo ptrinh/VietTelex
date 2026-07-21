@@ -118,7 +118,6 @@
 "Per-field (AX)" = "Tự dò theo ô (AX)";
 "Passthrough" = "Passthrough (tắt IME)";
 "not detected yet" = "chưa dò";
-"Per-field (session probe)" = "Tự dò theo ô (dò từng phiên)";
 "Missing Accessibility permission" = "Thiếu quyền Trợ năng";
 "Add recent app" = "Thêm app mở gần đây";
 "…or a bundle id" = "…hoặc bundle id";

@@ -351,6 +351,13 @@ final class AppState: @unchecked Sendable {
     }
 
     /// This client ignores in-place replacementRange (e.g. Terminal) -> use marked text.
+    ///
+    /// WITHOUT Accessibility the policy is deliberately blunt (decision 2026-07-21,
+    /// after field-testing subtler schemes): in-place ONLY for apps positively known
+    /// good (probed while trusted, built-in verified list, or a manual In-place pin);
+    /// EVERYTHING else — including never-probed apps — is marked text, and no probing
+    /// happens (needsProbe is false untrusted). Marked always renders correctly;
+    /// "đơn giản, an toàn" beats clever-but-glitchy here.
     func usesMarkedText(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
         let trusted = Accessibility.isTrusted   // own lock — read BEFORE ours, never nested
@@ -361,15 +368,16 @@ final class AppState: @unchecked Sendable {
                 // Tap-family override without Accessibility: marked text is the safe
                 // degradation (in-place would silently drop diacritics on an app the
                 // user explicitly said is broken).
-                case .tap, .selection, .emptyReset: return !trusted
-                // axDetect without AX is NOT blanket-marked: the controller runs a
-                // per-SESSION probe instead (usesSessionFieldProbe) — in-place where
-                // it verifies, marked only for the field sessions that fail.
-                case .inPlace, .auto, .passthrough, .axDetect: return false
+                case .tap, .selection, .emptyReset, .axDetect: return !trusted
+                case .inPlace, .auto, .passthrough: return false
                 }
             }
-            return fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
-                || Self.markedTextApps.contains(id)
+            if fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id)
+                || Self.markedTextApps.contains(id) { return true }
+            if trusted { return false }
+            // Untrusted default: marked, unless positively known in-place-good.
+            // (Remote-desktop passthrough is resolved in the controller BEFORE this.)
+            return !(probedAppsCache.contains(id) || Self.builtInInPlaceApps.contains(id))
         }
     }
 
@@ -449,21 +457,6 @@ final class AppState: @unchecked Sendable {
     /// Settings mode table — it lists the installed ones so their default is visible.
     static var builtInSpecialApps: Set<String> { selectionApps.union(emptyResetApps) }
 
-    /// Per-SESSION field probation: a per-field app WITHOUT Accessibility. The AX
-    /// field walk can't run, but every focus change between an address bar and page
-    /// content is still visible (each is its own input context → activateServer), so
-    /// the controller probes EACH session with the permission-free caret/read-back
-    /// signals: in-place where a session verifies, marked text only for the sessions
-    /// (address bar) that fail — never condemning the whole app. This is also what
-    /// the sandboxed MAS build gets for browsers.
-    func usesSessionFieldProbe(_ bundleID: String?) -> Bool {
-        guard let id = bundleID else { return false }
-        guard !Accessibility.isTrusted else { return false }   // AX walk handles it
-        return lock.withLock {
-            if let m = _manualMode(id) { return m == .axDetect }
-            return Self.isPerFieldByDefault(id)
-        }
-    }
 
     /// Office-style empty-character reset before a Backspace-retype (Developer ID only).
     func usesEmptyReset(_ bundleID: String?) -> Bool {
@@ -500,6 +493,10 @@ final class AppState: @unchecked Sendable {
     /// fallback app — it's known-broken in-place and would false-positive the probe.
     func needsProbe(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
+        // No probing while untrusted: the untrusted default is marked text (which
+        // needs no verification), and a probe would require the in-place trial we
+        // just decided not to risk.
+        guard Accessibility.isTrusted else { return false }
         return lock.withLock {
             if _manualMode(id) != nil { return false }   // user pinned it; never probe
             return !fallbackAppsCache.contains(id) && !probedAppsCache.contains(id)
