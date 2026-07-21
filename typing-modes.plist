@@ -43,6 +43,10 @@
 	<key>com.hnc.Discord</key>               <string>tap</string>
 	<key>com.microsoft.VSCode</key>          <string>tap</string>
 	<key>com.anthropic.claudefordesktop</key> <string>tap</string>
+	<key>notion.id</key>                     <string>tap</string>
+	<key>md.obsidian</key>                   <string>tap</string>
+	<key>com.figma.Desktop</key>             <string>tap</string>
+	<key>com.vng.zalo</key>                  <string>tap</string>
 
 	<!-- Đã kiểm chứng gõ trực tiếp tốt -->
 	<key>com.apple.Notes</key>               <string>inPlace</string>
@@ -53,6 +57,14 @@
 	<key>com.macromates.TextMate</key>       <string>inPlace</string>
 	<key>net.whatsapp.WhatsApp</key>         <string>inPlace</string>
 	<key>com.viettelex.inputmethod.telex</key> <string>inPlace</string>
+	<!-- App native chuẩn NSTextView — chưa tự field-test biên, probe sẽ bắt nếu sai -->
+	<key>com.microsoft.Powerpoint</key>      <string>inPlace</string>
+	<key>com.apple.iWork.Pages</key>         <string>inPlace</string>
+	<key>com.apple.iWork.Numbers</key>       <string>inPlace</string>
+	<key>com.apple.iWork.Keynote</key>       <string>inPlace</string>
+	<key>com.apple.dt.Xcode</key>            <string>inPlace</string>
+	<key>com.apple.MobileSMS</key>           <string>inPlace</string>
+	<key>ru.keepcoder.Telegram</key>         <string>inPlace</string>
 
 	<!-- Browsers — tự dò theo ô (address bar vs nội dung trang) -->
 	<key>com.apple.Safari</key>              <string>axDetect</string>
@@ -69,6 +81,22 @@
 	<key>com.vivaldi.Vivaldi</key>           <string>axDetect</string>
 	<key>com.operasoftware.Opera</key>       <string>axDetect</string>
 	<key>company.thebrowser.Browser</key>    <string>axDetect</string>
+	<key>org.mozilla.firefox</key>           <string>axDetect</string>
+
+	<!-- JetBrains IDEs — autocomplete popup nuốt backspace;
+	     selection cần quyền Trợ năng, thiếu quyền tự rơi về marked -->
+	<key>com.jetbrains.intellij</key>        <string>selection</string>
+	<key>com.jetbrains.intellij.ce</key>     <string>selection</string>
+	<key>com.jetbrains.WebStorm</key>        <string>selection</string>
+	<key>com.jetbrains.PyCharm</key>         <string>selection</string>
+	<key>com.jetbrains.pycharm.ce</key>      <string>selection</string>
+	<key>com.jetbrains.PhpStorm</key>        <string>selection</string>
+	<key>com.jetbrains.CLion</key>           <string>selection</string>
+	<key>com.jetbrains.goland</key>          <string>selection</string>
+	<key>com.jetbrains.rider</key>           <string>selection</string>
+	<key>com.jetbrains.rubymine</key>        <string>selection</string>
+	<key>com.jetbrains.datagrip</key>        <string>selection</string>
+	<key>com.google.android.studio</key>     <string>selection</string>
 
 	<!-- Grid app: cell autocomplete đua backspace, Shift+← chọn ô kề -->
 	<key>com.microsoft.Excel</key>           <string>emptyReset</string>
