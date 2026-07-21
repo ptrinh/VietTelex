@@ -90,8 +90,34 @@ final class TelexInputController: IMKInputController {
 
     // MARK: - Event handling (hot path)
 
+    /// Also receive flagsChanged (default is keyDown only): the composition is
+    /// committed the moment a ⌘/⌃/⌥ MODIFIER is pressed — see handle() below.
+    override func recognizedEvents(_ sender: Any!) -> Int {
+        Int(NSEvent.EventTypeMask.keyDown.union(.flagsChanged).rawValue)
+    }
+
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event = event, event.type == .keyDown,
+        guard let event = event else { return false }
+
+        // A ⌘/⌃/⌥ modifier just went DOWN: end any composition NOW, one event cycle
+        // BEFORE the shortcut's letter arrives. Committing inside the same cycle as
+        // the combo (the old approach) lost the first press — the app swallows a key
+        // equivalent delivered while its IME session is open/closing (⌘A while
+        // composing did nothing; after the fix for that, the FIRST ⌘A/⌥⌫ still
+        // needed a second press). The modifier physically precedes the letter by
+        // ~50-100ms, so by the time ⌘A is delivered the session has long been torn
+        // down and the app handles it immediately. Side effect (accepted): tapping a
+        // lone modifier mid-word finalizes the word.
+        if event.type == .flagsChanged {
+            if !event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+               !engine.isEmpty, let client = sender as? IMKTextInput {
+                logDecision("modifier down mid-composition → early commit")
+                endComposition(client)
+            }
+            return false
+        }
+
+        guard event.type == .keyDown,
               let client = sender as? IMKTextInput else { return false }
 
         // Signpost the whole IMKit round trip; the end message names the strategy
