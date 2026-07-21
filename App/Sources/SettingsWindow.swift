@@ -191,20 +191,29 @@ final class SettingsModel: ObservableObject {
         case .auto, nil: return loc("not detected yet")
         }
         // Without the permission, show the mode ACTUALLY in effect right now (what
-        // the routing degrades to), with the reason — "Marked text — thiếu quyền",
-        // not the aspirational "Tap (backspace) — thiếu quyền".
+        // the routing degrades to) — "Marked text", not the aspirational
+        // "Tap (backspace)". The ⚠️ badge (autoMissingPermission) carries the reason.
         if needsAX && !Accessibility.isTrusted {
-            let actual: String
             switch mode {
-            case .tap: actual = loc("Marked text")                       // fallback apps degrade to marked
-            case .selection: actual = loc("Passthrough")                 // Spotlight: deliberate raw passthrough
-            case .emptyReset: actual = loc("In-place")                   // Excel: plain probe path
-            case .axDetect: actual = loc("Per-field (session probe)")    // browsers: session probation
-            default: actual = base
+            case .tap: return loc("Marked text")                    // fallback apps degrade to marked
+            case .selection: return loc("Passthrough")              // Spotlight: deliberate raw passthrough
+            case .emptyReset: return loc("In-place")                // Excel: plain probe path
+            case .axDetect: return loc("Per-field (session probe)") // browsers: session probation
+            default: return base
             }
-            return String(format: loc("%@ — needs Accessibility"), actual)
         }
         return base
+    }
+
+    /// True when this app's ideal Auto mode needs Accessibility and it isn't
+    /// granted — the Detected cell shows a ⚠️ with an explanatory tooltip.
+    func autoMissingPermission(_ id: String) -> Bool {
+        guard !Accessibility.isTrusted else { return false }
+        let mode = id == Self.spotlightRowID ? .selection : AppState.shared.autoResolvedMode(id)
+        switch mode {
+        case .tap, .selection, .emptyReset, .axDetect: return true
+        default: return false
+        }
     }
 
     /// Localized label of the manual pick for `id` ("Tự động" when unset) — also
@@ -386,9 +395,16 @@ struct ModeTableTab: View {
                 }
                 TableColumn(model.loc("Detected")) { row in
                     // What Auto resolves to for this app right now. Grayed out when a
-                    // manual pick overrides it.
-                    Text(model.autoLabel(row.id))
-                        .foregroundStyle(model.appMode(row.id) == "auto" ? .primary : .tertiary)
+                    // manual pick overrides it. ⚠️ = degraded because Accessibility
+                    // is missing (tooltip explains on hover).
+                    HStack(spacing: 4) {
+                        Text(model.autoLabel(row.id))
+                            .foregroundStyle(model.appMode(row.id) == "auto" ? .primary : .tertiary)
+                        if model.autoMissingPermission(row.id) {
+                            Text("⚠️")
+                                .help(model.loc("Missing Accessibility permission"))
+                        }
+                    }
                 }.width(min: 120)
                 TableColumn(model.loc("Manual")) { row in
                     // Common picks first (Auto / Tap / Marked cover ~95% of real
