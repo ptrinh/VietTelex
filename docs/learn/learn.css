@@ -109,3 +109,15 @@ body.vt-focus { overflow: hidden; }
 body.vt-focus #player { position: fixed; inset: 0; z-index: 90; border-radius: 0; border: none; overflow-y: auto; background: var(--paper); box-shadow: none; padding: max(8px, env(safe-area-inset-top)) 8px 8px; }
 body.vt-focus #player .practice, body.vt-focus #player .result { max-width: 760px; margin: 0 auto; }
 #fsBtn { font-size: 1.05rem; line-height: 1; }
+
+/* Track picker: two big kid-friendly panels */
+.track-card { max-width: 780px !important; text-align: center; }
+.track-card h3 { font-size: clamp(1.3rem, 4vw, 1.7rem); margin-bottom: 20px; }
+.track-panels { display: flex; gap: 16px; }
+.track-panel { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 20px 24px; border-radius: 20px; cursor: pointer; font-family: var(--sans); border: 3px solid var(--line); background: linear-gradient(180deg, #fffdf5, #fff6e3); transition: transform .12s, border-color .12s, box-shadow .12s; }
+.track-panel.alt { background: linear-gradient(180deg, #f5fbff, #e3f0fd); }
+.track-panel:hover { transform: translateY(-4px); border-color: var(--gold); box-shadow: 0 14px 34px rgba(23,35,61,.14); }
+.track-panel .track-art { font-size: 3.2rem; line-height: 1.15; }
+.track-panel .t { font-size: 1.25rem; font-weight: 800; color: var(--navy); line-height: 1.3; }
+.track-panel .d { font-size: 1rem; color: var(--ink-soft); line-height: 1.5; }
+@media (max-width: 560px) { .track-panels { flex-direction: column; } .track-panel { padding: 20px 16px; } }

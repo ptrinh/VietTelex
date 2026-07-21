@@ -155,16 +155,20 @@
 </section>
 
 <div class="modal" id="trackModal" hidden>
-  <div class="card">
+  <div class="card track-card">
     <h3 id="trackTitle">Bạn bắt đầu từ đâu?</h3>
-    <button class="node" id="trackNew" style="width:100%;margin-bottom:10px;padding:16px">
-      <span class="t" id="trackNewT"></span>
-      <small id="trackNewD" style="color:var(--ink-soft)"></small>
-    </button>
-    <button class="node" id="trackTypist" style="width:100%;padding:16px">
-      <span class="t" id="trackTypistT"></span>
-      <small id="trackTypistD" style="color:var(--ink-soft)"></small>
-    </button>
+    <div class="track-panels">
+      <button class="track-panel" id="trackNew">
+        <span class="track-art" aria-hidden="true">🐣<br>⌨️</span>
+        <span class="t" id="trackNewT"></span>
+        <span class="d" id="trackNewD"></span>
+      </button>
+      <button class="track-panel alt" id="trackTypist">
+        <span class="track-art" aria-hidden="true">⚡<br>🚀</span>
+        <span class="t" id="trackTypistT"></span>
+        <span class="d" id="trackTypistD"></span>
+      </button>
+    </div>
   </div>
 </div>
 
