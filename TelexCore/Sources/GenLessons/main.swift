@@ -278,9 +278,9 @@ let chapters: [Chapter] = [
 
     // ───────────────────── Chương 5: Nâng cao ─────────────────────
     Chapter(id: "c5", icon: "🚀", title: "Nâng cao", titleEN: "Advanced", lessons: [
-        lesson("c5l1", "Bỏ dấu tự do", "Gõ dấu MUỘN cũng được — engine tự tìm đúng nguyên âm: dauas → dấu.", en: ("Free tone placement", "Type marks LATE and the engine finds the right vowel: dauas → dấu."), [
-            w("dauas", "dấu"), w("vieetj", "việt"), w("truowngf", "trường"),
-            w("hocj", "học"), w("dduongwf", "đường")
+        lesson("c5l1", "Gõ chuẩn Telex", "Dấu mũ gõ LIỀN nguyên âm, thanh gõ cuối từ: daaus → dấu (aa liền nhau, s ở cuối).", en: ("Canonical Telex order", "Vowel marks go RIGHT AFTER the vowel, tones at the end: daaus → dấu."), [
+            w("daaus", "dấu"), w("vieejt", "việt"), w("truwowngf", "trường"),
+            w("hocj", "học"), w("dduwowngf", "đường")
         ]),
         sentenceLesson("c5l2", "Câu dài", "Câu đầy đủ dấu câu và chữ hoa.", art: "🌤️😄", en: ("Long sentences", "Full sentences with punctuation and capitals."), [
             sentence([w("Hoom", "Hôm"), w("nay", "nay"), w("trowif", "trời"),
