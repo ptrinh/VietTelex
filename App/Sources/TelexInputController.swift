@@ -600,13 +600,16 @@ final class TelexInputController: IMKInputController {
         // (NSTextView, most Cocoa) honor the explicit "no underline" and marked text
         // becomes visually indistinguishable from in-place.
         // Chromium/Electron ALWAYS paint a composition underline (ImeTextSpan) even
-        // for style 0 — but they READ the underline COLOR from the attributed string
-        // (ExtractUnderlines in render_widget_host_view_mac), so a .clear underline
-        // is painted invisibly. Belt + suspenders: style 0 for Cocoa, clear color
-        // for the engines that insist on drawing.
+        // for style 0 — they read the underline COLOR from the attributed string,
+        // BUT a fully transparent color is their SENTINEL for "default: use the
+        // text color" (SK_ColorTRANSPARENT in ui::ImeTextSpan) — .clear made the
+        // underline MORE visible, verified in the field. Force it with an
+        // almost-transparent color instead: alpha ≈ 1/255 survives the sentinel
+        // check yet paints invisibly. Cocoa clients honor style 0 and never look
+        // at the color.
         let attributed = NSAttributedString(string: s, attributes: [
             .underlineStyle: 0,
-            .underlineColor: NSColor.clear,
+            .underlineColor: NSColor(calibratedWhite: 0, alpha: 0.004),
         ])
         client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
