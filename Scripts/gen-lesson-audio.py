@@ -2,20 +2,21 @@
 """Generate pronunciation audio for the /learn/lessons typing course.
 
 Reads docs/learn/lessons/lessons.json, collects every speakable word and
-sentence, and renders MP3s with Microsoft Edge's neural Vietnamese voice
-(vi-VN-HoaiMyNeural) — far more accurate than device speechSynthesis voices.
-learn.js plays these files first and falls back to speechSynthesis.
+sentence, and renders MP3s — far more accurate and consistent than device
+speechSynthesis voices. learn.js plays these files first, TTS is fallback.
+
+Engines:
+  gtts (default) — Google Translate voice: NỮ, giọng Hà Nội chuẩn
+  edge           — Microsoft vi-VN-HoaiMyNeural (nữ, neural)
 
 Usage:
-  python3 -m venv .tts-venv && .tts-venv/bin/pip install edge-tts
-  .tts-venv/bin/python Scripts/gen-lesson-audio.py
+  python3 -m venv .tts-venv && .tts-venv/bin/pip install gTTS edge-tts
+  .tts-venv/bin/python Scripts/gen-lesson-audio.py [gtts|edge]
 
 Re-run after changing the curriculum; existing files are skipped, the
 manifest is rewritten. Slug logic MUST stay in sync with slug() in learn.js.
 """
-import asyncio, json, pathlib, re, sys
-
-import edge_tts
+import asyncio, json, pathlib, re, sys, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LESSONS = ROOT / "docs/learn/lessons/lessons.json"
@@ -43,18 +44,27 @@ def collect() -> dict:
     return texts
 
 
-async def render(texts: dict) -> None:
+def render(texts: dict, engine: str) -> None:
     OUTDIR.mkdir(parents=True, exist_ok=True)
     todo = {s: t for s, t in texts.items() if not (OUTDIR / f"{s}.mp3").exists()}
-    print(f"{len(texts)} texts, {len(todo)} to render")
-    for i, (s, t) in enumerate(sorted(todo.items()), 1):
-        tts = edge_tts.Communicate(t, VOICE, rate=RATE)
-        await tts.save(str(OUTDIR / f"{s}.mp3"))
-        print(f"  [{i}/{len(todo)}] {t}")
+    print(f"{len(texts)} texts, {len(todo)} to render ({engine})")
+    if engine == "edge":
+        import edge_tts
+        async def go():
+            for i, (s, t) in enumerate(sorted(todo.items()), 1):
+                await edge_tts.Communicate(t, VOICE, rate=RATE).save(str(OUTDIR / f"{s}.mp3"))
+                print(f"  [{i}/{len(todo)}] {t}")
+        asyncio.run(go())
+    else:
+        from gtts import gTTS
+        for i, (s, t) in enumerate(sorted(todo.items()), 1):
+            gTTS(t, lang="vi", slow=False).save(str(OUTDIR / f"{s}.mp3"))
+            print(f"  [{i}/{len(todo)}] {t}")
+            time.sleep(0.4)   # be polite to the endpoint
     (OUTDIR / "manifest.json").write_text(
         json.dumps(sorted(texts.keys()), ensure_ascii=False, indent=0))
 
 
 if __name__ == "__main__":
-    asyncio.run(render(collect()))
+    render(collect(), sys.argv[1] if len(sys.argv) > 1 else "gtts")
     print("done →", OUTDIR)
