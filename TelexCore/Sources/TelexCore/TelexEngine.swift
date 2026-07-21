@@ -107,7 +107,6 @@ public struct TelexEngine {
     private var pToneKeyCount = 0
     private var pCancelled = false
     private var pProcessed = 0
-    private var pWWord = false          // word starts with 'w' -> whole word literal
     private var pFreeMarking = false    // settings snapshot the state was built with
     private var pSimpleTelex = false
 
@@ -191,9 +190,21 @@ public struct TelexEngine {
         }
 
         // Live spell-check: once the word can no longer be valid Vietnamese, freeze
-        // transforms from the NEXT key on (current output unchanged). See disabledAtCount.
+        // transforms from the NEXT key on. Letter MARKS applied so far stay
+        // ("gôgle" — historical, cosmetic until boundary restore), but a pending
+        // TONE is CANCELLED: the word cannot be Vietnamese, so a floating tone has
+        // no meaning and would otherwise land on whatever vowel follows in the
+        // frozen tail — "installer" rendered "intáller" (the s applied as sắc onto
+        // the post-freeze a; user report via its ⌫ variant "intálle").
         if liveSpellCheck, disabledAtCount == Int.max, !prefixIsValid(newCount) {
             disabledAtCount = rawCount
+            if pTone != .none {
+                // Rebuild: with the freeze set, parseStep folds every TONE key back
+                // to its literal letter (see the tone branch), so the s in
+                // "installer" comes back as 's' instead of floating as sắc.
+                rebuildParseState()
+                newCount = render()
+            }
         }
 
         // No-transform fast path: render is exactly the previous output plus this
@@ -221,11 +232,11 @@ public struct TelexEngine {
         // and drop the overflow. Let the app delete the last char natively instead.
         if overflowed { return .passthrough }
 
-        // Editing the word re-opens transforms; a still-invalid word simply re-disables
-        // on the next forward key (backspace itself never adds a transform). The
-        // provenance below must come from the UNFROZEN parse (historical semantics),
-        // so rebuild + render once with the freeze lifted before filtering.
-        disabledAtCount = Int.max
+        // Provenance must reflect what the user SEES — i.e. the CURRENT freeze
+        // state. (It briefly ran unfrozen "for historical semantics", which mis-
+        // deleted on frozen words: unfrozen "installer" consumes the trailing r as
+        // a hỏi tone, so "last displayed letter" pointed at the e and ⌫ produced
+        // "installr".)
         rebuildParseState()
         _ = render()                             // maps tone-key provenance
 
@@ -240,6 +251,25 @@ public struct TelexEngine {
             rawCount = w
         }
 
+        // Re-freeze exactly as forward typing would have computed it over the
+        // SHORTENED word. Lifting the freeze permanently re-applied transforms
+        // retroactively: frozen "installer" ⌫ became "intálle" once free marking
+        // could reach the 'a'. The replay is bounded (≤32 keys, parseStep is ~ns)
+        // and runs only on ⌫.
+        if liveSpellCheck {
+            let full = rawCount
+            disabledAtCount = Int.max
+            var r = 1
+            while r <= full {
+                rawCount = r
+                rebuildParseState()
+                if disabledAtCount == Int.max, pCount > 0, !prefixIsValid(pCount) {
+                    disabledAtCount = r
+                }
+                r += 1
+            }
+            rawCount = full
+        }
         rebuildParseState()
         let newCount = render()
         markCancelled = pCancelled
@@ -291,10 +321,18 @@ public struct TelexEngine {
     /// field reports arrive (candidate for a user-editable list later).
     private static let englishExceptions: [[UInt8]] = [
         Array("was".utf8), Array("wow".utf8),
+        Array("yes".utf8),   // "ýe" slips through the validator as a syllable
     ]
     private func rawIsEnglishException() -> Bool {
+        guard pCount > 0 else { return false }
+        // w-initiated entries apply ONLY when the w actually BECAME ư (full Telex):
+        // in Simple Telex the literal-w teencode forms ("wá" = quá) are the point
+        // and must survive. Non-w entries (yes) apply in every mode.
+        let wTransformed = renderLetters[0].base == UInt8(ascii: "u")
+            && renderLetters[0].mark == .horn
         outer: for word in Self.englishExceptions {
             guard word.count == rawCount else { continue }
+            if word[0] == UInt8(ascii: "w"), !wTransformed { continue }
             for i in 0..<rawCount where lowercased(raw[i]) != word[i] { continue outer }
             return true
         }
@@ -304,6 +342,27 @@ public struct TelexEngine {
     /// Zero-allocation twin of `SyllableValidator.isValidSyllable(String)` on the
     /// current composition: letter classes come from the render copy (post ươ
     /// propagation), the tone from the last render's effective tone.
+    /// TEENCODE onsets folded to their canonical spelling FOR VALIDATION ONLY
+    /// (rendering keeps the literal letters): w→qu ("wá"=quá, "wó"), z→d/gi/v-class
+    /// ("zô", "zị", "zậy"), dz→d ("dzô", "dzị"). The informal onset is swapped and
+    /// the REST of the syllable still has to pass the normal rime+tone rules, so
+    /// English/garbage stays restorable. f→ph was considered and dropped: it makes
+    /// the common English "fair" a valid syllable (fải).
+    /// Returns the canonical onset's ascii letters + how many leading letters it
+    /// replaces, or nil when the word has no informal onset.
+    private func teencodeOnset() -> (canonical: [UInt8], skip: Int)? {
+        guard pCount >= 2, renderLetters[0].mark == .none else { return nil }
+        switch renderLetters[0].base {
+        case UInt8(ascii: "w"): return ([UInt8(ascii: "q"), UInt8(ascii: "u")], 1)
+        case UInt8(ascii: "z"): return ([UInt8(ascii: "d")], 1)
+        case UInt8(ascii: "d")
+            where pCount >= 3 && renderLetters[1].base == UInt8(ascii: "z")
+               && renderLetters[1].mark == .none:
+            return ([UInt8(ascii: "d")], 2)
+        default: return nil
+        }
+    }
+
     private mutating func composedIsValidSyllable() -> Bool {
         // Accepted ABBREVIATION, not a real syllable: "đc" (= được, chat shorthand)
         // survives auto-restore — typing "ddc" keeps đc instead of reverting to raw
@@ -312,6 +371,18 @@ public struct TelexEngine {
            renderLetters[0].base == UInt8(ascii: "d"), renderLetters[0].mark == .bar,
            renderLetters[1].base == UInt8(ascii: "c"), renderLetters[1].mark == .none {
             return true
+        }
+        // Teencode onset: validate as if spelled canonically ("wá" checks as quá).
+        if pCount < Self.capacity - 1, let (canon, skip) = teencodeOnset() {
+            var n = 0
+            for c in canon { basesScratch[n] = Tables.letterClass(base: c, mark: .none); n += 1 }
+            for k in skip..<pCount {
+                basesScratch[n] = Tables.letterClass(base: renderLetters[k].base,
+                                                     mark: renderLetters[k].mark)
+                n += 1
+            }
+            if SyllableValidator.isValidSyllable(classes: basesScratch, count: n,
+                                                 tone: lastEffTone) { return true }
         }
         for k in 0..<pCount {
             basesScratch[k] = Tables.letterClass(base: renderLetters[k].base,
@@ -357,17 +428,36 @@ public struct TelexEngine {
         pToneKeyCount = 0
         pCancelled = false
         pProcessed = 0
-        pWWord = false
     }
 
     /// True if the current parse state's first `n` letters form a valid Vietnamese
     /// syllable prefix. Walks the validator's flat tries over the letters' folded
     /// bases (bit 7 = carries a mark) — no String, no hashing, no allocation.
     private mutating func prefixIsValid(_ n: Int) -> Bool {
-        for k in 0..<n {
-            basesScratch[k] = letters[k].base | (letters[k].mark != .none ? 0x80 : 0)
+        // Teencode onsets validate as their canonical spelling ("w…" as "qu…",
+        // "z…"/"dz…" as "d…") so live spell-check doesn't freeze "wá"/"zô"-class
+        // words at their very first key. Mirrors teencodeOnset() on the PARSE
+        // letters (render hasn't happened yet on this path).
+        var out = 0
+        var start = 0
+        if n >= 1, letters[0].mark == .none, n < Self.capacity - 1 {
+            switch letters[0].base {
+            case UInt8(ascii: "w"):
+                basesScratch[0] = UInt8(ascii: "q"); basesScratch[1] = UInt8(ascii: "u")
+                out = 2; start = 1
+            case UInt8(ascii: "z"):
+                basesScratch[0] = UInt8(ascii: "d"); out = 1; start = 1
+            case UInt8(ascii: "d")
+                where n >= 2 && letters[1].base == UInt8(ascii: "z") && letters[1].mark == .none:
+                basesScratch[0] = UInt8(ascii: "d"); out = 1; start = 2
+            default: break
+            }
         }
-        return SyllableValidator.isValidPrefix(bases: basesScratch, count: n)
+        for k in start..<n {
+            basesScratch[out] = letters[k].base | (letters[k].mark != .none ? 0x80 : 0)
+            out += 1
+        }
+        return SyllableValidator.isValidPrefix(bases: basesScratch, count: out)
     }
 
     // MARK: - Test / caller helpers
@@ -459,7 +549,6 @@ public struct TelexEngine {
         pTone = .none
         pToneKeyCount = 0
         pCancelled = false
-        pWWord = false
         upperToneKey = false
         pFreeMarking = freeMarking
         pSimpleTelex = simpleTelex
@@ -476,19 +565,9 @@ public struct TelexEngine {
         let lower = lowercased(key)
         let upper = isUpperAscii(key)
 
-        // A word starting with 'w' is English: Vietnamese has essentially no w-initial
-        // syllable, so type it literally with no diacritics ("was"→was, "write"→write).
-        // An initial ư is typed "uw". This guard applies in SIMPLE Telex only
-        // (corrected 2026-07-21 — briefly keyed to free marking): under FULL Telex
-        // the initial w falls through to the standalone handler and becomes ư
-        // ("w"→ư, "wu"→ưu); English w-words there rely on live spell-check +
-        // auto-restore ("write" restores at the boundary).
-        if at == 0, lower == UInt8(ascii: "w"), simpleTelex { pWWord = true }
-        if pWWord {
-            appendLetter(base: lower, mark: .none, upper: upper)
-            rawLetter[at] = pCount - 1
-            return
-        }
+        // (The historical pWWord "leading w = English word" guard is GONE — it
+        // blocked the teencode w-forms in Simple Telex ("wá" = quá, "wó"…). English
+        // w-words are protected by englishExceptions + auto-restore instead.)
 
         // Once a diacritic has been cancelled, the word is English: every further
         // key is literal (no tone/mark), so "messs"→mess (not "més") and the whole
@@ -504,6 +583,17 @@ public struct TelexEngine {
 
         // Tone keys: s f r x j
         if let t = toneForKey(lower) {
+            // FROZEN word (live spell-check said it can't be Vietnamese): every
+            // tone key folds back to its literal letter, even those typed BEFORE
+            // the freeze point — a tone has no meaning on a non-Vietnamese word,
+            // and keeping it made "installer" render "intáller" (the early s
+            // floated as sắc onto the post-freeze a). The freeze site triggers a
+            // rebuild so this applies retroactively within the word.
+            if disabledAtCount != Int.max {
+                appendLetter(base: lower, mark: .none, upper: upper)
+                rawLetter[at] = pCount - 1
+                return
+            }
             if hasVowel(pCount) {
                 if pTone == t {
                     pTone = .none // double same tone -> cancel, emit literal
@@ -601,7 +691,7 @@ public struct TelexEngine {
             // ("kw", "windows", "ew"); auto-restore then leaves them intact.
             // Simple Telex disables this entirely — a lone `w` is always literal
             // (type `uw` for ư). Full Telex converts, including word-initial w
-            // (the pWWord English guard above is Simple-Telex-only).
+            // (English w-words recover via englishExceptions + auto-restore).
             if !simpleTelex && standaloneHornUAllowed(pCount) {
                 appendLetter(base: UInt8(ascii: "u"), mark: .horn, upper: upper)
             } else {

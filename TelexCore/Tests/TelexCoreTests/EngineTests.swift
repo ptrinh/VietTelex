@@ -116,6 +116,47 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(composeSpell("dauas"), "dauas")
     }
 
+    // TEENCODE: informal onsets validate as their canonical spelling (w→qu, z→d,
+    // dz→d) so chat forms survive spell-check + auto-restore, while their rimes
+    // still obey the normal rules. English collisions with a TRANSFORMED w (full
+    // Telex "was"→ứa) stay force-restored; the Simple-Telex literal-w "wá" is the
+    // feature and survives.
+    func testTeencodeForms() {
+        // Simple Telex: literal w + tone = the wá/wó family (w validates as qu).
+        var e = TelexEngine(); e.simpleTelex = true; e.liveSpellCheck = true
+        for ch in "was" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "wá")
+        XCTAssertEqual(e.commitText(autoRestore: true), "wá")   // survives restore
+        for ch in "wos" { _ = e.feed(ch) }
+        XCTAssertEqual(e.commitText(autoRestore: true), "wó")
+        // z / dz forms work in BOTH modes (z is a literal letter everywhere).
+        XCTAssertEqual(commit("zoo"), "zô")
+        XCTAssertEqual(commit("zij"), "zị")
+        XCTAssertEqual(commit("zaayj"), "zậy")
+        XCTAssertEqual(commit("dzoo"), "dzô")
+        XCTAssertEqual(commit("dzij"), "dzị")
+        // Garbage rimes still restore: the onset swap doesn't bless everything.
+        XCTAssertEqual(commit("zxkr"), "zxkr")
+        // FULL Telex: leading w transforms, and the English exceptions still win.
+        XCTAssertEqual(commit("was"), "was")
+        XCTAssertEqual(commit("wow"), "wow")
+    }
+
+    // Backspacing a frozen (invalid) word must NOT retroactively re-enable
+    // transforms: "installer" ⌫ stays "installe", not "intálle" (the freeze is
+    // replayed over the shortened word exactly as forward typing computed it).
+    func testBackspaceKeepsSpellCheckFreeze() {
+        var e = TelexEngine()
+        e.liveSpellCheck = true
+        e.freeMarking = true
+        for ch in "installer" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "installer")
+        _ = e.backspace()
+        XCTAssertEqual(e.composed, "installe")
+        _ = e.backspace()
+        XCTAssertEqual(e.composed, "install")
+    }
+
     // Abbreviation whitelist: "đc" (= được) survives auto-restore.
     func testDcAbbreviationSurvivesAutoRestore() {
         XCTAssertEqual(commit("ddc"), "đc")

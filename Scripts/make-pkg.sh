@@ -54,55 +54,23 @@ pkgbuild --root "$WORK/payload" \
          --version "$VER" \
          "$WORK/VietTelex-component.pkg" >/dev/null
 
-# 4. Product archive with a bilingual conclusion screen. Installer's HTML pane
-#    renders neither data: URIs nor relative <img> files (WKWebView sandbox), so
-#    the conclusion ships as RTFD — the format Installer supports natively for
-#    images (rendered like the license pane: light document background, so no
-#    dark-mode color issues). textutil converts our HTML sources and EMBEDS the
-#    (downscaled, quantized) screenshots into each .rtfd. English at top level =
-#    default/fallback; Vietnamese in vi.lproj → shown on Vietnamese-language macOS.
+# 4. Product archive with a bilingual conclusion screen, shipped as RTFD (the
+#    pane renders neither data: URIs nor relative <img>; RTFD keeps the styled
+#    text + the clickable guide hyperlink). English at top level = default/
+#    fallback; Vietnamese in vi.lproj → shown on Vietnamese-language macOS.
 sed "s/__VERSION__/$VER/g" "$RES/distribution.xml" > "$WORK/distribution.xml"
 
-echo "→ building RTFD conclusion screens (textutil, images embedded)"
+# Screenshots were REMOVED from the conclusion (2026-07-21): the pane stays
+# compact and the prominent link opens the full illustrated guide instead —
+# postinstall also auto-opens it in the browser.
+echo "→ building RTFD conclusion screens (textutil)"
 RTFDSRC="$WORK/rtfd-src"
 rm -rf "$RTFDSRC" "$WORK/resources"
 mkdir -p "$RTFDSRC" "$WORK/resources/vi.lproj"
 cp "$RES/conclusion.en.html" "$RES/conclusion.vi.html" "$RTFDSRC/"
-python3 - "$RTFDSRC" assets/instructions-1.png assets/instructions-2.png <<'PY2'
-import sys
-from PIL import Image
-out, i1, i2 = sys.argv[1:4]
-for src, name in [(i1, "instructions-1.png"), (i2, "instructions-2.png")]:
-    im = Image.open(src).convert("RGB"); im.thumbnail((880, 880), Image.LANCZOS)
-    q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
-    # dpi=144 -> RTFD/NSTextAttachment shows 880px as 440pt: fits the ~800pt
-    # Summary pane (textutil sizes attachments by POINTS from the PNG's pHYs),
-    # and stays crisp on Retina (2x pixels available).
-    q.save(f"{out}/{name}", optimize=True, dpi=(144, 144))
-PY2
 (cd "$RTFDSRC" && textutil -convert rtfd conclusion.en.html -output en.rtfd \
                 && textutil -convert rtfd conclusion.vi.html -output vi.rtfd)
 
-# Force a FIXED display width on every embedded image, preserving aspect. textutil
-# sizes attachments from the PNG's DPI, which Installer's text view interprets
-# inconsistently (one image could overflow the Summary pane while another fit).
-# Rewriting NeXTGraphic \width/\height in the RTF pins both to the same on-screen
-# size, well inside the pane, independent of DPI.
-python3 - "$RTFDSRC/en.rtfd/TXT.rtf" "$RTFDSRC/vi.rtfd/TXT.rtf" <<'PY2'
-import sys, re
-TARGET_W = 360  # POINTS — NeXTGraphic \width/\height are pt, NOT twips (verified
-                # against textutil output: a 48px placeholder emits \width320-ish).
-                # The old 7200 "twips" rendered 7200pt wide → the first screenshot
-                # overflowed the Summary pane, clipped on the right.
-for path in sys.argv[1:]:
-    s = open(path, encoding="utf-8", errors="surrogateescape").read()
-    def fix(m):
-        w, h = int(m.group(1)), int(m.group(2))
-        nh = round(TARGET_W * h / w) if w else h
-        return f"\\width{TARGET_W} \\height{nh}"
-    s = re.sub(r"\\width(\d+) \\height(\d+)", fix, s)
-    open(path, "w", encoding="utf-8", errors="surrogateescape").write(s)
-PY2
 # productbuild cannot stream an .rtfd (directory) resource itself — it errors
 # with "conclusion.rtfd couldn't be opened". So: build the product with NO
 # conclusion resource, then post-process the archive: expand, drop the .rtfd

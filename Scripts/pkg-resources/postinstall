@@ -24,8 +24,13 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 # Register + best-effort enable, inside the user's GUI session.
 launchctl asuser "$uid" sudo -u "$consoleUser" "$DIR/register-source" "$APP" 2>/dev/null
 
-# Drop the user straight into System Settings → Keyboard for the final "＋" step.
+# Drop the user straight into System Settings → Keyboard for the final "＋" step,
+# and open the illustrated install guide (screenshots were removed from the
+# conclusion screen — the guide IS the visual walkthrough now). Settings first so
+# the browser ends up frontmost with the instructions.
 launchctl asuser "$uid" sudo -u "$consoleUser" \
     open "x-apple.systempreferences:com.apple.Keyboard-Settings.extension" 2>/dev/null
+launchctl asuser "$uid" sudo -u "$consoleUser" \
+    open "https://ptrinh.github.io/viettelex/#install" 2>/dev/null
 
 exit 0
