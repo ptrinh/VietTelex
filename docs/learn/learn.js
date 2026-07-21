@@ -38,6 +38,7 @@ var STR = {
     days: 'ngày', badges: '🏅', enterClass: '🎓 Vào lớp học', backHome: '← Trang chủ',
     map: '← Bản đồ', listen: '🔊 Nghe', dict: '🎧 Nghe rồi gõ', dictOn: '🎧 Đang nghe-gõ',
     fsOn: 'Toàn màn hình', fsOff: 'Thoát toàn màn hình',
+    upNext: 'Học tiếp',
     autoSpk: '🗣️ Tự đọc: Tắt', autoSpkOn: '🗣️ Tự đọc: Bật',
     art: '🖼️ Hình: Tắt', artOn: '🖼️ Hình: Bật',
     retry: '↻ Làm lại', next: 'Bài tiếp theo →', close: 'Đóng',
@@ -72,6 +73,7 @@ var STR = {
     days: 'day streak', badges: '🏅', enterClass: '🎓 Start learning', backHome: '← Home',
     map: '← Map', listen: '🔊 Listen', dict: '🎧 Listen & type', dictOn: '🎧 Dictation on',
     fsOn: 'Fullscreen', fsOff: 'Exit fullscreen',
+    upNext: 'Continue',
     autoSpk: '🗣️ Auto-speak: Off', autoSpkOn: '🗣️ Auto-speak: On',
     art: '🖼️ Pictures: Off', artOn: '🖼️ Pictures: On',
     retry: '↻ Retry', next: 'Next lesson →', close: 'Close',
@@ -405,6 +407,19 @@ function starStr(n) {
 }
 function renderMap() {
   mapEl.innerHTML = '';
+  // the lesson the learner should do next: first unlocked one without a star
+  var upNext = null;
+  DATA.chapters.forEach(function (ch, ci) {
+    ch.lessons.forEach(function (l, li) {
+      if (!upNext && !(store.stars[l.id] > 0) && lessonUnlocked(ci, li) &&
+          !(isReviewChapter(ci))) upNext = l.id;
+    });
+  });
+  if (!upNext) DATA.chapters.forEach(function (ch, ci) {   // all required done → any review left
+    ch.lessons.forEach(function (l, li) {
+      if (!upNext && !(store.stars[l.id] > 0) && lessonUnlocked(ci, li)) upNext = l.id;
+    });
+  });
   DATA.chapters.forEach(function (ch, ci) {
     var unlocked = chapterUnlocked(ci);
     var doneCount = ch.lessons.filter(function (l) { return (store.stars[l.id] || 0) > 0; }).length;
@@ -418,9 +433,11 @@ function renderMap() {
     var nodes = document.createElement('div'); nodes.className = 'nodes';
     ch.lessons.forEach(function (l, li) {
       var b = document.createElement('button');
-      b.className = 'node' + (l.type === 'test' ? ' test' : '');
+      var isNext = l.id === upNext;
+      b.className = 'node' + (l.type === 'test' ? ' test' : '') + (isNext ? ' up-next' : '');
       b.disabled = !lessonUnlocked(ci, li);
-      b.innerHTML = '<span class="t">' + (l.type === 'test' ? '👑 ' : '') + esc(lessonTitle(l)) + '</span>' +
+      b.innerHTML = (isNext ? '<span class="next-tag">▶ ' + T().upNext + '</span>' : '') +
+        '<span class="t">' + (l.type === 'test' ? '👑 ' : '') + esc(lessonTitle(l)) + '</span>' +
         '<span class="stars">' + starStr(store.stars[l.id] || 0) + '</span>';
       b.addEventListener('click', function () { openLesson(ci, li); });
       nodes.appendChild(b);
@@ -431,7 +448,7 @@ function renderMap() {
     var autoOpen = unlocked && !chapterDone(ch) && !mapEl.querySelector('.chapter.open') &&
                    !(isReviewChapter(ci) && !chapterDone(ch) && ci < 2 && store.track === 'typist');
     if (store.track === 'typist' && ci < 2) autoOpen = false;
-    if (autoOpen) el.classList.add('open');
+    if (autoOpen || ch.lessons.some(function (l) { return l.id === upNext; })) el.classList.add('open');
     mapEl.appendChild(el);
   });
 }
