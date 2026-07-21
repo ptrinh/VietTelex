@@ -23,6 +23,10 @@ public enum ClientPolicy {
         "com.teamviewer.TeamViewer",
         "com.realvnc.vncviewer",
         "com.nulana.remotixmac",
+        "com.carriez.rustdesk",
+        "com.philandro.anydesk",
+        // iPhone Mirroring — keystrokes forward to the phone, synthetic Unicode is meaningless there
+        "com.apple.ScreenContinuity",
     ]
 
     /// True when the built-in list marks this client as force-passthrough.

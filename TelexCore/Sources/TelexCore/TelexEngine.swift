@@ -67,6 +67,12 @@ public struct TelexEngine {
     /// this engine, the other Simple-Telex difference.) Preserved across `reset()`.
     public var simpleTelex = false
 
+    /// Force-restore top-frequency English words that collide with valid
+    /// Vietnamese syllables ("his"→hí) at the word boundary. Default ON.
+    /// gen-english turns this OFF to regenerate the table against the
+    /// validator-only behavior (the table must not observe itself).
+    public var englishWordRestore = true
+
     static let capacity = 32
 
     // Raw keystrokes that make up the current word (ascii, case preserved).
@@ -295,13 +301,31 @@ public struct TelexEngine {
         // Skip restore when the user cancelled a diacritic on purpose ("iss"→is).
         // Validation runs on letter classes + tone (no String); Strings are built
         // only when a restore actually happens.
-        if autoRestore, !markCancelled, outCount > 0,
-           forceRestoreUpperTone || rawIsEnglishException() || !composedIsValidSyllable() {
-            if compositionDiffersFromRaw() {
-                return .replace(backspaces: outCount, insert: rawKeystrokes)
-            }
+        if autoRestore, outCount > 0, shouldRestoreRaw(), compositionDiffersFromRaw() {
+            return .replace(backspaces: outCount, insert: rawKeystrokes)
         }
         return .none
+    }
+
+    /// Boundary restore decision, shared by both commit paths.
+    /// Order matters: the English-collision table wins over everything (even a
+    /// cancel — "off"/"OFF" restore); then a cancel keeps the composed text when
+    /// it is valid Vietnamese OR an all-caps acronym escape (DDDR → DDR);
+    /// otherwise the standard validity/exception rules decide.
+    private mutating func shouldRestoreRaw() -> Bool {
+        if rawIsEnglishCollision() { return true }
+        let composedValid = composedIsValidSyllable()
+        if markCancelled, composedValid || rawIsAllUppercase() { return false }
+        return forceRestoreUpperTone || rawIsEnglishException() || !composedValid
+    }
+
+    @inline(__always)
+    private func rawIsAllUppercase() -> Bool {
+        guard rawCount >= 2 else { return false }
+        for i in 0..<rawCount where raw[i] < UInt8(ascii: "A") || raw[i] > UInt8(ascii: "Z") {
+            return false
+        }
+        return true
     }
 
     /// Final text to commit at a word boundary, with auto-restore applied
@@ -312,8 +336,7 @@ public struct TelexEngine {
         // Overflowed: never restore to `rawKeystrokes` (only the first 32 keys) —
         // return the composed prefix unchanged; the caller keeps the rest on screen.
         if overflowed { return composed }
-        if autoRestore, !markCancelled, outCount > 0,
-           forceRestoreUpperTone || rawIsEnglishException() || !composedIsValidSyllable() {
+        if autoRestore, outCount > 0, shouldRestoreRaw() {
             return rawKeystrokes
         }
         return composed
@@ -328,6 +351,33 @@ public struct TelexEngine {
         Array("was".utf8), Array("wow".utf8),
         Array("yes".utf8),   // "ýe" slips through the validator as a syllable
     ]
+    /// Generated English-collision table (EnglishCollisions.swift, gen-english):
+    /// top-frequency English words whose default-Telex transform yields a VALID
+    /// Vietnamese syllable, so validity-based restore can't catch them
+    /// ("his"→hí, "this"→thí, "see"→sê). Boundary-only; the String is built only
+    /// after cheap byte pre-filters, never on the per-key hot path.
+    private mutating func rawIsEnglishCollision() -> Bool {
+        guard englishWordRestore else { return false }
+        guard rawCount >= 2, rawCount <= 12 else { return false }
+        guard compositionDiffersFromRaw() else { return false }   // untouched words can't collide
+        // w-entries count only when the w actually BECAME ư (full Telex) — in
+        // Simple Telex the literal-w teencode forms ("wá" = quá) must survive.
+        if (raw[0] | 0x20) == UInt8(ascii: "w") {
+            let wTransformed = pCount > 0 && renderLetters[0].base == UInt8(ascii: "u")
+                && renderLetters[0].mark == .horn
+            if !wTransformed { return false }
+        }
+        var v = String.UnicodeScalarView()
+        v.reserveCapacity(rawCount)
+        for i in 0..<rawCount {
+            var b = raw[i]
+            if b >= UInt8(ascii: "A"), b <= UInt8(ascii: "Z") { b |= 0x20 }
+            guard b >= UInt8(ascii: "a"), b <= UInt8(ascii: "z") else { return false }
+            v.append(Unicode.Scalar(b))
+        }
+        return EnglishCollisions.words.contains(String(v))
+    }
+
     private func rawIsEnglishException() -> Bool {
         guard pCount > 0 else { return false }
         // w-initiated entries apply ONLY when the w actually BECAME ư (full Telex):
