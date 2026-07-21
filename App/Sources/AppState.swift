@@ -296,68 +296,6 @@ final class AppState: @unchecked Sendable {
     ///
     /// TextMate has the same in-place breakage in practice. All force off in-place: →
     /// tap backspace-retype when Accessibility is granted, else marked text. Never probed.
-    /// Terminals proper — byte-pipe apps. Split out of builtInFallbackApps because
-    /// the controller's marked path treats them specially (boundary keys are
-    /// delivered as bytes through insertText, see handle()).
-    static let terminalApps: Set<String> = [
-        "com.apple.Terminal",     // Terminal.app
-        "com.googlecode.iterm2",  // iTerm2
-    ]
-
-    static let builtInFallbackApps: Set<String> = terminalApps.union([
-        // Terminals: ignore replacementRange by design, and Vietnamese-in-terminal
-        // is a core promise that must survive a wiped learned cache (per-install
-        // UserDefaults) — never left to the probe.
-        // Electron/CEF class, field-verified broken in-place (manual pin testing,
-        // 2026-07-21). The probe WOULD classify these (appended ×2 → fallback; even
-        // Lark's constant garbage caret can't lock in-place under the HonorTracker
-        // two-offset rule) — pinning just ships the right behavior to every install
-        // with zero glitched first words.
-        "com.larksuite.larkApp",       // Lark
-        "com.tinyspeck.slackmacgap",   // Slack
-        "com.hnc.Discord",             // Discord
-        "com.microsoft.VSCode",        // Visual Studio Code
-    ])
-
-    /// Apps field-verified GOOD in-place (manual pin testing, 2026-07-21): skip the
-    /// probe and take the underline-free in-place path directly — first tone edit in
-    /// a fresh install renders right away, no probe round. Deliberately small and
-    /// conservative (Apple staples + verified stable apps): a wrong entry here means
-    /// silent diacritic loss with no probe to catch it, so only add apps a human has
-    /// actually typed Vietnamese in. Users can still override per app in the table.
-    static let builtInInPlaceApps: Set<String> = [
-        "com.apple.Notes",
-        "com.apple.finder",
-        "com.apple.ActivityMonitor",
-        "com.microsoft.Word",
-        "com.macromates.TextMate",       // pre-2026 pin to tap was stale — verified in-place
-        "net.whatsapp.WhatsApp",         // native rewrite honors replacementRange
-        "com.viettelex.inputmethod.telex", // our own Settings window
-        // Spotlight (field-verified 2026-07-21 on macOS 26): in-place is clean even
-        // WITH the gray inline suggestion visible — the historical autocomplete race
-        // that forced tap selection-replace is gone. The window-scan special-casing
-        // is retired to a manual-pick path only.
-        "com.apple.Spotlight",
-    ]
-
-    /// Apps FORCED to marked-text — never in-place, and never tap (even with
-    /// Accessibility). For apps whose in-place is broken AND whose probe signals can't
-    /// be trusted (Lark reports a caret at start+len and/or echoes the read-back, so
-    /// auto-detection coincidentally locks it to a broken in-place path), but where
-    /// tap backspace-retype is more invasive than we want. Marked text renders the
-    /// composition via the app's own IME display, independent of its caret coordinates.
-    /// If an app here turns out not to draw marked text, move it to builtInFallbackApps
-    /// (→ tap) instead.
-    static let markedTextApps: Set<String> = [
-        // (Excel lived here for a few hours on 2026-07-21 — REVERTED: Excel paints
-        // its OWN thick composition underline and ignores every attribute the IME
-        // sends — style 0 bare / +clear / +near-transparent color / mark(forStyle:)
-        // base dicts, each field-tested. The "clean Excel" sighting turned out to be
-        // the empty-reset TAP path, i.e. real characters. Excel is back in
-        // emptyResetApps; without Accessibility the untrusted policy already falls
-        // back to marked automatically.)
-    ]
-
     // MARK: - Manual per-app mode override (Experimental → App mode)
 
     /// Unlocked core of manualMode — call ONLY while holding `lock`.
@@ -440,30 +378,53 @@ final class AppState: @unchecked Sendable {
         return w != .no && Accessibility.isTrusted
     }
 
-    /// Chromium browsers: inline omnibox autocomplete corrupts a Backspace-retype
-    /// ("gôgleogle") and races in-place edits. Resolved PER FIELD (like `.axDetect`):
-    /// the omnibox gets Shift+Left selection-replace, page-content fields keep the
-    /// fast IMKit in-place path (Chromium honors replacementRange there). Spotlight
-    /// gets unconditional selection-replace (detected by window list, not bundle id).
-    private static let selectionApps: Set<String> = [
-        "com.google.Chrome", "com.google.Chrome.canary", "com.google.Chrome.beta",
-        "org.chromium.Chromium", "com.brave.Browser", "com.brave.Browser.beta",
-        "com.microsoft.edgemac", "com.microsoft.edgemac.Beta", "com.microsoft.Edge",
-        "com.vivaldi.Vivaldi", "com.operasoftware.Opera", "company.thebrowser.Browser",
-        // Safari: same smart-search-field autocomplete race (verified 2026-07-21);
-        // page content honors replacementRange, so per-field is the right default.
-        "com.apple.Safari", "com.apple.SafariTechnologyPreview",
-    ]
+    // MARK: - Built-in typing-mode rules (typing-modes.plist)
+    //
+    // The per-app DEFAULTS ship as data, not code: typing-modes.plist at the repo
+    // root is bundled as a resource and attached to every GitHub release —
+    // contributors add rules without touching Swift, and its String→String format
+    // is exactly what Bảng cơ chế gõ's "Nhập từ plist…" imports, so users can also
+    // apply an edited copy locally as manual pins. The field lore that used to
+    // live in comments here (Lark's edge-of-word breakage, Excel's unfixable
+    // marked underline, Spotlight on macOS 26, WhatsApp's native rewrite) moved
+    // into the plist header where contributors will actually see it.
+    // Values are AppMode raw values; unknown values are logged and skipped.
+    private static let builtInRules: [String: AppMode] = {
+        guard let url = Bundle.main.url(forResource: "typing-modes", withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
+        else {
+            // Missing/corrupt resource: fall back to the CORE PROMISE alone —
+            // Vietnamese-in-terminal must survive anything.
+            Signposts.log.fault("typing-modes.plist missing/corrupt — terminal-only fallback")
+            return ["com.apple.Terminal": .tap, "com.googlecode.iterm2": .tap]
+        }
+        var out: [String: AppMode] = [:]
+        for (id, raw) in dict {
+            if let m = AppMode(rawValue: raw), m != .auto { out[id] = m }
+            else { Signposts.log.fault("typing-modes.plist: unknown mode for \(id, privacy: .public)") }
+        }
+        return out
+    }()
+    private static func builtInIDs(_ mode: AppMode) -> Set<String> {
+        Set(builtInRules.compactMap { $0.value == mode ? $0.key : nil })
+    }
 
-    /// Empty-reset (insert U+202F to cancel the inline suggestion, then
-    /// Backspace-retype) exists for grid apps whose cell autocomplete races a
-    /// backspace-retype AND where Shift+Left selects the adjacent CELL. Excel: cell
-    /// autocomplete races a plain Backspace-retype ("Tiếngếng Việt") → insert U+202F
-    /// to cancel the suggestion first. With Accessibility this is the clean path
-    /// (real characters, zero underline); without it the untrusted policy falls back
-    /// to marked text (Excel then draws its own thick underline — unfixable, it
-    /// ignores every style attribute the IME sends; field-tested exhaustively).
-    private static let emptyResetApps: Set<String> = ["com.microsoft.Excel"]
+    static let builtInFallbackApps = builtInIDs(.tap)
+    static let builtInInPlaceApps = builtInIDs(.inPlace)
+    static let markedTextApps = builtInIDs(.marked)
+    private static let selectionApps = builtInIDs(.axDetect)   // per-field browsers
+    private static let emptyResetApps = builtInIDs(.emptyReset)
+    /// Extends ClientPolicy's compiled-in remote-desktop floor (kept as the safety
+    /// net) with plist-declared passthrough apps.
+    static let builtInPassthroughApps = builtInIDs(.passthrough)
+
+    /// Terminals proper — byte-pipe apps with their own controller semantics.
+    /// Stays in CODE (not the plist): it is behavior classification, not a rule
+    /// users should move an app in or out of.
+    static let terminalApps: Set<String> = [
+        "com.apple.Terminal", "com.googlecode.iterm2",
+    ]
 
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
     /// For `.axDetect` apps the answer flips per focused FIELD (address bar yes,
@@ -504,6 +465,7 @@ final class AppState: @unchecked Sendable {
     /// default is visible.
     static var builtInSpecialApps: Set<String> {
         selectionApps.union(emptyResetApps).union(markedTextApps)
+            .union(builtInPassthroughApps)
     }
 
 
@@ -525,7 +487,7 @@ final class AppState: @unchecked Sendable {
     /// nil = not classified yet (probe hasn't seen a real replace here).
     func autoResolvedMode(_ bundleID: String?) -> AppMode? {
         guard let id = bundleID else { return nil }
-        if ClientPolicy.isRemoteDesktop(id) { return .passthrough }
+        if ClientPolicy.isRemoteDesktop(id) || Self.builtInPassthroughApps.contains(id) { return .passthrough }
         return lock.withLock {
             if Self.isPerFieldByDefault(id) { return .axDetect }
             if Self.emptyResetApps.contains(id) { return .emptyReset }

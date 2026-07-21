@@ -45,6 +45,10 @@ targets:
         buildPhase: resources
       - path: App/Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
+      # Built-in per-app typing rules — repo-root data file (see its header);
+      # bundled so AppState loads defaults from data, attached to releases.
+      - path: typing-modes.plist
+        buildPhase: resources
       - path: App/Resources/en.lproj
         buildPhase: resources
       - path: App/Resources/vi.lproj

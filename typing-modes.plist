@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  typing-modes.plist — bảng cơ chế gõ MẶC ĐỊNH của VietTelex, theo từng app.
+
+  Đóng góp rule mới: thêm một cặp <key>bundle-id</key><string>mode</string>
+  rồi mở PR — không cần sửa Swift. File này được bundle vào app lúc build và
+  đính kèm mỗi GitHub release. Format trùng với "Nhập từ plist…" trong
+  Bảng cơ chế gõ, nên cũng có thể sửa bản copy rồi import làm rule cá nhân.
+
+  Các mode hợp lệ (raw value của AppMode):
+    inPlace     — gõ trực tiếp, không gạch chân (app tôn trọng replacementRange;
+                  CHỈ thêm khi đã test kỹ cả biên: đầu dòng, đầu message)
+    tap         — CGEventTap backspace-retype (cần quyền Trợ năng; thiếu quyền
+                  tự rơi về marked). Cho app hỏng in-place: terminal, Electron…
+    marked      — ép marked text (đúng chữ tuyệt đối, có gạch chân)
+    axDetect    — tự dò theo ô qua Accessibility: address bar → chọn-ghi-đè,
+                  nội dung trang → gõ trực tiếp. Cho browser.
+    emptyReset  — chèn U+202F hủy suggestion rồi backspace-retype. Cho grid
+                  app mà Shift+← chọn Ô KỀ thay vì ký tự (Excel).
+    passthrough — IME coi như tắt (app remote/VM forward scancode thô).
+
+  Lịch sử đáng nhớ (để khỏi lặp lại):
+  - Lark/Slack/Discord/VSCode (Electron): in-place hỏng Ở BIÊN TỪ (editor áp
+    edit trễ) dù giữa dòng trông ổn — đã field-test 21/07/2026. Đừng chuyển
+    sang inPlace nếu chưa test đầu-dòng/đầu-message.
+  - Excel: KHÔNG chuyển sang marked — nó tự vẽ gạch chân đậm, mọi style IME
+    gửi đều bị bỏ qua (đã thử cạn 4 biến thể).
+  - Spotlight: inPlace sạch trên macOS 26 kể cả khi có gợi ý xám (race
+    autocomplete lịch sử đã hết).
+  - WhatsApp: bản native mới tôn trọng replacementRange (pin tap cũ là cho
+    bản Catalyst đã chết).
+-->
+<plist version="1.0">
+<dict>
+	<!-- Terminals — lời hứa cốt lõi, hỏng in-place theo thiết kế -->
+	<key>com.apple.Terminal</key>            <string>tap</string>
+	<key>com.googlecode.iterm2</key>         <string>tap</string>
+
+	<!-- Electron/CEF — in-place hỏng ở biên từ -->
+	<key>com.larksuite.larkApp</key>         <string>tap</string>
+	<key>com.tinyspeck.slackmacgap</key>     <string>tap</string>
+	<key>com.hnc.Discord</key>               <string>tap</string>
+	<key>com.microsoft.VSCode</key>          <string>tap</string>
+
+	<!-- Đã kiểm chứng gõ trực tiếp tốt -->
+	<key>com.apple.Notes</key>               <string>inPlace</string>
+	<key>com.apple.finder</key>              <string>inPlace</string>
+	<key>com.apple.ActivityMonitor</key>     <string>inPlace</string>
+	<key>com.apple.Spotlight</key>           <string>inPlace</string>
+	<key>com.microsoft.Word</key>            <string>inPlace</string>
+	<key>com.macromates.TextMate</key>       <string>inPlace</string>
+	<key>net.whatsapp.WhatsApp</key>         <string>inPlace</string>
+	<key>com.viettelex.inputmethod.telex</key> <string>inPlace</string>
+
+	<!-- Browsers — tự dò theo ô (address bar vs nội dung trang) -->
+	<key>com.apple.Safari</key>              <string>axDetect</string>
+	<key>com.apple.SafariTechnologyPreview</key> <string>axDetect</string>
+	<key>com.google.Chrome</key>             <string>axDetect</string>
+	<key>com.google.Chrome.canary</key>      <string>axDetect</string>
+	<key>com.google.Chrome.beta</key>        <string>axDetect</string>
+	<key>org.chromium.Chromium</key>         <string>axDetect</string>
+	<key>com.brave.Browser</key>             <string>axDetect</string>
+	<key>com.brave.Browser.beta</key>        <string>axDetect</string>
+	<key>com.microsoft.edgemac</key>         <string>axDetect</string>
+	<key>com.microsoft.edgemac.Beta</key>    <string>axDetect</string>
+	<key>com.microsoft.Edge</key>            <string>axDetect</string>
+	<key>com.vivaldi.Vivaldi</key>           <string>axDetect</string>
+	<key>com.operasoftware.Opera</key>       <string>axDetect</string>
+	<key>company.thebrowser.Browser</key>    <string>axDetect</string>
+
+	<!-- Grid app: cell autocomplete đua backspace, Shift+← chọn ô kề -->
+	<key>com.microsoft.Excel</key>           <string>emptyReset</string>
+
+	<!-- Remote desktop / VM / screen sharing — scancode thô sang máy khách -->
+	<key>com.microsoft.rdc.macos</key>       <string>passthrough</string>
+	<key>com.microsoft.rdc.osx.beta</key>    <string>passthrough</string>
+	<key>com.parallels.desktop.console</key> <string>passthrough</string>
+	<key>com.vmware.fusion</key>             <string>passthrough</string>
+	<key>com.utmapp.UTM</key>                <string>passthrough</string>
+	<key>com.apple.ScreenSharing</key>       <string>passthrough</string>
+	<key>com.citrix.receiver.icaviewer.mac</key> <string>passthrough</string>
+	<key>com.teamviewer.TeamViewer</key>     <string>passthrough</string>
+	<key>com.realvnc.vncviewer</key>         <string>passthrough</string>
+	<key>com.nulana.remotixmac</key>         <string>passthrough</string>
+</dict>
+</plist>

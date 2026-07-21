@@ -25,6 +25,10 @@ if ! xcrun stapler validate "$APP" >/dev/null 2>&1; then
     echo "App is not notarized+stapled — run Scripts/notarize-install.sh first."; exit 1
 fi
 
+# The built-in rules file ships alongside the binaries: users can read it,
+# edit a copy, and import it via Bảng cơ chế gõ → "Nhập từ plist…".
+cp typing-modes.plist "$OUTDIR/typing-modes.plist"
+
 ZIP="$OUTDIR/VietTelex-$VER.app.zip"
 echo "→ zipping stapled app → $ZIP"
 rm -f "$ZIP"
@@ -45,7 +49,7 @@ echo "app.zip sha256 (for the Homebrew cask):"
 echo "  $SHA"
 echo
 echo "Next — publish (needs your OK; these push to the public release + tap):"
-echo "  gh release upload v$VER \"$ZIP\" \"$PKG\""
+echo "  gh release upload v$VER \"$ZIP\" \"$PKG\" \"$OUTDIR/typing-modes.plist\""
 echo "  # then in ptrinh/homebrew-viettelex bump Casks/viettelex.rb:"
 echo "  #   version \"$VER\""
 echo "  #   sha256 \"$SHA\""
