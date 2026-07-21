@@ -5,7 +5,8 @@ let package = Package(
     name: "TelexCore",
     platforms: [.macOS(.v13)],
     products: [
-        .library(name: "TelexCore", targets: ["TelexCore"])
+        .library(name: "TelexCore", targets: ["TelexCore"]),
+        .executable(name: "gen-lessons", targets: ["GenLessons"])
     ],
     targets: [
         .target(
@@ -13,6 +14,10 @@ let package = Package(
             swiftSettings: [
                 .unsafeFlags(["-Ounchecked"], .when(configuration: .release))
             ]
+        ),
+        .executableTarget(
+            name: "GenLessons",
+            dependencies: ["TelexCore"]
         ),
         .testTarget(
             name: "TelexCoreTests",

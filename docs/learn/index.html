@@ -136,6 +136,7 @@
     .chip { transition: none; }
   }
 </style>
+<link rel="stylesheet" href="learn.css">
 </head>
 <body>
 
@@ -145,7 +146,7 @@
     <span>ViệtTelex<small>Tập gõ Telex</small></span>
   </a>
   <div class="right">
-    <span class="stars" id="stars">⭐ 0 sao</span>
+    <a class="back" href="#hoc">🎓 Vào lớp học</a>
     <a class="back" href="../">← Trang chủ</a>
   </div>
 </div>
@@ -163,7 +164,7 @@
       <button class="minibtn" data-demo="Chaof buooir sasng ">Ví dụ: Chào buổi sáng</button>
       <button class="minibtn" id="sandboxClear">Xoá</button>
     </div>
-    <div class="kbd-note">💡 Dùng bàn phím thật nhé. Bấm <b>dấu cách</b> để kết thúc một từ.</div>
+    <div class="kbd-note">💡 Ô thử này cần bàn phím thật. Bấm <b>dấu cách</b> để kết thúc một từ. Trong <a href="#hoc" style="color:#d4a94a">lớp học</a> bên dưới có bàn phím trên màn hình — dùng được cả iPad.</div>
   </div>
 </header>
 
@@ -176,32 +177,99 @@
   </div>
 </section>
 
-<!-- Lessons -->
-<section style="background:#f4f2ec;">
+<!-- Posture & hands guide -->
+<section id="hands" style="background:#f4f2ec;">
   <div class="wrap">
-    <h2>Bài tập theo cấp độ</h2>
-    <p class="lead">Mỗi cấp một kỹ năng. Gõ đúng chữ hiện trên màn hình để qua từ mới và nhận sao ⭐.</p>
-    <div class="lesson-wrap">
-      <div class="levels" id="levels"></div>
-      <div class="practice">
-        <div class="prog"><i id="progBar"></i></div>
+    <h2>Đặt tay đúng — mười ngón</h2>
+    <p class="lead">Trước khi học gõ, hãy đặt tay đúng: mỗi ngón phụ trách vài phím, gõ xong quay về <b>hàng phím chính</b>. Đây là kỹ năng nền cho mọi bài học bên dưới.</p>
+    <div class="hands-emoji" aria-hidden="true">🫲 ⌨️ 🫱</div>
+    <div class="hands-grid">
+      <div class="hands-note"><h3>1️⃣ Tìm gờ nổi F và J</h3><p>Sờ mặt bàn phím: phím <b>F</b> và <b>J</b> có gờ nổi nhỏ. Đặt hai ngón trỏ lên đó — không cần nhìn! Các ngón còn lại nằm lên <b>A S D</b> (tay trái) và <b>K L ;</b> (tay phải), hai ngón cái đặt hờ lên dấu cách.</p></div>
+      <div class="hands-note"><h3>2️⃣ Mỗi ngón một vùng</h3><p>Bàn phím trong bài học tô màu theo ngón: ngón nào gõ phím nấy rồi <b>quay về chỗ cũ</b>. Ban đầu chậm là bình thường — tay sẽ tự nhớ.</p></div>
+      <div class="hands-note"><h3>3️⃣ Mắt nhìn màn hình</h3><p>Cố gắng không nhìn xuống phím. Bài học luôn <b>tô sáng phím kế tiếp</b> và nhắc tên ngón tay, nên bạn không cần tìm phím bằng mắt.</p></div>
+      <div class="hands-note"><h3>4️⃣ Ngồi thẳng, cổ tay thả lỏng</h3><p>Lưng thẳng, khuỷu tay gập ~90°, cổ tay thẳng và không tì mạnh xuống bàn. Nghỉ 5 phút sau mỗi 20 phút luyện.</p></div>
+    </div>
+    <div class="kb-legend" style="margin-top:18px">
+      <span><i style="background:#fde8e8"></i> út trái</span><span><i style="background:#fdf3e0"></i> áp út trái</span>
+      <span><i style="background:#eaf7e6"></i> giữa trái</span><span><i style="background:#e6f2fb"></i> trỏ trái</span>
+      <span><i style="background:#e9e9fb"></i> trỏ phải</span><span><i style="background:#f3e6fb"></i> giữa phải</span>
+      <span><i style="background:#fbe6f3"></i> áp út phải</span><span><i style="background:#e6fbf7"></i> út phải</span>
+    </div>
+  </div>
+</section>
+
+<!-- Lesson map + player -->
+<section id="hoc">
+  <div class="wrap">
+    <h2>Lớp học gõ Telex 🎓</h2>
+    <p class="lead">6 chương từ làm quen bàn phím đến gõ đoạn văn. Đạt ít nhất ⭐ mỗi bài để mở bài kế tiếp. Trên iPad không có bàn phím rời? Bấm thẳng lên bàn phím trong bài học.</p>
+    <div class="gamebar">
+      <span class="pill fire" id="gbStreak">🔥 0 ngày</span>
+      <span class="pill xp" id="gbXp">⭐ 0 XP</span>
+      <button class="pill badges" id="gbBadges">🏅 0/8</button>
+      <button class="pill" id="gbSound" title="Âm thanh / Sound">🔊</button>
+      <button class="pill" id="gbLang" title="Ngôn ngữ / Language">🌐 VI</button>
+      <button class="pill" id="gbTrack" title="Lộ trình / Track">🐣</button>
+    </div>
+    <div id="map"></div>
+
+    <div class="lesson-wrap" id="player" hidden>
+      <div class="phead">
+        <button class="btn" id="pBack">← Bản đồ</button>
+        <h3 id="pTitle"></h3>
+      </div>
+      <div class="practice" id="playBox">
+        <div class="prog"><i id="pProg"></i></div>
         <div class="prompt">
-          <div class="task" id="taskLabel">Gõ chữ này:</div>
-          <div class="target" id="target">—</div>
-          <div class="meaning" id="meaning"></div>
-          <div class="hint" id="hint"></div>
+          <div class="task" id="pIntro"></div>
+          <div class="sentence-line" id="sentenceLine"></div>
+          <div class="target" id="pTarget">—</div>
+          <div class="speakrow">
+            <button class="speakbtn" id="speakBtn">🔊 Nghe</button>
+            <button class="speakbtn" id="dictBtn" style="display:none">🎧 Nghe rồi gõ</button>
+          </div>
         </div>
-        <div class="lesson-field" id="lessonField" tabindex="0" role="textbox" aria-label="Ô làm bài"></div>
-        <div class="feedback" id="feedback"></div>
+        <div class="typedbox" id="typedLine"></div>
+        <div class="fingerhint" id="fingerHint"></div>
+        <div class="kb" id="kbArea"></div>
+        <div tabindex="0" id="focusTrap" style="outline:none;height:0;overflow:hidden"></div>
+      </div>
+      <div class="result" id="resultBox" hidden>
+        <div class="bigstars" id="rStars"></div>
+        <h3 id="rTitle"></h3>
+        <div class="metrics" id="rMetrics"></div>
+        <div class="gained" id="rGained"></div>
+        <div id="rBadges"></div>
         <div class="lesson-tools">
-          <button class="btn" id="hintBtn">Gợi ý phím 👀</button>
-          <button class="btn" id="skipBtn">Bỏ qua →</button>
-          <button class="btn primary" id="nextBtn" style="display:none;">Từ tiếp theo →</button>
+          <button class="btn" id="rRetry">↻ Làm lại</button>
+          <button class="btn primary" id="rNext">Bài tiếp theo →</button>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<div class="modal" id="trackModal" hidden>
+  <div class="card">
+    <h3 id="trackTitle">Bạn bắt đầu từ đâu?</h3>
+    <button class="node" id="trackNew" style="width:100%;margin-bottom:10px;padding:16px">
+      <span class="t" id="trackNewT"></span>
+      <small id="trackNewD" style="color:var(--ink-soft)"></small>
+    </button>
+    <button class="node" id="trackTypist" style="width:100%;padding:16px">
+      <span class="t" id="trackTypistT"></span>
+      <small id="trackTypistD" style="color:var(--ink-soft)"></small>
+    </button>
+  </div>
+</div>
+
+<div class="modal" id="badgeModal" hidden>
+  <div class="card">
+    <h3 id="badgeTitle">🏅 Bộ sưu tập huy hiệu</h3>
+    <div id="badgeList"></div>
+    <div class="lesson-tools"><button class="btn primary" id="badgeClose">Đóng</button></div>
+  </div>
+</div>
 
 <!-- Quick why -->
 <section>
@@ -225,19 +293,12 @@
 <div class="confetti" id="confetti" aria-hidden="true"></div>
 
 <script src="telex.js"></script>
+<script src="learn.js" defer></script>
 <script>
 (function () {
   'use strict';
   var Telex = window.Telex;
   var PUNCT = ' .,!?;:\'"()-\n\t';
-
-  // ── Stars (localStorage) ───────────────────────────────────────────────
-  var starsEl = document.getElementById('stars');
-  function getStars() { return parseInt(localStorage.getItem('telex-learn-stars') || '0', 10) || 0; }
-  function setStars(n) { localStorage.setItem('telex-learn-stars', String(n)); renderStars(); }
-  function addStar() { setStars(getStars() + 1); }
-  function renderStars() { starsEl.textContent = '⭐ ' + getStars() + ' sao'; }
-  renderStars();
 
   // ── TelexField: a lightweight IME surface driven by the ported engine ────
   function TelexField(el, opts) {
@@ -360,167 +421,6 @@
     cheatEl.appendChild(chip);
   });
 
-  // ── Lessons ──────────────────────────────────────────────────────────────
-  // Each item: target Vietnamese text + meaning. Telex keys are DERIVED and verified.
-  var LESSONS = [
-    { name: 'Dấu thanh', emoji: '🎵', words: [
-      ['má', 'mẹ'], ['mà', 'nhưng'], ['mả', 'ngôi mả'], ['mã', 'con số / mã'], ['mạ', 'cây lúa non'],
-      ['cá', 'con cá'], ['gà', 'con gà'], ['bé', 'em bé'], ['cò', 'con cò'], ['lá', 'chiếc lá']
-    ] },
-    { name: 'Mũ â ê ô', emoji: '🔤', words: [
-      ['cô', 'cô giáo'], ['bố', 'người bố'], ['đêm', 'ban đêm'], ['mây', 'đám mây'], ['cây', 'cái cây'],
-      ['tôi', 'tôi / mình'], ['tết', 'ngày Tết'], ['ông', 'ông nội'], ['cần', 'cần thiết'], ['xôi', 'món xôi']
-    ] },
-    { name: 'Ă Ơ Ư', emoji: '✨', words: [
-      ['ăn', 'ăn cơm'], ['cơm', 'bát cơm'], ['thư', 'lá thư'], ['mưa', 'trời mưa'], ['sữa', 'ly sữa'],
-      ['chữ', 'con chữ'], ['vườn', 'khu vườn'], ['nước', 'nước uống'], ['tươi', 'tươi mới'], ['sương', 'sương mù']
-    ] },
-    { name: 'Chữ Đ', emoji: '🇻🇳', words: [
-      ['đi', 'đi bộ'], ['đá', 'hòn đá'], ['đỏ', 'màu đỏ'], ['đèn', 'cái đèn'], ['đũa', 'đôi đũa'],
-      ['đường', 'con đường'], ['đông', 'mùa đông'], ['đẹp', 'xinh đẹp'], ['đá bóng', 'chơi bóng đá'], ['đất nước', 'quê hương']
-    ] },
-    { name: 'Cả câu', emoji: '💬', words: [
-      ['xin chào', 'lời chào'], ['cảm ơn', 'nói lời cảm ơn'], ['tiếng Việt', 'ngôn ngữ của mình'],
-      ['con mèo', 'con mèo kêu meo meo'], ['quả táo', 'trái táo'], ['trường học', 'nơi đi học'],
-      ['yêu thương', 'tình cảm'], ['bầu trời', 'trên cao'], ['mặt trời', 'ông mặt trời'], ['ước mơ', 'điều mong muốn']
-    ] }
-  ];
-
-  // word -> telex keys (detone + mark-expand + trailing tone key), then verify.
-  var MARK_EXP = { 'â': 'aa', 'ă': 'aw', 'ê': 'ee', 'ô': 'oo', 'ơ': 'ow', 'ư': 'uw', 'đ': 'dd' };
-  var TONE_KEY = { 1: 's', 2: 'f', 3: 'r', 4: 'x', 5: 'j' };
-  var TG = ['aáàảãạ','ăắằẳẵặ','âấầẩẫậ','eéèẻẽẹ','êếềểễệ','iíìỉĩị','oóòỏõọ','ôốồổỗộ','ơớờởỡợ','uúùủũụ','ưứừửữự','yýỳỷỹỵ'];
-  var DETONE = {};
-  TG.forEach(function (g) { var cs = Array.from(g); cs.forEach(function (c, i) { DETONE[c] = { base: cs[0], tone: i }; }); });
-  function wordToKeys(word) {
-    return word.split(' ').map(function (tok) {
-      var out = '', tone = 0;
-      Array.from(tok).forEach(function (ch) {
-        var lower = ch.toLowerCase();
-        var up = ch !== lower;
-        var d = DETONE[lower];
-        var base = lower, t = 0;
-        if (d) { base = d.base; t = d.tone; }
-        if (t) tone = t;
-        var seg = MARK_EXP[base] || base;
-        out += up ? seg.toUpperCase() : seg;
-      });
-      if (tone) out += TONE_KEY[tone];
-      return out;
-    }).join(' ');
-  }
-  // Build + verify lesson keys; drop any word whose derived keys don't round-trip.
-  LESSONS.forEach(function (lvl) {
-    lvl.items = [];
-    lvl.words.forEach(function (w) {
-      var keys = wordToKeys(w[0]);
-      var got = Telex.transliterate(keys);
-      if (got === w[0]) lvl.items.push({ word: w[0], meaning: w[1], keys: keys });
-      else if (window.console) console.warn('Telex hint mismatch:', w[0], '→', keys, '→', got);
-    });
-  });
-
-  var levelsEl = document.getElementById('levels');
-  var progBar = document.getElementById('progBar');
-  var targetEl = document.getElementById('target');
-  var meaningEl = document.getElementById('meaning');
-  var hintEl = document.getElementById('hint');
-  var feedbackEl = document.getElementById('feedback');
-  var hintBtn = document.getElementById('hintBtn');
-  var skipBtn = document.getElementById('skipBtn');
-  var nextBtn = document.getElementById('nextBtn');
-
-  var curLevel = 0, curIdx = 0, solved = false, hintShown = false;
-  var levelDone = JSON.parse(localStorage.getItem('telex-learn-done') || '{}');
-
-  LESSONS.forEach(function (lvl, i) {
-    var b = document.createElement('button'); b.className = 'level-btn'; b.dataset.i = i;
-    b.innerHTML = lvl.emoji + ' ' + escapeHtml(lvl.name) + ' <span class="done"></span>';
-    b.addEventListener('click', function () { curLevel = i; curIdx = 0; renderLevels(); loadWord(); });
-    levelsEl.appendChild(b);
-  });
-  function renderLevels() {
-    Array.prototype.forEach.call(levelsEl.children, function (b, i) {
-      b.classList.toggle('active', i === curLevel);
-      var d = (levelDone[i] || 0);
-      b.querySelector('.done').textContent = d >= LESSONS[i].items.length && LESSONS[i].items.length ? '✓' : (d ? d + '/' + LESSONS[i].items.length : '');
-    });
-  }
-
-  var lessonField = new TelexField(document.getElementById('lessonField'), {
-    placeholder: 'Gõ vào đây…',
-    onUpdate: function (f) { checkAnswer(f); }
-  });
-
-  function loadWord() {
-    var lvl = LESSONS[curLevel];
-    if (curIdx >= lvl.items.length) { finishLevel(); return; }
-    var item = lvl.items[curIdx];
-    solved = false; hintShown = false;
-    targetEl.textContent = item.word;
-    meaningEl.textContent = item.meaning ? '(' + item.meaning + ')' : '';
-    hintEl.innerHTML = '';
-    feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
-    lessonField.el.className = 'lesson-field';
-    lessonField.reset();
-    nextBtn.style.display = 'none';
-    hintBtn.disabled = false;
-    var p = lvl.items.length ? (curIdx / lvl.items.length * 100) : 0;
-    progBar.style.width = p + '%';
-    document.getElementById('taskLabel').textContent = 'Gõ chữ này' + (item.word.indexOf(' ') >= 0 ? ' (nhớ dấu cách):' : ':');
-  }
-
-  function checkAnswer(f) {
-    if (solved) return;
-    var lvl = LESSONS[curLevel];
-    var item = lvl.items[curIdx];
-    var text = f.fullText();
-    var typed = f.keyLog.join('');
-    var win = text === item.word || text.toLowerCase() === item.word.toLowerCase();
-    if (win) {
-      solved = true;
-      lessonField.el.classList.remove('bad'); lessonField.el.classList.add('ok');
-      feedbackEl.textContent = pick(['Giỏi quá! 🎉', 'Chuẩn luôn! ⭐', 'Tuyệt vời! 👏', 'Xuất sắc! ✨']);
-      feedbackEl.className = 'feedback win';
-      addStar();
-      levelDone[curLevel] = Math.max(levelDone[curLevel] || 0, curIdx + 1);
-      localStorage.setItem('telex-learn-done', JSON.stringify(levelDone));
-      renderLevels();
-      progBar.style.width = ((curIdx + 1) / lvl.items.length * 100) + '%';
-      confetti();
-      nextBtn.style.display = ''; nextBtn.focus();
-    } else if (typed === '' || item.keys.toLowerCase().indexOf(typed.toLowerCase()) === 0) {
-      // typed keys are still a prefix of the expected keystrokes — on track, stay quiet
-      lessonField.el.classList.remove('bad');
-      feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
-    } else {
-      lessonField.el.classList.add('bad');
-      feedbackEl.textContent = 'Chưa đúng, thử lại nhé! 💪';
-      feedbackEl.className = 'feedback retry';
-    }
-  }
-
-  function finishLevel() {
-    targetEl.textContent = '🏆';
-    meaningEl.textContent = 'Hoàn thành cấp "' + LESSONS[curLevel].name + '"!';
-    hintEl.innerHTML = '';
-    feedbackEl.textContent = 'Chọn cấp khác ở trên để học tiếp nhé.';
-    feedbackEl.className = 'feedback win';
-    lessonField.el.className = 'lesson-field'; lessonField.reset();
-    nextBtn.style.display = 'none'; hintBtn.disabled = true;
-    progBar.style.width = '100%';
-    confetti();
-  }
-
-  hintBtn.addEventListener('click', function () {
-    hintShown = true;
-    var item = LESSONS[curLevel].items[curIdx];
-    hintEl.innerHTML = 'Gõ các phím: <span>' + escapeHtml(item.keys) + '</span>';
-    lessonField.el.focus();
-  });
-  skipBtn.addEventListener('click', function () { curIdx++; loadWord(); lessonField.el.focus(); });
-  nextBtn.addEventListener('click', function () { curIdx++; loadWord(); lessonField.el.focus(); });
-
   // ── helpers ──
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -539,8 +439,7 @@
     }
   }
 
-  renderLevels();
-  loadWord();
+  window.confettiBurst = confetti;
 })();
 </script>
 </body>
