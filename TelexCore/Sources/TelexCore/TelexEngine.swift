@@ -315,8 +315,17 @@ public struct TelexEngine {
     private mutating func shouldRestoreRaw() -> Bool {
         if rawIsEnglishCollision() { return true }
         let composedValid = composedIsValidSyllable()
-        if markCancelled, composedValid || rawIsAllUppercase() { return false }
+        // All-caps escape is for CONSONANT-ONLY acronyms (DDDR → DDR): a vowel in
+        // the composed text means a word, not an acronym — "OFF" must not keep "OF".
+        let acronymEscape = rawIsAllUppercase() && !renderHasVowel()
+        if markCancelled, composedValid || acronymEscape { return false }
         return forceRestoreUpperTone || rawIsEnglishException() || !composedValid
+    }
+
+    @inline(__always)
+    private func renderHasVowel() -> Bool {
+        for k in 0..<pCount where isVowelAscii(renderLetters[k].base) { return true }
+        return false
     }
 
     @inline(__always)
