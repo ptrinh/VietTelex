@@ -307,26 +307,15 @@ final class TelexInputController: IMKInputController {
             }
 
         case kReturn, kEnter, kTab, kEscape:
-            // Boundary keys while a MARKED composition is open in a TERMINAL lose
-            // their first press if committed-and-passed (the closing composition
-            // session swallows the key — "vậy⏎" needed a second Enter to run; same
-            // class as the modifier fixes above). A terminal is a byte pipe, so
-            // after committing we deliver the key's byte through the same committed-
-            // text channel and consume the event: Enter runs, Tab completes, Esc
-            // escapes — first press. Other marked apps (chat) keep commit-and-pass:
-            // a literal \r inserted there would ADD a newline instead of sending.
-            let wasComposing = !engine.isEmpty
-            boundary(client)
-            if wasComposing, AppState.shared.usesMarkedText(id),
-               let id, AppState.terminalApps.contains(id) {
-                let byte = event.keyCode == kTab ? "\t"
-                         : event.keyCode == kEscape ? "\u{1B}" : "\r"
-                client.insertText(byte, replacementRange: kNoRange)
-                spMode = "marked"
-                logDecision("terminal boundary key delivered as byte (single press)")
-                return true
-            }
-            return false
+            // KNOWN LIMITATION — while a MARKED composition is open in a terminal,
+            // the first boundary press only commits; the second acts ("vậy⏎⏎").
+            // Tried and closed (2026-07-21): delivering the key's byte through
+            // insertText after the commit — Terminal STRIPS control characters
+            // (\r, \n, \t, ESC) from IME-inserted text (paste-bracketing-style
+            // sanitizing; branch fired in logs, nothing reached the pty). This
+            // two-press behavior is also standard CJK composition UX. Single-press
+            // Enter in terminals is what the TAP path provides — grant Accessibility.
+            boundary(client); return false
 
         default:
             break
