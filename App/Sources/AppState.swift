@@ -115,7 +115,9 @@ final class AppState: @unchecked Sendable {
     /// a modifier only acts on the adjacent vowel, so English/code types cleanly
     /// ("ama"→ama, "trangw"→trangw; type "coot"/"trawng" to get the diacritic).
     var freeMarking: Bool {
-        get { defaults.object(forKey: Key.freeMarking) as? Bool ?? false }
+        // Default ON since 1.3.1 (user decision 2026-07-21). Users who explicitly
+        // turned it off keep their choice (stored value wins).
+        get { defaults.object(forKey: Key.freeMarking) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Key.freeMarking) }
     }
 

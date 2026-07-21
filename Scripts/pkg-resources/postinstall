@@ -11,6 +11,12 @@ consoleUser="$(stat -f%Su /dev/console)"
 uid="$(id -u "$consoleUser")"
 APP="/Users/$consoleUser/Library/Input Methods/VietTelex.app"
 
+# Upgrade path: kill any RUNNING old instance so the next keystroke relaunches
+# the freshly installed binary. Without this the old version keeps serving until
+# logout — field report: pkg upgraded the bundle on disk but the app still ran
+# (and reported) the previous version.
+launchctl asuser "$uid" sudo -u "$consoleUser" pkill -x VietTelex 2>/dev/null
+
 # Make LaunchServices aware of the freshly installed bundle.
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 "$LSREGISTER" -f "$APP" 2>/dev/null

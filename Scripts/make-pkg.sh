@@ -90,7 +90,10 @@ PY2
 # size, well inside the pane, independent of DPI.
 python3 - "$RTFDSRC/en.rtfd/TXT.rtf" "$RTFDSRC/vi.rtfd/TXT.rtf" <<'PY2'
 import sys, re
-TARGET_W = 7200  # twips (=360pt), comfortably inside the Summary pane
+TARGET_W = 360  # POINTS — NeXTGraphic \width/\height are pt, NOT twips (verified
+                # against textutil output: a 48px placeholder emits \width320-ish).
+                # The old 7200 "twips" rendered 7200pt wide → the first screenshot
+                # overflowed the Summary pane, clipped on the right.
 for path in sys.argv[1:]:
     s = open(path, encoding="utf-8", errors="surrogateescape").read()
     def fix(m):
