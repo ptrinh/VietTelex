@@ -31,6 +31,7 @@ struct Item: Codable {
     var d: String          // final rendered word
     var s: [String]        // render state after each key
     var post: String?      // literal key(s) after the word (space, punctuation)
+    var a: String?         // illustration emoji (vocabulary aid) — nil if ambiguous
 }
 
 struct Lesson: Codable {
@@ -43,6 +44,7 @@ struct Lesson: Codable {
     var newKeys: [String]? // keys introduced (highlighted on the keyboard)
     var titleEN: String?   // English UI variant
     var introEN: String?
+    var art: String?       // lesson-level illustration (sentence meaning)
 }
 
 struct Chapter: Codable {
@@ -55,6 +57,32 @@ struct Chapter: Codable {
 
 // MARK: - Authoring helpers
 
+/// Hình minh họa từ vựng (emoji) — chỉ những từ nghĩa rõ ràng, một nghĩa nổi trội.
+let wordArt: [String: String] = [
+    "đi": "🚶", "đo": "📏", "đen": "⚫", "đau": "🤕",
+    "cân": "⚖️", "lâu": "⏳", "mây": "☁️",
+    "tên": "🏷️", "đêm": "🌙", "cô": "👩‍🏫", "ông": "👴", "thôn": "🏘️", "không": "🚫",
+    "ăn": "🍚", "năm": "🖐️", "trăng": "🌕", "bơ": "🧈", "thư": "✉️",
+    "mưa": "🌧️", "thương": "❤️", "người": "🧑",
+    "má": "👩", "lá": "🍃", "cá": "🐟", "sáng": "🌅", "núi": "⛰️", "bánh": "🍰",
+    "bà": "👵", "làng": "🏘️", "nhà": "🏠", "trời": "☀️",
+    "nhỏ": "🤏", "ngủ": "😴", "hỏi": "❓",
+    "mũi": "👃", "nghĩ": "🤔", "ngã": "🤸",
+    "mạ": "🌾", "đẹp": "🌸", "mệt": "😮‍💨", "học": "📚", "chuyện": "💬",
+    "ma": "👻", "mả": "🪦",
+    "việt": "🇻🇳", "chào": "👋", "ơn": "🙏",
+    "em": "🧒", "con": "👶", "xanh": "💚",
+    "mẹ": "👩", "ba": "👨", "cam": "🍊", "cơm": "🍚",
+    "dấu": "✏️", "trường": "🏫", "đường": "🛣️",
+    "yêu": "❤️", "vui": "😄", "giỏi": "🏆",
+    "đa": "🌳", "mơ": "💭", "mã": "🐎", "lão": "👴", "họ": "👨‍👩‍👧‍👦", "được": "👍",
+    "xin": "🙏", "sinh": "🧑‍🎓", "hai": "✌️", "im": "🤫", "an": "🕊️", "anh": "👦",
+    "tư": "4️⃣", "thân": "🤗", "gõ": "⌨️", "thật": "💯", "ngày": "📅", "một": "1️⃣",
+    "chúc": "🎉", "bạn": "🧑‍🤝‍🧑", "làm": "💼", "cha": "👨", "nước": "💧",
+    "nguồn": "⛲", "chảy": "🌊", "tiếng": "🗣️", "cùng": "🤝", "quá": "😍"
+]
+
+
 nonisolated(unsafe) var failures: [String] = []
 
 /// One word item: author the telex keys and the EXPECTED final render.
@@ -63,7 +91,7 @@ func w(_ keys: String, _ expect: String, post: String? = " ") -> Item {
     if t.final != expect {
         failures.append("\(keys) → \(t.final) (expected \(expect))")
     }
-    return Item(k: keys, d: t.final, s: t.states, post: post)
+    return Item(k: keys, d: t.final, s: t.states, post: post, a: wordArt[expect.lowercased()])
 }
 
 /// Raw drill item (no telex semantics — home-row practice etc.).
@@ -71,7 +99,7 @@ func raw(_ keys: String, post: String? = " ") -> Item {
     var states: [String] = []
     var acc = ""
     for ch in keys { acc.append(ch); states.append(acc) }
-    return Item(k: keys, d: keys, s: states, post: post)
+    return Item(k: keys, d: keys, s: states, post: post, a: nil)
 }
 
 /// A sentence: list of word items; the joined displays become the TTS text.
@@ -91,11 +119,11 @@ func lesson(_ id: String, _ title: String, _ intro: String, en: (String, String)
     var its = items
     if let last = its.indices.last { its[last].post = nil }   // no trailing space
     return Lesson(id: id, title: title, intro: intro, type: type, items: its,
-                  speak: nil, newKeys: newKeys, titleEN: en?.0, introEN: en?.1)
+                  speak: nil, newKeys: newKeys, titleEN: en?.0, introEN: en?.1, art: nil)
 }
 
 func sentenceLesson(_ id: String, _ title: String, _ intro: String,
-                    newKeys: [String]? = nil, en: (String, String)? = nil,
+                    newKeys: [String]? = nil, art: String? = nil, en: (String, String)? = nil,
                     _ parts: [([Item], String)], type: String = "sentence") -> Lesson {
     var items: [Item] = []
     var texts: [String] = []
@@ -110,7 +138,7 @@ func sentenceLesson(_ id: String, _ title: String, _ intro: String,
     if let last = items.indices.last, items[last].post == " " { items[last].post = nil }
     return Lesson(id: id, title: title, intro: intro, type: type, items: items,
                   speak: texts.joined(separator: " "), newKeys: newKeys,
-                  titleEN: en?.0, introEN: en?.1)
+                  titleEN: en?.0, introEN: en?.1, art: art)
 }
 
 // MARK: - Curriculum
@@ -121,7 +149,7 @@ let chapters: [Chapter] = [
     Chapter(id: "c0", icon: "🖐️", title: "Làm quen bàn phím", titleEN: "Meet the keyboard", lessons: [
         Lesson(id: "c0l1", title: "Tư thế & đặt tay", intro: "info", type: "info",
                items: [], speak: nil, newKeys: nil,
-               titleEN: "Posture & hand position", introEN: "info"),
+               titleEN: "Posture & hand position", introEN: "info", art: nil),
         lesson("c0l2", "Hàng phím chính", "Đặt ngón trỏ lên F và J (có gờ nổi). Mỗi ngón một phím, gõ xong quay về chỗ cũ.", en: ("Home row", "Put your index fingers on F and J (feel the bumps). One finger per key, then return home."),
                type: "drill", newKeys: ["f","j","d","k","s","l","a",";"], [
             raw("ff"), raw("jj"), raw("fj"), raw("jf"),
@@ -150,7 +178,7 @@ let chapters: [Chapter] = [
             w("con", "con"), w("ban", "ban"), w("nam", "nam"), w("anh", "anh"),
             w("minh", "minh"), w("thanh", "thanh"), w("trong", "trong"), w("xanh", "xanh")
         ]),
-        sentenceLesson("c1l3", "Câu đầu tiên", "Câu hoàn chỉnh đầu tiên của bạn! Gõ từng từ, cách nhau bằng dấu cách.", en: ("Your first sentence", "A full sentence! Type each word, separated by spaces."), [
+        sentenceLesson("c1l3", "Câu đầu tiên", "Câu hoàn chỉnh đầu tiên của bạn! Gõ từng từ, cách nhau bằng dấu cách.", art: "🍚🧒", en: ("Your first sentence", "A full sentence! Type each word, separated by spaces."), [
             sentence([w("em", "em"), w("an", "an"), w("com", "com")]),
             sentence([w("ba", "ba"), w("hai", "hai"), w("cam", "cam")]),
         ]),
@@ -231,15 +259,15 @@ let chapters: [Chapter] = [
             w("xin", "xin"), w("chaof", "chào"),
             w("hocj", "học"), w("sinh", "sinh")
         ]),
-        sentenceLesson("c4l2", "Câu chào hỏi", "Gõ cả câu — bấm 🔊 để nghe trước khi gõ.", en: ("Greetings", "Type the whole sentence — press 🔊 to hear it first."), [
+        sentenceLesson("c4l2", "Câu chào hỏi", "Gõ cả câu — bấm 🔊 để nghe trước khi gõ.", art: "👋😊", en: ("Greetings", "Type the whole sentence — press 🔊 to hear it first."), [
             sentence([w("Xin", "Xin"), w("chaof", "chào"), w("cacs", "các"), w("banj", "bạn")], end: "!"),
             sentence([w("Chucs", "Chúc"), w("mootj", "một"), w("ngayf", "ngày"), w("vui", "vui")], end: "."),
         ]),
-        sentenceLesson("c4l3", "Em yêu gia đình", "Những câu về gia đình.", en: ("Family sentences", "Sentences about family."), [
+        sentenceLesson("c4l3", "Em yêu gia đình", "Những câu về gia đình.", art: "👨‍👩‍👧", en: ("Family sentences", "Sentences about family."), [
             sentence([w("Em", "Em"), w("yeeu", "yêu"), w("mej", "mẹ")], end: "."),
             sentence([w("Ba", "Ba"), w("ddi", "đi"), w("lamf", "làm")], end: "."),
         ]),
-        sentenceLesson("c4l4", "Ca dao", "Ca dao Việt Nam — vừa gõ vừa học tiếng Việt.", en: ("Folk verse", "Vietnamese folk verse — type and learn the language at once."), [
+        sentenceLesson("c4l4", "Ca dao", "Ca dao Việt Nam — vừa gõ vừa học tiếng Việt.", art: "👨⛰️ 👩🌊", en: ("Folk verse", "Vietnamese folk verse — type and learn the language at once."), [
             sentence([w("Coong", "Công"), w("cha", "cha"), w("nhuw", "như"),
                       w("nuis", "núi"), w("Thais", "Thái"), w("Sown", "Sơn")], end: ","),
             sentence([w("Nghixa", "Nghĩa"), w("mej", "mẹ"), w("nhuw", "như"),
@@ -254,13 +282,13 @@ let chapters: [Chapter] = [
             w("dauas", "dấu"), w("vieetj", "việt"), w("truowngf", "trường"),
             w("hocj", "học"), w("dduongwf", "đường")
         ]),
-        sentenceLesson("c5l2", "Câu dài", "Câu đầy đủ dấu câu và chữ hoa.", en: ("Long sentences", "Full sentences with punctuation and capitals."), [
+        sentenceLesson("c5l2", "Câu dài", "Câu đầy đủ dấu câu và chữ hoa.", art: "🌤️😄", en: ("Long sentences", "Full sentences with punctuation and capitals."), [
             sentence([w("Hoom", "Hôm"), w("nay", "nay"), w("trowif", "trời"),
                       w("ddepj", "đẹp"), w("quas", "quá")], end: "!"),
             sentence([w("Chungs", "Chúng"), w("ta", "ta"), w("cungf", "cùng"),
                       w("hocj", "học"), w("gox", "gõ"), w("nhes", "nhé")], end: "!"),
         ]),
-        sentenceLesson("c5l3", "Thử thách cuối", "Boss cuối! Gõ trọn đoạn — đủ chữ đặc biệt, đủ năm thanh.", en: ("Final boss", "The final challenge — every special letter, all five tones."), [
+        sentenceLesson("c5l3", "Thử thách cuối", "Boss cuối! Gõ trọn đoạn — đủ chữ đặc biệt, đủ năm thanh.", art: "🇻🇳⌨️", en: ("Final boss", "The final challenge — every special letter, all five tones."), [
             sentence([w("Tieengs", "Tiếng"), w("Vieejt", "Việt"), w("raats", "rất"),
                       w("hay", "hay"), w("vaf", "và"), w("ddepj", "đẹp")], end: "."),
             sentence([w("Em", "Em"), w("sex", "sẽ"), w("gox", "gõ"),

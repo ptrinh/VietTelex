@@ -17,6 +17,7 @@ function load() {
   }
   if (s.track === undefined) s.track = null;
   if (s.autoSpeak === undefined) s.autoSpeak = false;
+  if (s.showArt === undefined) s.showArt = true;
   if (!s.langChosen) { s.lang = 'vi'; }
   if (!s.lang) s.lang = 'vi';
   return s;
@@ -38,6 +39,7 @@ var STR = {
     map: '← Bản đồ', listen: '🔊 Nghe', dict: '🎧 Nghe rồi gõ', dictOn: '🎧 Đang nghe-gõ',
     fsOn: 'Toàn màn hình', fsOff: 'Thoát toàn màn hình',
     autoSpk: '🗣️ Tự đọc: Tắt', autoSpkOn: '🗣️ Tự đọc: Bật',
+    art: '🖼️ Hình: Tắt', artOn: '🖼️ Hình: Bật',
     retry: '↻ Làm lại', next: 'Bài tiếp theo →', close: 'Đóng',
     badgeTitle: '🏅 Bộ sưu tập huy hiệu',
     r3: 'Xuất sắc! 🎉', r2: 'Giỏi lắm! 👏', r1: 'Hoàn thành! ✅',
@@ -71,6 +73,7 @@ var STR = {
     map: '← Map', listen: '🔊 Listen', dict: '🎧 Listen & type', dictOn: '🎧 Dictation on',
     fsOn: 'Fullscreen', fsOff: 'Exit fullscreen',
     autoSpk: '🗣️ Auto-speak: Off', autoSpkOn: '🗣️ Auto-speak: On',
+    art: '🖼️ Pictures: Off', artOn: '🖼️ Pictures: On',
     retry: '↻ Retry', next: 'Next lesson →', close: 'Close',
     badgeTitle: '🏅 Badge collection',
     r3: 'Excellent! 🎉', r2: 'Great job! 👏', r1: 'Done! ✅',
@@ -174,7 +177,37 @@ function pickVoice() {
   ttsReady = true;
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+// Pre-rendered neural audio (Scripts/gen-lesson-audio.py, vi-VN-HoaiMyNeural)
+// beats any on-device voice. slug() MUST match the Python script's slug().
+var audioManifest = {};
+fetch('audio/manifest.json').then(function (r) { return r.json(); })
+  .then(function (list) { list.forEach(function (k) { audioManifest[k] = 1; }); })
+  .catch(function () {});
+function slugText(t) {
+  return t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').trim().replace(/\s+/g, '-');
+}
+var audioEl = null;
+function audioURL(text) {
+  var k = slugText(text);
+  return audioManifest[k] ? 'audio/' + encodeURIComponent(k) + '.mp3' : null;
+}
+function preloadAudio(text) {
+  var url = audioURL(text);
+  if (url) fetch(url).catch(function () {});   // warm the HTTP cache
+}
 function speak(text, rate) {
+  var url = audioURL(text);
+  if (url) {
+    if (audioEl) audioEl.pause();
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    audioEl = new Audio(url);
+    audioEl.play().catch(function () { speakTTS(text, rate); });
+    return true;
+  }
+  return speakTTS(text, rate);
+}
+function speakTTS(text, rate) {
   if (!window.speechSynthesis) return false;
   if (!ttsReady) pickVoice();
   speechSynthesis.cancel();
@@ -184,6 +217,12 @@ function speak(text, rate) {
   u.rate = rate || 0.85;
   speechSynthesis.speak(u);
   return !!viVoice;
+}
+// Preload a whole lesson's audio (items + sentence)
+function preloadLesson(lesson) {
+  if (!lesson || lesson.type === 'drill' || lesson.type === 'info') return;
+  lesson.items.forEach(function (it) { preloadAudio(it.d); });
+  if (lesson.speak) preloadAudio(lesson.speak);
 }
 
 // ── Keyboard model ──────────────────────────────────────────────────────────
@@ -419,11 +458,18 @@ function openLesson(ci, li) {
   var ab = document.getElementById('autoSpkBtn');
   ab.style.display = speakable ? '' : 'none';
   refreshAutoSpk();
+  document.getElementById('artBtn').style.display = speakable ? '' : 'none';
+  refreshArtBtn();
   document.getElementById('resultBox').hidden = true;
   document.getElementById('playBox').hidden = false;
   kb = buildKeyboard(document.getElementById('kbArea'), handleKey);
   skipAutoPunct();
   renderStep(true);
+  preloadLesson(lesson);
+  var chL = DATA.chapters[ci].lessons;
+  var next = li + 1 < chL.length ? chL[li + 1]
+           : (ci + 1 < DATA.chapters.length ? DATA.chapters[ci + 1].lessons[0] : null);
+  setTimeout(function () { preloadLesson(next); }, 1500);
   playerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -471,6 +517,10 @@ function renderStep(speakNew) {
   } else { sl.innerHTML = ''; }
   var tgt = document.getElementById('pTarget');
   tgt.textContent = it ? (cur.dictation ? '🎧' : it.d) : '';
+  var artEl = document.getElementById('artBox');
+  if (!store.showArt) artEl.textContent = '';
+  else if (lesson.art) artEl.textContent = lesson.art;   // sentence meaning (ca dao…)
+  else artEl.textContent = (it && it.a && !cur.dictation) ? it.a : '';
   var committed = '';
   for (var i = 0; i < cur.itemIdx; i++) committed += lesson.items[i].d + (lesson.items[i].post || '');
   var live = '';
@@ -617,6 +667,16 @@ document.getElementById('autoSpkBtn').addEventListener('click', function () {
   store.autoSpeak = !store.autoSpeak; save();
   refreshAutoSpk();
   if (store.autoSpeak && cur && curItem()) speak(curItem().d);
+});
+function refreshArtBtn() {
+  var b = document.getElementById('artBtn');
+  b.textContent = store.showArt ? T().artOn : T().art;
+  b.classList.toggle('on', store.showArt);
+}
+document.getElementById('artBtn').addEventListener('click', function () {
+  store.showArt = !store.showArt; save();
+  refreshArtBtn();
+  if (cur) renderStep(false);
 });
 document.getElementById('dictBtn').addEventListener('click', function () {
   if (!cur) return;
