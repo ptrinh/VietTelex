@@ -257,3 +257,19 @@ otool -ov ~/Library/Input\ Methods/VietTelex.app/Contents/MacOS/VietTelex | grep
   change and each install is notarized, the id stays healthy and one logout after
   the first correct install is enough; subsequent notarized swaps of the same id
   refresh in place after re-selecting the input source.
+
+## InputMethodConnectionName MUST be "<bundle-id>_Connection" (sandboxed clients)
+
+Shipped for months as `VietTelex_Connection` — worked everywhere we tested, then
+field reports: WhatsApp (MAS, sandboxed) typed NOTHING with VietTelex selected.
+The input-source menu even showed no VietTelex section in those apps, and
+activateServer never fired: a sandboxed client's NSConnection lookup of the IME
+connection fails unless the name follows the modern convention
+`$(PRODUCT_BUNDLE_IDENTIFIER)_Connection`. Non-sandboxed apps (Terminal, Chrome,
+Electron) connect fine with any name — which is exactly why this hid for so long:
+sandboxed apps were "covered" by the tap (needs Accessibility) and the IMKit path
+never got exercised there until the tap was off.
+
+Changing the name requires a logout/login (it is input-source registration
+metadata). Diagnosis trail: missing menu section per-app → zero activateServer in
+DebugLog → sandbox entitlement check → naming convention (vChewing dev guidelines).
