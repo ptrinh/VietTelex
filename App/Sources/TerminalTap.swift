@@ -1061,7 +1061,16 @@ final class TerminalTapController {
         //  - Anything else → the IMKit in-place path handles it (pass through).
         let id = FrontmostApp.shared.bundleID
         if SpotlightDetector.isVisible {
-            emitMode = .selection
+            // Manual override for Spotlight (keyed by its real bundle id): tap-family
+            // picks map to their emit mode; anything else (marked/in-place/
+            // passthrough) is NOT the tap's business — pass through so the IMKit
+            // controller routes it (its client id IS com.apple.Spotlight).
+            switch AppState.shared.manualMode(AppState.spotlightBundleID) {
+            case nil, .selection: emitMode = .selection
+            case .tap: emitMode = .backspace
+            case .emptyReset: emitMode = .emptyReset
+            default: engine.reset(); return pass
+            }
         } else if AppState.shared.usesSelectionReplace(id) {
             emitMode = .selection
         } else if AppState.shared.usesEmptyReset(id) {

@@ -455,6 +455,12 @@ final class AppState: @unchecked Sendable {
         Self.selectionApps.contains(id)
     }
 
+    /// Spotlight's REAL bundle id — IMKit reports it as the client while the overlay
+    /// is focused (field-verified in the debug log), so manual modes key off it like
+    /// any other app. Only the tap-side DETECTION needs the window scan (the
+    /// frontmost app stays whatever is behind the overlay).
+    static let spotlightBundleID = "com.apple.Spotlight"
+
     /// Apps with a built-in special strategy (per-field browsers, forced-marked like
     /// Excel), for the Settings mode table — it lists the installed ones so their
     /// default is visible.

@@ -119,9 +119,12 @@ final class SettingsModel: ObservableObject {
     /// Rebuild the mode table: every app VietTelex knows something about — manual
     /// overrides ∪ learned (probe) ∪ built-in pins ∪ rows added by hand — sorted by
     /// display name A-Z.
-    /// Synthetic row for Spotlight — it is a window overlay, not an app (detected by
-    /// window scan, not bundle id), so its strategy is fixed and the picker disabled.
-    static let spotlightRowID = "system.spotlight"
+    /// Spotlight row — keyed by its REAL bundle id (IMKit reports com.apple.Spotlight
+    /// as the client while the overlay is focused), so manual modes work like any
+    /// other app; only tap-side DETECTION uses the window scan. Also kills the old
+    /// duplicate-row problem (synthetic "system.spotlight" next to the learned
+    /// com.apple.Spotlight entry).
+    static let spotlightRowID = AppState.spotlightBundleID
 
     func reloadModeTable() {
         manualModes = AppState.shared.manualModes
@@ -140,9 +143,8 @@ final class SettingsModel: ObservableObject {
         ids.formUnion(AppState.builtInInPlaceApps.filter(installed))
         ids.formUnion(AppState.builtInSpecialApps.filter(installed))
         ids.formUnion(ClientPolicy.forcePassthroughBundleIDs.filter(installed))
-        var rows = ids.map { makeRow(id: $0, name: Self.appName(for: $0)) }
-        rows.append(makeRow(id: Self.spotlightRowID, name: "Spotlight"))
-        modeRows = rows
+        ids.insert(Self.spotlightRowID)   // always listed; dedupes with learned entry
+        modeRows = ids.map { makeRow(id: $0, name: Self.appName(for: $0)) }
         // Up to 10 recently-focused apps not yet in the table — quick add candidates.
         recentApps = FrontmostApp.shared.recent
             .filter { !ids.contains($0.id) }
@@ -152,6 +154,7 @@ final class SettingsModel: ObservableObject {
     /// Display name for a bundle id (the installed app's name; the raw id when the
     /// app isn't found — e.g. learned on another machine or since uninstalled).
     static func appName(for id: String) -> String {
+        if id == spotlightRowID { return "Spotlight" }   // CoreServices — lookup can miss
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
         else { return id }
         let name = FileManager.default.displayName(atPath: url.path)
@@ -440,7 +443,6 @@ struct ModeTableTab: View {
                         Text(model.loc("Passthrough")).tag("passthrough")
                     }
                     .labelsHidden()
-                    .disabled(row.id == SettingsModel.spotlightRowID)   // fixed strategy
                 }.width(min: 150)
             }
             .frame(minHeight: 230, maxHeight: .infinity)

@@ -108,7 +108,7 @@
 "…or enter a bundle id:" = "…hoặc nhập bundle id:";
 
 /* Mode table tab (Bảng chế độ gõ) */
-"Typing modes" = "Bảng chế độ gõ";
+"Typing modes" = "Bảng cơ chế gõ";
 "App" = "Ứng dụng";
 "Detected" = "Đã nhận diện";
 "Manual" = "Ép tay";
@@ -122,7 +122,7 @@
 "Add recent app" = "Thêm app mở gần đây";
 "…or a bundle id" = "…hoặc bundle id";
 "Clear & re-learn" = "Xoá & học lại từ đầu";
-"Filter by app name, bundle id, or mode" = "Lọc theo tên app, bundle id, hoặc chế độ gõ";
+"Filter by app name, bundle id, or mode" = "Lọc theo tên app, bundle id, hoặc cơ chế gõ";
 "Empty — type a few Vietnamese words in any app and it will appear here." = "Trống — gõ vài từ tiếng Việt trong app bất kỳ là app sẽ hiện ở đây.";
 "An app types wrong or shows underlines? Pick Tap — real keystrokes, no underline (needs Accessibility). Marked text always renders correctly but underlines while typing. The modes below the divider are for special cases — leave them unless you know the app needs one. Clear forgets everything learned; manual picks are kept." = "App gõ sai hoặc bị gạch chân? Chọn Tap — gõ phím thật, không gạch chân (cần quyền Trợ năng). Marked text luôn ra đúng chữ nhưng gạch chân khi đang gõ. Các chế độ dưới vạch ngăn dành cho trường hợp đặc biệt — đừng chọn trừ khi biết chắc app cần. Xoá = quên hết những gì đã học; các mục ép tay được giữ.";
 
@@ -131,4 +131,4 @@
 
 /* Advanced features toggle */
 "Show advanced features" = "Mở tính năng nâng cao";
-"Adds the Typing modes and Experimental tabs — per-app overrides, latency flags, debug log. Not needed for everyday typing." = "Hiện thêm tab Bảng chế độ gõ và Thử nghiệm — ép chế độ theo app, cờ độ trễ, nhật ký gỡ lỗi. Dùng hằng ngày thì không cần.";
+"Adds the Typing modes and Experimental tabs — per-app overrides, latency flags, debug log. Not needed for everyday typing." = "Hiện thêm tab Bảng cơ chế gõ và Thử nghiệm — ép chế độ theo app, cờ độ trễ, nhật ký gỡ lỗi. Dùng hằng ngày thì không cần.";

@@ -237,10 +237,18 @@ final class TelexInputController: IMKInputController {
         // Spotlight via Shift+Left selection-replace): the tap already intercepted and
         // synthesized these before the IME, so never compose here — let anything that
         // slipped through insert natively.
+        // Spotlight defers to the tap by default (or per a tap-family manual pick);
+        // a marked/in-place/passthrough manual pick keeps the key HERE — the IMKit
+        // client id during the overlay is com.apple.Spotlight, so normal routing
+        // (usesMarkedText / in-place / the passthrough branch above) just works.
+        let spotlightManual = AppState.shared.manualMode(AppState.spotlightBundleID)
+        let spotlightDefersToTap = SpotlightDetector.isVisible
+            && (spotlightManual == nil || spotlightManual == .selection
+                || spotlightManual == .tap || spotlightManual == .emptyReset)
         if AppState.shared.usesTapMode(frontID) || AppState.shared.usesTapMode(id)
             || AppState.shared.usesSelectionReplace(frontID) || AppState.shared.usesSelectionReplace(id)
             || AppState.shared.usesEmptyReset(frontID) || AppState.shared.usesEmptyReset(id)
-            || SpotlightDetector.isVisible {
+            || spotlightDefersToTap {
             // NOTE: SpotlightDetector.isVisible defers UNCONDITIONALLY, even when the
             // tap is dormant (Accessibility not trusted / sandboxed build). That means
             // Spotlight typing gets raw passthrough with NO composition at all. This is
