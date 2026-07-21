@@ -79,7 +79,10 @@ let wordArt: [String: String] = [
     "xin": "🙏", "sinh": "🧑‍🎓", "hai": "✌️", "im": "🤫", "an": "🕊️", "anh": "👦",
     "tư": "4️⃣", "thân": "🤗", "gõ": "⌨️", "thật": "💯", "ngày": "📅", "một": "1️⃣",
     "chúc": "🎉", "bạn": "🧑‍🤝‍🧑", "làm": "💼", "cha": "👨", "nước": "💧",
-    "nguồn": "⛲", "chảy": "🌊", "tiếng": "🗣️", "cùng": "🤝", "quá": "😍"
+    "nguồn": "⛲", "chảy": "🌊", "tiếng": "🗣️", "cùng": "🤝", "quá": "😍",
+    "rồng": "🐉", "rùa": "🐢", "voi": "🐘", "ngựa": "🐴", "lửa": "🔥",
+    "gươm": "⚔️", "trứng": "🥚", "đất": "🌍", "tết": "🧧", "áo": "👕",
+    "trẻ": "🧒", "tiên": "🧚", "hồ": "💧", "vua": "👑", "bay": "🕊️"
 ]
 
 
@@ -293,6 +296,59 @@ let chapters: [Chapter] = [
                       w("hay", "hay"), w("vaf", "và"), w("ddepj", "đẹp")], end: "."),
             sentence([w("Em", "Em"), w("sex", "sẽ"), w("gox", "gõ"),
                       w("thaatj", "thật"), w("gioir", "giỏi")], end: "!"),
+        ], type: "test"),
+    ]),
+
+    // ───────────────── Chương 6: Nâng cao 2 — Chuyện kể ─────────────────
+    Chapter(id: "c6", icon: "📖", title: "Nâng cao 2: Chuyện kể", titleEN: "Advanced 2: Little stories", lessons: [
+        sentenceLesson("c6l1", "Con Rồng cháu Tiên", "Truyền thuyết về nguồn gốc người Việt — gõ từng câu nhé.", art: "🐉🧚", en: ("Dragon and Fairy", "The legend of the Vietnamese origin — type it sentence by sentence."), [
+            sentence([w("Mej", "Mẹ"), w("AAu", "Âu"), w("Cow", "Cơ"), w("sinh", "sinh"),
+                      w("trawm", "trăm"), w("truwngs", "trứng")], end: "."),
+            sentence([w("Nguwowif", "Người"), w("Vieetj", "Việt"), w("laf", "là"), w("con", "con"),
+                      w("Roongf", "Rồng"), w("chaus", "cháu"), w("Tieen", "Tiên")], end: "."),
+        ]),
+        sentenceLesson("c6l2", "Sự tích bánh chưng", "Vì sao Tết có bánh chưng vuông?", art: "🎍🟩", en: ("Banh chung legend", "Why square banh chung at Tet?"), [
+            sentence([w("Lang", "Lang"), w("Lieeu", "Liêu"), w("lamf", "làm"),
+                      w("banhs", "bánh"), w("chuwng", "chưng"), w("vuoong", "vuông")], end: "."),
+            sentence([w("Banhs", "Bánh"), w("tuwowngj", "tượng"), w("truwng", "trưng"),
+                      w("cho", "cho"), w("ddaats", "đất")], end: "."),
+            sentence([w("Vua", "Vua"), w("cha", "cha"), w("raats", "rất"),
+                      w("haif", "hài"), w("longf", "lòng")], end: "."),
+        ]),
+        sentenceLesson("c6l3", "Sự tích Hồ Gươm", "Chuyện vua Lê và rùa vàng giữa lòng Hà Nội.", art: "🐢⚔️", en: ("Sword Lake legend", "King Le and the golden turtle in Hanoi."), [
+            sentence([w("Vua", "Vua"), w("Lee", "Lê"), w("trar", "trả"), w("guwowm", "gươm"),
+                      w("cho", "cho"), w("ruaf", "rùa"), w("vangf", "vàng")], end: "."),
+            sentence([w("Hoof", "Hồ"), w("aays", "ấy"), w("teen", "tên"),
+                      w("laf", "là"), w("Hoof", "Hồ"), w("Guwowm", "Gươm")], end: "."),
+        ]),
+    ]),
+
+    // ─────────────── Chương 7: Nâng cao 3 — Truyện lịch sử ───────────────
+    Chapter(id: "c7", icon: "🏯", title: "Nâng cao 3: Truyện lịch sử", titleEN: "Advanced 3: History tales", lessons: [
+        sentenceLesson("c7l1", "Thánh Gióng", "Cậu bé làng Gióng vươn vai thành tráng sĩ.", art: "🐴🔥", en: ("Saint Giong", "The boy of Giong village who grew into a warrior."), [
+            sentence([w("Giongs", "Gióng"), w("vuwown", "vươn"), w("vai", "vai"),
+                      w("thanhf", "thành"), w("trangs", "tráng"), w("six", "sĩ")], end: "."),
+            sentence([w("Nguwaj", "Ngựa"), w("sawts", "sắt"), w("phun", "phun"),
+                      w("luwar", "lửa"), w("xoong", "xông"), w("ra", "ra"), w("traanj", "trận")], end: "."),
+            sentence([w("DDanhs", "Đánh"), w("tan", "tan"), w("giawcj", "giặc"), w("Giongs", "Gióng"),
+                      w("bay", "bay"), w("veef", "về"), w("trowif", "trời")], end: "."),
+        ]),
+        sentenceLesson("c7l2", "Hai Bà Trưng", "Hai nữ anh hùng đầu tiên của nước ta.", art: "🐘⚔️", en: ("The Trung Sisters", "Our first heroines."), [
+            sentence([w("Hai", "Hai"), w("Baf", "Bà"), w("Truwng", "Trưng"), w("cuwowix", "cưỡi"),
+                      w("voi", "voi"), w("ddanhs", "đánh"), w("giawcj", "giặc")], end: "."),
+            sentence([w("Car", "Cả"), w("nuwowcs", "nước"), w("theo", "theo"), w("hai", "hai"),
+                      w("baf", "bà"), w("dduwngs", "đứng"), w("leen", "lên")], end: "."),
+            sentence([w("DDos", "Đó"), w("laf", "là"), w("nhuwngx", "những"), w("nuwx", "nữ"),
+                      w("anh", "anh"), w("hungf", "hùng"), w("ddaauf", "đầu"), w("tieen", "tiên"),
+                      w("cuar", "của"), w("nuwowcs", "nước"), w("ta", "ta")], end: "."),
+        ]),
+        sentenceLesson("c7l3", "Tết Việt Nam", "Boss cuối cùng: gõ trọn câu chuyện ngày Tết!", art: "🧧🎆", en: ("Vietnamese Tet", "The final boss: type the whole Tet story!"), [
+            sentence([w("Teets", "Tết"), w("ddeens", "đến"), w("nhaf", "nhà"), w("nhaf", "nhà"),
+                      w("gois", "gói"), w("banhs", "bánh"), w("chuwng", "chưng")], end: "."),
+            sentence([w("Trer", "Trẻ"), w("em", "em"), w("mawcj", "mặc"), w("aos", "áo"),
+                      w("mowis", "mới"), w("nhaanj", "nhận"), w("lif", "lì"), w("xif", "xì")], end: "."),
+            sentence([w("Moij", "Mọi"), w("nguwowif", "người"), w("chucs", "chúc"), w("nhau", "nhau"),
+                      w("nawm", "năm"), w("mowis", "mới"), w("an", "an"), w("lanhf", "lành")], end: "."),
         ], type: "test"),
     ]),
 ]
