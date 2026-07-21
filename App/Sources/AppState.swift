@@ -320,12 +320,13 @@ final class AppState: @unchecked Sendable {
     /// If an app here turns out not to draw marked text, move it to builtInFallbackApps
     /// (→ tap) instead.
     static let markedTextApps: Set<String> = [
-        // Excel (field-tested 2026-07-21): marked text in cells is a good experience
-        // — with the near-invisible underline style it reads cleanest — and it needs
-        // no Accessibility. Retires the empty-reset tap dance (U+202F insert +
-        // backspace-retype racing cell autocomplete) as Excel's default; the
-        // mechanism remains available as a manual pick.
-        "com.microsoft.Excel",
+        // (Excel lived here for a few hours on 2026-07-21 — REVERTED: Excel paints
+        // its OWN thick composition underline and ignores every attribute the IME
+        // sends — style 0 bare / +clear / +near-transparent color / mark(forStyle:)
+        // base dicts, each field-tested. The "clean Excel" sighting turned out to be
+        // the empty-reset TAP path, i.e. real characters. Excel is back in
+        // emptyResetApps; without Accessibility the untrusted policy already falls
+        // back to marked automatically.)
     ]
 
     // MARK: - Manual per-app mode override (Experimental → App mode)
@@ -427,10 +428,13 @@ final class AppState: @unchecked Sendable {
 
     /// Empty-reset (insert U+202F to cancel the inline suggestion, then
     /// Backspace-retype) exists for grid apps whose cell autocomplete races a
-    /// backspace-retype AND where Shift+Left selects the adjacent CELL. No built-in
-    /// members since Excel moved to markedTextApps (2026-07-21 field test — marked
-    /// is the better experience there); reachable via the manual Empty-reset pick.
-    private static let emptyResetApps: Set<String> = []
+    /// backspace-retype AND where Shift+Left selects the adjacent CELL. Excel: cell
+    /// autocomplete races a plain Backspace-retype ("Tiếngếng Việt") → insert U+202F
+    /// to cancel the suggestion first. With Accessibility this is the clean path
+    /// (real characters, zero underline); without it the untrusted policy falls back
+    /// to marked text (Excel then draws its own thick underline — unfixable, it
+    /// ignores every style attribute the IME sends; field-tested exhaustively).
+    private static let emptyResetApps: Set<String> = ["com.microsoft.Excel"]
 
     /// Chromium/Spotlight-style Shift+Left selection-replace (Developer ID only).
     /// For `.axDetect` apps the answer flips per focused FIELD (address bar yes,

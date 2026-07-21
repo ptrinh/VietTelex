@@ -627,17 +627,13 @@ final class TelexInputController: IMKInputController {
         // treats pure transparent as "use the text color"). Attribute transport was
         // proven by field-testing style 5 → visibly thicker underline. Base dict
         // from mark(forStyle:) keeps the clause segment the transport expects.
+        // (No Excel special case: Excel paints its own thick composition underline
+        // and ignores every attribute variant — field-tested exhaustively 2026-07-21.
+        // Its clean path is empty-reset tap, i.e. real characters, not marked text.)
         var attrs = mark(forStyle: 2 /* kTSMHiliteRawText */, at: range)
             as? [NSAttributedString.Key: Any] ?? [:]
-        if AppState.shared.currentBundleID == "com.microsoft.Excel" {
-            // Excel actually HONORS style 0 as "no underline" (field-tested — most
-            // clients treat 0 as unspecified and draw their default instead), and it
-            // renders cleanest there.
-            attrs[.underlineStyle] = 0
-        } else {
-            attrs[.underlineStyle] = 1
-            attrs[.underlineColor] = NSColor(calibratedWhite: 0, alpha: 0.004)
-        }
+        attrs[.underlineStyle] = 1
+        attrs[.underlineColor] = NSColor(calibratedWhite: 0, alpha: 0.004)
         let attributed = NSAttributedString(string: s, attributes: attrs)
         client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
