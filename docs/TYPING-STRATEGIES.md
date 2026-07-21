@@ -31,7 +31,7 @@ Ghi chú:
 - #3: pty đo trên Terminal: p50 +13 ms, p90 ~24 ms (vừa lố 1 frame 60 Hz).
   Phím thường vẫn +5 ms vì round-trip IMKit xảy ra dù tap-defer.
 - #4: ngoại suy ~3 ms/event × 2(N+1); D1 (gộp cả burst thành 1 AX write)
-  tồn tại nhưng default OFF.
+  **default ON từ 1.3.1** — fail thì tự rơi về posted-events path.
 - #5: như #3 + 2 events (~6 ms) chèn/xóa ký tự mồi. #4/#5 chưa đo trực tiếp —
   hàng A1 tương ứng trong `latency-baseline.md` còn trống.
 
@@ -87,13 +87,17 @@ hỏng in-place); (c) app pin cứng trong `markedTextApps` (hiện rỗng).
   Đây là lý do nó là fallback an toàn ("khi nghi ngờ, chọn đường luôn chạy").
 - Không cần quyền, sandbox OK → **đường duy nhất cứu các app hỏng trên MAS**.
 - Cùng kênh IMKit, chi phí tương đương in-place.
+- Gạch chân đã làm **gần vô hình** bằng công thức `underlineStyle: 1` +
+  `underlineColor: alpha 0.004` (tìm ra 21/07/2026): style 0 = "unspecified"
+  nên app vẽ default; màu clear thuần là sentinel "dùng màu chữ" của Chromium;
+  style 1 + alpha gần-0 thì được transport và vẽ trong suốt. Verified sạch
+  trên Chrome/Safari/Notes.
 
 **Cons**
-- **Gạch chân** dưới từ đang gõ — nhược điểm thuần thẩm mỹ nhưng thấy rõ, và
-  **không tắt được từ phía IME** (verified 21/07/2026: underlineStyle 0, màu
-  clear, màu alpha 1/255, và cả kênh chính chủ `mark(forStyle:
-  kTSMHiliteNoHilite)` — dict trả về CHỈ chứa `NSMarkedClauseSegment`, không
-  có attribute vẽ nào: app toàn quyền quyết định cách vẽ composition).
+- Gạch chân chỉ tắt được ở app TÔN TRỌNG attribute — Excel tự vẽ gạch đậm bất
+  chấp mọi style gửi xuống (đã thử cạn 4 biến thể 21/07/2026), nên Excel đi
+  đường 5 thay vì marked. Kênh chính chủ `mark(forStyle: kTSMHiliteNoHilite)`
+  cũng vô dụng: dict trả về chỉ chứa `NSMarkedClauseSegment`.
 - Từ ở trạng thái "đang compose": một số app xử lý composition kỳ quặc
   (autocomplete/shortcut của app có thể không thấy text cho tới khi commit).
 - Terminal/TUI vẽ marked text xấu hoặc phá autocomplete của shell → với
@@ -101,9 +105,10 @@ hỏng in-place); (c) app pin cứng trong `markedTextApps` (hiện rỗng).
 
 ### 3. Tap: backspace-retype
 
-**Dùng cho:** Terminal.app, iTerm2, TextMate, WhatsApp (`builtInFallbackApps`)
-+ app học được qua probe (`fallbackApps` — Lark, Slack, Discord tự vào đây) —
-khi có AX.
+**Dùng cho:** Terminal.app, iTerm2 + nhóm Electron field-tested (Lark, Slack,
+Discord, VSCode, Claude Desktop — rule `tap` trong typing-modes.plist; in-place
+của nhóm này hỏng Ở BIÊN TỪ dù giữa dòng trông ổn) + app học được qua probe
+(`fallbackApps`) — khi có AX.
 
 **Cơ chế:** CGEventTap chặn phím trước khi tới app; sửa dấu = synth
 Backspace×N + keyDown mang chuỗi Unicode.
@@ -126,9 +131,11 @@ Backspace×N + keyDown mang chuỗi Unicode.
 
 ### 4. Tap: selection-replace (Shift+←×N rồi ghi đè)
 
-**Dùng cho:** address/search bar của các browser (`selectionApps`: Chrome, Edge,
-Brave, Arc, Vivaldi, Opera, Chromium, **Safari**) và **Spotlight** (nhận diện
-qua window list, không phải bundle id) — khi có AX.
+**Dùng cho:** address/search bar của các browser (Chrome, Edge, Brave, Arc,
+Vivaldi, Opera, Chromium, **Safari** — mode `axDetect` trong typing-modes.plist)
+— khi có AX. **Spotlight từng đi đường này** nhưng trên macOS 26 in-place đã
+sạch (race autocomplete lịch sử hết) → default hiện tại là inPlace; tap branch
+cho Spotlight chỉ còn chạy khi user pin tay.
 
 **Per-field (từ 94083cc):** browser không còn đi selection-replace nguyên-app.
 `FocusedFieldDetector` đi ngược cây AX của element đang focus (cache TTL 200 ms,
@@ -142,15 +149,14 @@ backspace-retype → "gôgleogle". Chọn bằng Shift+← rồi overtype thì p
 autocomplete (đang selected) bị thay thế luôn → né race.
 
 **Pros**
-- Đường duy nhất gõ đúng trong omnibox/Spotlight mà vẫn ra text thật.
+- Đường duy nhất gõ đúng trong omnibox mà vẫn ra text thật.
 - Cùng hạ tầng tap → hưởng fast-path, breaker.
 
 **Cons**
 - Cần AX → ❌ MAS.
-- Nhiều event nhất: 2(N+1) posted events, mỗi round-trip ~3 ms → đường chậm
-  nhất về cảm nhận. Tối ưu D1 (một AX write thay cả burst) tồn tại nhưng
-  **default OFF** — AX call đồng bộ cross-process ngay trong tap callback là
-  bề mặt treo mới, chỉ opt-in ở Settings → Thử Nghiệm.
+- Nhiều event nhất: 2(N+1) posted events, mỗi round-trip ~3 ms. Tối ưu D1
+  (một AX write thay cả burst) **default ON từ 1.3.1**; AX call fail thì tự
+  rơi về posted-events path. Tắt được ở Settings → Thử Nghiệm.
 - Giả định "Shift+← chọn ký tự" — đúng trong text field, sai trong grid
   (→ Excel cần đường 5).
 
@@ -184,7 +190,7 @@ space) để hủy suggestion, rồi backspace-retype bình thường.
 - **App bỏ qua replacementRange + KHÔNG có AX** (MAS, hoặc user chưa cấp quyền)
   → marked text. Chịu gạch chân, nhưng luôn đúng chữ.
 - **Field có inline autocomplete đua với backspace**:
-  - chọn-ký-tự được (omnibox, Spotlight) → selection-replace;
+  - chọn-ký-tự được (omnibox) → selection-replace;
   - chọn-ký-tự là chọn ô (Excel) → empty-reset.
 - **Remote desktop / VM / screen sharing** → passthrough hoàn toàn (synthetic
   Unicode vô nghĩa với guest OS).
@@ -208,12 +214,12 @@ Thứ tự quyết định mỗi keystroke trong `TelexInputController.handle` +
 
 ```
 1. ClientPolicy.isRemoteDesktop(bundleID)?        → passthrough (IME như tắt)
-2. manualMode(bundleID) (user pin, Thử Nghiệm → App mode)
+2. manualMode(bundleID) (user pin trong Bảng cơ chế gõ)
      .inPlace / .marked / .tap                    → override tất cả, không probe
      (.tap vẫn đòi Accessibility.isTrusted)
 3. usesTapMode ∥ usesSelectionReplace ∥ usesEmptyReset (đều cần AX)?
      → controller "tap-defer" (trả false), CGEventTap xử lý;
-       emitMode = .selection (Chromium/Spotlight) / .emptyReset (Excel)
+       emitMode = .selection (address bar qua axDetect) / .emptyReset (Excel)
                 / .backspace (còn lại)
 4. usesMarkedText? (learned fallbackApps ∪ builtInFallbackApps ∪ markedTextApps)
      → setMarkedText
@@ -237,10 +243,9 @@ không phân biệt được). Hai tầng:
   promotion đã lỡ commit (`unmarkInPlaceGood`) + đẩy vào `fallbackApps`.
 - Kết quả ghi UserDefaults: honored (đã confirm) → `probedApps`,
   appended → `fallbackApps` (→ tap nếu có AX, marked nếu không).
-- `builtInFallbackApps` **không bao giờ probe**: Terminal/iTerm2 (lời hứa cốt
-  lõi — cache learned là per-install, reinstall là mất), WhatsApp/TextMate
-  (probe signal không tin được, chưa có data mới). **Lark đã ra khỏi danh sách
-  này** — rule 2-offset phân loại được nó tự động (appended ×2 → fallback).
+- App có rule trong `typing-modes.plist` **không bao giờ probe** — rule là
+  kết quả field-test, tin hơn probe (probe vẫn phân loại đúng Lark nhờ rule
+  2-offset, nhưng ship sẵn rule thì user mới không phải "học lại" sau reinstall).
   Settings có "Đặt lại (dò lại từ đầu)" cho probe hỏng vì app bận.
 
 ## Fallback chain

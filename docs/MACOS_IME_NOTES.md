@@ -5,6 +5,10 @@ Why a third-party IMKit input method does / doesn't appear in
 session on **macOS 26.5 Tahoe**. Read this BEFORE touching signing / bundle id /
 Info.plist again — every item below cost real time to discover.
 
+> Lessons here are HISTORY (what broke and why) — the *current* per-app strategy
+> selection lives in `TYPING-STRATEGIES.md` + `typing-modes.plist`; app lists
+> named below may be stale.
+
 ## The working recipe (do all of these; they are AND, not OR)
 
 1. **Notarize + staple.** macOS 26 silently refuses to register an un-notarized

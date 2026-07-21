@@ -23,10 +23,16 @@ bằng `Scripts/notarize-install.sh` (cần Apple Developer ID; xem chi tiết t
 ## Cấu trúc
 
 ```
-TelexCore/        Engine Telex + SyllableValidator (Swift package thuần, test độc lập)
-App/Sources/      IMKit controller, CGEventTap (tap-mode), AppState, Settings UI
-Scripts/          notarize-install, đo latency (keystroke-photon), stress test
+TelexCore/          Engine Telex + SyllableValidator (Swift package thuần, test độc lập)
+App/Sources/        IMKit controller, CGEventTap (tap-mode), AppState, Settings UI
+AppTests/           Test app target: routing per-app, import plist, Updater, DebugLog
+Scripts/            notarize-install, dev-install, make-release, đo latency, stress test
+typing-modes.plist  Rule cơ chế gõ mặc định theo app (bundle vào app + đính release)
 ```
+
+**Cách đóng góp dễ nhất:** app nào gõ sai, thêm một cặp
+`<key>bundle-id</key><string>mode</string>` vào `typing-modes.plist` (mode hợp lệ
+ghi trong header file) rồi mở PR — không cần sửa Swift.
 
 ## Tài liệu
 
@@ -43,9 +49,12 @@ Scripts/          notarize-install, đo latency (keystroke-photon), stress test
 
 ```bash
 cd TelexCore
-swift test                                          # 37 tests (golden + validator)
+swift test                                          # golden + validator tests
 swift test -c release --filter Benchmark            # engine latency (ghi vào BENCHMARKS.md)
 swift test -c release --filter ZeroAllocation       # invariant zero-alloc hot path
+
+# Test app target (routing, import plist, Updater…)
+xcodegen generate && xcodebuild -project VietTelex.xcodeproj -scheme VietTelex test
 ```
 
 Quy ước khi sửa engine:
@@ -57,10 +66,13 @@ Quy ước khi sửa engine:
 
 ## Quy trình release
 
-1. Test tay theo `checklist.md` (VS Code EditContext là blocker).
+1. Test tay theo `checklist.md`.
 2. `Scripts/notarize-install.sh` → build + notarize + staple app, smoke test trên máy thật.
-3. `Scripts/make-pkg.sh` → đóng gói `.pkg` (ký Developer ID Installer + notarize + staple).
-4. `gh release create/upload` đính `.pkg` vào GitHub Release.
+   (Sửa nhỏ lặp lại trong ngày: `Scripts/dev-install.sh` cài local giữ quyền AX + settings.)
+3. `Scripts/make-release.sh` → `.app.zip` + `.pkg` + `typing-modes.plist`.
+4. `gh release create/upload`, bump Homebrew cask (`ptrinh/homebrew-viettelex`).
+5. Khi bản đó đủ tin cậy: promote lên kênh stable — bump `docs/stable.json`
+   (auto-update trong app chỉ theo kênh này). Chi tiết: [`BUILD.md`](BUILD.md).
 
 ## Giấy phép
 

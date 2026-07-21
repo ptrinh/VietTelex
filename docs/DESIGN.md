@@ -4,9 +4,12 @@ Bộ gõ tiếng Việt cho macOS. Ưu tiên tuyệt đối: **performance** (la
 
 ## Phạm vi
 
-- Kiểu gõ: **Telex** (mặc định Simple Telex — `w` lẻ giữ nguyên, gõ `uw` để ra `ư`):
-  aa→â, aw→ă, dd→đ, ee→ê, oo→ô, ow→ơ, uw→ư, s/f/r/x/j = sắc/huyền/hỏi/ngã/nặng,
-  z = xóa dấu. Không VNI, không hỗn hợp.
+- Kiểu gõ: **Telex** đầy đủ (mặc định): aa→â, aw→ă, dd→đ, ee→ê, oo→ô, ow→ơ, uw→ư,
+  `w` đầu từ → ư, s/f/r/x/j = sắc/huyền/hỏi/ngã/nặng, z = xóa dấu. Tùy chọn
+  **Simple Telex** (OFF mặc định): `w` lẻ giữ nguyên. **Bỏ dấu tự do** ON mặc định
+  (dấu/mũ gõ muộn tự tìm về nguyên âm — `dauas`→dấu). Hỗ trợ teencode qua onset
+  mapping (wá→quá, zô→dô, dzị→dị) và whitelist `đc`; từ tiếng Anh va chạm
+  (was/wow/yes) force-restore. Không VNI, không hỗn hợp.
 - Bảng mã: **Unicode dựng sẵn (NFC precomposed)** duy nhất.
 - Tùy chọn: Simple Telex, bỏ dấu tự do, kiểu bỏ dấu cũ/mới (hòa/hoà), kiểm tra chính tả
   khi gõ, tự khôi phục từ không hợp lệ, bảng gõ tắt.
@@ -25,19 +28,24 @@ VietTelex.app  (một bundle duy nhất, LSUIElement)
 │     (cần quyền Accessibility — chỉ bản Developer ID; bản sandbox tự rơi về marked-text)
 ├── TelexEngine        (TelexCore — pure Swift, zero-heap hot path)
 ├── SyllableValidator  (rule-based, không từ điển)
-├── AppState           (UserDefaults, cache in-memory, học chiến lược per-app)
-└── SettingsWindow     (SwiftUI, 2 tab: Chung + Gõ tắt; chỉ tạo khi mở, đóng là giải phóng)
+├── AppState           (UserDefaults, cache in-memory, học chiến lược per-app;
+│     rule mặc định load từ typing-modes.plist bundle — sửa rule = sửa data, không sửa Swift)
+└── SettingsWindow     (SwiftUI: Chung, Gõ tắt + khi bật "tính năng nâng cao":
+      Bảng cơ chế gõ, Thử Nghiệm; chỉ tạo khi mở, đóng là giải phóng)
 ```
 
 Quy tắc cứng:
 1. **Một process duy nhất.** Không helper app, không XPC, không login item (input method
    được macOS tự khởi động).
-2. **Không timer, không polling.** Toàn bộ event-driven. Ngoài main có đúng MỘT
-   thread thường trực: run loop của event tap (ngủ trong mach_msg, zero CPU khi
-   idle) — để callback tap không xếp hàng sau XPC IMKit ~2ms/phím trên main
-   (jitter terminal + nguy cơ macOS disable tap vì callback chậm). Shared state
-   giữa hai thread đều có lock (AppState, Accessibility, SpotlightDetector,
-   FrontmostApp, SyntheticKeyboard, activation).
+2. **Không timer, không polling trên đường gõ.** Toàn bộ event-driven. Ngoài main
+   có đúng MỘT thread thường trực: run loop của event tap (ngủ trong mach_msg,
+   zero CPU khi idle) — để callback tap không xếp hàng sau XPC IMKit ~2ms/phím
+   trên main (jitter terminal + nguy cơ macOS disable tap vì callback chậm).
+   Shared state giữa hai thread đều có lock (AppState, Accessibility,
+   SpotlightDetector, FrontmostApp, SyntheticKeyboard, activation). Hai ngoại lệ
+   có chủ đích, đều KHÔNG chạy khi idle thuần: watchdog 3s trên main CHỈ tồn tại
+   khi tap đang sống (phát hiện revoke quyền — xem lịch sử treo bàn phím), và
+   auto-update check theo tuần (opt-in, throttle bằng timestamp lúc activate).
 3. **Không NSStatusItem.** Dùng menu do IMK cung cấp: dòng tình trạng (quyền
    Accessibility) + Cài đặt….
 4. Settings UI chỉ instantiate khi user mở; đóng là giải phóng.
@@ -48,13 +56,16 @@ Quy tắc cứng:
 |---|---|---|
 | **In-place** (mặc định) | App Cocoa chuẩn (TextEdit, Safari, Mail…) | `insertText(_:replacementRange:)`, không gạch chân, track anchor cục bộ |
 | **Marked text** | App bỏ qua replacementRange, khi KHÔNG có quyền AX | `setMarkedText`, có gạch chân tạm khi gõ |
-| **Tap: backspace-retype** | Terminal, iTerm, TUI (cần AX) | CGEventTap chặn phím, synth Backspace×N + Unicode |
-| **Tap: selection-replace** | Chromium omnibox, Spotlight (cần AX) | Shift+←×N chọn rồi ghi đè — né race với inline autocomplete |
+| **Tap: backspace-retype** | Terminal, iTerm, Electron (Lark/Slack/Discord/VSCode) — cần AX | CGEventTap chặn phím, synth Backspace×N + Unicode |
+| **Tap: selection-replace** | Address bar browser (qua `axDetect` per-field) — cần AX | Shift+←×N chọn rồi ghi đè — né race với inline autocomplete; D1 gộp burst thành 1 AX write (default ON) |
 | **Tap: empty-reset** | Excel (cần AX) | Chèn U+202F hủy suggestion rồi Backspace-retype (Shift+← trong ô sẽ chọn ô kề) |
 
-- App chưa phân loại được **probe một lần**: sau lần replace đầu tiên, đọc lại text
-  (`attributedSubstring`) để kiểm tra app có tôn trọng replacementRange không; kết quả
-  persist (`probedApps` / `fallbackApps`).
+- Rule mặc định per-app nằm trong **`typing-modes.plist`** (repo root, bundle vào app,
+  đính kèm release) — đóng góp rule = sửa plist, không sửa Swift. Mode `axDetect`
+  dò theo Ô đang focus (address bar → selection, nội dung trang → in-place).
+- App chưa phân loại được **probe** (2 tầng: verdict sơ bộ sync từ read-back/caret —
+  honored cần xác nhận ở 2 offset khác nhau, chống caret rác hằng số kiểu Lark;
+  AX ground truth async override sau). Kết quả persist (`probedApps` / `fallbackApps`).
 - **Remote desktop / VM / screen-share** (`ClientPolicy.forcePassthroughBundleIDs`):
   forward scancode thô nên IME passthrough hoàn toàn.
 - **Secure input** (password field): kiểm tra `IsSecureEventInputEnabled()` đầu
@@ -137,4 +148,7 @@ Quy tắc ổn định đã rút ra khi implement (chi tiết trong `MACOS_IME_N
    modern orthography, live spell-check (corpus 40+ từ), Simple Telex.
 2. **Validator tests**: đủ bảng vần, coda-tone constraints.
 3. **Benchmark test** cho latency budget — kết quả ghi vào `BENCHMARKS.md`.
-4. Manual checklist per-app: `checklist.md`.
+4. **App-target tests** (`AppTests/`, chạy qua `xcodebuild test`): ma trận routing
+   per-app × quyền AX, import plist idempotent, Updater (network stub), DebugLog.
+   TelexCore ~99% line coverage; phần IMK/tap plumbing loại trừ có chủ đích.
+5. Manual checklist per-app: `checklist.md`.

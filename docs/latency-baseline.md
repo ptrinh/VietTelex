@@ -209,20 +209,15 @@ Until one of those is done, A2 still gives you real **per-interval** timings
 
 ---
 
-## Decision gates (already agreed)
+## Decision gates — OUTCOMES (settled 2026-07-20/21)
 
-These are the actions the baseline is meant to trigger — do **not** implement
-them pre-emptively; only if the numbers say so.
-
-- **D1 — AX selection-replace for Chrome / Spotlight.** Switch those apps to an
-  Accessibility-based selection-replace path **only if** their A1 rows
-  (Chrome address bar `selection-replace`, Spotlight `tap-selection`) stay
-  *visibly slow* relative to the in-place/tap rows. If they're already low, skip
-  the added complexity.
-- **B3 — `postToPid` targeting.** Post synthetic events directly to the target
-  pid **only if** `tap.emit` (A2) remains the bottleneck *after* B1/B2 land.
-  Watch `tap.emit` p90/p99 and especially the `bs=2+` bucket — if that is where
-  the time concentrates, B3 is justified; otherwise it isn't.
+- **B1 (modify-event-in-place) + B2 (skip synthetic keyUp): SHIPPED**, toggles
+  in Settings → Thử Nghiệm, default ON.
+- **D1 — AX selection-replace burst-as-one-write: SHIPPED, default ON since
+  1.3.1.** Falls back to the posted-events path when the AX write fails.
+- **B3 — `postToPid` targeting: DROPPED.** After B1/B2 the `tap.emit` bucket
+  no longer dominates; not worth the extra ordering risk.
+- Spotlight left the tap path entirely — in-place is clean on macOS 26.
 
 ---
 
