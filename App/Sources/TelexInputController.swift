@@ -237,14 +237,14 @@ final class TelexInputController: IMKInputController {
         // Spotlight via Shift+Left selection-replace): the tap already intercepted and
         // synthesized these before the IME, so never compose here — let anything that
         // slipped through insert natively.
-        // Spotlight defers to the tap by default (or per a tap-family manual pick);
-        // a marked/in-place/passthrough manual pick keeps the key HERE — the IMKit
-        // client id during the overlay is com.apple.Spotlight, so normal routing
-        // (usesMarkedText / in-place / the passthrough branch above) just works.
+        // Spotlight types IN-PLACE by default (field-verified clean on macOS 26,
+        // even with the gray inline suggestion — the historical autocomplete race
+        // that forced tap selection-replace is gone; it's in builtInInPlaceApps).
+        // Only an explicit tap-family manual pick still routes it to the tap.
         let spotlightManual = AppState.shared.manualMode(AppState.spotlightBundleID)
         let spotlightDefersToTap = SpotlightDetector.isVisible
-            && (spotlightManual == nil || spotlightManual == .selection
-                || spotlightManual == .tap || spotlightManual == .emptyReset)
+            && (spotlightManual == .selection || spotlightManual == .tap
+                || spotlightManual == .emptyReset)
         if AppState.shared.usesTapMode(frontID) || AppState.shared.usesTapMode(id)
             || AppState.shared.usesSelectionReplace(frontID) || AppState.shared.usesSelectionReplace(id)
             || AppState.shared.usesEmptyReset(frontID) || AppState.shared.usesEmptyReset(id)
@@ -629,8 +629,15 @@ final class TelexInputController: IMKInputController {
         // from mark(forStyle:) keeps the clause segment the transport expects.
         var attrs = mark(forStyle: 2 /* kTSMHiliteRawText */, at: range)
             as? [NSAttributedString.Key: Any] ?? [:]
-        attrs[.underlineStyle] = 1
-        attrs[.underlineColor] = NSColor(calibratedWhite: 0, alpha: 0.004)
+        if AppState.shared.currentBundleID == "com.microsoft.Excel" {
+            // Excel actually HONORS style 0 as "no underline" (field-tested — most
+            // clients treat 0 as unspecified and draw their default instead), and it
+            // renders cleanest there.
+            attrs[.underlineStyle] = 0
+        } else {
+            attrs[.underlineStyle] = 1
+            attrs[.underlineColor] = NSColor(calibratedWhite: 0, alpha: 0.004)
+        }
         let attributed = NSAttributedString(string: s, attributes: attrs)
         client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")

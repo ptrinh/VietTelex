@@ -174,15 +174,9 @@ final class SettingsModel: ObservableObject {
     /// when that mode needs Accessibility and it isn't granted — the truth is
     /// "per-field, but degraded right now", not "chưa dò".
     func autoLabel(_ id: String) -> String {
-        let mode: AppState.AppMode?
-        if id == Self.spotlightRowID {
-            // Spotlight's strategy is fixed (window-scan detection). Without AX it is
-            // deliberately raw passthrough: IMKit composing corrupts Spotlight's
-            // inline autocomplete, so Vietnamese there REQUIRES the permission.
-            mode = .selection
-        } else {
-            mode = AppState.shared.autoResolvedMode(id)
-        }
+        // (Spotlight needs no special case any more: it sits in builtInInPlaceApps —
+        // in-place field-verified on macOS 26 — and resolves like any other app.)
+        let mode = AppState.shared.autoResolvedMode(id)
         let base: String
         var needsAX = false
         switch mode {
@@ -213,8 +207,7 @@ final class SettingsModel: ObservableObject {
     /// granted — the Detected cell shows a ⚠️ with an explanatory tooltip.
     func autoMissingPermission(_ id: String) -> Bool {
         guard !Accessibility.isTrusted else { return false }
-        let mode = id == Self.spotlightRowID ? .selection : AppState.shared.autoResolvedMode(id)
-        switch mode {
+        switch AppState.shared.autoResolvedMode(id) {
         case .tap, .selection, .emptyReset, .axDetect: return true
         case .auto, nil: return true   // would probe if trusted; runs marked instead
         default: return false

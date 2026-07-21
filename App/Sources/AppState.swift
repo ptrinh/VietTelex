@@ -304,6 +304,11 @@ final class AppState: @unchecked Sendable {
         "com.macromates.TextMate",       // pre-2026 pin to tap was stale — verified in-place
         "net.whatsapp.WhatsApp",         // native rewrite honors replacementRange
         "com.viettelex.inputmethod.telex", // our own Settings window
+        // Spotlight (field-verified 2026-07-21 on macOS 26): in-place is clean even
+        // WITH the gray inline suggestion visible — the historical autocomplete race
+        // that forced tap selection-replace is gone. The window-scan special-casing
+        // is retired to a manual-pick path only.
+        "com.apple.Spotlight",
     ]
 
     /// Apps FORCED to marked-text — never in-place, and never tap (even with
