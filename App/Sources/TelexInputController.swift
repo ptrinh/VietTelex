@@ -595,7 +595,16 @@ final class TelexInputController: IMKInputController {
     private func updateMarked(_ client: IMKTextInput) {
         let s = engine.composed
         let caret = NSRange(location: (s as NSString).length, length: 0)
-        client.setMarkedText(s, selectionRange: caret, replacementRange: kNoRange)
+        // Attributed with underlineStyle 0: the composition underline is a style the
+        // IME PROPOSES, not something the app must draw — compliant clients
+        // (NSTextView, most Cocoa) honor the explicit "no underline" and marked text
+        // becomes visually indistinguishable from in-place. Apps that paint their
+        // own composition style (some Electron/terminals) ignore the attribute and
+        // keep their underline — no worse than before, so this ships unconditionally.
+        let attributed = NSAttributedString(string: s, attributes: [
+            .underlineStyle: 0,
+        ])
+        client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
     }
 
