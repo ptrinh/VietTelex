@@ -232,7 +232,7 @@ let chapters: [Chapter] = [
         lesson("c3l4", "x → ngã (~)", "Phím x cho dấu ngã: max → mã.", en: ("x → tumbling tone (~)", "The x key adds the tumbling tone: max → mã."),
                newKeys: ["x"], [
             w("max", "mã"), w("cux", "cũ"), w("ngax", "ngã"),
-            w("muxi", "mũi"), w("laxo", "lão"), w("nghix", "nghĩ")
+            w("muix", "mũi"), w("laox", "lão"), w("nghix", "nghĩ")
         ]),
         lesson("c3l5", "j → nặng (.)", "Phím j cho dấu nặng: maj → mạ.", en: ("j → heavy tone (.)", "The j key adds the heavy tone: maj → mạ."),
                newKeys: ["j"], [
@@ -247,14 +247,14 @@ let chapters: [Chapter] = [
         lesson("c3l7", "Đủ năm thanh", "Bài tổng hợp: ma má mà mả mã mạ — nghe thử từng từ nhé!", en: ("All five tones", "The full set: ma má mà mả mã mạ — try the 🔊 button on each!"), type: "test", [
             w("ma", "ma"), w("mas", "má"), w("maf", "mà"),
             w("mar", "mả"), w("max", "mã"), w("maj", "mạ"),
-            w("vieejt", "việt"), w("hoas", "hóa"), w("dduwowcj", "được")
+            w("vieetj", "việt"), w("hoas", "hóa"), w("dduwowcj", "được")
         ]),
     ]),
 
     // ───────────────────── Chương 4: Từ & câu ─────────────────────
     Chapter(id: "c4", icon: "💬", title: "Từ ghép & câu", titleEN: "Words & sentences", lessons: [
         lesson("c4l1", "Từ hai âm tiết", "Tên nước mình! Chữ hoa: giữ Shift rồi gõ chữ như thường.", en: ("Two-syllable words", "Our country's name! Capitals: hold Shift and type normally."), [
-            w("Vieejt", "Việt"), w("Nam", "Nam"),
+            w("Vieetj", "Việt"), w("Nam", "Nam"),
             w("camr", "cảm"), w("own", "ơn"),
             w("xin", "xin"), w("chaof", "chào"),
             w("hocj", "học"), w("sinh", "sinh")
@@ -270,7 +270,7 @@ let chapters: [Chapter] = [
         sentenceLesson("c4l4", "Ca dao", "Ca dao Việt Nam — vừa gõ vừa học tiếng Việt.", art: "👨⛰️ 👩🌊", en: ("Folk verse", "Vietnamese folk verse — type and learn the language at once."), [
             sentence([w("Coong", "Công"), w("cha", "cha"), w("nhuw", "như"),
                       w("nuis", "núi"), w("Thais", "Thái"), w("Sown", "Sơn")], end: ","),
-            sentence([w("Nghixa", "Nghĩa"), w("mej", "mẹ"), w("nhuw", "như"),
+            sentence([w("Nghiax", "Nghĩa"), w("mej", "mẹ"), w("nhuw", "như"),
                       w("nuwowcs", "nước"), w("trong", "trong"), w("nguoonf", "nguồn"),
                       w("chayr", "chảy"), w("ra", "ra")], end: "."),
         ]),
@@ -279,7 +279,7 @@ let chapters: [Chapter] = [
     // ───────────────────── Chương 5: Nâng cao ─────────────────────
     Chapter(id: "c5", icon: "🚀", title: "Nâng cao", titleEN: "Advanced", lessons: [
         lesson("c5l1", "Gõ chuẩn Telex", "Dấu mũ gõ LIỀN nguyên âm, thanh gõ cuối từ: daaus → dấu (aa liền nhau, s ở cuối).", en: ("Canonical Telex order", "Vowel marks go RIGHT AFTER the vowel, tones at the end: daaus → dấu."), [
-            w("daaus", "dấu"), w("vieejt", "việt"), w("truwowngf", "trường"),
+            w("daaus", "dấu"), w("vieetj", "việt"), w("truwowngf", "trường"),
             w("hocj", "học"), w("dduwowngf", "đường")
         ]),
         sentenceLesson("c5l2", "Câu dài", "Câu đầy đủ dấu câu và chữ hoa.", art: "🌤️😄", en: ("Long sentences", "Full sentences with punctuation and capitals."), [
@@ -289,10 +289,10 @@ let chapters: [Chapter] = [
                       w("hocj", "học"), w("gox", "gõ"), w("nhes", "nhé")], end: "!"),
         ]),
         sentenceLesson("c5l3", "Thử thách cuối", "Boss cuối! Gõ trọn đoạn — đủ chữ đặc biệt, đủ năm thanh.", art: "🇻🇳⌨️", en: ("Final boss", "The final challenge — every special letter, all five tones."), [
-            sentence([w("Tieengs", "Tiếng"), w("Vieejt", "Việt"), w("raats", "rất"),
+            sentence([w("Tieengs", "Tiếng"), w("Vieetj", "Việt"), w("raats", "rất"),
                       w("hay", "hay"), w("vaf", "và"), w("ddepj", "đẹp")], end: "."),
             sentence([w("Em", "Em"), w("sex", "sẽ"), w("gox", "gõ"),
-                      w("thaajt", "thật"), w("gioir", "giỏi")], end: "!"),
+                      w("thaatj", "thật"), w("gioir", "giỏi")], end: "!"),
         ], type: "test"),
     ]),
 ]
