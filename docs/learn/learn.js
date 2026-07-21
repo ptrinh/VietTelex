@@ -36,6 +36,7 @@ var STR = {
   vi: {
     days: 'ngày', badges: '🏅', enterClass: '🎓 Vào lớp học', backHome: '← Trang chủ',
     map: '← Bản đồ', listen: '🔊 Nghe', dict: '🎧 Nghe rồi gõ', dictOn: '🎧 Đang nghe-gõ',
+    fsOn: 'Toàn màn hình', fsOff: 'Thoát toàn màn hình',
     autoSpk: '🗣️ Tự đọc: Tắt', autoSpkOn: '🗣️ Tự đọc: Bật',
     retry: '↻ Làm lại', next: 'Bài tiếp theo →', close: 'Đóng',
     badgeTitle: '🏅 Bộ sưu tập huy hiệu',
@@ -68,6 +69,7 @@ var STR = {
   en: {
     days: 'day streak', badges: '🏅', enterClass: '🎓 Start learning', backHome: '← Home',
     map: '← Map', listen: '🔊 Listen', dict: '🎧 Listen & type', dictOn: '🎧 Dictation on',
+    fsOn: 'Fullscreen', fsOff: 'Exit fullscreen',
     autoSpk: '🗣️ Auto-speak: Off', autoSpkOn: '🗣️ Auto-speak: On',
     retry: '↻ Retry', next: 'Next lesson →', close: 'Close',
     badgeTitle: '🏅 Badge collection',
@@ -574,8 +576,28 @@ document.getElementById('rNext').addEventListener('click', function () {
   if (cur.li + 1 < ch.lessons.length) openLesson(cur.ci, cur.li + 1);
   else backToMap();
 });
+// ── Fullscreen / focus mode ────────────────────────────────────────────────
+var fsBtn = document.getElementById('fsBtn');
+function focusModeOn() { return document.body.classList.contains('vt-focus'); }
+function setFocusMode(on) {
+  document.body.classList.toggle('vt-focus', on);
+  fsBtn.textContent = on ? '✕' : '⛶';
+  fsBtn.title = on ? T().fsOff : T().fsOn;
+  if (on) {
+    var el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } else if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+}
+fsBtn.addEventListener('click', function () { setFocusMode(!focusModeOn()); });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && focusModeOn()) setFocusMode(false);
+});
 document.getElementById('pBack').addEventListener('click', backToMap);
 function backToMap() {
+  setFocusMode(false);
   playerEl.hidden = true; mapEl.hidden = false;
   cur = null; renderMap();
   mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });

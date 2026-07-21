@@ -103,3 +103,9 @@
 .speakbtn.on { background: var(--green-soft); border-color: var(--green); color: var(--green); }
 .langsel { background: rgba(255,255,255,.1); color: #dfe4f0; border: 1px solid rgba(255,255,255,.25); border-radius: 9px; padding: 6px 10px; font-family: var(--sans); font-size: .85rem; font-weight: 600; cursor: pointer; }
 .langsel option { color: #1c2333; }
+
+/* Fullscreen / focus mode: the player covers the viewport, nothing else */
+body.vt-focus { overflow: hidden; }
+body.vt-focus #player { position: fixed; inset: 0; z-index: 90; border-radius: 0; border: none; overflow-y: auto; background: var(--paper); box-shadow: none; padding: max(8px, env(safe-area-inset-top)) 8px 8px; }
+body.vt-focus #player .practice, body.vt-focus #player .result { max-width: 760px; margin: 0 auto; }
+#fsBtn { font-size: 1.05rem; line-height: 1; }
