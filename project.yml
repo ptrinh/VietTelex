@@ -79,3 +79,20 @@ targets:
         # TelexCore remains Swift 6 strict-concurrency clean.
         SWIFT_VERSION: "5.0"
         ENABLE_HARDENED_RUNTIME: "YES"
+      configs:
+        Release:
+          # Size diet (Release ONLY — Debug keeps symbols so VietTelexTests'
+          # BUNDLE_LOADER/@testable linking still works). Measured before: each
+          # arch slice was ~950KB of which only ~380KB was __TEXT — the rest
+          # mostly a 3.4k-entry symbol table nothing consumes (crash reports
+          # symbolicate via the dSYM). ObjC runtime metadata (NSClassFromString
+          # for InputMethodServerControllerClass) lives in __DATA and is NOT
+          # affected by strip.
+          DEPLOYMENT_POSTPROCESSING: "YES"
+          STRIP_INSTALLED_PRODUCT: "YES"
+          STRIP_STYLE: "all"
+          # App-side code is I/O-bound (XPC/event round trips), so trade a few
+          # percent of straight-line speed for size. TelexCore (the µs hot path)
+          # builds as a package with its own -O and is untouched.
+          SWIFT_OPTIMIZATION_LEVEL: "-Osize"
+          LLVM_LTO: "YES_THIN"
