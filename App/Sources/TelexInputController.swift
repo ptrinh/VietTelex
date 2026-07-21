@@ -595,23 +595,16 @@ final class TelexInputController: IMKInputController {
     private func updateMarked(_ client: IMKTextInput) {
         let s = engine.composed
         let caret = NSRange(location: (s as NSString).length, length: 0)
-        // Attributed with underlineStyle 0: the composition underline is a style the
-        // IME PROPOSES, not something the app must draw — compliant clients
-        // (NSTextView, most Cocoa) honor the explicit "no underline" and marked text
-        // becomes visually indistinguishable from in-place.
-        // Chromium/Electron ALWAYS paint a composition underline (ImeTextSpan) even
-        // for style 0 — they read the underline COLOR from the attributed string,
-        // BUT a fully transparent color is their SENTINEL for "default: use the
-        // text color" (SK_ColorTRANSPARENT in ui::ImeTextSpan) — .clear made the
-        // underline MORE visible, verified in the field. Force it with an
-        // almost-transparent color instead: alpha ≈ 1/255 survives the sentinel
-        // check yet paints invisibly. Cocoa clients honor style 0 and never look
-        // at the color.
-        let attributed = NSAttributedString(string: s, attributes: [
-            .underlineStyle: 0,
-            .underlineColor: NSColor(calibratedWhite: 0, alpha: 0.004),
-        ])
-        client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
+        // KNOWN LIMITATION — the composition underline cannot be removed (verified
+        // 2026-07-21, three attempts): (1) attributed underlineStyle 0, (2)
+        // .underlineColor clear — Chromium treats fully-transparent as "use text
+        // color", (3) near-transparent color (alpha 1/255) — still underlined in
+        // BOTH Blink content and the omnibox, and in Cocoa apps, i.e. the attributes
+        // never reach any client: IMKit's setMarkedText transport only carries the
+        // blessed TSM highlight styles (how Japanese IMEs vary their underlines),
+        // arbitrary NSAttributedString keys are stripped. Plain string it is; the
+        // underline-free experience is what the in-place/tap paths are for.
+        client.setMarkedText(s, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
     }
 

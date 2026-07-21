@@ -89,7 +89,10 @@ hỏng in-place); (c) app pin cứng trong `markedTextApps` (hiện rỗng).
 - Cùng kênh IMKit, chi phí tương đương in-place.
 
 **Cons**
-- **Gạch chân** dưới từ đang gõ — nhược điểm thuần thẩm mỹ nhưng thấy rõ.
+- **Gạch chân** dưới từ đang gõ — nhược điểm thuần thẩm mỹ nhưng thấy rõ, và
+  **không tắt được** (verified 21/07/2026: đã thử underlineStyle 0, màu clear,
+  màu alpha 1/255 — không app nào đổi, kể cả Cocoa: transport `setMarkedText`
+  của IMKit chỉ mang các TSM highlight style chuẩn, attribute tùy ý bị strip).
 - Từ ở trạng thái "đang compose": một số app xử lý composition kỳ quặc
   (autocomplete/shortcut của app có thể không thấy text cho tới khi commit).
 - Terminal/TUI vẽ marked text xấu hoặc phá autocomplete của shell → với
