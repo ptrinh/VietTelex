@@ -43,8 +43,6 @@
 	<key>com.hnc.Discord</key>               <string>tap</string>
 	<key>com.microsoft.VSCode</key>          <string>tap</string>
 	<key>com.anthropic.claudefordesktop</key> <string>tap</string>
-	<!-- Chrome PWA (bundle id cố định theo web app, không theo máy) — probe học ra tap -->
-	<key>com.google.Chrome.app.bbcbahpbnakjldhdcgiblnjnfgaejidg</key> <string>tap</string>
 
 	<!-- Đã kiểm chứng gõ trực tiếp tốt -->
 	<key>com.apple.Notes</key>               <string>inPlace</string>
