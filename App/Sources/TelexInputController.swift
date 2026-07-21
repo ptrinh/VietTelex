@@ -595,15 +595,14 @@ final class TelexInputController: IMKInputController {
     private func updateMarked(_ client: IMKTextInput) {
         let s = engine.composed
         let caret = NSRange(location: (s as NSString).length, length: 0)
-        // KNOWN LIMITATION — the composition underline cannot be removed (verified
-        // 2026-07-21, three attempts): (1) attributed underlineStyle 0, (2)
-        // .underlineColor clear — Chromium treats fully-transparent as "use text
-        // color", (3) near-transparent color (alpha 1/255) — still underlined in
-        // BOTH Blink content and the omnibox, and in Cocoa apps, i.e. the attributes
-        // never reach any client: IMKit's setMarkedText transport only carries the
-        // blessed TSM highlight styles (how Japanese IMEs vary their underlines),
-        // arbitrary NSAttributedString keys are stripped. Plain string it is; the
-        // underline-free experience is what the in-place/tap paths are for.
+        // KNOWN LIMITATION — the composition underline CANNOT be removed by the IME.
+        // Definitive root cause (2026-07-21): even the blessed styling channel,
+        // mark(forStyle: kTSMHiliteNoHilite /* 9 */, at:), returns ONLY
+        // [NSMarkedClauseSegment: N] — clause boundaries, no drawing attributes.
+        // The client app decides entirely how composition is painted; arbitrary
+        // attributed keys (underlineStyle 0, clear/near-clear underlineColor) were
+        // also field-tested and change nothing. The underline-free experience is
+        // what the in-place/tap paths are for.
         client.setMarkedText(s, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
     }
