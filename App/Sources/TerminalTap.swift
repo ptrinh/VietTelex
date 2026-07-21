@@ -42,9 +42,20 @@ enum Accessibility {
     // provides.
     private static let ttlNs: UInt64 = 5_000_000_000
 
+    #if DEBUG
+    /// Test-only override for the TCC answer — unit tests can't grant real
+    /// Accessibility, and the routing matrix (AppState) must be exercised in BOTH
+    /// trust states. nil = ask TCC as normal. Debug builds only; the Release binary
+    /// has no override path.
+    static var testTrustOverride: Bool?
+    #endif
+
     /// True when the process may create an event tap / post events. Always false in
     /// the sandboxed build — it can never be granted.
     static var isTrusted: Bool {
+        #if DEBUG
+        if let forced = testTrustOverride { return forced }
+        #endif
         let now = DispatchTime.now().uptimeNanoseconds
         let fresh: Bool? = lock.withLock {
             (lastCheckNs != 0 && now &- lastCheckNs < ttlNs) ? cached : nil

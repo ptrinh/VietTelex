@@ -241,6 +241,11 @@ public struct TelexEngine {
         _ = render()                             // maps tone-key provenance
 
         if pCount == 0 {
+            // Safety net, UNREACHABLE by construction (uncovered in coverage runs
+            // and that's fine): pCount == 0 with rawCount > 0 would need every raw
+            // key consumed as a tone (rawLetter == -1), but a tone key is only
+            // consumed when a vowel LETTER precedes it — so some key always maps to
+            // a letter. Kept in case a future parse rule breaks that invariant.
             rawCount -= 1                        // nothing on screen -> drop one key
         } else {
             let last = pCount - 1
