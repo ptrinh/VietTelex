@@ -105,7 +105,7 @@ final class EdgeCaseTests: XCTestCase {
         // A lone tone key with no vowel is a literal letter.
         XCTAssertEqual(compose("s"), "s")
         XCTAssertEqual(compose("f"), "f")
-        // A lone w depends on onset context — empty onset → literal.
-        XCTAssertEqual(compose("w"), "w")
+        // A lone w under full Telex converts even at word start (1.3.3).
+        XCTAssertEqual(compose("w"), "ư")
     }
 }

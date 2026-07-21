@@ -461,11 +461,12 @@ public struct TelexEngine {
 
         // A word starting with 'w' is English: Vietnamese has essentially no w-initial
         // syllable, so type it literally with no diacritics ("was"→was, "write"→write).
-        // An initial ư is typed "uw", not "w". EXCEPT with free marking on (user
-        // decision 2026-07-21): there the initial w falls through to the standalone
-        // handler and becomes ư ("w"→ư, "wu"→ưu) — English w-words then rely on
-        // live spell-check + auto-restore ("write" restores at the boundary).
-        if at == 0, lower == UInt8(ascii: "w"), !freeMarking { pWWord = true }
+        // An initial ư is typed "uw". This guard applies in SIMPLE Telex only
+        // (corrected 2026-07-21 — briefly keyed to free marking): under FULL Telex
+        // the initial w falls through to the standalone handler and becomes ư
+        // ("w"→ư, "wu"→ưu); English w-words there rely on live spell-check +
+        // auto-restore ("write" restores at the boundary).
+        if at == 0, lower == UInt8(ascii: "w"), simpleTelex { pWWord = true }
         if pWWord {
             appendLetter(base: lower, mark: .none, upper: upper)
             rawLetter[at] = pCount - 1
@@ -581,13 +582,10 @@ public struct TelexEngine {
             // onset that never precedes ư (k, q, gh, ngh, p) or after another
             // vowel, keep the literal 'w' so English words type through
             // ("kw", "windows", "ew"); auto-restore then leaves them intact.
-            // Simple Telex disables this — a lone `w` is literal (type `uw` for ư)
-            // — EXCEPT word-initial w when free marking is on (user decision
-            // 2026-07-21): "w"→ư, "wa"→ưa ("ưu tiên"-class words in one keystroke),
-            // while mid-word w after an onset stays literal under Simple Telex
-            // ("windows" still types through).
-            if (!simpleTelex || (freeMarking && pCount == 0)),
-               standaloneHornUAllowed(pCount) {
+            // Simple Telex disables this entirely — a lone `w` is always literal
+            // (type `uw` for ư). Full Telex converts, including word-initial w
+            // (the pWWord English guard above is Simple-Telex-only).
+            if !simpleTelex && standaloneHornUAllowed(pCount) {
                 appendLetter(base: UInt8(ascii: "u"), mark: .horn, upper: upper)
             } else {
                 appendLetter(base: UInt8(ascii: "w"), mark: .none, upper: upper)

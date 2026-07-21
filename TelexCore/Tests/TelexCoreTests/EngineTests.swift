@@ -124,18 +124,21 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(commit("ddcs"), "ddcs")
     }
 
-    // Word-initial standalone w → ư when FREE MARKING is on, even under Simple
-    // Telex ("ưu tiên"-class words in one keystroke). Mid-word w after an onset
-    // stays literal under Simple Telex so English still types through.
-    func testWordInitialWWithFreeMarking() {
-        XCTAssertEqual(composeSimpleFree("w"), "ư")
-        XCTAssertEqual(composeSimpleFree("wa"), "ưa")
-        XCTAssertEqual(composeSimpleFree("wu"), "ưu")   // "ưu tiên"-class
-        XCTAssertEqual(composeSimpleFree("thw"), "thw",
-                       "mid-word lone w stays literal under Simple Telex")
-        // Simple Telex WITHOUT free marking keeps the old behavior everywhere.
+    // Word-initial standalone w → ư belongs to FULL Telex (Simple Telex off) —
+    // corrected 2026-07-21 after briefly being keyed to free marking. Under Simple
+    // Telex a lone w is literal EVERYWHERE, free marking or not; English w-words
+    // under full Telex rely on auto-restore at the boundary.
+    func testWordInitialWIsFullTelex() {
+        XCTAssertEqual(compose("w"), "ư")               // full Telex (engine default)
+        XCTAssertEqual(compose("wa"), "ưa")
+        XCTAssertEqual(compose("wu"), "ưu")             // "ưu tiên"-class
+        XCTAssertEqual(commit("windows"), "windows",
+                       "English w-word restores raw at the boundary under full Telex")
+        // Simple Telex: literal everywhere, regardless of free marking.
         XCTAssertEqual(composeSimple("w"), "w")
         XCTAssertEqual(composeSimple("wa"), "wa")
+        XCTAssertEqual(composeSimpleFree("w"), "w")
+        XCTAssertEqual(composeSimpleFree("wa"), "wa")
     }
 
     func testFreeMarkingToggle() {
@@ -343,14 +346,19 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(compose("ew"), "ew")     // vowel before -> block
         XCTAssertEqual(compose("iw"), "iw")
 
-        // Leading 'w' = English word (no w-initial Vietnamese syllable): literal.
-        XCTAssertEqual(compose("w"), "w")        // empty onset -> English, not ư
-        XCTAssertEqual(compose("was"), "was")
-        XCTAssertEqual(compose("web"), "web")
-        XCTAssertEqual(compose("win"), "win")
-        XCTAssertEqual(compose("write"), "write")
-        XCTAssertEqual(compose("Wow"), "Wow")
-        XCTAssertEqual(compose("would"), "would")
+        // Leading 'w' under FULL Telex converts (corrected 2026-07-21: the English
+        // guard is Simple-Telex-only now); English w-words are recovered by
+        // auto-restore at the word boundary instead of being blocked up front.
+        XCTAssertEqual(compose("w"), "ư")
+        // KNOWN TRADE-OFF of full Telex (accepted with the default change): when
+        // the transformed word happens to be VALID Vietnamese, auto-restore keeps
+        // it — "was"→ứa, "Wow"→Ươ. Invalid ones restore as before.
+        XCTAssertEqual(commit("was"), "ứa")
+        XCTAssertEqual(commit("web"), "web")
+        XCTAssertEqual(commit("win"), "win")
+        XCTAssertEqual(commit("write"), "write")
+        XCTAssertEqual(commit("Wow"), "Ươ")
+        XCTAssertEqual(commit("would"), "would")
 
         // Allowed -> ư (valid Vietnamese onsets, must NOT regress).
         XCTAssertEqual(compose("cw"), "cư")
@@ -488,7 +496,7 @@ final class EngineGoldenTests: XCTestCase {
 
             // Single transforms
             ("aa", "â"), ("aw", "ă"), ("ee", "ê"), ("oo", "ô"),
-            ("ow", "ơ"), ("uw", "ư"), ("w", "w"), ("dd", "đ"),
+            ("ow", "ơ"), ("uw", "ư"), ("w", "ư"), ("dd", "đ"),   // initial w → ư (full Telex, 1.3.3)
 
             // Bare tones on 'a'
             ("as", "á"), ("af", "à"), ("ar", "ả"), ("ax", "ã"), ("aj", "ạ"),

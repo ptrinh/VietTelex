@@ -135,10 +135,12 @@ final class AppState: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Key.liveSpellCheck) }
     }
 
-    /// Simple Telex: a standalone `w` stays literal (type `uw` for ư). Default ON.
-    /// See `TelexEngine.simpleTelex`.
+    /// Simple Telex: a standalone `w` stays literal (type `uw` for ư). Default OFF
+    /// since 1.3.3 (user decision 2026-07-21 — full Telex incl. word-initial w→ư;
+    /// English w-words rely on live spell-check + auto-restore). An explicit user
+    /// choice is preserved. See `TelexEngine.simpleTelex`.
     var simpleTelex: Bool {
-        get { defaults.object(forKey: Key.simpleTelex) as? Bool ?? true }
+        get { defaults.object(forKey: Key.simpleTelex) as? Bool ?? false }
         set { defaults.set(newValue, forKey: Key.simpleTelex) }
     }
 
