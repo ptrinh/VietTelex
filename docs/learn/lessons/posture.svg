@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" font-family="'Be Vietnam Pro',-apple-system,'Segoe UI',sans-serif">
+  <!-- Tư thế ngồi đúng trước máy tính — minh họa phẳng, không asset ngoài -->
+  <defs>
+    <style>
+      .lbl { font-size: 17px; font-weight: 600; fill: #3d4a66; }
+      .guide { stroke: #c22727; stroke-width: 2; stroke-dasharray: 5 5; fill: none; }
+      .angle { fill: none; stroke: #c22727; stroke-width: 2.5; }
+      .deg { font-size: 15px; font-weight: 800; fill: #c22727; }
+      .skin { fill: #f0b894; }
+      .furn { fill: #b9c2d4; }
+    </style>
+  </defs>
+
+  <rect width="900" height="640" fill="#fbfaf7"/>
+  <!-- floor -->
+  <line x1="30" y1="580" x2="870" y2="580" stroke="#d9d4c8" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- desk -->
+  <rect x="70" y="300" width="360" height="14" rx="5" fill="#8a94ab"/>
+  <rect x="90" y="314" width="14" height="266" rx="4" class="furn"/>
+  <rect x="392" y="314" width="14" height="266" rx="4" class="furn"/>
+
+  <!-- monitor: top of screen at eye level -->
+  <rect x="190" y="330" width="60" height="10" rx="3" class="furn"/>
+  <rect x="212" y="240" width="16" height="94" rx="4" class="furn"/>
+  <rect x="120" y="118" width="200" height="130" rx="10" fill="#17233d"/>
+  <rect x="132" y="130" width="176" height="106" rx="5" fill="#eaf1fb"/>
+
+  <!-- keyboard -->
+  <rect x="330" y="288" width="86" height="12" rx="4" fill="#55607a"/>
+
+  <!-- chair -->
+  <rect x="500" y="368" width="190" height="18" rx="8" fill="#2f6fd0"/>
+  <path d="M676 180 q26 4 26 30 l0 160 -26 0 z" fill="#2f6fd0"/>
+  <rect x="580" y="386" width="16" height="120" class="furn"/>
+  <rect x="518" y="506" width="140" height="12" rx="6" class="furn"/>
+  <circle cx="530" cy="530" r="11" class="furn"/>
+  <circle cx="646" cy="530" r="11" class="furn"/>
+
+  <!-- person (side view, facing the desk) -->
+  <!-- shin + flat foot -->
+  <path d="M382 392 L382 548" stroke="#17233d" stroke-width="26" stroke-linecap="round"/>
+  <path d="M330 560 L398 560" stroke="#17233d" stroke-width="18" stroke-linecap="round"/>
+  <!-- thigh -->
+  <path d="M600 386 L384 390" stroke="#1e2d4e" stroke-width="34" stroke-linecap="round"/>
+  <!-- torso, upright against the backrest -->
+  <path d="M604 380 L616 216" stroke="#c22727" stroke-width="40" stroke-linecap="round"/>
+  <!-- upper arm down, forearm level to the keyboard -->
+  <path d="M612 232 L588 306" stroke="#a82222" stroke-width="24" stroke-linecap="round"/>
+  <path d="M588 306 L428 296" stroke="#a82222" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="420" cy="295" r="12" class="skin"/>
+  <!-- neck + head -->
+  <path d="M616 214 L620 196" stroke="#f0b894" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="624" cy="160" r="38" class="skin"/>
+  <path d="M652 138 a38 38 0 0 0 -54 -10 q-6 22 8 26 q28 -14 46 -16 z" fill="#17233d"/>
+  <circle cx="596" cy="158" r="4" fill="#17233d"/>
+
+  <!-- eye-level guide to the top of the screen -->
+  <line x1="150" y1="130" x2="586" y2="156" class="guide"/>
+
+  <!-- elbow ≈ 90° -->
+  <path class="angle" d="M567 282 a30 30 0 0 1 24 -34"/>
+  <text class="deg" x="596" y="268">90°</text>
+
+  <!-- knee ≈ 90° -->
+  <path class="angle" d="M414 390 a30 30 0 0 0 -30 30"/>
+  <text class="deg" x="422" y="430">90°</text>
+
+  <!-- labels -->
+  <text class="lbl" x="96" y="86">Đỉnh màn hình ngang tầm mắt</text>
+  <line x1="150" y1="96" x2="170" y2="116" stroke="#8a94ab" stroke-width="1.5"/>
+
+  <text class="lbl" x="672" y="120">Lưng thẳng,</text>
+  <text class="lbl" x="672" y="142">tựa vào ghế</text>
+  <line x1="690" y1="152" x2="668" y2="200" stroke="#8a94ab" stroke-width="1.5"/>
+
+  <text class="lbl" x="428" y="232">Khuỷu tay gập ~90°,</text>
+  <text class="lbl" x="428" y="254">cổ tay thẳng</text>
+
+  <text class="lbl" x="470" y="470">Đầu gối ~90°</text>
+
+  <text class="lbl" x="120" y="612">Bàn chân đặt phẳng trên sàn</text>
+  <line x1="330" y1="596" x2="360" y2="566" stroke="#8a94ab" stroke-width="1.5"/>
+</svg>

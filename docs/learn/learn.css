@@ -133,3 +133,6 @@ body.vt-focus #player .practice, body.vt-focus #player .result { max-width: 760p
 @media (prefers-reduced-motion: reduce) { .node.up-next { animation: none; } }
 
 .hands-img { display: block; max-width: 680px; width: 100%; margin: 6px auto 20px; border-radius: 16px; }
+
+.hands-illos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; max-width: 1100px; margin: 6px auto 20px; }
+.hands-illos .hands-img { margin: 0; background: #fff; border: 1px solid var(--line); }

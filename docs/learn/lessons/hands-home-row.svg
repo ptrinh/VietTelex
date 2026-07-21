@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1130 700" font-family="'JetBrains Mono',ui-monospace,monospace">
+<rect width="1130" height="700" fill="#fbfaf7"/>
+<rect x="24" y="24" width="1082" height="392" rx="18" fill="#e6e2d8"/>
+<rect x="40" y="40" width="64" height="64" rx="10" fill="#fde8e8" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="72" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">`</text>
+<rect x="114" y="40" width="64" height="64" rx="10" fill="#fde8e8" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="146" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">1</text>
+<rect x="188" y="40" width="64" height="64" rx="10" fill="#fdf3e0" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="220" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">2</text>
+<rect x="262" y="40" width="64" height="64" rx="10" fill="#eaf7e6" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="294" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">3</text>
+<rect x="336" y="40" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="368" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">4</text>
+<rect x="410" y="40" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="442" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">5</text>
+<rect x="484" y="40" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="516" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">6</text>
+<rect x="558" y="40" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="590" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">7</text>
+<rect x="632" y="40" width="64" height="64" rx="10" fill="#f3e6fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="664" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">8</text>
+<rect x="706" y="40" width="64" height="64" rx="10" fill="#fbe6f3" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="738" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">9</text>
+<rect x="780" y="40" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="812" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">0</text>
+<rect x="854" y="40" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="886" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">-</text>
+<rect x="928" y="40" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="960" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">=</text>
+<rect x="1002" y="40" width="105" height="64" rx="10" fill="#f0ede4" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="1054" y="80" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">⌫</text>
+<rect x="40" y="114" width="101" height="64" rx="10" fill="#f0ede4" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="90" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">⇥</text>
+<rect x="151" y="114" width="64" height="64" rx="10" fill="#fde8e8" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="183" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">Q</text>
+<rect x="225" y="114" width="64" height="64" rx="10" fill="#fdf3e0" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="257" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">W</text>
+<rect x="299" y="114" width="64" height="64" rx="10" fill="#eaf7e6" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="331" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">E</text>
+<rect x="373" y="114" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="405" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">R</text>
+<rect x="447" y="114" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="479" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">T</text>
+<rect x="521" y="114" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="553" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">Y</text>
+<rect x="595" y="114" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="627" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">U</text>
+<rect x="669" y="114" width="64" height="64" rx="10" fill="#f3e6fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="701" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">I</text>
+<rect x="743" y="114" width="64" height="64" rx="10" fill="#fbe6f3" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="775" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">O</text>
+<rect x="817" y="114" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="849" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">P</text>
+<rect x="891" y="114" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="923" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">[</text>
+<rect x="965" y="114" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="997" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">]</text>
+<rect x="1039" y="114" width="68" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="1073" y="154" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">\</text>
+<rect x="40" y="188" width="127" height="64" rx="10" fill="#f0ede4" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="103" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">⇪</text>
+<rect x="177" y="188" width="64" height="64" rx="10" fill="#fde8e8" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="209" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">A</text>
+<circle cx="209" cy="220" r="36" fill="none" stroke="#e88c8c" stroke-width="5" opacity="0.9"/>
+<rect x="251" y="188" width="64" height="64" rx="10" fill="#fdf3e0" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="283" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">S</text>
+<circle cx="283" cy="220" r="36" fill="none" stroke="#e0b25c" stroke-width="5" opacity="0.9"/>
+<rect x="325" y="188" width="64" height="64" rx="10" fill="#eaf7e6" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="357" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">D</text>
+<circle cx="357" cy="220" r="36" fill="none" stroke="#7cc46a" stroke-width="5" opacity="0.9"/>
+<rect x="399" y="188" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="431" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">F</text>
+<circle cx="431" cy="220" r="36" fill="none" stroke="#6aa3dd" stroke-width="5" opacity="0.9"/>
+<rect x="422" y="240" width="18" height="4" rx="2" fill="#3d4a66"/>
+<rect x="473" y="188" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="505" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">G</text>
+<rect x="547" y="188" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="579" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">H</text>
+<rect x="621" y="188" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="653" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">J</text>
+<circle cx="653" cy="220" r="36" fill="none" stroke="#8d8ddd" stroke-width="5" opacity="0.9"/>
+<rect x="644" y="240" width="18" height="4" rx="2" fill="#3d4a66"/>
+<rect x="695" y="188" width="64" height="64" rx="10" fill="#f3e6fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="727" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">K</text>
+<circle cx="727" cy="220" r="36" fill="none" stroke="#bb7cd6" stroke-width="5" opacity="0.9"/>
+<rect x="769" y="188" width="64" height="64" rx="10" fill="#fbe6f3" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="801" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">L</text>
+<circle cx="801" cy="220" r="36" fill="none" stroke="#d67cb2" stroke-width="5" opacity="0.9"/>
+<rect x="843" y="188" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="875" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">;</text>
+<circle cx="875" cy="220" r="36" fill="none" stroke="#5ec9b4" stroke-width="5" opacity="0.9"/>
+<rect x="917" y="188" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="949" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">'</text>
+<rect x="991" y="188" width="116" height="64" rx="10" fill="#f0ede4" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="1049" y="228" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">⏎</text>
+<rect x="40" y="262" width="168" height="64" rx="10" fill="#f0ede4" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="124" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">⇧</text>
+<rect x="218" y="262" width="64" height="64" rx="10" fill="#fde8e8" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="250" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">Z</text>
+<rect x="292" y="262" width="64" height="64" rx="10" fill="#fdf3e0" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="324" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">X</text>
+<rect x="366" y="262" width="64" height="64" rx="10" fill="#eaf7e6" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="398" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">C</text>
+<rect x="440" y="262" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="472" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">V</text>
+<rect x="514" y="262" width="64" height="64" rx="10" fill="#e6f2fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="546" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">B</text>
+<rect x="588" y="262" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="620" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">N</text>
+<rect x="662" y="262" width="64" height="64" rx="10" fill="#e9e9fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="694" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">M</text>
+<rect x="736" y="262" width="64" height="64" rx="10" fill="#f3e6fb" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="768" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">,</text>
+<rect x="810" y="262" width="64" height="64" rx="10" fill="#fbe6f3" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="842" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">.</text>
+<rect x="884" y="262" width="64" height="64" rx="10" fill="#e6fbf7" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="916" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">/</text>
+<rect x="958" y="262" width="149" height="64" rx="10" fill="#f0ede4" stroke="#d5cfc2" stroke-width="1.5"/>
+<text x="1032" y="302" font-size="24" font-weight="700" fill="#3d4a66" text-anchor="middle">⇧</text>
+<rect x="300" y="336" width="500" height="64" rx="10" fill="#ffffff" stroke="#d5cfc2" stroke-width="1.5"/>
+<g stroke="#f0b894" stroke-linecap="round" fill="none" opacity="0.55">
+<path d="M208.9 226.0 Q202.9 340.0 328 470" stroke-width="26"/>
+<path d="M282.9 226.0 Q280.9 340.0 336 470" stroke-width="30"/>
+<path d="M356.9 226.0 Q358.9 340.0 344 470" stroke-width="32"/>
+<path d="M430.9 226.0 Q438.9 340.0 356 470" stroke-width="30"/>
+<path d="M340 480 Q405 450 470 372" stroke-width="30"/>
+</g>
+<ellipse cx="340" cy="550" rx="86" ry="105" fill="#f0b894" opacity="0.55"/>
+<g stroke="#f0b894" stroke-linecap="round" fill="none" opacity="0.55">
+<path d="M874.9 226.0 Q880.9 340.0 802 470" stroke-width="26"/>
+<path d="M800.9 226.0 Q802.9 340.0 794 470" stroke-width="30"/>
+<path d="M726.9 226.0 Q724.9 340.0 786 470" stroke-width="32"/>
+<path d="M652.9 226.0 Q644.9 340.0 774 470" stroke-width="30"/>
+<path d="M790 480 Q710 450 630 372" stroke-width="30"/>
+</g>
+<ellipse cx="790" cy="550" rx="86" ry="105" fill="#f0b894" opacity="0.55"/>
+<circle cx="470" cy="368" r="14" fill="#e0a983" opacity="0.6"/>
+<circle cx="630" cy="368" r="14" fill="#e0a983" opacity="0.6"/>
+<text x="565" y="682" font-family="'Be Vietnam Pro',sans-serif" font-size="20" font-weight="700" fill="#3d4a66" text-anchor="middle">Ngón trỏ đặt lên F và J (có gờ nổi) — mỗi ngón một màu, gõ xong quay về</text>
+</svg>
