@@ -39,6 +39,10 @@ var STR = {
     map: '← Bản đồ', listen: '🔊 Nghe', dict: '🎧 Nghe rồi gõ', dictOn: '🎧 Đang nghe-gõ',
     fsOn: 'Toàn màn hình', fsOff: 'Thoát toàn màn hình',
     upNext: 'Học tiếp',
+    imeTitle: 'Tắt bộ gõ tiếng Việt trước khi học',
+    imeBody: 'Bài học tự ghép dấu khi bạn gõ phím thường, nên hãy chuyển bàn phím hệ thống về <b>English / ABC</b> (tắt VietTelex, Unikey, EVKey…) trước khi luyện.<br><br>💡 Trên máy Mac: bấm 🌐 hoặc ⌃Space để đổi nguồn nhập. Nếu để bộ gõ bật, chữ sẽ bị bỏ dấu HAI LẦN và bài học không nhận đúng phím.',
+    imeOk: 'Đã hiểu, bắt đầu học!',
+    imeToast: '⚠️ Hình như bộ gõ tiếng Việt của máy đang bật — hãy chuyển sang bàn phím English/ABC để bài học nhận đúng phím.',
     autoSpk: '🗣️ Tự đọc: Tắt', autoSpkOn: '🗣️ Tự đọc: Bật',
     art: '🖼️ Hình: Tắt', artOn: '🖼️ Hình: Bật',
     retry: '↻ Làm lại', next: 'Bài tiếp theo →', close: 'Đóng',
@@ -74,6 +78,10 @@ var STR = {
     map: '← Map', listen: '🔊 Listen', dict: '🎧 Listen & type', dictOn: '🎧 Dictation on',
     fsOn: 'Fullscreen', fsOff: 'Exit fullscreen',
     upNext: 'Continue',
+    imeTitle: 'Turn OFF your Vietnamese IME first',
+    imeBody: 'Lessons compose the diacritics for you from plain keystrokes, so switch your system keyboard to <b>English / ABC</b> (turn off VietTelex, Unikey, EVKey…) before practicing.<br><br>💡 On a Mac: press 🌐 or ⌃Space to switch input sources. With an IME on, letters get marked TWICE and the lesson can\'t match your keys.',
+    imeOk: 'Got it, let\'s go!',
+    imeToast: '⚠️ Your system Vietnamese IME seems to be ON — switch to the English/ABC keyboard so lessons see your real keys.',
     autoSpk: '🗣️ Auto-speak: Off', autoSpkOn: '🗣️ Auto-speak: On',
     art: '🖼️ Pictures: Off', artOn: '🖼️ Pictures: On',
     retry: '↻ Retry', next: 'Next lesson →', close: 'Close',
@@ -373,9 +381,28 @@ function showTrackModal(firstTime) {
 }
 function chooseTrack(t) {
   store.track = t; save();
-  document.getElementById('trackModal').hidden = true;
   renderBar(); renderMap();
+  document.getElementById('trackStep1').hidden = true;
+  var step = document.getElementById('imeStep');
+  document.getElementById('imeTitle').textContent = T().imeTitle;
+  document.getElementById('imeBody').innerHTML = T().imeBody;
+  document.getElementById('imeOk').textContent = T().imeOk;
+  step.hidden = false;
 }
+document.getElementById('imeOk').addEventListener('click', function () {
+  document.getElementById('trackModal').hidden = true;
+  document.getElementById('imeStep').hidden = true;
+  document.getElementById('trackStep1').hidden = false;
+});
+// Live detection: an active IME fires composition events on real keyboards —
+// warn (at most once per minute) if that happens during a lesson.
+var lastImeWarn = 0;
+document.addEventListener('compositionstart', function () {
+  if (!cur || playerEl.hidden) return;
+  if (Date.now() - lastImeWarn < 60000) return;
+  lastImeWarn = Date.now();
+  toast(T().imeToast);
+});
 document.getElementById('trackNew').addEventListener('click', function () { chooseTrack('new'); });
 document.getElementById('trackTypist').addEventListener('click', function () { chooseTrack('typist'); });
 
