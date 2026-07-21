@@ -101,3 +101,5 @@
   .node { min-width: calc(50% - 5px); }
 }
 .speakbtn.on { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.langsel { background: rgba(255,255,255,.1); color: #dfe4f0; border: 1px solid rgba(255,255,255,.25); border-radius: 9px; padding: 6px 10px; font-family: var(--sans); font-size: .85rem; font-weight: 600; cursor: pointer; }
+.langsel option { color: #1c2333; }

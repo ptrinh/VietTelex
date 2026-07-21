@@ -63,6 +63,8 @@
   .minibtn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #dfe4f0; border-radius: 9px; padding: 7px 14px; font-size: .85rem; font-weight: 600; cursor: pointer; font-family: var(--sans); }
   .minibtn:hover { border-color: var(--gold); color: #fff; }
   .kbd-note { margin-top: 14px; font-size: .8rem; color: #8b94ab; }
+  .langsel { background: rgba(255,255,255,.1); color: #dfe4f0; border: 1px solid rgba(255,255,255,.25); border-radius: 9px; padding: 6px 10px; font-family: var(--sans); font-size: .85rem; font-weight: 600; cursor: pointer; }
+  .langsel option { color: #1c2333; }
   .field:focus .ph { display: none; }
   .cta-btn { display: inline-block; background: var(--red); color: #fff; text-decoration: none; font-weight: 800; font-size: 1.15rem; padding: 16px 38px; border-radius: 999px; box-shadow: 0 10px 30px rgba(194,39,39,.3); transition: transform .12s, box-shadow .12s; }
   .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(194,39,39,.4); }
@@ -149,6 +151,10 @@
     <span>ViệtTelex<small>Tập gõ Telex</small></span>
   </a>
   <div class="right">
+    <select id="langSel" class="langsel" aria-label="Ngôn ngữ / Language">
+      <option value="vi">🌐 Tiếng Việt</option>
+      <option value="en">🌐 English</option>
+    </select>
     <a class="back" href="lessons/">🎓 Vào lớp học</a>
     <a class="back" href="../">← Trang chủ</a>
   </div>
@@ -185,8 +191,8 @@
 <!-- Cheat sheet -->
 <section>
   <div class="wrap">
-    <h2>Bảng quy tắc Telex</h2>
-    <p class="lead">Bấm một ô để xem nó chạy trong ô gõ thử ở trên. Nhớ được mấy nhóm này là gõ được cả tiếng Việt.</p>
+    <h2 id="cheatH2">Bảng quy tắc Telex</h2>
+    <p class="lead" id="cheatLead">Bấm một ô để xem nó chạy trong ô gõ thử ở trên. Nhớ được mấy nhóm này là gõ được cả tiếng Việt.</p>
     <div class="cheat" id="cheat"></div>
   </div>
 </section>
@@ -364,6 +370,59 @@
   }
 
   window.confettiBurst = confetti;
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  // Landing-page i18n. Language is shared with the classroom via vtlearn.lang.
+  var MAP = [
+    ['.hero h1', 'Learn Vietnamese <span class="accent">Telex</span> typing'],
+    ['.hero p.sub', 'Type without diacritics, get full Vietnamese. Instant feedback — the exact rule set of the ViệtTelex input method.'],
+    ['.sandbox .label', '✏️ Try it now — type Vietnamese the Telex way'],
+    ['.kbd-note', '💡 This box needs a real keyboard. Press <b>space</b> to end a word. The <a href="lessons/" style="color:#d4a94a">classroom</a> has an on-screen keyboard — tablets work too.'],
+    ['#hoc h2', 'Want to learn Telex? 🎓'],
+    ['#hoc .lead', 'A 6-chapter course: hand position → special letters → tones → full sentences.<br>Stars ⭐, badges 🏅, spoken examples 🔊 — and an on-screen keyboard for tablets.'],
+    ['.cta-btn', '🚀 Start learning'],
+    ['#hoc .wrap > p:last-child', 'Free, no account — progress is saved on your device.'],
+    ['#cheatH2', 'Telex rule sheet'],
+    ['#cheatLead', 'Click a tile to see it run in the try-box above. Remember these few groups and you can type all of Vietnamese.']
+  ];
+  var GROUPS = { 'Dấu thanh (gõ ở cuối từ)': 'Tones (typed at the end of the word)',
+                 'Nguyên âm đội mũ ^': 'Hatted vowels ^',
+                 'Nguyên âm có móc/ngoặc': 'Hooked vowels',
+                 'Đặc biệt': 'Special' };
+  var saved = null;
+  function state() {
+    var st; try { st = JSON.parse(localStorage.getItem('vtlearn') || '{}'); } catch (e) { st = {}; }
+    return st;
+  }
+  function apply(lang) {
+    if (!saved) {
+      saved = MAP.map(function (m) { var el = document.querySelector(m[0]); return el ? el.innerHTML : null; });
+      saved.groups = Array.prototype.map.call(document.querySelectorAll('.cheat-group-title'), function (g) { return g.textContent; });
+    }
+    MAP.forEach(function (m, i) {
+      var el = document.querySelector(m[0]);
+      if (!el || saved[i] == null) return;
+      el.innerHTML = lang === 'en' ? m[1] : saved[i];
+    });
+    document.querySelectorAll('.cheat-group-title').forEach(function (g, i) {
+      g.textContent = lang === 'en' ? (GROUPS[saved.groups[i]] || saved.groups[i]) : saved.groups[i];
+    });
+    document.documentElement.lang = lang;
+  }
+  var sel = document.getElementById('langSel');
+  var lang = state().lang === 'en' ? 'en' : 'vi';
+  sel.value = lang;
+  if (lang === 'en') apply('en'); else apply('vi');
+  sel.addEventListener('change', function () {
+    var st = state();
+    st.lang = sel.value === 'en' ? 'en' : 'vi';
+    st.langChosen = true;
+    localStorage.setItem('vtlearn', JSON.stringify(st));
+    apply(st.lang);
+  });
 })();
 </script>
 </body>

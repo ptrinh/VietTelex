@@ -271,7 +271,7 @@ var gb = {
   xp: document.getElementById('gbXp'),
   badges: document.getElementById('gbBadges'),
   sound: document.getElementById('gbSound'),
-  lang: document.getElementById('gbLang'),
+  lang: document.getElementById('langSel'),
   track: document.getElementById('gbTrack')
 };
 var DATA = null;
@@ -284,12 +284,12 @@ function renderBar() {
   gb.xp.textContent = '⭐ ' + store.xp + ' XP';
   gb.badges.textContent = '🏅 ' + store.badges.length + '/' + BADGE_IDS.length;
   gb.sound.textContent = store.sound ? '🔊' : '🔇';
-  gb.lang.textContent = store.lang === 'en' ? '🌐 EN' : '🌐 VI';
+  gb.lang.value = store.lang;
   gb.track.textContent = (store.track === 'typist' ? '⚡' : '🐣') + ' ' + T().trackSwitch;
 }
 gb.sound.addEventListener('click', function () { store.sound = !store.sound; save(); renderBar(); });
-gb.lang.addEventListener('click', function () {
-  store.lang = store.lang === 'en' ? 'vi' : 'en'; store.langChosen = true; save();
+gb.lang.addEventListener('change', function () {
+  store.lang = gb.lang.value === 'en' ? 'en' : 'vi'; store.langChosen = true; save();
   renderBar(); applyStaticLang();
   if (DATA) renderMap();
   if (cur) { document.getElementById('pTitle').textContent = lessonTitle(cur.lesson);
@@ -528,6 +528,7 @@ function advanceAndRender() {
 function finishLesson() {
   if (cur.done) return;
   cur.done = true;
+  cur.finishedAt = Date.now();
   var mins = Math.max((Date.now() - cur.t0) / 60000, 0.01);
   var wpm = Math.round(cur.correct / 5 / mins);
   var acc = Math.round(cur.correct / Math.max(cur.correct + cur.wrong, 1) * 100);
@@ -605,8 +606,17 @@ document.getElementById('dictBtn').addEventListener('click', function () {
 
 // ── Physical keyboard input (works with iPad hardware keyboards too) ───────
 document.addEventListener('keydown', function (e) {
-  if (!cur || cur.done || playerEl.hidden) return;
+  if (!cur || playerEl.hidden) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (cur.done) {
+    // result screen: Space/Enter advances to the next lesson (300ms guard so
+    // the keystroke that finished the lesson can't double-fire)
+    if ((e.key === ' ' || e.key === 'Enter') && Date.now() - (cur.finishedAt || 0) > 300) {
+      e.preventDefault();
+      document.getElementById('rNext').click();
+    }
+    return;
+  }
   if (e.key === 'Backspace') { e.preventDefault(); return; }
   if (e.key.length !== 1) return;
   e.preventDefault();
