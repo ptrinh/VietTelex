@@ -598,11 +598,15 @@ final class TelexInputController: IMKInputController {
         // Attributed with underlineStyle 0: the composition underline is a style the
         // IME PROPOSES, not something the app must draw — compliant clients
         // (NSTextView, most Cocoa) honor the explicit "no underline" and marked text
-        // becomes visually indistinguishable from in-place. Apps that paint their
-        // own composition style (some Electron/terminals) ignore the attribute and
-        // keep their underline — no worse than before, so this ships unconditionally.
+        // becomes visually indistinguishable from in-place.
+        // Chromium/Electron ALWAYS paint a composition underline (ImeTextSpan) even
+        // for style 0 — but they READ the underline COLOR from the attributed string
+        // (ExtractUnderlines in render_widget_host_view_mac), so a .clear underline
+        // is painted invisibly. Belt + suspenders: style 0 for Cocoa, clear color
+        // for the engines that insist on drawing.
         let attributed = NSAttributedString(string: s, attributes: [
             .underlineStyle: 0,
+            .underlineColor: NSColor.clear,
         ])
         client.setMarkedText(attributed, selectionRange: caret, replacementRange: kNoRange)
         DebugLog.log("setMarked \(AppState.shared.currentBundleID ?? "?"): len=\((s as NSString).length)")
