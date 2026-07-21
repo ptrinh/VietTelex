@@ -23,11 +23,17 @@ enum DebugLog {
     static func log(_ message: @autoclosure () -> String) {
         guard AppState.shared.debugLogging else { return }
         let ms = Double(DispatchTime.now().uptimeNanoseconds &- startNs) / 1_000_000
-        let line = String(format: "%10.1f  %@", ms, message())
+        let text = message()
+        let line = String(format: "%10.1f  %@", ms, text)
         lock.lock()
         lines.append(line)
         if lines.count > capacity { lines.removeFirst(lines.count - capacity) }
         lock.unlock()
+        // Mirror to the unified log: the in-memory ring DIES with the process, which
+        // is exactly when it is needed most (hang → reboot / relaunch wiped the
+        // evidence of the build-7 revoke wedge). Structural events only, never typed
+        // text — same privacy contract as the ring buffer.
+        Signposts.log.notice("\(text, privacy: .public)")
     }
 
     static func clear() { lock.lock(); lines.removeAll(); lock.unlock() }

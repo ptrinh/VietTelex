@@ -55,12 +55,11 @@ var axChangeObserver: NSObjectProtocol?
 axChangeObserver = DistributedNotificationCenter.default().addObserver(
     forName: NSNotification.Name("com.apple.accessibility.api"),
     object: nil, queue: .main) { _ in
-    Accessibility.invalidateCache()
-    if Accessibility.isTrusted {
-        TerminalTapController.shared.ensureRunning()
-    } else {
-        TerminalTapController.shared.stopForRevokedTrust()
-    }
+    // No trust check here — right after the toggle tccd can still report the OLD
+    // value (that race skipped the teardown in build 7 and the wedged tap
+    // survived). trustMayHaveChanged tears down unconditionally and re-creates
+    // ~1.5s later iff genuinely trusted.
+    TerminalTapController.shared.trustMayHaveChanged()
 }
 
 // Standard editing key equivalents (⌘A/⌘C/⌘V/⌘X/⌘Z, ⌘W) inside our OWN Settings

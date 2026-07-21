@@ -33,7 +33,11 @@ enum Accessibility {
     private static let lock = NSLock()
     private static var cached = false
     private static var lastCheckNs: UInt64 = 0
-    private static let ttlNs: UInt64 = 2_000_000_000
+    // 500ms (was 2s): this cache also gates synthetic-event POSTING now, and a
+    // stale "trusted" there means CGEvent.post from a just-revoked process — the
+    // suspected tap-thread block behind the build-7 wedge. The TCC IPC is ~15ms,
+    // so 2 checks/second while typing is noise.
+    private static let ttlNs: UInt64 = 500_000_000
 
     /// True when the process may create an event tap / post events. Always false in
     /// the sandboxed build — it can never be granted.
@@ -589,6 +593,11 @@ enum SyntheticKeyboard {
     ///   (empty `text`) has nothing to overtype, so it falls back to real Backspaces.
     static func apply(backspaces: Int, insert text: String, mode: TapEmit = .backspace) {
         if tripped { return }   // recognition failed — emitting more would storm the keyboard
+        // NEVER post from an untrusted process: CGEvent.post without Accessibility
+        // can stall/behave unpredictably, and a tap callback stuck inside a post is
+        // an unserviced port = system-wide input wedge. Dropping the edit merely
+        // loses one tone change during the revoke transition.
+        guard Accessibility.isTrusted else { return }
         // Signpost each synthesized edit burst — this is where a tone edit pays
         // real milliseconds (every posted event round-trips the window server).
         let spState = Signposts.poster.beginInterval("tap.emit",
@@ -636,7 +645,10 @@ enum SyntheticKeyboard {
 
     /// Re-emit a control/whitespace boundary key after a boundary rewrite, so it
     /// lands AFTER the synthesized edit.
-    static func postKey(_ key: CGKeyCode) { postVirtual(key) }
+    static func postKey(_ key: CGKeyCode) {
+        guard Accessibility.isTrusted else { return }   // see apply()
+        postVirtual(key)
+    }
 
     /// Shift+LeftArrow: extend the selection one char left (used by selectionReplace).
     private static func postSelectLeft() {
@@ -754,6 +766,34 @@ final class TerminalTapController {
         return CGEvent.tapIsEnabled(tap: tap)
     }
 
+    /// LAST-RESORT watchdog (main thread, alive ONLY while a tap exists — created in
+    /// start(), invalidated in teardown()). Every 3s it makes a FRESH trust check;
+    /// on revoke it forces the unconditional teardown. This is the layer that needs
+    /// no cooperation from anything else: not from the TCC notification (may race /
+    /// not arrive), not from the tap callback (which can be BLOCKED inside a
+    /// synthetic-event post the instant trust vanishes — the suspected build-7 wedge:
+    /// a stuck callback never sees tapDisabledBy* and a stuck thread's own runloop
+    /// timer would be just as stuck, which is why this lives on MAIN). Worst case the
+    /// user's input stalls ≤3s before the port is invalidated and everything flows
+    /// natively again. The "no polling" design rule is deliberately bent here: the
+    /// timer exists only while an Accessibility-trusted event tap does — the exact
+    /// window in which a wedge can take the whole machine's input down.
+    private var watchdog: Timer?
+
+    private func startWatchdog() {
+        watchdog?.invalidate()
+        let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            if !AXIsProcessTrusted() {
+                Signposts.log.fault("watchdog: Accessibility revoked with a live tap — forcing teardown")
+                self.trustMayHaveChanged()
+            }
+        }
+        t.tolerance = 1
+        RunLoop.main.add(t, forMode: .common)
+        watchdog = t
+    }
+
     /// Emit mode for the CURRENT key: false = Backspace+retype (terminals), true =
     /// Shift+Left select + overtype (Chrome omnibox / Spotlight). Set per event in
     /// handle() before any edit is emitted. TAP-thread confined.
@@ -818,6 +858,7 @@ final class TerminalTapController {
             self.source = src
         }
         SyntheticKeyboard.resetBreaker()   // fresh machinery — clear any prior trip
+        startWatchdog()
         DebugLog.log("tap created + enabled (dedicated thread)")
     }
 
@@ -841,19 +882,29 @@ final class TerminalTapController {
         start()
     }
 
-    /// Accessibility was revoked while the tap was live: kill the machinery entirely
-    /// (MAIN thread — lifecycle owner). ensureRunning()/start() are trust-guarded, so
-    /// nothing resurrects it until the user re-grants; the AX-change notification
-    /// (main.swift) restarts it then.
-    func stopForRevokedTrust() {
+    /// The Accessibility permission MAY have changed (TCC notification, or a
+    /// disabled-tap event with an untrusted read). MAIN thread — lifecycle owner.
+    ///
+    /// Tear down UNCONDITIONALLY, then re-create after a beat if genuinely trusted.
+    /// The build-7 hang taught why there must be no guard here: immediately after
+    /// the toggle, tccd can still report the OLD trust value — the previous
+    /// `guard !isTrusted else return` skipped the teardown on exactly that race and
+    /// left the wedged tap alive. Rebuilding a healthy tap ~1.5s later costs
+    /// nothing; guessing wrong costs the user's keyboard and mouse.
+    func trustMayHaveChanged() {
         Accessibility.invalidateCache()
-        guard !Accessibility.isTrusted else { return }   // stale disable, still trusted
         teardown()
         SyntheticKeyboard.resetBreaker()
-        DebugLog.log("tap stopped (Accessibility revoked)")
+        DebugLog.log("trust-change signal → tap torn down; re-checking in 1.5s")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            Accessibility.invalidateCache()
+            self?.ensureRunning()   // recreates only if AXIsProcessTrusted by then
+        }
     }
 
     private func teardown() {
+        watchdog?.invalidate()
+        watchdog = nil
         let (tap, source, runLoop) = stateLock.withLock {
             let t = (self.tap, self.source, self.tapRunLoop)
             self.tap = nil
@@ -926,7 +977,7 @@ final class TerminalTapController {
                 Accessibility.invalidateCache()
                 engine.reset()
                 DebugLog.log("tap disabled + Accessibility revoked → full teardown, input native")
-                DispatchQueue.main.async { TerminalTapController.shared.stopForRevokedTrust() }
+                DispatchQueue.main.async { TerminalTapController.shared.trustMayHaveChanged() }
             }
             return pass
         }
