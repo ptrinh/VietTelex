@@ -40,6 +40,15 @@ private func composeSimple(_ keys: String) -> String {
     return e.composed
 }
 
+/// Simple Telex + free marking together (the 1.3.1 defaults).
+private func composeSimpleFree(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.simpleTelex = true
+    e.freeMarking = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
 /// Type keys then commit at a word boundary with auto-restore on.
 private func commit(_ keys: String) -> String {
     var e = TelexEngine()
@@ -87,6 +96,48 @@ final class EngineGoldenTests: XCTestCase {
     // "Bỏ dấu tự do" toggle. Default (strict / Minimal Telex):
     // modifiers act only on the adjacent vowel — reach-back over a consonant is off,
     // so English/code types cleanly. Free mode: modifiers reach back over consonants.
+    // FREE MARKING: circumflex doublers cross the whole nucleus (UniKey-style) —
+    // "daua"→dâu, "dauas"→dấu — never the onset boundary (qu/gi stay safe).
+    func testFreeMarkingDoublerCrossesNucleus() {
+        XCTAssertEqual(composeFree("daua"), "dâu")
+        XCTAssertEqual(composeFree("dauas"), "dấu")
+        XCTAssertEqual(composeFree("mauas"), "mấu")
+        // Coda reach-back unchanged.
+        XCTAssertEqual(composeFree("coto"), "côt")
+        XCTAssertEqual(composeFree("ama"), "âm")
+        // Onset boundary is never crossed: no vowel match → literal.
+        XCTAssertEqual(composeFree("quao"), "quao")
+        // Immediate doubling still wins first (standard Telex, both modes).
+        XCTAssertEqual(composeFree("muaa"), "muâ")
+        // STRICT mode: nucleus-crossing must NOT happen. (The bare-compose "dauas"
+        // → "daúa" is pre-existing strict behavior — tone still applies; with the
+        // real default liveSpellCheck ON the invalid word freezes to raw.)
+        XCTAssertEqual(compose("daua"), "daua")
+        XCTAssertEqual(composeSpell("dauas"), "dauas")
+    }
+
+    // Abbreviation whitelist: "đc" (= được) survives auto-restore.
+    func testDcAbbreviationSurvivesAutoRestore() {
+        XCTAssertEqual(commit("ddc"), "đc")
+        XCTAssertEqual(compose("ddc"), "đc")
+        // Tone on it is NOT whitelisted → restores raw.
+        XCTAssertEqual(commit("ddcs"), "ddcs")
+    }
+
+    // Word-initial standalone w → ư when FREE MARKING is on, even under Simple
+    // Telex ("ưu tiên"-class words in one keystroke). Mid-word w after an onset
+    // stays literal under Simple Telex so English still types through.
+    func testWordInitialWWithFreeMarking() {
+        XCTAssertEqual(composeSimpleFree("w"), "ư")
+        XCTAssertEqual(composeSimpleFree("wa"), "ưa")
+        XCTAssertEqual(composeSimpleFree("wu"), "ưu")   // "ưu tiên"-class
+        XCTAssertEqual(composeSimpleFree("thw"), "thw",
+                       "mid-word lone w stays literal under Simple Telex")
+        // Simple Telex WITHOUT free marking keeps the old behavior everywhere.
+        XCTAssertEqual(composeSimple("w"), "w")
+        XCTAssertEqual(composeSimple("wa"), "wa")
+    }
+
     func testFreeMarkingToggle() {
         // --- Strict (default): reach-back over a consonant is blocked. ---
         XCTAssertEqual(compose("ama"), "ama")       // circumflex can't cross the m

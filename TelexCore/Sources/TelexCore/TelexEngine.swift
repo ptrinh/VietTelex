@@ -288,6 +288,14 @@ public struct TelexEngine {
     /// current composition: letter classes come from the render copy (post ươ
     /// propagation), the tone from the last render's effective tone.
     private mutating func composedIsValidSyllable() -> Bool {
+        // Accepted ABBREVIATION, not a real syllable: "đc" (= được, chat shorthand)
+        // survives auto-restore — typing "ddc" keeps đc instead of reverting to raw
+        // (user decision 2026-07-21). Zero-alloc direct compare, tone-less only.
+        if pCount == 2, lastEffTone == .none,
+           renderLetters[0].base == UInt8(ascii: "d"), renderLetters[0].mark == .bar,
+           renderLetters[1].base == UInt8(ascii: "c"), renderLetters[1].mark == .none {
+            return true
+        }
         for k in 0..<pCount {
             basesScratch[k] = Tables.letterClass(base: renderLetters[k].base,
                                                  mark: renderLetters[k].mark)
@@ -453,8 +461,11 @@ public struct TelexEngine {
 
         // A word starting with 'w' is English: Vietnamese has essentially no w-initial
         // syllable, so type it literally with no diacritics ("was"→was, "write"→write).
-        // An initial ư is typed "uw", not "w". Applies in both modes.
-        if at == 0, lower == UInt8(ascii: "w") { pWWord = true }
+        // An initial ư is typed "uw", not "w". EXCEPT with free marking on (user
+        // decision 2026-07-21): there the initial w falls through to the standalone
+        // handler and becomes ư ("w"→ư, "wu"→ưu) — English w-words then rely on
+        // live spell-check + auto-restore ("write" restores at the boundary).
+        if at == 0, lower == UInt8(ascii: "w"), !freeMarking { pWWord = true }
         if pWWord {
             appendLetter(base: lower, mark: .none, upper: upper)
             rawLetter[at] = pCount - 1
@@ -570,9 +581,13 @@ public struct TelexEngine {
             // onset that never precedes ư (k, q, gh, ngh, p) or after another
             // vowel, keep the literal 'w' so English words type through
             // ("kw", "windows", "ew"); auto-restore then leaves them intact.
-            // Simple Telex disables this entirely — a lone `w` is always literal
-            // (type `uw` for ư).
-            if !simpleTelex && standaloneHornUAllowed(pCount) {
+            // Simple Telex disables this — a lone `w` is literal (type `uw` for ư)
+            // — EXCEPT word-initial w when free marking is on (user decision
+            // 2026-07-21): "w"→ư, "wa"→ưa ("ưu tiên"-class words in one keystroke),
+            // while mid-word w after an onset stays literal under Simple Telex
+            // ("windows" still types through).
+            if (!simpleTelex || (freeMarking && pCount == 0)),
+               standaloneHornUAllowed(pCount) {
                 appendLetter(base: UInt8(ascii: "u"), mark: .horn, upper: upper)
             } else {
                 appendLetter(base: UInt8(ascii: "w"), mark: .none, upper: upper)
@@ -596,15 +611,22 @@ public struct TelexEngine {
                     rawLetter[at] = pCount - 1; return
                 }
             }
-            // Free mode ("bỏ dấu tự do"): reach back over a consonant coda to
-            // circumflex an earlier bare same-vowel — "ama"→âm, "coto"→côt. Stops
-            // at the first vowel from the end, so it never crosses another vowel.
-            // Strict mode skips this: "ama"/"coto"/"data" stay literal.
+            // Free mode ("bỏ dấu tự do"): reach back over a consonant coda AND
+            // across the whole NUCLEUS (contiguous vowel run) to circumflex an
+            // earlier bare same-vowel — "ama"→âm, "coto"→côt, and since 1.3.1 also
+            // "daua"→dâu / "dauas"→dấu (the doubling `a` crosses the `u`, matching
+            // UniKey's free-marking). The scan never crosses into the onset
+            // (consonant boundary), so qu/gi glides and English words stay safe
+            // ("quao" stays literal). Strict mode skips all of this: "ama"/"coto"/
+            // "data"/"daua" stay as typed.
             if freeMarking {
                 var k = pCount - 1
-                while k >= 0 && !isVowelAscii(letters[k].base) { k -= 1 }
-                if k >= 0, letters[k].base == lower, letters[k].mark == .none {
-                    letters[k].mark = .circumflex; rawLetter[at] = k; return
+                while k >= 0 && !isVowelAscii(letters[k].base) { k -= 1 }   // skip coda
+                while k >= 0, isVowelAscii(letters[k].base) {               // walk nucleus
+                    if letters[k].base == lower, letters[k].mark == .none {
+                        letters[k].mark = .circumflex; rawLetter[at] = k; return
+                    }
+                    k -= 1
                 }
             }
             appendLetter(base: lower, mark: .none, upper: upper)
