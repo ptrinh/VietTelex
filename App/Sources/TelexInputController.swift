@@ -170,7 +170,25 @@ final class TelexInputController: IMKInputController {
 
         // Modifier combos (⌘⌃⌥) are never Telex input: finish and pass through.
         let mods = event.modifierFlags.intersection([.command, .control, .option])
-        if !mods.isEmpty { endComposition(client); return false }
+        if !mods.isEmpty {
+            // Modifier+Delete while a MARKED composition is open: committing and
+            // passing the key loses the FIRST press — the just-closing composition
+            // session swallows it (Terminal: "goo" → gô, Option+Delete needed two
+            // presses to kill the word). The word those shortcuts delete backward IS
+            // the composition, so consume the key and kill the composition directly:
+            // same net effect, single press. In-place mode has no composition session
+            // (text is already real), so it keeps the normal commit-and-pass path.
+            if event.keyCode == kDelete, !engine.isEmpty,
+               AppState.shared.usesMarkedText(AppState.shared.currentBundleID) {
+                client.setMarkedText("", selectionRange: kNoRange, replacementRange: kNoRange)
+                engine.reset()
+                tracking = false
+                spMode = "marked"
+                logDecision("marked composition killed by modifier+Delete (single press)")
+                return true
+            }
+            endComposition(client); return false
+        }
 
         // No internal enable/disable: if VietTelex is the active input source we always
         // compose. To type English, switch macOS input source (the OS remembers it
