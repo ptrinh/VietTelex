@@ -307,7 +307,26 @@ final class TelexInputController: IMKInputController {
             }
 
         case kReturn, kEnter, kTab, kEscape:
-            boundary(client); return false
+            // Boundary keys while a MARKED composition is open in a TERMINAL lose
+            // their first press if committed-and-passed (the closing composition
+            // session swallows the key — "vậy⏎" needed a second Enter to run; same
+            // class as the modifier fixes above). A terminal is a byte pipe, so
+            // after committing we deliver the key's byte through the same committed-
+            // text channel and consume the event: Enter runs, Tab completes, Esc
+            // escapes — first press. Other marked apps (chat) keep commit-and-pass:
+            // a literal \r inserted there would ADD a newline instead of sending.
+            let wasComposing = !engine.isEmpty
+            boundary(client)
+            if wasComposing, AppState.shared.usesMarkedText(id),
+               let id, AppState.terminalApps.contains(id) {
+                let byte = event.keyCode == kTab ? "\t"
+                         : event.keyCode == kEscape ? "\u{1B}" : "\r"
+                client.insertText(byte, replacementRange: kNoRange)
+                spMode = "marked"
+                logDecision("terminal boundary key delivered as byte (single press)")
+                return true
+            }
+            return false
 
         default:
             break

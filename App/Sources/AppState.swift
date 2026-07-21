@@ -273,12 +273,18 @@ final class AppState: @unchecked Sendable {
     ///
     /// TextMate has the same in-place breakage in practice. All force off in-place: →
     /// tap backspace-retype when Accessibility is granted, else marked text. Never probed.
-    static let builtInFallbackApps: Set<String> = [
+    /// Terminals proper — byte-pipe apps. Split out of builtInFallbackApps because
+    /// the controller's marked path treats them specially (boundary keys are
+    /// delivered as bytes through insertText, see handle()).
+    static let terminalApps: Set<String> = [
+        "com.apple.Terminal",     // Terminal.app
+        "com.googlecode.iterm2",  // iTerm2
+    ]
+
+    static let builtInFallbackApps: Set<String> = terminalApps.union([
         // Terminals: ignore replacementRange by design, and Vietnamese-in-terminal
         // is a core promise that must survive a wiped learned cache (per-install
         // UserDefaults) — never left to the probe.
-        "com.apple.Terminal",     // Terminal.app
-        "com.googlecode.iterm2",  // iTerm2
         // Electron/CEF class, field-verified broken in-place (manual pin testing,
         // 2026-07-21). The probe WOULD classify these (appended ×2 → fallback; even
         // Lark's constant garbage caret can't lock in-place under the HonorTracker
@@ -288,7 +294,7 @@ final class AppState: @unchecked Sendable {
         "com.tinyspeck.slackmacgap",   // Slack
         "com.hnc.Discord",             // Discord
         "com.microsoft.VSCode",        // Visual Studio Code
-    ]
+    ])
 
     /// Apps field-verified GOOD in-place (manual pin testing, 2026-07-21): skip the
     /// probe and take the underline-free in-place path directly — first tone edit in
