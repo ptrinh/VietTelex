@@ -538,7 +538,7 @@ struct ExperimentalTab: View {
                 Text(model.loc("Post only the key-down for inserted letters in terminals, halving events per keystroke."))
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle(model.loc("AX replace (Chrome/Spotlight)"), isOn: $model.axSelectionReplace)
-                Text(model.loc("Apply tone edits in Chrome and Spotlight with one Accessibility edit instead of a burst of Shift+Left key events. Experimental — off by default."))
+                Text(model.loc("Apply tone edits in Chrome and Spotlight with one Accessibility edit instead of a burst of Shift+Left key events."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(model.loc("Safety")) {

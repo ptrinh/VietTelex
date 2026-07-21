@@ -71,7 +71,10 @@ final class AppState: @unchecked Sendable {
         tapNativeFastPath = (defaults.object(forKey: "tapNativeFastPath") as? Bool) ?? true
         _tapModifyEventInPlace = (defaults.object(forKey: "tapModifyEventInPlace") as? Bool) ?? true
         _tapSkipSyntheticKeyUp = (defaults.object(forKey: "tapSkipSyntheticKeyUp") as? Bool) ?? true
-        _axSelectionReplace = (defaults.object(forKey: "axSelectionReplace") as? Bool) ?? false
+        // D1 default ON since 2026-07-21 (was opt-in after the v1.2.1 hang scare):
+        // field-run for a day with the queueDrained gate + 50ms AX timeout + posted-
+        // events fallback and no stalls observed.
+        _axSelectionReplace = (defaults.object(forKey: "axSelectionReplace") as? Bool) ?? true
         _tapCascadeBreaker = (defaults.object(forKey: "tapCascadeBreaker") as? Bool) ?? true
         _debugLogging = (defaults.object(forKey: "debugLogging") as? Bool) ?? false
         shortcutsCache = (defaults.dictionary(forKey: Key.shortcuts) as? [String: String]) ?? [:]
