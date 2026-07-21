@@ -121,23 +121,21 @@ final class SettingsModel: ObservableObject {
 
     func reloadModeTable() {
         manualModes = AppState.shared.manualModes
+        // User data (manual pins, probe results, hand-added) is always listed —
+        // even for apps since uninstalled, so a stale pin stays visible/removable.
         var ids = Set(manualModes.keys)
         ids.formUnion(AppState.shared.learnedFallbackApps)
         ids.formUnion(AppState.shared.learnedInPlaceApps)
-        ids.formUnion(AppState.builtInFallbackApps)
-        ids.formUnion(AppState.builtInInPlaceApps)
-        // Built-in special-strategy apps (browsers → per-field, Excel → empty-reset):
-        // only the ones actually installed, so the table shows real defaults without
-        // listing every browser we know of.
-        ids.formUnion(AppState.builtInSpecialApps.filter {
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
-        })
-        // Remote-desktop / VM apps (installed only): default Passthrough, shown so
-        // the behavior is visible and overridable like everything else.
-        ids.formUnion(ClientPolicy.forcePassthroughBundleIDs.filter {
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
-        })
         ids.formUnion(addedApps)
+        // Every HARDCODED rule set is filtered to apps actually installed — the
+        // table shows this system's real defaults, not our whole knowledge base.
+        let installed: (String) -> Bool = {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
+        }
+        ids.formUnion(AppState.builtInFallbackApps.filter(installed))
+        ids.formUnion(AppState.builtInInPlaceApps.filter(installed))
+        ids.formUnion(AppState.builtInSpecialApps.filter(installed))
+        ids.formUnion(ClientPolicy.forcePassthroughBundleIDs.filter(installed))
         var rows = ids
             .map { AppModeRow(id: $0, name: Self.appName(for: $0)) }
         rows.append(AppModeRow(id: Self.spotlightRowID, name: "Spotlight"))
@@ -167,21 +165,35 @@ final class SettingsModel: ObservableObject {
         reloadModeTable()
     }
 
-    /// Label for what Auto resolves to right now ("In-place", "Tap (backspace)"…,
-    /// or "chưa dò" when the probe hasn't classified the app yet).
+    /// Label for what Auto WANTS for this app, plus a "missing permission" warning
+    /// when that mode needs Accessibility and it isn't granted — the truth is
+    /// "per-field, but degraded right now", not "chưa dò".
     func autoLabel(_ id: String) -> String {
-        // Spotlight's strategy is fixed (window-scan detection, selection-replace).
-        if id == Self.spotlightRowID { return loc("Selection-replace") }
-        switch AppState.shared.autoResolvedMode(id) {
-        case .inPlace: return loc("In-place")
-        case .marked: return loc("Marked text")
-        case .tap: return loc("Tap (backspace)")
-        case .selection: return loc("Selection-replace")
-        case .emptyReset: return loc("Empty-reset")
-        case .axDetect: return loc("Per-field (AX)")   // browsers default to per-field
-        case .passthrough: return loc("Passthrough")   // remote-desktop class
+        let mode: AppState.AppMode?
+        if id == Self.spotlightRowID {
+            // Spotlight's strategy is fixed (window-scan detection). Without AX it is
+            // deliberately raw passthrough: IMKit composing corrupts Spotlight's
+            // inline autocomplete, so Vietnamese there REQUIRES the permission.
+            mode = .selection
+        } else {
+            mode = AppState.shared.autoResolvedMode(id)
+        }
+        let base: String
+        var needsAX = false
+        switch mode {
+        case .inPlace: base = loc("In-place")
+        case .marked: base = loc("Marked text")
+        case .tap: base = loc("Tap (backspace)"); needsAX = true
+        case .selection: base = loc("Selection-replace"); needsAX = true
+        case .emptyReset: base = loc("Empty-reset"); needsAX = true
+        case .axDetect: base = loc("Per-field (AX)"); needsAX = true
+        case .passthrough: base = loc("Passthrough")
         case .auto, nil: return loc("not detected yet")
         }
+        if needsAX && !Accessibility.isTrusted {
+            return String(format: loc("%@ — needs Accessibility"), base)
+        }
+        return base
     }
 
     /// Localized label of the manual pick for `id` ("Tự động" when unset) — also

@@ -458,21 +458,21 @@ final class AppState: @unchecked Sendable {
         return wants && Accessibility.isTrusted
     }
 
-    /// What Auto currently resolves to for this app — the label shown in the mode
-    /// table's "Auto — …" row. Ignores any manual override (that's what the row IS).
+    /// What Auto WANTS for this app — the IDEAL mode, independent of the current
+    /// Accessibility state. Shown in the mode table's "Detected" column; the UI adds
+    /// a "missing permission" suffix when the mode needs AX and it isn't granted
+    /// (showing the degraded mode instead proved misleading: Chrome displayed
+    /// "chưa dò" and Spotlight looked "locked to tap" whenever AX was off).
     /// nil = not classified yet (probe hasn't seen a real replace here).
     func autoResolvedMode(_ bundleID: String?) -> AppMode? {
         guard let id = bundleID else { return nil }
-        let trusted = Accessibility.isTrusted
         if ClientPolicy.isRemoteDesktop(id) { return .passthrough }
         return lock.withLock {
-            // Browsers resolve per field when the AX walk is possible; without
-            // Accessibility they fall through to whatever the probe learned.
-            if Self.isPerFieldByDefault(id), trusted { return .axDetect }
-            if Self.emptyResetApps.contains(id) { return trusted ? .emptyReset : .marked }
+            if Self.isPerFieldByDefault(id) { return .axDetect }
+            if Self.emptyResetApps.contains(id) { return .emptyReset }
             if Self.markedTextApps.contains(id) { return .marked }
             if fallbackAppsCache.contains(id) || Self.builtInFallbackApps.contains(id) {
-                return trusted ? .tap : .marked
+                return .tap
             }
             if probedAppsCache.contains(id) || Self.builtInInPlaceApps.contains(id) { return .inPlace }
             return nil
