@@ -290,12 +290,29 @@ enum FocusedFieldDetector {
 
     private static func scan() -> Bool {
         guard let focused = focusedElementForScan() else { return true }
+        // ROLE rules on the focused element itself (gonhanh's detection matrix):
+        // combo boxes and search fields carry inline autocomplete that races a
+        // backspace burst, whatever app they live in — selection-replace wins.
+        // Checked BEFORE the ancestor walk so a search box inside a web area is
+        // still treated as autocomplete-prone.
+        var roleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(focused, kAXRoleAttribute as CFString, &roleRef) == .success,
+           let role = roleRef as? String {
+            if role == "AXComboBox" { return true }
+            if role == "AXTextField" {
+                var subRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(focused, kAXSubroleAttribute as CFString, &subRef) == .success,
+                   let sub = subRef as? String, sub == "AXSearchField" {
+                    return true
+                }
+            }
+        }
         var element = focused
         // Walk up a bounded ancestor chain. 12 hops covers real browser hierarchies
         // (web content sits many groups deep) while still bounding the AX round trips.
         for _ in 0..<12 {
             AXUIElementSetMessagingTimeout(element, 0.05)
-            var roleRef: CFTypeRef?
+            roleRef = nil
             if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
                let role = roleRef as? String {
                 if role == "AXWebArea" { return false }   // page content → in-place
