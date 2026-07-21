@@ -33,11 +33,14 @@ enum Accessibility {
     private static let lock = NSLock()
     private static var cached = false
     private static var lastCheckNs: UInt64 = 0
-    // 500ms (was 2s): this cache also gates synthetic-event POSTING now, and a
-    // stale "trusted" there means CGEvent.post from a just-revoked process — the
-    // suspected tap-thread block behind the build-7 wedge. The TCC IPC is ~15ms,
-    // so 2 checks/second while typing is noise.
-    private static let ttlNs: UInt64 = 500_000_000
+    // 5s. History: 2s → 500ms during the revoke-wedge hunt (the cache gates
+    // synthetic-event posting), then BACK UP once the real protections landed —
+    // the com.apple.accessibility.api observer invalidates this cache the moment
+    // the permission changes, and the 3s watchdog force-checks fresh. A short TTL
+    // here was pure cost: the expiry lands ON the keystroke path, so typing paid
+    // a ~10-15ms TCC IPC spike every 500ms for correctness the observer already
+    // provides.
+    private static let ttlNs: UInt64 = 5_000_000_000
 
     /// True when the process may create an event tap / post events. Always false in
     /// the sandboxed build — it can never be granted.
@@ -1060,12 +1063,15 @@ final class TerminalTapController {
         //  - Terminals (fallbackApps) → Backspace+retype.
         //  - Anything else → the IMKit in-place path handles it (pass through).
         let id = FrontmostApp.shared.bundleID
-        if SpotlightDetector.isVisible {
-            // Spotlight is IN-PLACE by default now (verified clean on macOS 26,
-            // builtInInPlaceApps) — the tap engages only for an explicit tap-family
-            // manual pick (keyed by the real bundle id); everything else passes
-            // through to the IMKit controller, whose client id IS com.apple.Spotlight.
-            switch AppState.shared.manualMode(AppState.spotlightBundleID) {
+        // Spotlight is IN-PLACE by default (builtInInPlaceApps) — the tap engages
+        // only for an explicit tap-family manual pick. Manual pin consulted FIRST:
+        // isVisible kicks a CGWindowList background scan every 200ms while typing,
+        // which nobody should pay for unless Spotlight was actually pinned.
+        let spotlightManual = AppState.shared.manualMode(AppState.spotlightBundleID)
+        if (spotlightManual == .selection || spotlightManual == .tap
+                || spotlightManual == .emptyReset),
+           SpotlightDetector.isVisible {
+            switch spotlightManual {
             case .selection: emitMode = .selection
             case .tap: emitMode = .backspace
             case .emptyReset: emitMode = .emptyReset

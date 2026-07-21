@@ -65,12 +65,15 @@ final class TelexInputController: IMKInputController {
     // transition instead of one per keystroke.
     private var lastDecisionLog = ""
     private var lastEntryLog = ""
-    private func logDecision(_ s: String) {
-        // Dedup keeps the ring buffer readable in normal use — but it also hid the
-        // per-key picture during the WhatsApp/Lark no-render diagnosis (state
-        // survives DebugLog.clear(), so a fresh log stayed empty). While the debug
-        // flag is on, log EVERY decision; 400 ring lines is plenty for a short repro.
-        guard AppState.shared.debugLogging || s != lastDecisionLog else { return }
+    private func logDecision(_ message: @autoclosure () -> String) {
+        // @autoclosure: the interpolated string must NOT be built per keystroke when
+        // logging is off — these sit on the hot path (an eager String parameter was
+        // allocating+formatting on every key).
+        guard AppState.shared.debugLogging else { return }
+        let s = message()
+        // Dedup keeps the ring readable in normal use, but hides the per-key picture
+        // during diagnosis — while the debug flag is on, log EVERY decision (400
+        // ring lines is plenty for a short repro).
         lastDecisionLog = s
         DebugLog.log(s)
     }
@@ -242,10 +245,13 @@ final class TelexInputController: IMKInputController {
         // even with the gray inline suggestion — the historical autocomplete race
         // that forced tap selection-replace is gone; it's in builtInInPlaceApps).
         // Only an explicit tap-family manual pick still routes it to the tap.
+        // ORDER MATTERS for CPU: consult the manual pin FIRST — isVisible kicks a
+        // CGWindowList background scan every 200ms while typing, which nobody needs
+        // unless Spotlight was explicitly pinned to a tap-family mode (rare).
         let spotlightManual = AppState.shared.manualMode(AppState.spotlightBundleID)
-        let spotlightDefersToTap = SpotlightDetector.isVisible
-            && (spotlightManual == .selection || spotlightManual == .tap
-                || spotlightManual == .emptyReset)
+        let spotlightDefersToTap = (spotlightManual == .selection
+                || spotlightManual == .tap || spotlightManual == .emptyReset)
+            && SpotlightDetector.isVisible
         if AppState.shared.usesTapMode(frontID) || AppState.shared.usesTapMode(id)
             || AppState.shared.usesSelectionReplace(frontID) || AppState.shared.usesSelectionReplace(id)
             || AppState.shared.usesEmptyReset(frontID) || AppState.shared.usesEmptyReset(id)
