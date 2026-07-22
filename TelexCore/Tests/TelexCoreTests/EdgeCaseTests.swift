@@ -88,13 +88,12 @@ final class EdgeCaseTests: XCTestCase {
 
     // Cancelled words are not auto-restored (deliberate literal gesture) — extends the
     // EngineTests cases with the horn/quad-d variants.
-    func testCancelledEdgeCasesRestoreRawWhenInvalid() {
-        // invalid composed after a double-key cancel → raw keys come back
-        XCTAssertEqual(commit("oww"), "oww")
-        XCTAssertEqual(commit("uww"), "uww")
-        XCTAssertEqual(commit("dddd"), "dddd")
+    func testCancelledEdgeCasesKeepComposed() {
+        // cancel keeps the composed text (none of these raws are English words)
+        XCTAssertEqual(commit("oww"), "ow")
+        XCTAssertEqual(commit("uww"), "uw")
+        XCTAssertEqual(commit("dddd"), "ddd")
         XCTAssertEqual(commit("bzz"), "bzz")
-
     }
 
     // MARK: - Empty / trivial inputs

@@ -30,9 +30,8 @@ final class EnglishCollisionTests: XCTestCase {
                   "address", "message", "access", "process", "business"] {
             XCTAssertEqual(commit(w), w, "'\(w)' must keep its double letter")
         }
-        // invalid-after-cancel restores raw even for Vietnamese-looking input:
-        // the user gets exactly the keys they pressed
-        XCTAssertEqual(commit("hoass"), "hoass")
+        // a cancel outside the dict keeps the composed text
+        XCTAssertEqual(commit("hoass"), "hoas")
     }
 
     func testVietnameseProtectedWords() {
@@ -94,9 +93,8 @@ final class EnglishCollisionTests: XCTestCase {
     // Regression net for future `gen-english` runs: the generated table must
     // keep the pain words, and must NEVER contain a protected/junk raw.
     func testGeneratedTableSanity() {
-        // NOTE: off/class/pass are NOT here — the cancel contract restores them
-        // structurally, so gen-english correctly leaves them out of the table.
-        for expected in ["his", "this", "see", "test", "of", "if", "is"] {
+        for expected in ["his", "this", "see", "test", "of", "if", "is",
+                         "off", "class", "office", "mess", "boss"] {
             XCTAssertTrue(EnglishCollisions.words.contains(expected), "table lost '\(expected)'")
         }
         // protected: Vietnamese wins these raw sequences (sẽ=sex, ơn=own…)
@@ -110,22 +108,29 @@ final class EnglishCollisionTests: XCTestCase {
             XCTAssertFalse(EnglishCollisions.words.contains(junk), "junk '\(junk)' leaked into the table")
         }
         // minimal means minimal: a few hundred words, not a dictionary
-        XCTAssertLessThan(EnglishCollisions.words.count, 400)
+        XCTAssertLessThan(EnglishCollisions.words.count, 600)
         XCTAssertGreaterThan(EnglishCollisions.words.count, 80)
     }
 
     // MARK: - Cancel contract (item 5)
 
     func testCancelContractMatrix() {
-        // valid Vietnamese after cancel → composed survives
+        // FINAL contract (field report 2026-07-22): dict wins over everything;
+        // otherwise a cancel ALWAYS keeps the composed text — the extra key was
+        // pressed to undo an unwanted diacritic, maybe mid-word.
+        XCTAssertEqual(commit("Deffault"), "Default")   // Dè → f-cancel → keep typing
+        XCTAssertEqual(commit("deffault"), "default")
         XCTAssertEqual(commit("asz"), "a")
-        // all-caps acronym escape → composed survives (literal DD reachable)
-        XCTAssertEqual(commit("DDDR"), "DDR")
-        // invalid + not in dict → exact raw keys come back
-        XCTAssertEqual(commit("iss"), "iss")
-        XCTAssertEqual(commit("banhss"), "banhss")   // bánh + s-cancel → invalid → raw
-        // invalid + in dict → raw keys too (same visible result, dict path)
+        XCTAssertEqual(commit("DDDR"), "DDR")           // acronym via cancel
+        XCTAssertEqual(commit("iss"), "is")             // not English → composed
+        XCTAssertEqual(commit("banhss"), "banhs")
+        // real English doubles restore via the dict
         XCTAssertEqual(commit("boss"), "boss")
+        XCTAssertEqual(commit("mess"), "mess")
+        // the "off" feedback loop (field report): screen shows "of" mid-word, so
+        // some users add a third f — BOTH inputs must end as "off" at the boundary
+        XCTAssertEqual(commit("off"), "off")     // raw ∈ dict → restore
+        XCTAssertEqual(commit("offf"), "off")    // cancel keeps composed
     }
 
     // MARK: - Remote-desktop passthrough ids (item 3)

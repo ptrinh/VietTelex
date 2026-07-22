@@ -288,20 +288,20 @@ final class EngineGoldenTests: XCTestCase {
     // Trade-off (accepted): English double-letter words like miss/class also keep the
     // composed (shorter) form rather than restoring the raw keystrokes.
     func testCancelledMarkFollowsValidityRule() {
-        // Invalid composed after cancel → the raw keys come back verbatim
-        // (English doubles survive: off/class/pass — the gonhanh 10.4 class).
-        XCTAssertEqual(commit("iss"), "iss")
-        XCTAssertEqual(commit("ass"), "ass")
-        XCTAssertEqual(commit("aff"), "aff")
+        // Cancel keeps the composed text (the extra key was an undo gesture) —
+        // UNLESS the raw keys are a real English word (dict wins: ass, off…).
+        XCTAssertEqual(commit("iss"), "is")
+        XCTAssertEqual(commit("ass"), "ass")    // English → dict restore
+        XCTAssertEqual(commit("aff"), "af")
         XCTAssertEqual(commit("asz"), "a")      // z-cancel leaves valid "a" -> keep composed
-        XCTAssertEqual(commit("aaa"), "aaa")    // what you typed is what you get
+        XCTAssertEqual(commit("aaa"), "aa")
 
         // After a cancel the rest of the word stays literal (English): a further tone
         // key does NOT re-apply a diacritic. "messs"→mess, not "més".
         XCTAssertEqual(compose("messs"), "mess")
         XCTAssertEqual(compose("asss"), "ass")
         XCTAssertEqual(compose("bossss"), "bosss") // b,o + s(sắc) s(cancel) s s literal
-        XCTAssertEqual(commit("messs"), "messs")   // invalid after cancel → raw
+        XCTAssertEqual(commit("messs"), "mess")    // cancel keeps composed (messs not English)
 
         // Not a cancel: a mangled word (diacritic applied, no cancel) still restores
         // to the raw keystrokes. "school" -> "schôl" (oo→ô) -> restored to "school".
