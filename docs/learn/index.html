@@ -152,8 +152,8 @@
   </a>
   <div class="right">
     <select id="langSel" class="langsel" aria-label="Ngôn ngữ / Language">
-      <option value="vi">🌐 Tiếng Việt</option>
-      <option value="en">🌐 English</option>
+      <option value="vi">🇻🇳 Tiếng Việt</option>
+      <option value="en">🇬🇧 English</option>
     </select>
     <a class="back" id="navClass" href="lessons/">🎓 Vào lớp học</a>
     <a class="back" id="navHome" href="../">← Trang chủ</a>
@@ -388,8 +388,8 @@
   // Landing-page i18n. vi = authored DOM, en = built-in map, other languages
   // lazy-load lessons/i18n/<code>.json (.landing section). Shared vtlearn.lang.
   var LANGS = [
-    ['vi', 'Tiếng Việt'], ['en', 'English'], ['fr', 'Français'], ['de', 'Deutsch'],
-    ['ko', '한국어'], ['ja', '日本語'], ['zh', '简体中文'], ['km', 'ខ្មែរ']
+    ['vi', 'Tiếng Việt', '🇻🇳'], ['en', 'English', '🇬🇧'], ['fr', 'Français', '🇫🇷'], ['de', 'Deutsch', '🇩🇪'],
+    ['ko', '한국어', '🇰🇷'], ['ja', '日本語', '🇯🇵'], ['zh', '简体中文', '🇨🇳'], ['km', 'ខ្មែរ', '🇰🇭']
   ];
   var EN = {
     heroH1: 'Learn Vietnamese <span class="accent">Telex</span> typing',
@@ -480,7 +480,7 @@
       .catch(function () { apply('en', null); });
   }
   var sel = document.getElementById('langSel');
-  sel.innerHTML = LANGS.map(function (l) { return '<option value="' + l[0] + '">🌐 ' + l[1] + '</option>'; }).join('');
+  sel.innerHTML = LANGS.map(function (l) { return '<option value="' + l[0] + '">' + l[2] + ' ' + l[1] + '</option>'; }).join('');
   var st0 = state();
   var lang = st0.lang;
   if (!st0.langChosen) {
