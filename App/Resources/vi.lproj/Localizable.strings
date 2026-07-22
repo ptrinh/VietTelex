@@ -9,6 +9,8 @@
 /* General tab */
 "Input style" = "Kiểu gõ";
 "Simple Telex" = "Telex đơn giản";
+"Quick Telex" = "Gõ nhanh (Quick Telex)";
+"Doubled first consonant expands: cc→ch, gg→gi, kk→kh, nn→ng, qq→qu, pp→ph, tt→th." = "Gõ đúp phụ âm đầu để ra phụ âm ghép: cc→ch, gg→gi, kk→kh, nn→ng, qq→qu, pp→ph, tt→th.";
 "Language" = "Ngôn ngữ";
 "System" = "Theo hệ thống";
 "A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư)." = "Chữ w đứng một mình luôn là 'w' (gõ 'uw' để ra ư). Tắt = Telex đầy đủ (cw→cư).";

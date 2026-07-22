@@ -56,6 +56,15 @@ private func commit(_ keys: String) -> String {
     return e.commitText(autoRestore: true)
 }
 
+/// Quick Telex + free marking (the shipped-default pairing when enabled).
+private func composeQuick(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.freeMarking = true
+    e.quickTelex = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.composed
+}
+
 final class EngineGoldenTests: XCTestCase {
 
     // B1: "uo" + horn -> ươ (horn BOTH) when the ơ is closed (has a coda/offglide)
@@ -98,6 +107,30 @@ final class EngineGoldenTests: XCTestCase {
     // so English/code types cleanly. Free mode: modifiers reach back over consonants.
     // FREE MARKING: circumflex doublers cross the whole nucleus (UniKey-style) —
     // "daua"→dâu, "dauas"→dấu — never the onset boundary (qu/gi stay safe).
+
+    /// Quick Telex (gõ nhanh, default OFF): word-initial doubled consonant →
+    /// onset digraph. Mid-word doubles stay literal; OFF means fully inert.
+    func testQuickTelex() {
+        XCTAssertEqual(composeQuick("cc"), "ch")
+        XCTAssertEqual(composeQuick("gg"), "gi")
+        XCTAssertEqual(composeQuick("kk"), "kh")
+        XCTAssertEqual(composeQuick("nn"), "ng")
+        XCTAssertEqual(composeQuick("qq"), "qu")
+        XCTAssertEqual(composeQuick("pp"), "ph")
+        XCTAssertEqual(composeQuick("tt"), "th")
+        XCTAssertEqual(composeQuick("ccaof"), "chào")
+        XCTAssertEqual(composeQuick("qqas"), "quá")
+        XCTAssertEqual(composeQuick("ttuw"), "thư")
+        XCTAssertEqual(composeQuick("nnuwowif"), "người")
+        XCTAssertEqual(composeQuick("Ccaof"), "Chào")
+        XCTAssertEqual(composeQuick("CCAOF"), "CHÀO")
+        // onset only — mid-word doubles stay literal
+        XCTAssertEqual(composeQuick("occ"), "occ")
+        // dd is still đ, not part of Quick Telex
+        XCTAssertEqual(composeQuick("dd"), "đ")
+        // toggle OFF: nothing changes
+        XCTAssertEqual(composeFree("cc"), "cc")
+    }
 
     /// Standalone-w cancel ladder under free marking (user request 2026-07-21):
     /// w→ư, ww→u (cancel yields the bare u, no literal w), www→uw (the press

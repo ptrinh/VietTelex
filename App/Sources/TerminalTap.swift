@@ -1270,6 +1270,7 @@ final class TerminalTapController {
         engine.modernTone = AppState.shared.modernOrthography
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
+        engine.quickTelex = AppState.shared.quickTelex
 
         // Signpost the tap-handled keystroke; message = emit mode (see Instrumentation).
         let spState = Signposts.poster.beginInterval("tap.handle",

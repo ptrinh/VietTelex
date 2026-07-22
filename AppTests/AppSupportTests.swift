@@ -171,6 +171,7 @@ extension AppSupportTests {
             ({ s.modernOrthography }, { s.modernOrthography = $0 }),
             ({ s.liveSpellCheck }, { s.liveSpellCheck = $0 }),
             ({ s.simpleTelex }, { s.simpleTelex = $0 }),
+            ({ s.quickTelex }, { s.quickTelex = $0 }),
             ({ s.tapModifyEventInPlace }, { s.tapModifyEventInPlace = $0 }),
             ({ s.tapSkipSyntheticKeyUp }, { s.tapSkipSyntheticKeyUp = $0 }),
             ({ s.axSelectionReplace }, { s.axSelectionReplace = $0 }),

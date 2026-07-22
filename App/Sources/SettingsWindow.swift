@@ -59,6 +59,7 @@ final class SettingsModel: ObservableObject {
     @Published var modernOrthography: Bool { didSet { AppState.shared.modernOrthography = modernOrthography } }
     @Published var liveSpellCheck: Bool { didSet { AppState.shared.liveSpellCheck = liveSpellCheck } }
     @Published var simpleTelex: Bool { didSet { AppState.shared.simpleTelex = simpleTelex } }
+    @Published var quickTelex: Bool { didSet { AppState.shared.quickTelex = quickTelex } }
     /// Advanced (terminal tap latency) — see AppState for the full semantics.
     @Published var tapModifyEventInPlace: Bool { didSet { AppState.shared.tapModifyEventInPlace = tapModifyEventInPlace } }
     @Published var tapSkipSyntheticKeyUp: Bool { didSet { AppState.shared.tapSkipSyntheticKeyUp = tapSkipSyntheticKeyUp } }
@@ -101,6 +102,7 @@ final class SettingsModel: ObservableObject {
         modernOrthography = AppState.shared.modernOrthography
         liveSpellCheck = AppState.shared.liveSpellCheck
         simpleTelex = AppState.shared.simpleTelex
+        quickTelex = AppState.shared.quickTelex
         tapModifyEventInPlace = AppState.shared.tapModifyEventInPlace
         tapSkipSyntheticKeyUp = AppState.shared.tapSkipSyntheticKeyUp
         axSelectionReplace = AppState.shared.axSelectionReplace
@@ -359,6 +361,9 @@ struct GeneralTab: View {
             Section(model.loc("Input style")) {
                 Toggle(model.loc("Simple Telex"), isOn: $model.simpleTelex)
                 Text(model.loc("A lone “w” stays “w” (type “uw” for ư). Off = full Telex (cw→cư)."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle(model.loc("Quick Telex"), isOn: $model.quickTelex)
+                Text(model.loc("Doubled first consonant expands: cc→ch, gg→gi, kk→kh, nn→ng, qq→qu, pp→ph, tt→th."))
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle(model.loc("Free tone placement"), isOn: $model.freeMarking)
                 Text(model.loc("Off = strict Telex: tones apply only next to a vowel — good for English/code (data→data). On: free placement (ama→âm)."))

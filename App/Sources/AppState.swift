@@ -32,6 +32,7 @@ final class AppState: @unchecked Sendable {
         static let modernOrthography = "modernOrthography"
         static let liveSpellCheck = "liveSpellCheck"
         static let simpleTelex = "simpleTelex"
+        static let quickTelex = "quickTelex"
         static let shortcuts = "shortcuts"
         static let fallbackApps = "fallbackApps"      // learned: ignore replacementRange
         static let probedApps = "probedApps"          // learned: verified good
@@ -142,6 +143,14 @@ final class AppState: @unchecked Sendable {
     var simpleTelex: Bool {
         get { defaults.object(forKey: Key.simpleTelex) as? Bool ?? false }
         set { defaults.set(newValue, forKey: Key.simpleTelex) }
+    }
+
+    /// Quick Telex ("gõ nhanh"): word-initial doubled consonant → onset digraph
+    /// (cc→ch, gg→gi, kk→kh, nn→ng, qq→qu, pp→ph, tt→th). Default OFF.
+    /// See `TelexEngine.quickTelex`.
+    var quickTelex: Bool {
+        get { defaults.object(forKey: Key.quickTelex) as? Bool ?? false }
+        set { defaults.set(newValue, forKey: Key.quickTelex) }
     }
 
     /// UI language override for the Settings window + menu, independent of the

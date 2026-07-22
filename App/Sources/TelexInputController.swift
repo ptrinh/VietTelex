@@ -284,6 +284,7 @@ final class TelexInputController: IMKInputController {
         engine.modernTone = AppState.shared.modernOrthography
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
+        engine.quickTelex = AppState.shared.quickTelex
 
         switch event.keyCode {
         case kDelete:

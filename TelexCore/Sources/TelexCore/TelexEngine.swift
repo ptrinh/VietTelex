@@ -67,6 +67,12 @@ public struct TelexEngine {
     /// this engine, the other Simple-Telex difference.) Preserved across `reset()`.
     public var simpleTelex = false
 
+    /// Quick Telex ("gõ nhanh"): a doubled onset consonant expands to its digraph —
+    /// cc→ch, gg→gi, kk→kh, nn→ng, qq→qu, pp→ph, tt→th. Word-INITIAL pair only
+    /// (these are onset digraphs; mid-word doubles like "occur" stay literal).
+    /// Default OFF. Preserved across `reset()`; the caller sets it from settings.
+    public var quickTelex = false
+
     /// Force-restore top-frequency English words that collide with valid
     /// Vietnamese syllables ("his"→hí) at the word boundary. Default ON.
     /// gen-english turns this OFF to regenerate the table against the
@@ -119,6 +125,7 @@ public struct TelexEngine {
     private var pProcessed = 0
     private var pFreeMarking = false    // settings snapshot the state was built with
     private var pSimpleTelex = false
+    private var pQuickTelex = false
 
     // Raw index from which keys are emitted literally because live spell-check found
     // the word can no longer be valid Vietnamese. Int.max = not disabled. Unlike
@@ -177,7 +184,8 @@ public struct TelexEngine {
         // setting that changes parse behavior flipped mid-word (rare; the controller
         // re-applies settings every key, they just normally don't change mid-word).
         if pProcessed != rawCount - 1
-            || pFreeMarking != freeMarking || pSimpleTelex != simpleTelex {
+            || pFreeMarking != freeMarking || pSimpleTelex != simpleTelex
+            || pQuickTelex != quickTelex {
             rebuildParseState()
         } else {
             parseStep(rawCount - 1)
@@ -645,6 +653,7 @@ public struct TelexEngine {
         upperToneKey = false
         pFreeMarking = freeMarking
         pSimpleTelex = simpleTelex
+        pQuickTelex = quickTelex
         for i in 0..<rawCount { rawLetter[i] = -1 }
         for i in 0..<rawCount { parseStep(i) }
         pProcessed = rawCount
@@ -884,9 +893,37 @@ public struct TelexEngine {
             return
         }
 
+        // Quick Telex: doubled onset consonant → digraph (cc→ch, gg→gi, kk→kh,
+        // nn→ng, qq→qu, pp→ph, tt→th). Word-initial pair ONLY (pCount == 1): the
+        // targets are onset digraphs, and the guard keeps mid-word doubles
+        // ("occur", "running") literal. The second letter's case carries over
+        // ("Cc"→"Ch", "CC"→"CH"). No special revert: a literal word-initial
+        // double is vanishingly rare and auto-restore returns the raw keys.
+        if quickTelex, pCount == 1,
+           letters[0].base == lower, letters[0].mark == .none,
+           let second = Self.quickTelexSecond(lower) {
+            appendLetter(base: second, mark: .none, upper: upper)
+            rawLetter[at] = pCount - 1
+            return
+        }
+
         // ordinary letter
         appendLetter(base: lower, mark: .none, upper: upper)
         rawLetter[at] = pCount - 1
+    }
+
+    /// Quick-Telex digraph table: the letter the SECOND key of a doubled onset
+    /// consonant becomes (cc→c+h, gg→g+i, …). nil = not a Quick-Telex consonant.
+    @inline(__always)
+    private static func quickTelexSecond(_ c: UInt8) -> UInt8? {
+        switch c {
+        case UInt8(ascii: "c"), UInt8(ascii: "k"), UInt8(ascii: "p"), UInt8(ascii: "t"):
+            return UInt8(ascii: "h")
+        case UInt8(ascii: "g"): return UInt8(ascii: "i")
+        case UInt8(ascii: "n"): return UInt8(ascii: "g")
+        case UInt8(ascii: "q"): return UInt8(ascii: "u")
+        default: return nil
+        }
     }
 
     // MARK: - Tone placement (old style: òa, úy) — reads the render copy
