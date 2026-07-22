@@ -25,6 +25,10 @@ function load() {
     var old = parseInt(localStorage.getItem('telex-learn-stars') || '0', 10) || 0;
     s.xp = old * 5; // migrate the v1 star counter
   }
+  // BACKFILL: the kite game (or an older page) may have written a PARTIAL
+  // store (e.g. only {kite, xp}) — missing fields rendered as "undefined ngày".
+  var defs = { stars: {}, xp: 0, streak: 0, lastDay: '', badges: [], sound: true, track: null, lang: null };
+  Object.keys(defs).forEach(function (k) { if (s[k] === undefined) s[k] = defs[k]; });
   if (s.track === undefined) s.track = null;
   if (s.autoSpeak === undefined) s.autoSpeak = false;
   if (s.showArt === undefined) s.showArt = true;

@@ -209,7 +209,12 @@ function loadStore() { try { return JSON.parse(localStorage.getItem('vtlearn') |
 function saveStore(st) { localStorage.setItem('vtlearn', JSON.stringify(st)); }
 var store = loadStore();
 if (!store.kite) store.kite = { best: {}, level: 1 };
-if (store.xp === undefined) store.xp = 0;
+// keep the store complete so the classroom never sees missing fields
+[['xp', 0], ['streak', 0], ['lastDay', ''], ['sound', true]].forEach(function (d) {
+  if (store[d[0]] === undefined) store[d[0]] = d[1];
+});
+if (!store.stars) store.stars = {};
+if (!store.badges) store.badges = [];
 var soundOn = store.sound !== false;
 
 // ── Sounds (WebAudio, no assets) ────────────────────────────────────────────
