@@ -150,7 +150,7 @@ button{font-family:inherit}
       <div style="font-size:13px;font-weight:800;letter-spacing:.06em;color:#5a7a9a">ĐỘ CAO CỦA DIỀU — <span id="pct">30</span>%</div>
       <div style="width:200px;height:10px;background:#e3eef7;border-radius:6px;margin-top:5px;overflow:hidden"><div id="bar" style="width:30%;height:100%;border-radius:6px;background:linear-gradient(90deg,#ffb037,#ff6b57)"></div></div>
     </div>
-    <div class="hudpill" style="color:#7a4fd0;background:#efe8fd">🎮 Level <span id="lvl">1</span></div>
+    <button id="lvlBtn" class="hudpill" style="color:#7a4fd0;background:#efe8fd;border:none;cursor:pointer;font-family:inherit" title="Chọn level">🎮 Level <span id="lvl">1</span> ▾</button>
     <div class="hudpill" style="color:#e8890c;background:#fff3dd">⭐ <span id="score">0</span></div>
     <div class="hudpill" style="color:#1f9d63;background:#e6f6ee">⚡ <span id="wpm">0</span> WPM</div>
     <div class="hudpill" style="color:#3a6ea8;background:#e3f0fd">⏱ <span id="time">1:00</span></div>
@@ -158,6 +158,14 @@ button{font-family:inherit}
   <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong đám mây có gạch chân để phá mây — Space đổi mây, tắt bộ gõ tiếng Việt nhé!</div>
   <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)">← Lớp học</a>
   <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
+
+  <div id="picker" style="display:none;position:absolute;inset:0;z-index:10;background:rgba(225,242,255,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:28px;padding:30px 36px;text-align:center;box-shadow:0 24px 60px rgba(60,100,160,.3);max-width:86vw;max-height:80vh;overflow:auto">
+      <div style="font-size:26px;font-weight:800;color:#3a5a7a">Chọn level 🪁</div>
+      <div id="pickerGrid" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px;max-width:520px"></div>
+      <button id="pickerClose" style="margin-top:20px;font-size:16px;font-weight:800;color:#4a6b8a;background:#e3f0fd;border:none;border-radius:12px;padding:10px 26px;cursor:pointer">Đóng</button>
+    </div>
+  </div>
 
   <div id="overlay" style="display:none;position:absolute;inset:0;z-index:9;background:rgba(225,242,255,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:28px;padding:38px 52px;text-align:center;box-shadow:0 24px 60px rgba(60,100,160,.3);max-width:86vw">
@@ -167,6 +175,7 @@ button{font-family:inherit}
       <div id="ovStats" style="font-size:17px;margin-top:12px;font-weight:800;color:#e8890c"></div>
       <div style="display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap">
         <button id="btnRetry" style="font-size:19px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff8a4c,#ff5a5a);border:none;border-radius:16px;padding:12px 32px;cursor:pointer;box-shadow:0 10px 22px rgba(255,110,80,.4)">Chơi lại 🪁</button>
+        <button id="btnPick" style="font-size:19px;font-weight:800;color:#4a6b8a;background:#e3f0fd;border:none;border-radius:16px;padding:12px 24px;cursor:pointer">Chọn level 🎮</button>
         <button id="btnNext" style="display:none;font-size:19px;font-weight:800;color:#fff;background:linear-gradient(135deg,#37c07e,#1f9d63);border:none;border-radius:16px;padding:12px 32px;cursor:pointer;box-shadow:0 10px 22px rgba(40,160,100,.4)">Level tiếp theo ➜</button>
       </div>
     </div>
@@ -454,6 +463,10 @@ function spawnFlock() {
 // ── Typing ──────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (pickerEl.style.display !== 'none' && pickerEl.style.display !== '') {
+    if (e.key === 'Escape') pickerEl.style.display = 'none';
+    return;
+  }
   if (over) {
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); document.getElementById(nextUnlocked ? 'btnNext' : 'btnRetry').click(); }
     return;
@@ -587,6 +600,33 @@ function startLevel(l) {
   setTimeout(spawnCloud, 700);
   setTimeout(spawnFlock, 4000);
 }
+var pickerEl = document.getElementById('picker');
+function openPicker() {
+  var maxL = Math.max(level, store.kite.level || 1);
+  var grid = document.getElementById('pickerGrid');
+  grid.innerHTML = '';
+  for (var l = 1; l <= maxL; l++) {
+    (function (l) {
+      var best = (store.kite.best && store.kite.best[l]) || 0;
+      var b = document.createElement('button');
+      b.style.cssText = 'font-family:inherit;font-size:17px;font-weight:800;border:none;border-radius:14px;padding:12px 16px;cursor:pointer;min-width:104px;' +
+        (l === level ? 'background:linear-gradient(135deg,#ff8a4c,#ff5a5a);color:#fff' : 'background:#efe8fd;color:#7a4fd0');
+      var stars = '';
+      for (var i = 1; i <= 3; i++) stars += i <= best ? '⭐' : '☆';
+      b.innerHTML = 'Level ' + l + '<br><span style="font-size:13px">' + stars + '</span>';
+      b.addEventListener('click', function () {
+        pickerEl.style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        startLevel(l);
+      });
+      grid.appendChild(b);
+    })(l);
+  }
+  pickerEl.style.display = 'flex';
+}
+document.getElementById('lvlBtn').addEventListener('click', openPicker);
+document.getElementById('btnPick').addEventListener('click', openPicker);
+document.getElementById('pickerClose').addEventListener('click', function () { pickerEl.style.display = 'none'; });
 document.getElementById('btnRetry').addEventListener('click', function () { startLevel(level); });
 document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1); });
 document.getElementById('soundBtn').addEventListener('click', function () {
