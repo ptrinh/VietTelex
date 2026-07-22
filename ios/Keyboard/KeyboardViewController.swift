@@ -33,6 +33,19 @@ final class KeyboardViewController: UIInputViewController {
         bridge = EngineBridge()                       // fresh settings + buffer
         keyboard.configureReturnKey(type: textDocumentProxy.returnKeyType ?? .default)
         keyboard.applyAppearance(textDocumentProxy.keyboardAppearance ?? .default)
+        updateAutoShift()
+    }
+
+    /// Apple behavior: shift turns on at sentence start when the field asks for
+    /// .sentences autocapitalization (empty context, or after ".!?" + space).
+    private func updateAutoShift() {
+        guard textDocumentProxy.autocapitalizationType == .sentences else { return }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let t = before.trimmingCharacters(in: .whitespaces)
+        let auto = before.isEmpty
+            || (before.hasSuffix(" ") && (t.hasSuffix(".") || t.hasSuffix("!") || t.hasSuffix("?")))
+            || before.hasSuffix("\n")
+        keyboard.setAutoShift(auto)
     }
 
     override func textWillChange(_ textInput: UITextInput?) {
@@ -62,12 +75,28 @@ final class KeyboardViewController: UIInputViewController {
             bridge.boundary(s, proxy: proxy)
         case .space:
             bridge.boundary(" ", proxy: proxy)
+        case .doubleSpacePeriod:
+            // Apple: double-space converts the just-typed space into ". "
+            if textDocumentProxy.documentContextBeforeInput?.hasSuffix(" ") == true {
+                textDocumentProxy.deleteBackward()
+                textDocumentProxy.insertText(". ")
+            } else {
+                bridge.boundary(" ", proxy: proxy)
+            }
+        case .moveCursor(let delta):
+            bridge.reset()                        // caret moved → composition gone
+            textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
         case .newline:
             bridge.boundary("\n", proxy: proxy)
         case .backspace:
             bridge.backspace(proxy: proxy)
         }
         UIDevice.current.playInputClick()
+        switch key {
+        case .space, .newline, .doubleSpacePeriod, .backspace, .moveCursor:
+            updateAutoShift()
+        default: break
+        }
     }
 }
 

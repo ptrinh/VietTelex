@@ -26,6 +26,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.viettelex.ios
+        CODE_SIGN_ENTITLEMENTS: App/App.entitlements
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_CFBundleDisplayName: VietTelex
         GENERATE_INFOPLIST_FILE: YES
@@ -40,6 +41,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.viettelex.ios.keyboard
+        CODE_SIGN_ENTITLEMENTS: Keyboard/Keyboard.entitlements
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: "Tiếng Việt (VietTelex)"
     info:

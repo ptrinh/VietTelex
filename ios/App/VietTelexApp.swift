@@ -1,28 +1,56 @@
-// Container app — M1 placeholder: enable-keyboard onboarding. Settings + Learn = M3.
+// Container app: onboarding + Telex settings (shared with the keyboard via the
+// App Group) + a link that opens the Learn site in the browser. Deliberately
+// minimal — no WebView, no third-party dependencies (docs/ios-app.md).
 import SwiftUI
 
 @main
 struct VietTelexApp: App {
     var body: some Scene {
-        WindowGroup { OnboardingView() }
+        WindowGroup { RootView() }
     }
 }
 
-struct OnboardingView: View {
+struct RootView: View {
     var body: some View {
-        VStack(spacing: 22) {
-            Text("⌨️").font(.system(size: 64))
-            Text("VietTelex").font(.largeTitle.bold())
-            Text("Bộ gõ tiếng Việt Telex — nhanh, sạch, không cần Full Access, không mạng.")
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Mở **Cài đặt → Cài đặt chung → Bàn phím → Bàn phím**", systemImage: "1.circle.fill")
-                Label("Chọn **Thêm bàn phím mới… → Tiếng Việt (VietTelex)**", systemImage: "2.circle.fill")
+        NavigationStack {
+            List {
+                Section {
+                    OnboardingCard()
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+                SettingsSection()
+                Section {
+                    Link(destination: URL(string: "https://ptrinh.github.io/viettelex/learn/")!) {
+                        Label("Học gõ Telex (mở trình duyệt)", systemImage: "graduationcap")
+                    }
+                    Link(destination: URL(string: "https://github.com/ptrinh/viettelex")!) {
+                        Label("Mã nguồn trên GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                    }
+                } header: { Text("Tài nguyên") }
+                Section {
+                    LabeledContent("Phiên bản",
+                                   value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+                    Text("Không Full Access · Không mạng · Không thu thập dữ liệu")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("VietTelex")
+        }
+    }
+}
+
+struct OnboardingCard: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("⌨️").font(.system(size: 52))
+            Text("Bật bàn phím VietTelex").font(.title3.bold())
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Cài đặt → Cài đặt chung → Bàn phím → Bàn phím", systemImage: "1.circle.fill")
+                Label("Thêm bàn phím mới… → Tiếng Việt (VietTelex)", systemImage: "2.circle.fill")
                 Label("Khi gõ, bấm 🌐 để chuyển sang VietTelex", systemImage: "3.circle.fill")
             }
-            .padding()
-            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 16))
+            .font(.subheadline)
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
@@ -32,6 +60,31 @@ struct OnboardingView: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .padding(28)
+        .padding(20)
+        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 18))
+        .padding(.vertical, 6)
+    }
+}
+
+/// Telex settings — the same keys EngineBridge reads from the App Group.
+struct SettingsSection: View {
+    @AppStorage("freeMarking", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var freeMarking = true
+    @AppStorage("simpleTelex", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var simpleTelex = false
+    @AppStorage("liveSpellCheck", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var liveSpellCheck = true
+    @AppStorage("autoRestore", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var autoRestore = true
+
+    var body: some View {
+        Section {
+            Toggle("Bỏ dấu tự do", isOn: $freeMarking)
+            Toggle("Simple Telex (w lẻ giữ nguyên)", isOn: $simpleTelex)
+            Toggle("Kiểm tra chính tả khi gõ", isOn: $liveSpellCheck)
+            Toggle("Tự khôi phục từ tiếng Anh", isOn: $autoRestore)
+        } header: { Text("Cách gõ") } footer: {
+            Text("Cài đặt áp dụng ngay lần mở bàn phím kế tiếp. Ví dụ: vieetj → việt, dd → đ, w → ư.")
+        }
     }
 }
