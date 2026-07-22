@@ -295,6 +295,14 @@
    "<h3><span class=\"e\">✨</span>đ 글자 &amp; 성조 지우기</h3><p><b>dd</b>→đ. 방금 붙인 성조를 지우려면 <b>z</b>를 눌러요. 같은 성조 키를 다시 눌러도 지워져요.</p>",
    "<h3><span class=\"e\">🧠</span>틀려도 괜찮아요</h3><p>IME는 베트남어가 아닌 낱말(예: <code>google</code>)을 알아보고 그대로 둬요. 편하게 입력하고, 틀리면 지우고 다시 쳐요.</p>"
   ],
-  "footer": "<a href=\"../\">ViệtTelex</a> — macOS를 위한 오픈 소스 베트남어 입력 방식이에요.<br>실제 앱에서 돌아가는 규칙 그대로예요. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
+  "footer": "<a href=\"../\">ViệtTelex</a> — macOS를 위한 오픈 소스 베트남어 입력 방식이에요.<br>실제 앱에서 돌아가는 규칙 그대로예요. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>",
+  "cheatText": {
+   "⌫ dấu": "⌫ 성조",
+   "xoá dấu vừa bỏ": "방금 넣은 성조를 지우기"
+  },
+  "demoBtn1": "예시: Tiếng Việt",
+  "demoBtn2": "예시: Chào buổi sáng",
+  "clearBtn": "지우기",
+  "sandboxPh": "여기에 입력… 예: xin chaof"
  }
 }

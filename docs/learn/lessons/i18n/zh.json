@@ -295,6 +295,14 @@
    "<h3><span class=\"e\">✨</span>字母 đ 与清除音调</h3><p><b>dd</b>→đ。打 <b>z</b> 可以清除你刚加上的音调。再打一次同一个音调键也能清除它。</p>",
    "<h3><span class=\"e\">🧠</span>打错也没关系</h3><p>输入法能识别非越南语的词（比如 <code>google</code>）并保持原样。放心自然地打；如果错了，删掉重打就行。</p>"
   ],
-  "footer": "<a href=\"../\">ViệtTelex</a> — 面向 macOS 的开源越南语输入法。<br>与真正的 App 运行的是同一套规则。© 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
+  "footer": "<a href=\"../\">ViệtTelex</a> — 面向 macOS 的开源越南语输入法。<br>与真正的 App 运行的是同一套规则。© 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>",
+  "cheatText": {
+   "⌫ dấu": "⌫ 声调",
+   "xoá dấu vừa bỏ": "清除刚加的声调"
+  },
+  "demoBtn1": "示例：Tiếng Việt",
+  "demoBtn2": "示例：Chào buổi sáng",
+  "clearBtn": "清除",
+  "sandboxPh": "在此输入… 例：xin chaof"
  }
 }

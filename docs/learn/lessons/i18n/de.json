@@ -295,6 +295,14 @@
    "<h3><span class=\"e\">✨</span>Der Buchstabe đ &amp; Töne löschen</h3><p><b>dd</b>→đ. Tippe <b>z</b>, um einen gerade gesetzten Ton zu löschen. Dieselbe Ton-Taste erneut zu tippen löscht ihn ebenfalls.</p>",
    "<h3><span class=\"e\">🧠</span>Fehler sind okay</h3><p>Die Eingabemethode erkennt nicht-vietnamesische Wörter (wie <code>google</code>) und lässt sie unangetastet. Tippe einfach natürlich; wenn es falsch ist, lösche und tippe neu.</p>"
   ],
-  "footer": "<a href=\"../\">ViệtTelex</a> — die quelloffene vietnamesische Eingabemethode für macOS.<br>Dasselbe Regelwerk wie in der echten App. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
+  "footer": "<a href=\"../\">ViệtTelex</a> — die quelloffene vietnamesische Eingabemethode für macOS.<br>Dasselbe Regelwerk wie in der echten App. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>",
+  "cheatText": {
+   "⌫ dấu": "⌫ Ton",
+   "xoá dấu vừa bỏ": "löscht den eben gesetzten Ton"
+  },
+  "demoBtn1": "Beispiel: Tiếng Việt",
+  "demoBtn2": "Beispiel: Chào buổi sáng",
+  "clearBtn": "Löschen",
+  "sandboxPh": "Hier tippen… z. B. xin chaof"
  }
 }

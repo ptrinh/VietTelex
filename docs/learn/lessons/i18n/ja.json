@@ -295,6 +295,14 @@
    "<h3><span class=\"e\">✨</span>đ の文字と声調を消す</h3><p><b>dd</b>→đ。いま付けた声調は <b>z</b> をおすと消せます。同じ声調キーをもう一度おしても消えます。</p>",
    "<h3><span class=\"e\">🧠</span>まちがえてもだいじょうぶ</h3><p>IME はベトナム語じゃない言葉（<code>google</code> など）を見わけて、そのままにしてくれます。ふつうにタイプしてね。ちがったら消してタイプしなおそう。</p>"
   ],
-  "footer": "<a href=\"../\">ViệtTelex</a> — macOS 用のオープンソースなベトナム語入力メソッド。<br>本物のアプリとまったく同じルールで動きます。© 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
+  "footer": "<a href=\"../\">ViệtTelex</a> — macOS 用のオープンソースなベトナム語入力メソッド。<br>本物のアプリとまったく同じルールで動きます。© 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>",
+  "cheatText": {
+   "⌫ dấu": "⌫ 声調",
+   "xoá dấu vừa bỏ": "直前に付けた声調を消す"
+  },
+  "demoBtn1": "例: Tiếng Việt",
+  "demoBtn2": "例: Chào buổi sáng",
+  "clearBtn": "クリア",
+  "sandboxPh": "ここに入力… 例: xin chaof"
  }
 }

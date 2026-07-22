@@ -296,6 +296,14 @@
    "<h3><span class=\"e\">✨</span>The letter đ &amp; clearing tones</h3><p><b>dd</b>→đ. Type <b>z</b> to clear a tone you just added. Typing the same tone key again also clears it.</p>",
    "<h3><span class=\"e\">🧠</span>Mistakes are fine</h3><p>The IME recognises non-Vietnamese words (like <code>google</code>) and leaves them alone. Just type naturally; if it’s wrong, delete and retype.</p>"
   ],
-  "footer": "Part of <a href=\"../\">ViệtTelex</a> — the open-source Vietnamese input method for macOS.<br>The same rule set that runs in the real app. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
+  "footer": "Part of <a href=\"../\">ViệtTelex</a> — the open-source Vietnamese input method for macOS.<br>The same rule set that runs in the real app. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>",
+  "cheatText": {
+   "⌫ dấu": "⌫ tone",
+   "xoá dấu vừa bỏ": "clear the tone you just added"
+  },
+  "demoBtn1": "Example: Tiếng Việt",
+  "demoBtn2": "Example: Chào buổi sáng",
+  "clearBtn": "Clear",
+  "sandboxPh": "Type here… e.g. xin chaof"
  }
 }

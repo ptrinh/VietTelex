@@ -169,8 +169,8 @@
     <div class="field" id="sandbox" tabindex="0" role="textbox" aria-label="Ô gõ thử Telex"></div>
     <div class="keysline" id="sandboxKeys"></div>
     <div class="tools">
-      <button class="minibtn" data-demo="Tieengs Vieejt tuyeejt vowif!">Ví dụ: Tiếng Việt</button>
-      <button class="minibtn" data-demo="Chaof buooir sasng ">Ví dụ: Chào buổi sáng</button>
+      <button class="minibtn" id="demoBtn1" data-demo="Tieengs Vieejt tuyeejt vowif!">Ví dụ: Tiếng Việt</button>
+      <button class="minibtn" id="demoBtn2" data-demo="Chaof buooir sasng ">Ví dụ: Chào buổi sáng</button>
       <button class="minibtn" id="sandboxClear">Xoá</button>
     </div>
     <div class="kbd-note">💡 Ô thử này cần bàn phím thật. Bấm <b>dấu cách</b> để kết thúc một từ. Trong <a href="lessons/" style="color:#d4a94a">lớp học</a> có bàn phím trên màn hình — dùng được cả máy tính bảng.</div>
@@ -313,6 +313,12 @@
     });
   });
   document.getElementById('sandboxClear').addEventListener('click', function () { sandbox.reset(); sandbox.el.focus(); });
+  // Let the landing-page i18n retranslate the placeholder (updates both the
+  // current .ph span and future re-renders after reset).
+  window.__sandboxSetPlaceholder = function (t) {
+    sandbox.placeholder = t;
+    var ph = document.querySelector('#sandbox .ph'); if (ph) ph.textContent = t;
+  };
 
   // ── Cheat sheet ────────────────────────────────────────────────────────
   var CHEAT = [
@@ -343,6 +349,7 @@
     }
     var chip = document.createElement('div'); chip.className = 'chip'; chip.setAttribute('role', 'button'); chip.tabIndex = 0;
     chip.title = c.ex;
+    chip.setAttribute('data-res-vi', c.res); chip.setAttribute('data-ex-vi', c.ex);
     chip.innerHTML = '<span class="keys">' + escapeHtml(c.keys) + '</span><span class="arrow">→</span>' +
       '<span class="res">' + escapeHtml(c.res) + '</span>';
     function play() {
@@ -398,13 +405,26 @@
     groups: { 'Dấu thanh (gõ ở cuối từ)': 'Tones (typed at the end of the word)',
               'Nguyên âm đội mũ ^': 'Hatted vowels ^',
               'Nguyên âm có móc/ngoặc': 'Hooked vowels',
-              'Đặc biệt': 'Special' }
+              'Đặc biệt': 'Special' },
+    navClass: '🎓 Enter the classroom', navHome: '← Home',
+    why1: '<h3><span class="e">🎵</span>Tone marks</h3><p><b>s f r x j</b> = the five tones. Type the tone at the end of the word: <code>casa? </code> e.g. <code>caf</code> → cà, <code>hoir</code> → hỏi.</p>',
+    why2: '<h3><span class="e">🔤</span>Hatted vowels</h3><p>Double the letter: <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Add a hook/horn: <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p>',
+    why3: '<h3><span class="e">✨</span>The letter đ &amp; clearing tones</h3><p><b>dd</b>→đ. Type <b>z</b> to clear a tone you just added. Typing the same tone key again also clears it.</p>',
+    why4: '<h3><span class="e">🧠</span>Mistakes are fine</h3><p>The IME recognises non-Vietnamese words (like <code>google</code>) and leaves them alone. Just type naturally; if it’s wrong, delete and retype.</p>',
+    footer: 'Part of <a href="../">ViệtTelex</a> — the open-source Vietnamese input method for macOS.<br>The same rule set that runs in the real app. © 2026 Phil Trịnh · <a href="https://github.com/ptrinh/viettelex">GitHub</a>',
+    cheatText: { '⌫ dấu': '⌫ tone', 'xoá dấu vừa bỏ': 'clear the tone you just added' },
+    demoBtn1: 'Example: Tiếng Việt', demoBtn2: 'Example: Chào buổi sáng',
+    clearBtn: 'Clear', sandboxPh: 'Type here… e.g. xin chaof'
   };
   var SEL = [
     ['.hero h1', 'heroH1'], ['.hero p.sub', 'heroSub'], ['.sandbox .label', 'sandboxLabel'],
     ['.kbd-note', 'kbdNote'], ['#hoc h2', 'hocH2'], ['#hoc .lead', 'hocLead'],
     ['.cta-btn', 'ctaBtn'], ['#hoc .wrap > p:last-child', 'ctaNote'],
-    ['#cheatH2', 'cheatH2'], ['#cheatLead', 'cheatLead']
+    ['#cheatH2', 'cheatH2'], ['#cheatLead', 'cheatLead'],
+    ['#navClass', 'navClass'], ['#navHome', 'navHome'],
+    ['#why1', 'why1'], ['#why2', 'why2'], ['#why3', 'why3'], ['#why4', 'why4'],
+    ['#pageFooter', 'footer'],
+    ['#demoBtn1', 'demoBtn1'], ['#demoBtn2', 'demoBtn2'], ['#sandboxClear', 'clearBtn']
   ];
   var saved = null, cache = {};
   function state() {
@@ -416,6 +436,8 @@
     saved = {};
     SEL.forEach(function (m) { var el = document.querySelector(m[0]); if (el) saved[m[1]] = el.innerHTML; });
     saved.groups = Array.prototype.map.call(document.querySelectorAll('.cheat-group-title'), function (g) { return g.textContent; });
+    var ph0 = document.querySelector('#sandbox .ph');
+    saved.sandboxPh = ph0 ? ph0.textContent : 'Gõ ở đây… ví dụ: xin chaof';
   }
   function apply(lang, dict) {
     snapshot();
@@ -431,13 +453,30 @@
       var groups = (dict && dict.groups) || EN.groups;
       g.textContent = groups[vi] || (EN.groups[vi] || vi);
     });
+    // Cheat tiles: only strings carrying a Vietnamese word need translating
+    // (the char results and telex formulae are language-neutral). Chips keep
+    // their authored VN res/ex in data-* attributes.
+    var ct = (dict && dict.cheatText) || EN.cheatText;
+    document.querySelectorAll('.cheat .chip').forEach(function (chip) {
+      var rv = chip.getAttribute('data-res-vi'), ev = chip.getAttribute('data-ex-vi');
+      var res = (lang === 'vi') ? rv : (ct[rv] || EN.cheatText[rv] || rv);
+      var ex = (lang === 'vi') ? ev : (ct[ev] || EN.cheatText[ev] || ev);
+      var rs = chip.querySelector('.res'); if (rs) rs.textContent = res;
+      chip.title = ex;
+    });
+    var phText = (lang === 'vi') ? saved.sandboxPh : ((dict && dict.sandboxPh) || EN.sandboxPh);
+    if (window.__sandboxSetPlaceholder) window.__sandboxSetPlaceholder(phText);
     document.documentElement.lang = lang;
   }
   function setLang(lang) {
     if (lang === 'vi' || lang === 'en') { apply(lang, null); return; }
     if (cache[lang]) { apply(lang, cache[lang]); return; }
     fetch('lessons/i18n/' + lang + '.json').then(function (r) { return r.json(); })
-      .then(function (j) { cache[lang] = j.landing || {}; apply(lang, cache[lang]); })
+      .then(function (j) {
+        var L = j.landing || {};
+        if (Array.isArray(L.why)) L.why.forEach(function (w, i) { L['why' + (i + 1)] = w; });
+        cache[lang] = L; apply(lang, cache[lang]);
+      })
       .catch(function () { apply('en', null); });
   }
   var sel = document.getElementById('langSel');
