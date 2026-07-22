@@ -20,6 +20,7 @@ function load() {
   if (s.showArt === undefined) s.showArt = true;
   if (!s.langChosen) { s.lang = 'vi'; }
   if (!s.lang) s.lang = 'vi';
+  if (['vi','en','fr','de','ko','ja','zh','km'].indexOf(s.lang) < 0) s.lang = 'vi';
   return s;
 }
 function save() { localStorage.setItem('vtlearn', JSON.stringify(store)); }
@@ -113,10 +114,51 @@ var STR = {
     }
   }
 };
+// Supported languages. vi/en are built-in; the rest lazy-load i18n/<code>.json
+// (translated by design-time agents from i18n/_template.en.json).
+var LANGS = [
+  { code: 'vi', native: 'Tiếng Việt' },
+  { code: 'en', native: 'English' },
+  { code: 'fr', native: 'Français' },
+  { code: 'de', native: 'Deutsch' },
+  { code: 'ko', native: '한국어' },
+  { code: 'ja', native: '日本語' },
+  { code: 'zh', native: '简体中文' },
+  { code: 'km', native: 'ខ្មែរ' }
+];
+var EXTRA = {};   // lang -> fetched i18n json (chapters/lessons/hands/hoc)
+function isBuiltinLang(c) { return c === 'vi' || c === 'en'; }
+function loadLang(code, done) {
+  if (isBuiltinLang(code) || STR[code]) { done(); return; }
+  fetch('i18n/' + code + '.json').then(function (r) { return r.json(); }).then(function (j) {
+    // overlay the translated UI strings on the EN set so missing keys fall back
+    var base = {};
+    Object.keys(STR.en).forEach(function (k) { base[k] = STR.en[k]; });
+    Object.keys(j.ui || {}).forEach(function (k) { base[k] = j.ui[k]; });
+    STR[code] = base;
+    EXTRA[code] = j;
+    done();
+  }).catch(function () { store.lang = 'en'; save(); done(); });
+}
 function T() { return STR[store.lang] || STR.vi; }
-function lessonTitle(l) { return (store.lang === 'en' && l.titleEN) ? l.titleEN : l.title; }
-function lessonIntro(l) { return (store.lang === 'en' && l.introEN) ? l.introEN : l.intro; }
-function chapterTitle(c) { return (store.lang === 'en' && c.titleEN) ? c.titleEN : c.title; }
+function lessonTitle(l) {
+  if (store.lang === 'vi') return l.title;
+  var x = EXTRA[store.lang];
+  if (x && x.lessons && x.lessons[l.id]) return x.lessons[l.id][0];
+  return l.titleEN || l.title;
+}
+function lessonIntro(l) {
+  if (store.lang === 'vi') return l.intro;
+  var x = EXTRA[store.lang];
+  if (x && x.lessons && x.lessons[l.id]) return x.lessons[l.id][1];
+  return l.introEN || l.intro;
+}
+function chapterTitle(c) {
+  if (store.lang === 'vi') return c.title;
+  var x = EXTRA[store.lang];
+  if (x && x.chapters && x.chapters[c.id]) return x.chapters[c.id];
+  return c.titleEN || c.title;
+}
 
 // Static page translation: [selector, {vi, en}] — vi is the authored DOM text.
 var STATIC_I18N = [
@@ -139,15 +181,28 @@ function applyStaticLang() {
     staticVi = STATIC_I18N.map(function (e) { var el = document.querySelector(e[0]); return el ? el.innerHTML : null; });
     staticVi.hands = Array.prototype.map.call(document.querySelectorAll('#hands .hands-note'), function (n) { return n.innerHTML; });
   }
+  var x = EXTRA[store.lang];
   STATIC_I18N.forEach(function (e, i) {
     var el = document.querySelector(e[0]);
     if (!el || staticVi[i] == null) return;
-    el.innerHTML = store.lang === 'en' ? e[2].en : staticVi[i];
+    if (store.lang === 'vi') { el.innerHTML = staticVi[i]; return; }
+    var dyn = null;
+    if (x) {
+      if (e[0] === '#hands h2') dyn = x.hands && x.hands.h2;
+      else if (e[0] === '#hands .lead') dyn = x.hands && x.hands.lead;
+      else if (e[0] === '#hoc h2') dyn = x.hoc && x.hoc.h2;
+      else if (e[0] === '#hoc .lead') dyn = x.hoc && x.hoc.lead;
+    }
+    el.innerHTML = dyn || e[2].en;
   });
   var notes = document.querySelectorAll('#hands .hands-note');
   Array.prototype.forEach.call(notes, function (n, i) {
-    if (store.lang === 'en' && HANDS_EN[i]) n.innerHTML = '<h3>' + HANDS_EN[i][0] + '</h3><p>' + HANDS_EN[i][1] + '</p>';
-    else if (staticVi.hands && staticVi.hands[i]) n.innerHTML = staticVi.hands[i];
+    if (store.lang === 'vi') {
+      if (staticVi.hands && staticVi.hands[i]) n.innerHTML = staticVi.hands[i];
+      return;
+    }
+    var pair = (x && x.hands && x.hands.notes && x.hands.notes[i]) || HANDS_EN[i];
+    if (pair) n.innerHTML = '<h3>' + pair[0] + '</h3><p>' + pair[1] + '</p>';
   });
 }
 
@@ -330,7 +385,14 @@ var cur = null;
 var kb = null;
 
 // ── Game bar ────────────────────────────────────────────────────────────────
+function populateLangSel() {
+  if (gb.lang.options.length === LANGS.length) return;
+  gb.lang.innerHTML = LANGS.map(function (l) {
+    return '<option value="' + l.code + '">🌐 ' + l.native + '</option>';
+  }).join('');
+}
 function renderBar() {
+  populateLangSel();
   gb.streak.textContent = '🔥 ' + store.streak + ' ' + T().days;
   gb.xp.textContent = '⭐ ' + store.xp + ' XP';
   gb.badges.textContent = '🏅 ' + store.badges.length + '/' + BADGE_IDS.length;
@@ -340,11 +402,15 @@ function renderBar() {
 }
 gb.sound.addEventListener('click', function () { store.sound = !store.sound; save(); renderBar(); });
 gb.lang.addEventListener('change', function () {
-  store.lang = gb.lang.value === 'en' ? 'en' : 'vi'; store.langChosen = true; save();
-  renderBar(); applyStaticLang();
-  if (DATA) renderMap();
-  if (cur) { document.getElementById('pTitle').textContent = lessonTitle(cur.lesson);
-             document.getElementById('pIntro').textContent = lessonIntro(cur.lesson); renderStep(false); }
+  var code = gb.lang.value;
+  if (!LANGS.some(function (l) { return l.code === code; })) code = 'vi';
+  store.lang = code; store.langChosen = true; save();
+  loadLang(code, function () {
+    renderBar(); applyStaticLang();
+    if (DATA) renderMap();
+    if (cur) { document.getElementById('pTitle').textContent = lessonTitle(cur.lesson);
+               document.getElementById('pIntro').textContent = lessonIntro(cur.lesson); renderStep(false); }
+  });
 });
 gb.track.addEventListener('click', function () { showTrackModal(false); });
 gb.badges.addEventListener('click', showBadges);
@@ -752,10 +818,12 @@ document.addEventListener('keydown', function (e) {
 // ── Load data ───────────────────────────────────────────────────────────────
 fetch('lessons.json').then(function (r) { return r.json(); }).then(function (d) {
   DATA = d;
-  renderBar();
-  applyStaticLang();
-  renderMap();
-  if (!store.track) showTrackModal(true);
+  loadLang(store.lang, function () {
+    renderBar();
+    applyStaticLang();
+    renderMap();
+    if (!store.track) showTrackModal(true);
+  });
 }).catch(function () {
   mapEl.innerHTML = '<p style="color:var(--ink-soft)">' + T().loadFail +
     ' <a href="https://ptrinh.github.io/viettelex/learn/">ptrinh.github.io/viettelex/learn</a>.</p>';

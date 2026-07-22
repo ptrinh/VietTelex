@@ -1,0 +1,285 @@
+{
+ "_meta": {
+  "lang": "en",
+  "notes": "Translate values only. NEVER translate: Vietnamese example words (đêm, dấu, việt…), Telex key sequences (daaus, vieetj, aa, ow…), the words 'Telex', 'VietTelex', 'English / ABC', emoji, HTML tags like <b>. Vietnamese tone names (sắc, huyền, hỏi, ngã, nặng) stay Vietnamese — add a short gloss in the target language in parentheses if natural. Keep the friendly, kid-appropriate tone."
+ },
+ "native": "English",
+ "ui": {
+  "days": "day streak",
+  "map": "← Map",
+  "listen": "🔊 Listen",
+  "dict": "🎧 Listen & type",
+  "dictOn": "🎧 Dictation on",
+  "fsOn": "Fullscreen",
+  "fsOff": "Exit fullscreen",
+  "upNext": "Continue",
+  "imeTitle": "Turn OFF your Vietnamese IME first",
+  "imeBody": "Lessons compose the diacritics for you from plain keystrokes, so switch your system keyboard to <b>English / ABC</b> (turn off VietTelex, Unikey, EVKey…) before practicing.<br><br>💡 On a Mac: press 🌐 or ⌃Space to switch input sources. With an IME on, letters get marked TWICE and the lesson can't match your keys.",
+  "imeOk": "Got it, let's go!",
+  "imeToast": "⚠️ Your system Vietnamese IME seems to be ON — switch to the English/ABC keyboard so lessons see your real keys.",
+  "autoSpk": "🗣️ Auto-speak: Off",
+  "autoSpkOn": "🗣️ Auto-speak: On",
+  "art": "🖼️ Pictures: Off",
+  "artOn": "🖼️ Pictures: On",
+  "retry": "↻ Retry",
+  "next": "Next lesson →",
+  "close": "Close",
+  "badgeTitle": "🏅 Badge collection",
+  "r3": "Excellent! 🎉",
+  "r2": "Great job! 👏",
+  "r1": "Done! ✅",
+  "acc": "Accuracy",
+  "speed": "Speed",
+  "noVoice": "No Vietnamese voice on this device 😢",
+  "infoDone": "📖 +10 XP — hand-position guide read, next lesson unlocked!",
+  "fingerTo": "→ key",
+  "holdShift": "(hold ⇧ Shift)",
+  "spaceKey": "SPACE",
+  "spaceCap": "space",
+  "trackTitle": "Where do you want to start?",
+  "trackNewT": "I'm new to the keyboard",
+  "trackNewD": "Start with hand position and touch typing, then learn Telex.",
+  "trackTypistT": "I can type —\njust teach me Telex",
+  "trackTypistD": "Jump straight to special letters and tones. The first two chapters stay open for review.",
+  "trackSwitch": "Switch track",
+  "optional": "review",
+  "loadFail": "Could not load lessons — open the page via",
+  "finger": {
+   "f1": "Left pinky",
+   "f2": "Left ring finger",
+   "f3": "Left middle finger",
+   "f4": "Left index finger",
+   "f5": "Right index finger",
+   "f6": "Right middle finger",
+   "f7": "Right ring finger",
+   "f8": "Right pinky",
+   "th": "Thumb"
+  },
+  "badgeDefs": {
+   "first": [
+    "🐣",
+    "First step",
+    "Finish your first lesson"
+   ],
+   "perfect": [
+    "💯",
+    "Perfect",
+    "Get 3 stars on a lesson"
+   ],
+   "tones": [
+    "🎵",
+    "Tone master",
+    "Pass \"All five tones\""
+   ],
+   "c2done": [
+    "✨",
+    "Letter wizard",
+    "Finish the Special letters chapter"
+   ],
+   "streak3": [
+    "🔥",
+    "Dedicated",
+    "Learn 3 days in a row"
+   ],
+   "streak7": [
+    "🌋",
+    "Persistent",
+    "Learn 7 days in a row"
+   ],
+   "xp500": [
+    "🚀",
+    "Astronaut",
+    "Reach 500 XP"
+   ],
+   "boss": [
+    "🏆",
+    "Telex master",
+    "Beat the Final boss"
+   ]
+  }
+ },
+ "chapters": {
+  "c0": "Meet the keyboard",
+  "c1": "Words without marks",
+  "c2": "Special letters: â ê ô ă ơ ư đ",
+  "c3": "The five tones",
+  "c4": "Words & sentences",
+  "c5": "Advanced",
+  "c6": "Advanced 2: Little stories",
+  "c7": "Advanced 3: History tales"
+ },
+ "lessons": {
+  "c0l1": [
+   "Posture & hand position",
+   "info"
+  ],
+  "c0l2": [
+   "Home row",
+   "Put your index fingers on F and J (feel the bumps). One finger per key, then return home."
+  ],
+  "c0l3": [
+   "Top row",
+   "Reach up, then RETURN to the home row. Eyes on the screen, not the keys."
+  ],
+  "c0l4": [
+   "Bottom row",
+   "Vietnamese uses V, N, M, C a lot. Slow and accurate first — speed comes later."
+  ],
+  "c1l1": [
+   "Two-letter words",
+   "Real Vietnamese words, no diacritics yet. Press SPACE to move to the next word."
+  ],
+  "c1l2": [
+   "Longer words",
+   "Still no diacritics — build muscle memory between keys."
+  ],
+  "c1l3": [
+   "Your first sentence",
+   "A full sentence! Type each word, separated by spaces."
+  ],
+  "c2l1": [
+   "dd → đ",
+   "Type d TWICE to get đ. Watch the letter transform as you type!"
+  ],
+  "c2l2": [
+   "aa → â",
+   "Type a twice to get â. Example: caan → cân."
+  ],
+  "c2l3": [
+   "ee → ê, oo → ô",
+   "Same rule: double the vowel. teen → tên, coo → cô."
+  ],
+  "c2l4": [
+   "The w key: ă ơ ư",
+   "w is the magic key: aw → ă, ow → ơ, uw → ư, and w alone → ư."
+  ],
+  "c2l5": [
+   "Mix it all",
+   "One word can need several transforms: thuwowng → thương (ư then ơ)."
+  ],
+  "c3l1": [
+   "s → rising tone (´)",
+   "Finish the word, then press s for the rising tone: mas → má."
+  ],
+  "c3l2": [
+   "f → falling tone (`)",
+   "The f key adds the falling tone: maf → mà."
+  ],
+  "c3l3": [
+   "r → asking tone (ˀ)",
+   "The r key adds the asking tone: har → hả."
+  ],
+  "c3l4": [
+   "x → tumbling tone (~)",
+   "The x key adds the tumbling tone: max → mã."
+  ],
+  "c3l5": [
+   "j → heavy tone (.)",
+   "The j key adds the heavy tone: maj → mạ."
+  ],
+  "c3l6": [
+   "Fix & remove tones",
+   "Type a DIFFERENT tone key to change it (más + f → mà); press z to remove."
+  ],
+  "c3l7": [
+   "All five tones",
+   "The full set: ma má mà mả mã mạ — try the 🔊 button on each!"
+  ],
+  "c4l1": [
+   "Two-syllable words",
+   "Our country's name! Capitals: hold Shift and type normally."
+  ],
+  "c4l2": [
+   "Greetings",
+   "Type the whole sentence — press 🔊 to hear it first."
+  ],
+  "c4l3": [
+   "Family sentences",
+   "Sentences about family."
+  ],
+  "c4l4": [
+   "Folk verse",
+   "Vietnamese folk verse — type and learn the language at once."
+  ],
+  "c5l1": [
+   "Canonical Telex order",
+   "Vowel marks go RIGHT AFTER the vowel, tones at the end: daaus → dấu."
+  ],
+  "c5l2": [
+   "Long sentences",
+   "Full sentences with punctuation and capitals."
+  ],
+  "c5l3": [
+   "Final boss",
+   "The final challenge — every special letter, all five tones."
+  ],
+  "c6l1": [
+   "Dragon and Fairy",
+   "The legend of the Vietnamese origin — type it sentence by sentence."
+  ],
+  "c6l2": [
+   "Banh chung legend",
+   "Why square banh chung at Tet?"
+  ],
+  "c6l3": [
+   "Sword Lake legend",
+   "King Le and the golden turtle in Hanoi."
+  ],
+  "c7l1": [
+   "Saint Giong",
+   "The boy of Giong village who grew into a warrior."
+  ],
+  "c7l2": [
+   "The Trung Sisters",
+   "Our first heroines."
+  ],
+  "c7l3": [
+   "Vietnamese Tet",
+   "The final boss: type the whole Tet story!"
+  ]
+ },
+ "hands": {
+  "h2": "Hand position — touch typing",
+  "lead": "Before the lessons, place your hands right: each finger owns a few keys and returns to the <b>home row</b>. This is the foundation for everything below.",
+  "notes": [
+   [
+    "1️⃣ Find the F and J bumps",
+    "Feel the keyboard: <b>F</b> and <b>J</b> have small ridges. Rest your index fingers there — no looking! The other fingers sit on <b>A S D</b> (left) and <b>K L ;</b> (right); thumbs hover over the space bar."
+   ],
+   [
+    "2️⃣ One finger, one zone",
+    "The lesson keyboard is coloured by finger: each finger presses its own keys and <b>returns home</b>. Being slow at first is normal — your hands will remember."
+   ],
+   [
+    "3️⃣ Eyes on the screen",
+    "Try not to look down. Lessons always <b>highlight the next key</b> and name the finger, so you never hunt for keys by sight."
+   ],
+   [
+    "4️⃣ Sit straight, wrists relaxed",
+    "Straight back, elbows ~90°, wrists straight and not pressed onto the desk. Rest 5 minutes after every 20."
+   ]
+  ]
+ },
+ "hoc": {
+  "h2": "The Telex classroom 🎓",
+  "lead": "8 chapters, from meeting the keyboard to typing history tales. Earn at least ⭐ on a lesson to unlock the next. On a tablet without a keyboard, tap the on-screen keys inside each lesson."
+ },
+ "landing": {
+  "heroH1": "Learn Vietnamese <span class=\"accent\">Telex</span> typing",
+  "heroSub": "Type without diacritics, get full Vietnamese. Instant feedback — the exact rule set of the ViệtTelex input method.",
+  "sandboxLabel": "✏️ Try it now — type Vietnamese the Telex way",
+  "kbdNote": "💡 This box needs a real keyboard. Press <b>space</b> to end a word. The <a href=\"lessons/\" style=\"color:#d4a94a\">classroom</a> has an on-screen keyboard — tablets work too.",
+  "hocH2": "Want to learn Telex? 🎓",
+  "hocLead": "An 8-chapter course: hand position → special letters → tones → full stories.<br>Stars ⭐, badges 🏅, spoken examples 🔊 — and an on-screen keyboard for tablets.",
+  "ctaBtn": "🚀 Start learning",
+  "ctaNote": "Free, no account — progress is saved on your device.",
+  "cheatH2": "Telex rule sheet",
+  "cheatLead": "Click a tile to see it run in the try-box above. Remember these few groups and you can type all of Vietnamese.",
+  "groups": {
+   "Dấu thanh (gõ ở cuối từ)": "Tones (typed at the end of the word)",
+   "Nguyên âm đội mũ ^": "Hatted vowels ^",
+   "Nguyên âm có móc/ngoặc": "Hooked vowels",
+   "Đặc biệt": "Special"
+  }
+ }
+}
