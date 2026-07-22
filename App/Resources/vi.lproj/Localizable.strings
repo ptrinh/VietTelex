@@ -140,3 +140,11 @@
 "You can download the update from the releases page. This check ran because weekly update checks are enabled in Settings." = "Bạn có thể tải bản mới từ trang releases. Lần kiểm tra này chạy vì bạn đã bật tự kiểm tra hàng tuần trong Cài đặt.";
 "Later" = "Để sau";
 "Forget this app (pin + learned data)" = "Quên app này (xoá ép tay + dữ liệu đã học)";
+
+"Status: Permission stale — click to fix" = "⚠️ Quyền trợ năng bị kẹt — bấm để sửa";
+
+"Stale permission title" = "Quyền Trợ năng bị kẹt sau khi cập nhật";
+
+"Stale permission body" = "macOS đang liệt kê VietTelex là được phép, nhưng từ chối cấp event tap — thường xảy ra khi bản cập nhật được ký lại nằm dưới quyền cũ.\n\nCách sửa (một lần):\n1. Mở System Settings → Privacy & Security → Accessibility\n2. Chọn VietTelex, bấm nút − để XÓA khỏi danh sách\n3. Bấm + và thêm lại VietTelex (trong ~/Library/Input Methods)\n4. Chuyển bàn phím qua ABC rồi quay lại VietTelex";
+
+"Open Accessibility Settings" = "Mở cài đặt Trợ năng";

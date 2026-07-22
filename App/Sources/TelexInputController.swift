@@ -824,9 +824,17 @@ final class TelexInputController: IMKInputController {
         // menus. Strip it (and any trailing separator) each time the menu opens.
         menu.delegate = self
 
-        // Status first. OK when Accessibility is granted (terminal tap works), else
-        // missing. No checkmark. Click → grant-permission pane if missing, else a debug log.
-        let status = NSMenuItem(title: Accessibility.isTrusted ? VTLocalized("Status: OK") : VTLocalized("Status: Permission needed"),
+        // Status first. Three states: OK / permission missing / permission STALE
+        // (trusted but the tap was refused — needs a remove+re-add, see TerminalTap).
+        let statusTitle: String
+        if !Accessibility.isTrusted {
+            statusTitle = VTLocalized("Status: Permission needed")
+        } else if TerminalTapController.shared.trustLooksStale {
+            statusTitle = VTLocalized("Status: Permission stale — click to fix")
+        } else {
+            statusTitle = VTLocalized("Status: OK")
+        }
+        let status = NSMenuItem(title: statusTitle,
                                 action: #selector(showStatus(_:)), keyEquivalent: "")
         status.target = self
         menu.addItem(status)
@@ -852,8 +860,25 @@ final class TelexInputController: IMKInputController {
         // makes it appear reliably.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            if Accessibility.isTrusted { self.showDebugLog() }
-            else { self.grantAccessibility() }
+            if !Accessibility.isTrusted { self.grantAccessibility() }
+            else if TerminalTapController.shared.trustLooksStale { self.showStaleTrustRepair() }
+            else { self.showDebugLog() }
+        }
+    }
+
+    /// Stale-grant repair: macOS lists VietTelex as allowed but refuses the tap
+    /// (typical after a re-signed binary lands under an old grant). The ONLY fix
+    /// is user-side: remove the entry and add it back. Walk them through it.
+    @objc private func showStaleTrustRepair() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = VTLocalized("Stale permission title")
+        alert.informativeText = VTLocalized("Stale permission body")
+        alert.addButton(withTitle: VTLocalized("Open Accessibility Settings"))
+        alert.addButton(withTitle: VTLocalized("Close"))
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
         }
     }
 
