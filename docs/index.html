@@ -177,10 +177,10 @@
       <div><span class="phi-key">Nhanh</span><span class="phi-desc">~130 ns/phím, không chạy nền — gõ nhanh cỡ nào cũng mượt.</span></div>
     </div>
     <div class="grid">
-      <div class="card"><h3><span class="dot">●</span> Chuẩn IMKit của macOS</h3><p>Là input method thật của hệ thống, không phải app chặn phím — tự đổi kiểu gõ theo từng app, chính tả/dự đoán/undo/VoiceOver đều hoạt động đúng.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Nhanh — ~130 nano giây/phím</h3><p>Luật chính tả compile thành máy trạng thái, không cấp phát bộ nhớ khi gõ. Gõ nhanh cỡ nào cũng mượt, không mất hay loạn ký tự.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Gõ được trong Terminal &amp; Chrome</h3><p>Terminal/iTerm giữ nguyên autocomplete của shell; thanh địa chỉ Chrome, ô Excel, Spotlight đều gõ đúng — nơi các bộ gõ khác thường vỡ.</p></div>
-      <div class="card"><h3><span class="dot">●</span> Thông minh với English &amp; code</h3><p>Tự khôi phục <code>google</code>, <code>github</code>…; nhận token camelCase (<code>OmS</code>, <code>JavaScript</code>) để không bỏ dấu nhầm; có chế độ Telex nghiêm ngặt cho dev.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Chuẩn IMKit của macOS</h3><p>Là bộ gõ thật của hệ thống, không phải ứng dụng chặn phím — tự đổi kiểu gõ theo từng ứng dụng, chính tả, gợi ý từ, hoàn tác hay VoiceOver đều hoạt động đúng.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Nhanh — ~130 nano giây/phím</h3><p>Luật chính tả được biên dịch sẵn thành máy trạng thái, không cấp phát bộ nhớ khi gõ. Gõ nhanh cỡ nào cũng mượt, không mất hay loạn ký tự.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Gõ được trong Terminal &amp; Chrome</h3><p>Terminal/iTerm giữ nguyên gợi ý lệnh của shell; thanh địa chỉ Chrome, ô Excel, Spotlight đều gõ đúng — nơi các bộ gõ khác thường vỡ.</p></div>
+      <div class="card"><h3><span class="dot">●</span> Thông minh với tiếng Anh &amp; mã nguồn</h3><p>Tự khôi phục <code>google</code>, <code>github</code>…; nhận dạng từ viết kiểu camelCase (<code>OmS</code>, <code>JavaScript</code>) để không bỏ dấu nhầm; có chế độ Telex nghiêm ngặt cho lập trình viên.</p></div>
       <div class="card"><h3><span class="dot">●</span> Nhẹ &amp; riêng tư</h3><p>Không chạy nền tốn CPU, không kết nối mạng, không thu thập bất kỳ dữ liệu nào.</p></div>
     </div>
   </div>
@@ -189,7 +189,7 @@
 <section id="shots" style="padding-top:0">
   <div class="wrap">
     <div class="shots">
-      <figure><img src="assets/Menu-Bar-Screenshot.png" alt="Menu ViệtTelex trên thanh menu macOS" loading="lazy"><figcaption>Badge VT trên thanh menu — chọn nguồn gõ như bộ gõ hệ thống.</figcaption></figure>
+      <figure><img src="assets/Menu-Bar-Screenshot.png" alt="Menu ViệtTelex trên thanh menu macOS" loading="lazy"><figcaption>Biểu tượng VT trên thanh menu — chọn nguồn gõ như với bộ gõ hệ thống.</figcaption></figure>
       <figure><img src="assets/Settings-Screenshot.png" alt="Cửa sổ Cài đặt của ViệtTelex" loading="lazy"><figcaption>Cài đặt: Simple Telex, bỏ dấu tự do, kiểu cũ/mới, kiểm tra chính tả, gõ tắt.</figcaption></figure>
     </div>
   </div>
@@ -200,13 +200,13 @@
 <section id="install"><span id="huongdan"></span>
   <div class="wrap">
     <h2>Cài đặt trong một phút</h2>
-    <p class="lead">Trình cài đặt tự đặt app vào đúng chỗ, đăng ký bộ gõ và mở sẵn System Settings — không cần kéo thả, không cần đăng xuất.</p>
+    <p class="lead">Trình cài đặt tự đặt app vào đúng chỗ, đăng ký bộ gõ và mở sẵn System Settings — không phải kéo thả, không phải đăng xuất.</p>
     <div class="steps">
-      <div class="step"><strong>Tải và chạy trình cài đặt</strong><p>Tải <a href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener" class="dl-direct">VietTelex-x.y.z.pkg</a> (đã ký + notarized bởi Apple) rồi double-click. Hoặc dùng Homebrew: <code>brew install --cask ptrinh/viettelex/viettelex</code></p></div>
+      <div class="step"><strong>Tải và chạy trình cài đặt</strong><p>Tải <a href="https://github.com/ptrinh/viettelex/releases/latest" rel="noopener" class="dl-direct">VietTelex-x.y.z.pkg</a> (đã được Apple ký &amp; xác thực notarize) rồi nhấp đúp. Hoặc dùng Homebrew: <code>brew install --cask ptrinh/viettelex/viettelex</code></p></div>
       <div class="step"><strong>Thêm bộ gõ</strong><p>System Settings → Keyboard → Input Sources → <b>Edit… / ＋</b> → Vietnamese → <b>ViệtTelex</b> → Add.</p>
         <img src="assets/instructions-1.png" alt="Input Sources → Edit trong System Settings" loading="lazy" style="max-width:560px">
         <img src="assets/instructions-2.png" alt="Thêm ViệtTelex trong Input Sources" loading="lazy" style="max-width:560px;margin-top:10px"></div>
-      <div class="step"><strong>Gõ thử</strong><p>Chuyển sang ViệtTelex bằng phím 🌐 hoặc ⌃Space. Muốn gõ trong Terminal/iTerm/Chrome thì bật quyền Accessibility cho VietTelex (Privacy &amp; Security → Accessibility).</p></div>
+      <div class="step"><strong>Gõ thử</strong><p>Chuyển sang ViệtTelex bằng phím 🌐 hoặc ⌃Space. Muốn gõ trong Terminal/iTerm/Chrome thì bật quyền Trợ năng cho VietTelex (Privacy &amp; Security → Accessibility).</p></div>
     </div>
   </div>
 </section>
@@ -234,7 +234,7 @@
           <button class="copybtn" type="button"
                   data-copy="bc1ps44wjx3wpu4s0xj746gz2lu45nspsm9059d3ym8xz0nrhu4psyasdgwwhx"
                   title="Bấm để copy địa chỉ BTC" aria-label="Copy địa chỉ Bitcoin">
-            <code>bc1ps4…gwwhx</code> <span class="copyhint">copy</span>
+            <code>bc1ps4…gwwhx</code> <span class="copyhint">sao chép</span>
           </button>
         </p>
       </div>
@@ -243,7 +243,7 @@
 </section>
 
 <footer>
-  <p>ViệtTelex — dự án mã nguồn mở của Phil Trịnh · <a href="https://github.com/ptrinh/viettelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/viettelex/blob/main/LICENSE" rel="noopener">MIT License</a> · <a href="https://trinh.uk/contact" rel="noopener">Liên hệ</a></p>
+  <p>ViệtTelex — dự án mã nguồn mở của Phil Trịnh · <a href="https://github.com/ptrinh/viettelex" rel="noopener">GitHub</a> · <a href="https://github.com/ptrinh/viettelex/blob/main/LICENSE" rel="noopener">Giấy phép MIT</a> · <a href="https://trinh.uk/contact" rel="noopener">Liên hệ</a></p>
 </footer>
 
 <script>
