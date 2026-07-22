@@ -397,6 +397,70 @@ let gameWords: [GameWord] = [
     gw("banhs", "bánh", "🍰"), gw("xoaif", "xoài", "🥭")
 ]
 
+
+// ── Auto-derive telex keys from a Vietnamese word ───────────────────────────
+// Tone keys go at the word END (curriculum policy); marked vowels expand to
+// their doubled/w forms. Returns nil for characters outside the table.
+let toneKeyOf: [Int: Character] = [1: "s", 2: "f", 3: "r", 4: "x", 5: "j"]
+// char → (base key string, tone index 0-5)
+let charTable: [Character: (String, Int)] = {
+    var t: [Character: (String, Int)] = [:]
+    let groups: [(String, [Character])] = [
+        ("a",  ["a","á","à","ả","ã","ạ"]), ("aw", ["ă","ắ","ằ","ẳ","ẵ","ặ"]),
+        ("aa", ["â","ấ","ầ","ẩ","ẫ","ậ"]), ("e",  ["e","é","è","ẻ","ẽ","ẹ"]),
+        ("ee", ["ê","ế","ề","ể","ễ","ệ"]), ("i",  ["i","í","ì","ỉ","ĩ","ị"]),
+        ("o",  ["o","ó","ò","ỏ","õ","ọ"]), ("oo", ["ô","ố","ồ","ổ","ỗ","ộ"]),
+        ("ow", ["ơ","ớ","ờ","ở","ỡ","ợ"]), ("u",  ["u","ú","ù","ủ","ũ","ụ"]),
+        ("uw", ["ư","ứ","ừ","ử","ữ","ự"]), ("y",  ["y","ý","ỳ","ỷ","ỹ","ỵ"]),
+    ]
+    for (keys, chars) in groups {
+        for (i, c) in chars.enumerated() { t[c] = (keys, i) }
+    }
+    t["đ"] = ("dd", 0)
+    for c in "bcdghklmnpqrstvx" { t[c] = (String(c), 0) }
+    return t
+}()
+func deriveKeys(_ word: String) -> String? {
+    var keys = "", tone = 0
+    for ch in word.lowercased() {
+        guard let (k, t) = charTable[ch] else { return nil }
+        keys += k
+        if t != 0 { tone = t }
+    }
+    if tone != 0, let tk = toneKeyOf[tone] { keys.append(tk) }
+    return keys
+}
+
+/// Game word from (word, emoji) with AUTO-derived keys; nil (skipped, logged)
+/// when derivation fails or the engine round-trip mismatches.
+nonisolated(unsafe) var gameSkipped: [String] = []
+func gwAuto(_ word: String, _ emoji: String) -> GameWord? {
+    guard !word.contains(" ") else { gameSkipped.append(word + " (đa âm tiết)"); return nil }
+    guard let keys = deriveKeys(word) else { gameSkipped.append(word + " (ký tự lạ)"); return nil }
+    let t = trace(keys)
+    guard t.final == word else { gameSkipped.append(word + " (round-trip \(t.final))"); return nil }
+    return GameWord(k: keys, d: word, s: t.states, a: emoji)
+}
+
+/// Load extra (word, emoji) pairs from a JSON file (arg 2) — the kid-words
+/// research list. Derives keys, validates, dedups against the curated list.
+func loadExtraGameWords(_ path: String, existing: [GameWord]) -> [GameWord] {
+    guard let data = FileManager.default.contents(atPath: path),
+          let pairs = try? JSONSerialization.jsonObject(with: data) as? [[String]] else {
+        FileHandle.standardError.write("cannot read kid-words JSON at \(path)\n".data(using: .utf8)!)
+        return []
+    }
+    var seen = Set(existing.map(\.d))
+    var out: [GameWord] = []
+    for p in pairs where p.count >= 2 {
+        let w = p[0].trimmingCharacters(in: .whitespaces).lowercased()
+        guard !w.isEmpty, !seen.contains(w) else { continue }
+        if let g = gwAuto(w, p[1]) { out.append(g); seen.insert(w) }
+    }
+    print("kid-words: +\(out.count) từ, bỏ \(gameSkipped.count) (\(gameSkipped.prefix(8).joined(separator: ", "))…)")
+    return out
+}
+
 // MARK: - Emit
 
 struct Root: Codable { var version: Int; var chapters: [Chapter]; var game: [GameWord] }
@@ -404,7 +468,11 @@ struct Root: Codable { var version: Int; var chapters: [Chapter]; var game: [Gam
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "lessons.json"
 let enc = JSONEncoder()
 enc.outputFormatting = [.sortedKeys]
-let data = try enc.encode(Root(version: 1, chapters: chapters, game: gameWords))
+var allGameWords = gameWords
+if CommandLine.arguments.count > 2 {
+    allGameWords += loadExtraGameWords(CommandLine.arguments[2], existing: gameWords)
+}
+let data = try enc.encode(Root(version: 1, chapters: chapters, game: allGameWords))
 
 if !failures.isEmpty {
     FileHandle.standardError.write("MISMATCHES (\(failures.count)):\n".data(using: .utf8)!)
