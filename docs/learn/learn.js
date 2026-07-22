@@ -303,7 +303,9 @@ var sWin  = function () { [523, 659, 784, 1047].forEach(function (f, i) { setTim
 var viVoice = null, ttsReady = false;
 function pickVoice() {
   var vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-  viVoice = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf('vi') === 0; })[0] || null;
+  var vi = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf('vi') === 0; });
+  // prefer the familiar FEMALE Vietnamese voices (Apple Linh, HoaiMy)
+  viVoice = vi.filter(function (v) { return /linh|hoaimy|female/i.test(v.name); })[0] || vi[0] || null;
   ttsReady = true;
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
@@ -339,7 +341,8 @@ function speak(text, rate) {
 }
 function speakTTS(text, rate) {
   if (!window.speechSynthesis) return false;
-  if (!ttsReady) pickVoice();
+  if (!ttsReady || !viVoice) pickVoice();
+  if (!viVoice) return false;   // never read Vietnamese with a wrong-language voice
   speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
   if (viVoice) u.voice = viVoice;

@@ -592,17 +592,26 @@ document.addEventListener('DOMContentLoaded', applyStrings);
 
 // ── Đọc từ bằng speechSynthesis của browser ────────────────────────────────
 var voiceOn = store.kiteVoice !== false;      // default BẬT
-var viVoice = null;
+// PIN giọng NỮ tiếng Việt. getVoices() trả rỗng lúc mới load (voices nạp
+// async) — nếu đọc ngay khi chưa có giọng vi, browser rơi về giọng mặc định
+// (nam, đọc kiểu tiếng Anh). Vì vậy: chưa có giọng vi thì XẾP HÀNG chờ
+// voiceschanged, tuyệt đối không đọc bằng giọng sai.
+var viVoice = null, pendingSpeak = null;
 function pickVoice() {
   var vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-  viVoice = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf('vi') === 0; })[0] || null;
+  var vi = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf('vi') === 0; });
+  // ưu tiên giọng nữ quen thuộc (Linh của Apple, HoaiMy, Google vi mặc định là nữ)
+  viVoice = vi.filter(function (v) { return /linh|hoaimy|female|n\u1eef/i.test(v.name); })[0] || vi[0] || null;
+  if (viVoice && pendingSpeak) { var t = pendingSpeak; pendingSpeak = null; speakWord(t); }
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function speakWord(text) {
   if (!voiceOn || !window.speechSynthesis) return;
+  if (!viVoice) { pickVoice(); }
+  if (!viVoice) { pendingSpeak = text; return; }   // chờ giọng vi, không đọc giọng sai
   speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
-  if (viVoice) u.voice = viVoice;
+  u.voice = viVoice;
   u.lang = 'vi-VN';
   u.rate = 0.9;
   speechSynthesis.speak(u);
