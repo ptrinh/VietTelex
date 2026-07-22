@@ -52,6 +52,18 @@ final class ShortcutImporterTests: XCTestCase {
         XCTAssertEqual(d?.count, 1)
     }
 
+    func testYamlExportRoundTrips() {
+        let table = ["vn": "Việt Nam", "đc": "được", "web": "https://x.vn",
+                     "q": "\"quoted\" start", "sp": " lead space"]
+        let yaml = ShortcutImporter.exportYAML(table)
+        XCTAssertTrue(yaml.hasPrefix("#"))                       // comment header
+        let back = ShortcutImporter.parse(Data(yaml.utf8))
+        XCTAssertEqual(back?["vn"], "Việt Nam")
+        XCTAssertEqual(back?["đc"], "được")
+        XCTAssertEqual(back?["web"], "https://x.vn")
+        XCTAssertEqual(back?.count, table.count)
+    }
+
     func testGarbageReturnsNil() {
         XCTAssertNil(parse(""))
         XCTAssertNil(parse("just some prose without any pairs"))

@@ -778,7 +778,7 @@ struct ShortcutsTab: View {
 
             HStack {
                 Button(model.loc("Import from plist…")) { importPlist() }
-                Button(model.loc("Export to plist…")) { exportPlist() }
+                Button(model.loc("Export to YAML…")) { exportPlist() }
                 Spacer()
             }
         }
@@ -829,13 +829,13 @@ struct ShortcutsTab: View {
     }
 
     private func exportPlist() {
+        // Flat YAML (user decision 2026-07-22): readable, editable, and the
+        // universal importer round-trips it. plist import still works for old files.
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.propertyList]
-        panel.nameFieldStringValue = "TelexShortcuts.plist"
-        guard panel.runModal() == .OK, let url = panel.url,
-              let data = try? PropertyListSerialization.data(
-                fromPropertyList: AppState.shared.shortcuts, format: .xml, options: 0)
-        else { return }
-        try? data.write(to: url)
+        panel.allowedContentTypes = [.yaml, .plainText]
+        panel.nameFieldStringValue = "viettelex-shortcuts.yaml"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let yaml = ShortcutImporter.exportYAML(AppState.shared.shortcuts)
+        try? Data(yaml.utf8).write(to: url)
     }
 }
