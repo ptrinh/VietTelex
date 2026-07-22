@@ -51,6 +51,20 @@ final class EnglishCollisionTests: XCTestCase {
         XCTAssertEqual(commitSimple("was"), "wá")   // w-guard: literal w = teencode
     }
 
+    // Đ-initial chat abbreviations survive auto-restore (đ, đm, đc, đkm…).
+    func testDdAbbreviations() {
+        XCTAssertEqual(commit("dd"), "đ")
+        XCTAssertEqual(commit("ddc"), "đc")
+        XCTAssertEqual(commit("ddm"), "đm")
+        XCTAssertEqual(commit("ddkm"), "đkm")
+        XCTAssertEqual(commit("Ddm"), "Đm")
+        // vowelled words keep the normal path (unchanged behavior)
+        XCTAssertEqual(commit("ddi"), "đi")
+        XCTAssertEqual(commit("ddieen"), "điên")
+        // literal lowercase dd stays reachable via the cancel
+        XCTAssertEqual(commit("ddd"), "dd")
+    }
+
     func testEthnicNameSyllables() {
         XCTAssertEqual(commit("DDawks"), "Đắk")
         XCTAssertEqual(commit("Lawks"), "Lắk")
