@@ -158,6 +158,7 @@ button{font-family:inherit}
   <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong đám mây có gạch chân để phá mây — Space đổi mây, tắt bộ gõ tiếng Việt nhé!</div>
   <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)">← Lớp học</a>
   <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
+  <button id="voiceBtn" title="Đọc từ khi đổi mây" style="position:absolute;top:16px;right:64px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
 
   <div id="picker" style="display:none;position:absolute;inset:0;z-index:10;background:rgba(225,242,255,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:28px;padding:30px 36px;text-align:center;box-shadow:0 24px 60px rgba(60,100,160,.3);max-width:86vw;max-height:80vh;overflow:auto">
@@ -330,9 +331,29 @@ function activeCloud() {
   return null;
 }
 var DEBUG = location.hash === '#debug';
+
+// ── Đọc từ bằng speechSynthesis của browser ────────────────────────────────
+var voiceOn = store.kiteVoice !== false;      // default BẬT
+var viVoice = null;
+function pickVoice() {
+  var vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  viVoice = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf('vi') === 0; })[0] || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speakWord(text) {
+  if (!voiceOn || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  if (viVoice) u.voice = viVoice;
+  u.lang = 'vi-VN';
+  u.rate = 0.9;
+  speechSynthesis.speak(u);
+}
+var lastSpokenId = 0;
 function markActive() {
   var a = activeCloud();
   clouds.forEach(function (c) { c.el.classList.toggle('active', a === c); });
+  if (a && a.id !== lastSpokenId) { lastSpokenId = a.id; speakWord(a.w.d); }
   if (DEBUG) document.title = 'K s=' + score + ' kite=' + Math.round(kiteTarget) +
     ' wpm=' + document.getElementById('wpm').textContent +
     (a ? ' keys=' + a.w.k + ' comp=' + a.eng.composed : ' keys=-');
@@ -634,6 +655,20 @@ document.getElementById('btnNext').addEventListener('click', function () { start
 document.getElementById('soundBtn').addEventListener('click', function () {
   soundOn = !soundOn;
   this.textContent = soundOn ? '🔊' : '🔇';
+});
+var voiceBtn = document.getElementById('voiceBtn');
+function renderVoiceBtn() {
+  voiceBtn.textContent = voiceOn ? '🗣️' : '🤫';
+  voiceBtn.style.opacity = voiceOn ? '1' : '.55';
+}
+renderVoiceBtn();
+voiceBtn.addEventListener('click', function () {
+  voiceOn = !voiceOn;
+  store.kiteVoice = voiceOn;
+  saveStore(store);
+  renderVoiceBtn();
+  if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel();
+  else { var a = activeCloud(); if (a) speakWord(a.w.d); }
 });
 window.addEventListener('resize', layoutKite);
 
