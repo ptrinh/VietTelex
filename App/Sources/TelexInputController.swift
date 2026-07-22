@@ -861,7 +861,20 @@ final class TelexInputController: IMKInputController {
         settings.target = self
         menu.addItem(settings)
 
+        // System Settings → Keyboard (Text Input / Input Sources) — where users
+        // add/remove the input source and reach the Edit… sheet.
+        let sysSettings = NSMenuItem(title: VTLocalized("System Settings…"),
+                                     action: #selector(openSystemKeyboardSettings(_:)), keyEquivalent: "")
+        sysSettings.target = self
+        menu.addItem(sysSettings)
+
         return menu
+    }
+
+    @objc private func openSystemKeyboardSettings(_ sender: Any?) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
 

@@ -71,6 +71,7 @@
 /* Input-method menu + Accessibility alert */
 "Status: OK" = "Tình trạng: OK";
 "Status: Permission needed" = "Tình trạng: Thiếu quyền";
+"System Settings…" = "Cài đặt hệ thống…";
 "Settings…" = "Cài đặt…";
 "Accessibility permission needed" = "Thiếu quyền Trợ năng (Accessibility)";
 "VietTelex needs Accessibility to type Vietnamese in Terminal/iTerm and browsers.\n\nOpen System Settings → Privacy & Security → Accessibility and enable VietTelex (if it’s already there, untick then tick it again)." = "VietTelex cần quyền Trợ năng (Accessibility) để có trải nghiệm tốt nhất qua các cơ chế gõ khác - không bị gạch chân.\n\nMở System Settings → Privacy & Security → Accessibility, rồi bật VietTelex (nếu đã có thì bỏ tick và tick lại).";
