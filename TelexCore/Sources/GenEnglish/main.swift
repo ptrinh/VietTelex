@@ -38,6 +38,8 @@ let protected: Set<String> = [
     "mã",   // max   (mã số)
     "môn",  // moon  (môn học)
     "rơ",   // row   (chơi rơ)
+    "đi",   // did   (user 2026-07-22: free-marking did→đi thắng English "did")
+    "thêm", // theme (cùng đợt: theme→thêm)
     "sên",  // seen  (ốc sên)
     "sỉ",   // sir   (mua sỉ)
     "sĩ",   // six   (bác sĩ)

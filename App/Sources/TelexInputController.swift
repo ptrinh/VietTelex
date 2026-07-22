@@ -948,7 +948,11 @@ final class TelexInputController: IMKInputController {
         else if AppState.shared.usesMarkedText(id) { mode = "IMKit · marked text" }
         else { mode = "IMKit · in-place" }
         let s = AppState.shared
+        let bundle = Bundle(for: TelexInputController.self)
+        let ver = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         let lines = [
+            "VietTelex \(ver) (build \(build))",
             "Accessibility: \(Accessibility.isTrusted ? "OK" : "thiếu")",
             "Terminal tap: \(TerminalTapController.shared.isRunning ? "đang chạy" : "tắt")",
             "Spotlight đang mở: \(SpotlightDetector.isVisible ? "có" : "không")",

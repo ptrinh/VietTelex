@@ -49,6 +49,14 @@ private func composeSimpleFree(_ keys: String) -> String {
     return e.composed
 }
 
+/// Free marking + boundary commit with auto-restore (the shipped defaults).
+private func commitFree(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.freeMarking = true
+    for ch in keys { _ = e.feed(ch) }
+    return e.commitText(autoRestore: true)
+}
+
 /// Type keys then commit at a word boundary with auto-restore on.
 private func commit(_ keys: String) -> String {
     var e = TelexEngine()
@@ -152,6 +160,11 @@ final class EngineGoldenTests: XCTestCase {
     func testFreeMarkingOutOfOrderTyping() {
         XCTAssertEqual(composeFree("did"), "đi")
         XCTAssertEqual(composeFree("theme"), "thêm")
+        // …and they SURVIVE the boundary: đi/thêm are protected in gen-english,
+        // so the English-collision restore no longer steals them (field bug
+        // 2026-07-22: composed đi, committed "did").
+        XCTAssertEqual(commitFree("did"), "đi")
+        XCTAssertEqual(commitFree("theme"), "thêm")
         XCTAssertEqual(composeFree("luuw"), "lưu")
         XCTAssertEqual(composeFree("cuuws"), "cứu")
         XCTAssertEqual(composeFree("dad"), "đa")
