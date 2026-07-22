@@ -140,14 +140,14 @@ var STR = {
 // Supported languages. vi/en are built-in; the rest lazy-load i18n/<code>.json
 // (translated by design-time agents from i18n/_template.en.json).
 var LANGS = [
-  { code: 'vi', native: 'Tiếng Việt' },
-  { code: 'en', native: 'English' },
-  { code: 'fr', native: 'Français' },
-  { code: 'de', native: 'Deutsch' },
-  { code: 'ko', native: '한국어' },
-  { code: 'ja', native: '日本語' },
-  { code: 'zh', native: '简体中文' },
-  { code: 'km', native: 'ខ្មែរ' }
+  { code: 'vi', native: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'en', native: 'English', flag: '🇬🇧' },
+  { code: 'fr', native: 'Français', flag: '🇫🇷' },
+  { code: 'de', native: 'Deutsch', flag: '🇩🇪' },
+  { code: 'ko', native: '한국어', flag: '🇰🇷' },
+  { code: 'ja', native: '日本語', flag: '🇯🇵' },
+  { code: 'zh', native: '简体中文', flag: '🇨🇳' },
+  { code: 'km', native: 'ខ្មែរ', flag: '🇰🇭' }
 ];
 var EXTRA = {};   // lang -> fetched i18n json (chapters/lessons/hands/hoc)
 function isBuiltinLang(c) { return c === 'vi' || c === 'en'; }
@@ -483,7 +483,7 @@ var kb = null;
 function populateLangSel() {
   if (gb.lang.options.length === LANGS.length) return;
   gb.lang.innerHTML = LANGS.map(function (l) {
-    return '<option value="' + l.code + '">🌐 ' + l.native + '</option>';
+    return '<option value="' + l.code + '">' + l.flag + ' ' + l.native + '</option>';
   }).join('');
 }
 function renderBar() {
