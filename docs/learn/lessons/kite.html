@@ -19,6 +19,7 @@ a{color:#2c7a4b}a:hover{color:#1d5c37}
 @keyframes flockFly{from{transform:translateX(-20vw)}to{transform:translateX(118vw)}}
 @keyframes gustLeft{0%{opacity:0;transform:translateX(10px)}25%{opacity:1}100%{opacity:0;transform:translateX(-140px)}}
 @keyframes legSwing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(9deg)}}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:.85}}
 @keyframes headSway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
 @keyframes buffHead{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(3deg)}}
 @keyframes tailSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
@@ -312,11 +313,25 @@ function scheduleNote(freq, t, dur, type, gain) {
   o.connect(g); g.connect(mGain);
   o.start(t); o.stop(t + dur + 0.02);
 }
+var musicHint = null;
+function showMusicHint() {
+  if (musicHint || !musicOn) return;
+  musicHint = document.createElement('div');
+  musicHint.textContent = gt('musicHint');
+  musicHint.style.cssText = 'position:fixed;top:118px;right:16px;z-index:8;background:#17233d;color:#fff;padding:8px 14px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.25);animation:pulse 1.4s ease-in-out infinite';
+  document.body.appendChild(musicHint);
+}
+function hideMusicHint() { if (musicHint) { musicHint.remove(); musicHint = null; } }
+function tryResume(c) {
+  try { var p = c.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
 function musicTick() {
   var c = ac();
   // Safari giữ context ở 'suspended'/'interrupted' lâu hơn Chrome — thử
-  // resume mỗi tick và đừng dồn nốt vào lúc đồng hồ đứng yên.
-  if (c.state !== 'running') { try { c.resume(); } catch (e) {} return; }
+  // resume mỗi tick và đừng dồn nốt vào lúc đồng hồ đứng yên. Chặn mãi
+  // (refresh xong chưa có gesture) thì chỉ hint "chạm để bật nhạc".
+  if (c.state !== 'running') { tryResume(c); showMusicHint(); return; }
+  hideMusicHint();
   ensureMusicGain();
   if (mNext < c.currentTime) mNext = c.currentTime + 0.05;
   while (mNext < c.currentTime + 0.35) {
@@ -332,7 +347,7 @@ function startMusic() {
   if (mTimer) return;
   try {
     var c = ac();
-    if (c.state === 'suspended') c.resume();
+    if (c.state !== 'running') tryResume(c);
     ensureMusicGain();
     mNext = c.currentTime + 0.05;
     mTimer = setInterval(musicTick, 150);
@@ -346,7 +361,7 @@ function renderMusicUI() {
 document.getElementById('musicBtn').addEventListener('click', function () {
   musicOn = !musicOn;
   store.kiteMusic = musicOn; saveStore(store);
-  if (musicOn) startMusic();
+  if (musicOn) startMusic(); else hideMusicHint();
   renderMusicUI();
 });
 document.getElementById('musicVol').addEventListener('input', function () {
@@ -375,6 +390,9 @@ function unlockAudio() {
 ['keydown', 'pointerdown', 'touchstart', 'click'].forEach(function (ev) {
   document.addEventListener(ev, unlockAudio, { passive: true });
 });
+// thử phát ngay khi load: Chrome cho autoplay với trang hay ghé (MEI cao);
+// nơi bị chặn thì musicTick tự hint "chạm để bật nhạc" đến khi có gesture.
+if (musicOn) startMusic();
 
 // ── Game state ──────────────────────────────────────────────────────────────
 var WORDS = [];
@@ -472,6 +490,7 @@ var DEBUG = location.hash === '#debug';
 // ── i18n: theo ngôn ngữ đã chọn ở Lessons (vtlearn.lang) ────────────────────
 var GSTR = {
 "vi": {
+"musicHint": "🎵 Chạm hoặc bấm phím để bật nhạc",
 "mobileNotice": "📱 Trò chơi này được thiết kế để luyện gõ trên máy tính với bàn phím vật lý. Trên điện thoại/máy tính bảng vẫn chơi được nhưng trải nghiệm sẽ không tối ưu.",
 "altitude": "ĐỘ CAO CỦA DIỀU",
 "hint": "⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!",
@@ -498,6 +517,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "en": {
+"musicHint": "🎵 Tap or press a key to start the music",
 "mobileNotice": "📱 This game is designed for typing practice on a computer with a physical keyboard. It works on phones/tablets, but the experience won't be optimal.",
 "altitude": "KITE ALTITUDE",
 "hint": "⌨️ Type the word in the underlined cloud to pop it — turn OFF your Vietnamese IME!",
@@ -524,6 +544,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "fr": {
+"musicHint": "🎵 Touche l'écran ou appuie sur une touche pour lancer la musique",
 "mobileNotice": "📱 Ce jeu est conçu pour s'entraîner à taper sur un ordinateur avec un clavier physique. Il fonctionne sur téléphone/tablette, mais l'expérience ne sera pas optimale.",
 "altitude": "ALTITUDE DU CERF-VOLANT",
 "hint": "⌨️ Tape le mot dans le nuage souligné pour le faire éclater — désactive la saisie vietnamienne du système !",
@@ -550,6 +571,7 @@ var GSTR = {
 "levelN": "Niveau {n}"
 },
 "de": {
+"musicHint": "🎵 Tippe oder drücke eine Taste, um die Musik zu starten",
 "mobileNotice": "📱 Dieses Spiel ist zum Tippen am Computer mit einer physischen Tastatur gedacht. Es funktioniert auch auf Handy/Tablet, aber das Erlebnis ist dort nicht optimal.",
 "altitude": "FLUGHÖHE DES DRACHENS",
 "hint": "⌨️ Tippe das Wort in der unterstrichenen Wolke, um sie platzen zu lassen — schalte die vietnamesische Eingabe deines Systems AUS!",
@@ -576,6 +598,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "ko": {
+"musicHint": "🎵 화면을 누르거나 키를 눌러 음악을 켜요",
 "mobileNotice": "📱 이 게임은 실제 키보드가 있는 컴퓨터에서 타자 연습을 하도록 만들어졌어요. 휴대폰/태블릿에서도 되지만 최적의 경험은 아니에요.",
 "altitude": "연 높이",
 "hint": "⌨️ 밑줄 친 구름 속 단어를 입력해서 터뜨려요 — 베트남어 입력기는 꺼 주세요!",
@@ -602,6 +625,7 @@ var GSTR = {
 "levelN": "레벨 {n}"
 },
 "ja": {
+"musicHint": "🎵 タップかキーをおして音楽をスタート",
 "mobileNotice": "📱 このゲームは、じつぶつのキーボードがあるパソコンでのタイピングれんしゅうのために作られています。スマホ／タブレットでもあそべますが、さいてきなたいけんではありません。",
 "altitude": "たこの たかさ",
 "hint": "⌨️ 下線がついた雲の中の単語を入力してポン！と割ってね — ベトナム語IMEはオフにしてね！",
@@ -628,6 +652,7 @@ var GSTR = {
 "levelN": "レベル {n}"
 },
 "zh": {
+"musicHint": "🎵 点一下或按任意键开始播放音乐",
 "mobileNotice": "📱 这个游戏是为使用实体键盘的电脑打字练习设计的。手机/平板也能玩，但体验不是最佳。",
 "altitude": "风筝高度",
 "hint": "⌨️ 打出带下划线的云朵里的词语就能把它戳破 — 记得先关掉越南语输入法哦！",
@@ -654,6 +679,7 @@ var GSTR = {
 "levelN": "第{n}关"
 },
 "km": {
+"musicHint": "🎵 ចុចអេក្រង់ ឬចុចគ្រាប់ចុចដើម្បីបើកតន្ត្រី",
 "mobileNotice": "📱 ល្បែងនេះត្រូវបានរចនាសម្រាប់ហាត់វាយអក្សរនៅលើកុំព្យូទ័រដែលមានក្ដារចុចពិត។ នៅលើទូរស័ព្ទ/ថេប្លេតក៏លេងបានដែរ ប៉ុន្តែបទពិសោធន៍មិនល្អបំផុតទេ។",
 "altitude": "កម្ពស់ខ្លែង",
 "hint": "⌨️ វាយពាក្យនៅក្នុងពពកដែលមានបន្ទាត់ពីក្រោមដើម្បីធ្វើឲ្យវាបែក — កុំភ្លេចបិទកម្មវិធីវាយអក្សរវៀតណាមណា!",
