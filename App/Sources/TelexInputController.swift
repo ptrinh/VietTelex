@@ -872,6 +872,12 @@ final class TelexInputController: IMKInputController {
     }
 
     @objc private func openSystemKeyboardSettings(_ sender: Any?) {
+        Self.openKeyboardInputSources()
+    }
+
+    /// Shared by the IME menu and the Settings window: open System Settings →
+    /// Keyboard and (with Accessibility) press through to All Input Sources.
+    static func openKeyboardInputSources() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
             NSWorkspace.shared.open(url)
         }
@@ -885,7 +891,7 @@ final class TelexInputController: IMKInputController {
         DispatchQueue.global(qos: .userInitiated).async {
             for attempt in 0..<6 {
                 Thread.sleep(forTimeInterval: attempt == 0 ? 1.2 : 0.5)
-                if Self.pressInputSourcesEdit() { return }
+                if pressInputSourcesEdit() { return }
             }
         }
     }

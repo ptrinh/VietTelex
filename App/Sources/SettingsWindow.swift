@@ -386,6 +386,13 @@ struct GeneralTab: View {
                 }
             }
             Section {
+                Button(model.loc("System Settings…")) {
+                    TelexInputController.openKeyboardInputSources()
+                }
+                Text(model.loc("Opens Keyboard settings — set automatic input-source switching per app / document there."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
                 Toggle(model.loc("Show advanced features"), isOn: $model.advancedFeatures)
                 Text(model.loc("Adds the Typing modes and Experimental tabs — per-app overrides, latency flags, debug log. Not needed for everyday typing."))
                     .font(.caption).foregroundStyle(.secondary)
