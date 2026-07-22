@@ -164,3 +164,4 @@
 "Restart input method" = "Khởi động lại bộ gõ";
 
 "Open releases page" = "Mở trang releases";
+\n"Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…)." = "Định dạng hỗ trợ: plist/XML, JSON, YAML, hoặc mỗi dòng một cặp key:value (Gõ Nhanh, EVKey…).";\n

@@ -803,16 +803,17 @@ struct ShortcutsTab: View {
 
     private func importPlist() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.propertyList]
+        // Any text-ish file: plist/XML, JSON, YAML, or "key:value" txt
+        // (GõNhanh/EVKey exports) — ShortcutImporter sniffs the format.
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let data = try? Data(contentsOf: url),
-              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
+              let dict = ShortcutImporter.parse(data)
         else {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = VTLocalized("Couldn’t read the file")
-            alert.informativeText = VTLocalized("The file must be a String → String dictionary plist (like the one Export to plist… creates).")
+            alert.informativeText = VTLocalized("Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…).")
             alert.runModal()
             return
         }
