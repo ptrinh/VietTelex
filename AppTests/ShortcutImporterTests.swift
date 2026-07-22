@@ -35,14 +35,16 @@ final class ShortcutImporterTests: XCTestCase {
         XCTAssertEqual(d?["hcm"], "Hồ Chí Minh")
     }
 
-    func testPlistAndJson() {
+    func testJsonParsesAndPlistIsRejected() {
+        XCTAssertEqual(parse(#"{"vn": "Việt Nam"}"#)?["vn"], "Việt Nam")
+        // plist support was dropped (2026-07-22) — an XML plist has no
+        // "key: value" lines, so the line-based pass yields nothing.
         let plist = """
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0"><dict><key>vn</key><string>Việt Nam</string></dict></plist>
         """
-        XCTAssertEqual(parse(plist)?["vn"], "Việt Nam")
-        XCTAssertEqual(parse(#"{"vn": "Việt Nam"}"#)?["vn"], "Việt Nam")
+        XCTAssertNil(parse(plist))
     }
 
     func testValueWithColonsAndJunk() {
