@@ -500,7 +500,7 @@ struct ModeTableTab: View {
                     Text(model.loc("Clear & re-learn")).foregroundStyle(.red)
                 }
                 Spacer()
-                Button(model.loc("Import from plist…")) { importModes() }
+                Button(model.loc("Import…")) { importModes() }
                 Button(model.loc("Export to YAML…")) { exportModes() }
             }
             Text(model.loc("An app types wrong or shows underlines? Pick Tap — real keystrokes, no underline (needs Accessibility). Marked text always renders correctly but underlines while typing. The modes below the divider are for special cases — leave them unless you know the app needs one. Clear forgets everything learned; manual picks are kept."))
@@ -515,12 +515,12 @@ struct ModeTableTab: View {
         }
     }
 
-    /// Import manual pins (bundleID → mode) from a String → String plist — the same
+    /// Import manual pins (bundleID → mode) from a YAML/JSON/txt file — the same
     /// container format the Shortcuts tab uses, so the flow is familiar. Merge, not
     /// replace: imported entries win, everything else is kept.
     private func importModes() {
         let panel = NSOpenPanel()
-        // YAML (typing-modes.yml, our export) — plist/JSON/txt also accepted.
+        // YAML (typing-modes.yml, our export) — JSON/txt also accepted.
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let data = try? Data(contentsOf: url),
@@ -529,7 +529,7 @@ struct ModeTableTab: View {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = VTLocalized("Couldn’t read the file")
-            alert.informativeText = VTLocalized("Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…).")
+            alert.informativeText = VTLocalized("Supported formats: YAML, JSON, or one key:value per line (GõNhanh, EVKey…).")
             alert.runModal()
             return
         }
@@ -776,7 +776,7 @@ struct ShortcutsTab: View {
                 .font(.caption).foregroundStyle(.secondary)
 
             HStack {
-                Button(model.loc("Import from plist…")) { importPlist() }
+                Button(model.loc("Import…")) { importPlist() }
                 Button(model.loc("Export to YAML…")) { exportPlist() }
                 Spacer()
             }
@@ -802,7 +802,7 @@ struct ShortcutsTab: View {
 
     private func importPlist() {
         let panel = NSOpenPanel()
-        // Any text-ish file: plist/XML, JSON, YAML, or "key:value" txt
+        // Any text-ish file: YAML, JSON, or "key:value" txt
         // (GõNhanh/EVKey exports) — ShortcutImporter sniffs the format.
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -812,7 +812,7 @@ struct ShortcutsTab: View {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = VTLocalized("Couldn’t read the file")
-            alert.informativeText = VTLocalized("Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…).")
+            alert.informativeText = VTLocalized("Supported formats: YAML, JSON, or one key:value per line (GõNhanh, EVKey…).")
             alert.runModal()
             return
         }
@@ -829,7 +829,7 @@ struct ShortcutsTab: View {
 
     private func exportPlist() {
         // Flat YAML (user decision 2026-07-22): readable, editable, and the
-        // universal importer round-trips it. plist import still works for old files.
+        // universal importer round-trips it.
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.yaml, .plainText]
         panel.nameFieldStringValue = "viettelex-shortcuts.yaml"

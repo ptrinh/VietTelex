@@ -635,17 +635,12 @@ enum ShortcutImporter {
     }
 
     static func parse(_ data: Data) -> [String: String]? {
-        // 1. plist (our own export format; also covers generic XML dictionaries)
-        if let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String],
-           !dict.isEmpty {
-            return dict
-        }
-        // 2. JSON object of strings
+        // 1. JSON object of strings
         if let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
            !dict.isEmpty {
             return dict
         }
-        // 3. Line-based: GõNhanh txt ("key:value", ";" comments) and flat YAML
+        // 2. Line-based: GõNhanh txt ("key:value", ";" comments) and flat YAML
         //    ("key: value", "#" comments). One entry per line, first ":" splits.
         guard let text = String(data: data, encoding: .utf8) else { return nil }
         var out: [String: String] = [:]
