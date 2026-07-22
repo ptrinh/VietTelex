@@ -28,5 +28,13 @@ pkill -x VietTelex 2>/dev/null || true
 rm -rf "$DEST"
 ditto "$APP" "$DEST"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST"
+
+# The keyboard menu is drawn by TextInputMenuAgent, which keeps an IMK
+# connection to the OLD (now dead) IME process. Without this restart the
+# VietTelex menu section vanishes in EVERY app until the agent is bounced.
+killall TextInputMenuAgent 2>/dev/null || true
+
 echo "Installed to $DEST. Type anywhere (or switch input source away and back) to relaunch."
+echo "NOTE: apps hold their own IMK connection — an app that stopped responding to"
+echo "      the IME needs an input-source flip; Chrome/iTerm need a full app relaunch."
 echo "Live logs: log stream --predicate 'process == \"VietTelex\"'"

@@ -21,6 +21,16 @@ var inputSourceObserver: NSObjectProtocol?
 let connectionName = (Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String)
     ?? "com.viettelex.inputmethod.telex_Connection"
 
+// XCTest host guard. AppTests use this app as their test host: the process
+// launches, XCTest injects the bundle, tests run, the process dies. If that
+// throwaway process registers an IMKServer and calls into TCC, it fights the
+// REAL installed IME — field day 2026-07-22: the debug-signed host's
+// AXIsProcessTrusted checks corrupted the Accessibility row (8 duplicate
+// entries, silent denial for the real app) and its IMK registration stole
+// client connections. Under XCTest: plain NSApplication run loop, nothing else.
+let isTestHost = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
+if !isTestHost {
 telexServer = IMKServer(name: connectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
 
 // No internal VI/EN toggle: Vietnamese is ON whenever VietTelex is the active macOS
@@ -61,6 +71,8 @@ axChangeObserver = DistributedNotificationCenter.default().addObserver(
     // ~1.5s later iff genuinely trusted.
     TerminalTapController.shared.trustChangedExternally()
 }
+
+}  // end !isTestHost
 
 // Standard editing key equivalents (⌘A/⌘C/⌘V/⌘X/⌘Z, ⌘W) inside our OWN Settings
 // window. macOS dispatches key equivalents through the app's main menu — an
