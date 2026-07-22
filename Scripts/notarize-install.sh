@@ -57,12 +57,14 @@ rm -rf "$DEST"
 /usr/bin/ditto "$APP" "$DEST"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST"
 spctl -a -t exec -vv "$DEST" 2>&1 | head -2
-# A re-signed build makes the old Accessibility grant STALE: AXIsProcessTrusted()
-# still returns true but CGEvent.post is silently dropped -> letters type but no
-# diacritics in tap-mode apps (see MACOS_IME_NOTES.md). Reset so the user re-grants.
-tccutil reset Accessibility com.viettelex.inputmethod.telex >/dev/null 2>&1 || true
+# DO NOT blanket-reset the Accessibility grant here (it used to, forcing a
+# re-grant on EVERY install). The designated requirement is identity-based
+# (identifier + team), so a same-identity re-sign normally keeps the grant
+# valid. When macOS does wedge the grant anyway, the app now DETECTS it
+# (trusted but tap-create refused) and walks the user through remove+re-add
+# via the menu status line — see TerminalTapController.trustLooksStale.
 pkill -x VietTelex 2>/dev/null || true
 
 echo "Done. Log out / log in ONCE (first install only), then add it: Keyboard → Input Sources → + → Vietnamese → Tiếng Việt (VietTelex)."
-echo "NOTE: Accessibility grant was reset (stale after re-sign) — re-enable VietTelex in"
-echo "System Settings → Privacy & Security → Accessibility for Terminal/Chromium typing."
+echo "If Terminal/Chromium typing stops after this install, the IME menu will show"
+echo "'Quyền trợ năng bị kẹt' with one-click repair instructions."

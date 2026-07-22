@@ -2,3 +2,11 @@
    stay empty: any lookup misses and falls back to the key (= English). It exists
    so an explicit "English" UI-language pick resolves to en.lproj even on a
    Vietnamese-language system (VTLocalized loads this bundle by name). */
+
+"Status: Permission stale — click to fix" = "⚠️ Accessibility permission stuck — click to fix";
+
+"Stale permission title" = "Accessibility permission is stuck after an update";
+
+"Stale permission body" = "macOS lists VietTelex as allowed but refuses the event tap — this can happen when an updated, re-signed build sits under an old grant.\n\nOne-time fix:\n1. Open System Settings → Privacy & Security → Accessibility\n2. Select VietTelex and press − to REMOVE it\n3. Press + and add VietTelex back (~/Library/Input Methods)\n4. Switch the keyboard to ABC and back to VietTelex";
+
+"Open Accessibility Settings" = "Open Accessibility Settings";

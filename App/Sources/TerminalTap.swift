@@ -858,6 +858,13 @@ final class TerminalTapController {
     /// thread is event-driven (parked in mach_msg, zero CPU when idle) — it is the
     /// tap's equivalent of the main run loop, not a polling worker, so it does not
     /// violate the "no persistent background work" rule in DESIGN.md.
+    /// TRUE when the last tap-create attempt failed WHILE AXIsProcessTrusted said
+    /// yes — the classic stale TCC grant after a re-signed upgrade: the checkbox
+    /// looks on, but the system refuses the tap. Cleared the moment a tap is
+    /// created. The menu turns this into a self-serve repair instruction
+    /// (remove + re-add in Accessibility) instead of silently typing English.
+    private(set) var trustLooksStale = false
+
     func start() {
         guard stateLock.withLock({ tap == nil }), Accessibility.isTrusted else { return }
         let mask = CGEventMask((1 << CGEventType.keyDown.rawValue)
@@ -872,7 +879,15 @@ final class TerminalTapController {
                 return me.handle(type: type, event: event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else { return }
+        ) else {
+            // Trusted but the system refused the tap → stale grant (field case
+            // 2026-07-22: dev re-sign; can also follow unusual upgrade paths).
+            trustLooksStale = true
+            Signposts.log.fault("tap create FAILED while trusted — stale Accessibility grant; remove + re-add VietTelex in System Settings")
+            DebugLog.log("tap create failed while trusted → stale TCC grant")
+            return
+        }
+        trustLooksStale = false
 
         let src = CFMachPortCreateRunLoopSource(nil, tap, 0)
         // Park the source on the dedicated thread's run loop. Wait (bounded) for the
