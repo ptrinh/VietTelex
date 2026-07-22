@@ -807,6 +807,20 @@ final class TerminalTapController {
     private var probeSentTick: UInt64 = 0
     private var probeSeenTick: UInt64 = 0
     private var probeMisses = 0
+
+    // Backoff after a FAILED trust cycle (probe missed / tap refused): without
+    // it, the stale-TRUE AXIsProcessTrusted drives an infinite create→probe-fail
+    // →teardown loop every ~8s (observed live 2026-07-22), eating keys in
+    // tap-mode apps during each ~6s window. While quarantined we do NOT
+    // auto-retry; an explicit user action (menu repair, grant re-add firing the
+    // TCC notification, input-source activation after the window) retries.
+    private var quarantineUntilNs: UInt64 = 0
+    private func quarantine(_ seconds: UInt64) {
+        quarantineUntilNs = DispatchTime.now().uptimeNanoseconds &+ seconds &* 1_000_000_000
+    }
+    private var quarantined: Bool {
+        DispatchTime.now().uptimeNanoseconds < quarantineUntilNs
+    }
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     /// The dedicated thread's run loop, captured at thread start; nil while stopped.
@@ -863,9 +877,11 @@ final class TerminalTapController {
             if sent != seen {
                 self.probeMisses += 1
                 if self.probeMisses >= 2 {
-                    Signposts.log.fault("health probe unanswered ×\(self.probeMisses) — posts dropped or tap wedged; tearing down")
-                    DebugLog.log("health probe missed ×\(self.probeMisses) → teardown")
+                    Signposts.log.fault("health probe unanswered ×\(self.probeMisses) — posts dropped or tap wedged; tearing down (quarantine 60s)")
+                    DebugLog.log("health probe missed ×\(self.probeMisses) → teardown + quarantine 60s")
                     self.probeMisses = 0
+                    self.trustLooksStale = true          // menu shows the repair line
+                    self.quarantine(60)
                     self.trustMayHaveChanged()
                     return
                 }
@@ -915,6 +931,7 @@ final class TerminalTapController {
     private(set) var trustLooksStale = false
 
     func start() {
+        guard !quarantined else { return }
         guard stateLock.withLock({ tap == nil }), Accessibility.isTrusted else { return }
         let mask = CGEventMask((1 << CGEventType.keyDown.rawValue)
                              | (1 << CGEventType.leftMouseDown.rawValue)
@@ -932,8 +949,9 @@ final class TerminalTapController {
             // Trusted but the system refused the tap → stale grant (field case
             // 2026-07-22: dev re-sign; can also follow unusual upgrade paths).
             trustLooksStale = true
+            quarantine(60)
             Signposts.log.fault("tap create FAILED while trusted — stale Accessibility grant; remove + re-add VietTelex in System Settings")
-            DebugLog.log("tap create failed while trusted → stale TCC grant")
+            DebugLog.log("tap create failed while trusted → stale TCC grant (retry in 60s)")
             return
         }
         trustLooksStale = false
@@ -994,6 +1012,21 @@ final class TerminalTapController {
     /// `guard !isTrusted else return` skipped the teardown on exactly that race and
     /// left the wedged tap alive. Rebuilding a healthy tap ~1.5s later costs
     /// nothing; guessing wrong costs the user's keyboard and mouse.
+    /// Called from the menu repair flow / TCC change notification: the user just
+    /// DID something about the permission — drop the backoff and re-evaluate now.
+    func retryNow() {
+        quarantineUntilNs = 0
+        trustLooksStale = false
+        Accessibility.invalidateCache()
+        ensureRunning()
+    }
+
+    /// A REAL trust-change signal (TCC notification): outranks the backoff.
+    func trustChangedExternally() {
+        quarantineUntilNs = 0
+        trustMayHaveChanged()
+    }
+
     func trustMayHaveChanged() {
         Accessibility.invalidateCache()
         teardown()
