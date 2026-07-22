@@ -115,7 +115,7 @@ app, `make-pkg.sh` cho installer). Đây là kênh DUY NHẤT khả thi cho inpu
 
 **Đóng gói một bản release** (sau khi `notarize-install.sh` đã notarize + staple app):
 `Scripts/make-release.sh` tạo artifact vào `~/Desktop` — `VietTelex-<VER>.app.zip`
-(zip từ app đã staple), `VietTelex-<VER>.pkg`, và copy `typing-modes.plist` — rồi in
+(zip từ app đã staple), `VietTelex-<VER>.pkg`, và copy `typing-modes.yml` — rồi in
 sha256 của app.zip + lệnh upload. **Homebrew cask tải `.app.zip`** (stanza `artifact`
 vào `~/Library/Input Methods`, vì pkg là user-home domain), nên release nào cũng PHẢI
 đính `.app.zip`. Sau khi `gh release upload`:
@@ -138,6 +138,6 @@ phòng khi Apple mở đường sau này; đừng tốn công submit trước đ
 - [ ] Test tay các mục còn mở trong `checklist.md`: Google Docs/Sheets, Photoshop,
       Lark Docs/Sheets, VS Code EditContext (watch item), nhóm cross-app.
       (Đã pass: Terminal/iTerm2, Word, Excel, Chrome/Safari, Discord, Lark, Slack,
-      VSCode, Spotlight, WhatsApp — mode chốt trong `typing-modes.plist`.)
+      VSCode, Spotlight, WhatsApp — mode chốt trong `typing-modes.yml`.)
 - [ ] Đo RSS sau 1h (< 20MB), cold start (< 300ms) — Instruments / `footprint`
       trên bản đã cài. (Engine latency đã đo: BENCHMARKS.md.)

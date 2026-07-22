@@ -1,0 +1,101 @@
+# typing-modes.yml — bảng cơ chế gõ MẶC ĐỊNH của VietTelex, theo từng app.
+#
+# Đóng góp rule mới: thêm một dòng `bundle-id: mode` rồi mở PR — không cần sửa
+# Swift. File này được bundle vào app lúc build và đính kèm mỗi GitHub release.
+# Format trùng với "Nhập…" trong Bảng cơ chế gõ, nên cũng có thể sửa bản copy
+# rồi import làm rule cá nhân.
+#
+# Các mode hợp lệ (raw value của AppMode):
+#   inPlace     — gõ trực tiếp, không gạch chân (app tôn trọng replacementRange;
+#                 CHỈ thêm khi đã test kỹ cả biên: đầu dòng, đầu message)
+#   tap         — CGEventTap backspace-retype (cần quyền Trợ năng; thiếu quyền
+#                 tự rơi về marked). Cho app hỏng in-place: terminal, Electron…
+#   marked      — ép marked text (đúng chữ tuyệt đối, có gạch chân)
+#   axDetect    — tự dò theo ô qua Accessibility: address bar → chọn-ghi-đè,
+#                 nội dung trang → gõ trực tiếp. Cho browser.
+#   selection   — chọn-ghi-đè (Shift+←) toàn app. Cho IDE có autocomplete popup.
+#   emptyReset  — chèn U+202F hủy suggestion rồi backspace-retype. Cho grid
+#                 app mà Shift+← chọn Ô KỀ thay vì ký tự (Excel).
+#   passthrough — IME coi như tắt (app remote/VM forward scancode thô).
+#
+# Lịch sử đáng nhớ (để khỏi lặp lại):
+# - Lark/Slack/Discord/VSCode (Electron): in-place hỏng Ở BIÊN TỪ (editor áp
+#   edit trễ) dù giữa dòng trông ổn — field-test 21/07/2026.
+# - Excel: KHÔNG chuyển sang marked — nó tự vẽ gạch chân đậm bất chấp style.
+# - Spotlight: inPlace sạch trên macOS 26 (race autocomplete lịch sử đã hết).
+# - WhatsApp: bản native mới tôn trọng replacementRange.
+
+# Terminals — lời hứa cốt lõi, hỏng in-place theo thiết kế
+com.apple.Terminal: tap
+com.googlecode.iterm2: tap
+
+# Electron/CEF — in-place hỏng ở biên từ
+com.larksuite.larkApp: tap
+com.tinyspeck.slackmacgap: tap
+com.hnc.Discord: tap
+com.microsoft.VSCode: tap
+com.anthropic.claudefordesktop: tap
+notion.id: tap
+md.obsidian: tap
+com.figma.Desktop: tap
+com.vng.zalo: tap
+# Đã kiểm chứng gõ trực tiếp tốt
+com.apple.Notes: inPlace
+com.apple.finder: inPlace
+com.apple.ActivityMonitor: inPlace
+com.apple.Spotlight: inPlace
+com.microsoft.Word: inPlace
+com.macromates.TextMate: inPlace
+net.whatsapp.WhatsApp: inPlace
+com.viettelex.inputmethod.telex: inPlace
+com.microsoft.Powerpoint: inPlace
+com.apple.iWork.Pages: inPlace
+com.apple.iWork.Numbers: inPlace
+com.apple.iWork.Keynote: inPlace
+com.apple.dt.Xcode: inPlace
+com.apple.MobileSMS: inPlace
+ru.keepcoder.Telegram: inPlace
+# Browsers — tự dò theo ô (address bar vs nội dung trang)
+com.apple.Safari: axDetect
+com.apple.SafariTechnologyPreview: axDetect
+com.google.Chrome: axDetect
+com.google.Chrome.canary: axDetect
+com.google.Chrome.beta: axDetect
+org.chromium.Chromium: axDetect
+com.brave.Browser: axDetect
+com.brave.Browser.beta: axDetect
+com.microsoft.edgemac: axDetect
+com.microsoft.edgemac.Beta: axDetect
+com.microsoft.Edge: axDetect
+com.vivaldi.Vivaldi: axDetect
+com.operasoftware.Opera: axDetect
+company.thebrowser.Browser: axDetect
+org.mozilla.firefox: axDetect
+com.jetbrains.intellij: selection
+com.jetbrains.intellij.ce: selection
+com.jetbrains.WebStorm: selection
+com.jetbrains.PyCharm: selection
+com.jetbrains.pycharm.ce: selection
+com.jetbrains.PhpStorm: selection
+com.jetbrains.CLion: selection
+com.jetbrains.goland: selection
+com.jetbrains.rider: selection
+com.jetbrains.rubymine: selection
+com.jetbrains.datagrip: selection
+com.google.android.studio: selection
+# Grid app: cell autocomplete đua backspace, Shift+← chọn ô kề
+com.microsoft.Excel: emptyReset
+# Remote desktop / VM / screen sharing — scancode thô sang máy khách
+com.microsoft.rdc.macos: passthrough
+com.microsoft.rdc.osx.beta: passthrough
+com.parallels.desktop.console: passthrough
+com.vmware.fusion: passthrough
+com.utmapp.UTM: passthrough
+com.apple.ScreenSharing: passthrough
+com.citrix.receiver.icaviewer.mac: passthrough
+com.teamviewer.TeamViewer: passthrough
+com.realvnc.vncviewer: passthrough
+com.nulana.remotixmac: passthrough
+com.carriez.rustdesk: passthrough
+com.philandro.anydesk: passthrough
+com.apple.ScreenContinuity: passthrough

@@ -20,10 +20,10 @@ final class GonhanhHardeningTests: XCTestCase {
     func testBundledPlistCarriesTheNewRules() {
         // the SHIPPED resource (not just the repo file) must contain the ids
         guard let url = Bundle(for: TelexInputController.self)
-                .url(forResource: "typing-modes", withExtension: "plist"),
+                .url(forResource: "typing-modes", withExtension: "yml"),
               let data = try? Data(contentsOf: url),
-              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
-        else { return XCTFail("bundled typing-modes.plist unreadable") }
+              let dict = ShortcutImporter.parse(data)
+        else { return XCTFail("bundled typing-modes.yml unreadable") }
         XCTAssertEqual(dict["com.carriez.rustdesk"], "passthrough")
         XCTAssertEqual(dict["com.philandro.anydesk"], "passthrough")
         XCTAssertEqual(dict["com.apple.ScreenContinuity"], "passthrough")

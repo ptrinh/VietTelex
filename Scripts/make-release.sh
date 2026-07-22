@@ -27,7 +27,7 @@ fi
 
 # The built-in rules file ships alongside the binaries: users can read it,
 # edit a copy, and import it via Bảng cơ chế gõ → "Nhập từ plist…".
-cp typing-modes.plist "$OUTDIR/typing-modes.plist"
+cp typing-modes.yml "$OUTDIR/typing-modes.yml"
 
 ZIP="$OUTDIR/VietTelex-$VER.app.zip"
 echo "→ zipping stapled app → $ZIP"
@@ -49,7 +49,7 @@ echo "app.zip sha256 (for the Homebrew cask):"
 echo "  $SHA"
 echo
 echo "Next — publish (needs your OK; these push to the public release + tap):"
-echo "  gh release upload v$VER \"$ZIP\" \"$PKG\" \"$OUTDIR/typing-modes.plist\""
+echo "  gh release upload v$VER \"$ZIP\" \"$PKG\" \"$OUTDIR/typing-modes.yml\""
 echo "  # then in ptrinh/homebrew-viettelex bump Casks/viettelex.rb:"
 echo "  #   version \"$VER\""
 echo "  #   sha256 \"$SHA\""

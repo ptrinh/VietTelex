@@ -27,11 +27,11 @@ TelexCore/          Engine Telex + SyllableValidator (Swift package thuần, tes
 App/Sources/        IMKit controller, CGEventTap (tap-mode), AppState, Settings UI
 AppTests/           Test app target: routing per-app, import plist, Updater, DebugLog
 Scripts/            notarize-install, dev-install, make-release, đo latency, stress test
-typing-modes.plist  Rule cơ chế gõ mặc định theo app (bundle vào app + đính release)
+typing-modes.yml  Rule cơ chế gõ mặc định theo app (bundle vào app + đính release)
 ```
 
 **Cách đóng góp dễ nhất:** app nào gõ sai, thêm một cặp
-`<key>bundle-id</key><string>mode</string>` vào `typing-modes.plist` (mode hợp lệ
+`bundle-id: mode` vào `typing-modes.yml` (mode hợp lệ
 ghi trong header file) rồi mở PR — không cần sửa Swift.
 
 ## Tài liệu
@@ -69,7 +69,7 @@ Quy ước khi sửa engine:
 1. Test tay theo `checklist.md`.
 2. `Scripts/notarize-install.sh` → build + notarize + staple app, smoke test trên máy thật.
    (Sửa nhỏ lặp lại trong ngày: `Scripts/dev-install.sh` cài local giữ quyền AX + settings.)
-3. `Scripts/make-release.sh` → `.app.zip` + `.pkg` + `typing-modes.plist`.
+3. `Scripts/make-release.sh` → `.app.zip` + `.pkg` + `typing-modes.yml`.
 4. `gh release create/upload`, bump Homebrew cask (`ptrinh/homebrew-viettelex`).
 5. Khi bản đó đủ tin cậy: promote lên kênh stable — bump `docs/stable.json`
    (auto-update trong app chỉ theo kênh này). Chi tiết: [`BUILD.md`](BUILD.md).

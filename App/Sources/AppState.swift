@@ -378,9 +378,9 @@ final class AppState: @unchecked Sendable {
         return w != .no && Accessibility.isTrusted
     }
 
-    // MARK: - Built-in typing-mode rules (typing-modes.plist)
+    // MARK: - Built-in typing-mode rules (typing-modes.yml)
     //
-    // The per-app DEFAULTS ship as data, not code: typing-modes.plist at the repo
+    // The per-app DEFAULTS ship as data, not code: typing-modes.yml at the repo
     // root is bundled as a resource and attached to every GitHub release —
     // contributors add rules without touching Swift, and its String→String format
     // is exactly what Bảng cơ chế gõ's "Nhập từ plist…" imports, so users can also
@@ -390,19 +390,19 @@ final class AppState: @unchecked Sendable {
     // into the plist header where contributors will actually see it.
     // Values are AppMode raw values; unknown values are logged and skipped.
     private static let builtInRules: [String: AppMode] = {
-        guard let url = Bundle.main.url(forResource: "typing-modes", withExtension: "plist"),
+        guard let url = Bundle.main.url(forResource: "typing-modes", withExtension: "yml"),
               let data = try? Data(contentsOf: url),
-              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
+              let dict = ShortcutImporter.parse(data)
         else {
             // Missing/corrupt resource: fall back to the CORE PROMISE alone —
             // Vietnamese-in-terminal must survive anything.
-            Signposts.log.fault("typing-modes.plist missing/corrupt — terminal-only fallback")
+            Signposts.log.fault("typing-modes.yml missing/corrupt — terminal-only fallback")
             return ["com.apple.Terminal": .tap, "com.googlecode.iterm2": .tap]
         }
         var out: [String: AppMode] = [:]
         for (id, raw) in dict {
             if let m = AppMode(rawValue: raw), m != .auto { out[id] = m }
-            else { Signposts.log.fault("typing-modes.plist: unknown mode for \(id, privacy: .public)") }
+            else { Signposts.log.fault("typing-modes.yml: unknown mode for \(id, privacy: .public)") }
         }
         return out
     }()
