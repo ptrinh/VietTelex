@@ -478,6 +478,18 @@ enum SyntheticKeyboard {
         event.cgEvent.map(isSynthetic) ?? false
     }
 
+    /// Health-probe key: keycode 127 (unassigned on Apple keyboards). The watchdog
+    /// posts one every tick; the tap callback swallows it and records the arrival.
+    /// A probe that never comes back means posts are being DROPPED (Accessibility
+    /// grant REMOVED — AXIsProcessTrusted lies true in that state) or the tap is
+    /// dead/wedged. No breaker or in-flight bookkeeping: probes are out-of-band.
+    static let probeKeycode: Int64 = 127
+    static func postProbe() {
+        guard let src = source else { return }
+        guard let ev = CGEvent(keyboardEventSource: src, virtualKey: CGKeyCode(probeKeycode), keyDown: true) else { return }
+        ev.post(tap: .cgSessionEventTap)
+    }
+
     /// IMKit-path recognizer: match ONLY on the private source's `magic` userData,
     /// never the posting pid. Chromium/Electron apps (Slack, Lark) deliver REAL
     /// keydowns to the input method with `eventSourceUnixProcessID == getpid()`, so
@@ -784,6 +796,17 @@ final class TerminalTapController {
     /// runs on MAIN, while the callback's rare tapEnable branches (tripped / re-enable
     /// after timeout) and emergencyStop run on the TAP thread.
     private let stateLock = NSLock()
+
+    // Grant-removal ping-pong detector (tap thread confined).
+    private var lastDisableNs: UInt64 = 0
+    private var disableBurst = 0
+
+    // Functional health probe (stateLock): watchdog bumps probeSentTick and posts;
+    // the callback copies it into probeSeenTick on arrival. Sent != seen for two
+    // consecutive watchdog ticks ⇒ posts are dropped or the tap is wedged.
+    private var probeSentTick: UInt64 = 0
+    private var probeSeenTick: UInt64 = 0
+    private var probeMisses = 0
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     /// The dedicated thread's run loop, captured at thread start; nil while stopped.
@@ -827,6 +850,32 @@ final class TerminalTapController {
             // Without this a dead tap only healed on the next activateServer
             // (app switch) — typing in the SAME app stayed broken up to that point.
             self.ensureRunning()
+
+            // FUNCTIONAL probe — the only signal that survives a LYING
+            // AXIsProcessTrusted (grant REMOVED via −, field bug 2026-07-22):
+            // post a keycode-127 marker at ourselves; the callback swallows it
+            // and acks. Two consecutive unanswered probes ⇒ posts are being
+            // dropped (revoked) or the callback is wedged ⇒ unconditional
+            // teardown, keys flow natively again.
+            let (sent, seen): (UInt64, UInt64) = self.stateLock.withLock {
+                (self.probeSentTick, self.probeSeenTick)
+            }
+            if sent != seen {
+                self.probeMisses += 1
+                if self.probeMisses >= 2 {
+                    Signposts.log.fault("health probe unanswered ×\(self.probeMisses) — posts dropped or tap wedged; tearing down")
+                    DebugLog.log("health probe missed ×\(self.probeMisses) → teardown")
+                    self.probeMisses = 0
+                    self.trustMayHaveChanged()
+                    return
+                }
+            } else {
+                self.probeMisses = 0
+            }
+            if let tap = self.stateLock.withLock({ self.tap }), CGEvent.tapIsEnabled(tap: tap) {
+                self.stateLock.withLock { self.probeSentTick &+= 1 }
+                SyntheticKeyboard.postProbe()
+            }
         }
         t.tolerance = 1
         RunLoop.main.add(t, forMode: .common)
@@ -1003,6 +1052,15 @@ final class TerminalTapController {
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         let pass = Unmanaged.passUnretained(event)
 
+        // Watchdog health probe (our own keycode-127 keyDown): swallow it before
+        // ANY other logic — no app ever sees it, no counter counts it.
+        if type == .keyDown,
+           event.getIntegerValueField(.keyboardEventKeycode) == SyntheticKeyboard.probeKeycode,
+           SyntheticKeyboard.isSynthetic(event) {
+            stateLock.withLock { probeSeenTick = probeSentTick }
+            return nil
+        }
+
         // Circuit breaker tripped: synthetic events stopped being recognized as ours
         // and were cascading (the dead-keyboard hang). DISABLE the tap immediately so
         // every key — real and any still-queued synthetic — passes through natively;
@@ -1025,6 +1083,21 @@ final class TerminalTapController {
         // Direct AXIsProcessTrusted() call, NOT the TTL cache — the cache can say
         // "trusted" for up to 2s after the toggle, which re-arms the fight.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            // GRANT-REMOVAL guard (field bug 2026-07-22): when the user REMOVES the
+            // Accessibility entry (−, not a toggle), AXIsProcessTrusted() keeps
+            // returning a stale TRUE — so the old code re-enabled, the OS disabled
+            // again, and the ping-pong wedged ALL input. Three disables inside 2s
+            // can only be that fight: tear down regardless of what trust claims.
+            let now = DispatchTime.now().uptimeNanoseconds
+            if now &- lastDisableNs < 2_000_000_000 { disableBurst += 1 } else { disableBurst = 1 }
+            lastDisableNs = now
+            if disableBurst >= 3 {
+                engine.reset()
+                Signposts.log.fault("tap disable ping-pong (\(self.disableBurst)x/2s) — grant likely REMOVED, tearing down")
+                DebugLog.log("tap disable ping-pong → teardown (grant removed?)")
+                DispatchQueue.main.async { TerminalTapController.shared.trustMayHaveChanged() }
+                return pass
+            }
             if AXIsProcessTrusted() {
                 if let tap = stateLock.withLock({ tap }) { CGEvent.tapEnable(tap: tap, enable: true) }
             } else {
