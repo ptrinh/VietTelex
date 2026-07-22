@@ -308,33 +308,17 @@ public struct TelexEngine {
     }
 
     /// Boundary restore decision, shared by both commit paths.
-    /// Order matters: the English-collision table wins over everything (even a
-    /// cancel — "off"/"OFF" restore); then a cancel keeps the composed text when
-    /// it is valid Vietnamese OR an all-caps acronym escape (DDDR → DDR);
-    /// otherwise the standard validity/exception rules decide.
+    /// Order matters: the English-collision table wins over EVERYTHING, including
+    /// a cancel — that is what restores "off"/"office"/"class" (their raw doubles
+    /// are real English). After that, a deliberate double-key cancel ALWAYS keeps
+    /// the composed text: the user pressed the extra key to undo an unwanted
+    /// diacritic and may keep typing ("Deffault" keys → Default, field report
+    /// 2026-07-22 — an earlier validity-based rule here restored the raw double-f).
+    /// Only then do the standard validity/exception rules decide.
     private mutating func shouldRestoreRaw() -> Bool {
         if rawIsEnglishCollision() { return true }
-        let composedValid = composedIsValidSyllable()
-        // All-caps escape is for CONSONANT-ONLY acronyms (DDDR → DDR): a vowel in
-        // the composed text means a word, not an acronym — "OFF" must not keep "OF".
-        let acronymEscape = rawIsAllUppercase() && !renderHasVowel()
-        if markCancelled, composedValid || acronymEscape { return false }
-        return forceRestoreUpperTone || rawIsEnglishException() || !composedValid
-    }
-
-    @inline(__always)
-    private func renderHasVowel() -> Bool {
-        for k in 0..<pCount where isVowelAscii(renderLetters[k].base) { return true }
-        return false
-    }
-
-    @inline(__always)
-    private func rawIsAllUppercase() -> Bool {
-        guard rawCount >= 2 else { return false }
-        for i in 0..<rawCount where raw[i] < UInt8(ascii: "A") || raw[i] > UInt8(ascii: "Z") {
-            return false
-        }
-        return true
+        if markCancelled { return false }
+        return forceRestoreUpperTone || rawIsEnglishException() || !composedIsValidSyllable()
     }
 
     /// Final text to commit at a word boundary, with auto-restore applied

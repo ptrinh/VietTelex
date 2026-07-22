@@ -89,23 +89,25 @@ final class BoundaryTests: XCTestCase {
         }
     }
 
-    // Cancel contract (2026-07-21, gonhanh learnings): a cancelled word keeps the
-    // composed text ONLY when it is valid Vietnamese; otherwise the RAW keys come
-    // back — the user gets exactly what they pressed ("off" stays off, "ass" stays
-    // ass), instead of the old collapse that silently ate a letter ("iss"→is).
-    func testCancelledWordsFollowValidityRule() {
-        // invalid after cancel → raw restore in BOTH paths
-        for keys in ["iss", "ass", "messs", "off", "class"] {
+    // Cancel contract (final, 2026-07-22): the English table wins over everything
+    // ("off"/"ass"/"class" restore their real double letters); any other cancel
+    // keeps the COMPOSED text — the extra key was an undo gesture and typing may
+    // continue after it ("Deffault" keys → Default).
+    func testCancelledWordsFollowDictThenComposed() {
+        // real English words → raw restore in BOTH paths
+        for keys in ["ass", "off", "class"] {
             var b = feed(keys)
             if case .replace(_, let insert) = b.commitBoundary(autoRestore: true) {
                 XCTAssertEqual(insert, keys, "\(keys) should restore to raw")
             } else { XCTFail("\(keys) should restore") }
             XCTAssertEqual(commitText(keys, restore: true), keys)
         }
-        // valid after cancel (z cleared the tone, "a" is fine) → keep composed
-        var b = feed("asz")
-        XCTAssertEqual(b.commitBoundary(autoRestore: true), .none, "asz keeps composed")
-        XCTAssertEqual(commitText("asz", restore: true), "a")
+        // non-English cancels → composed survives in BOTH paths
+        for (keys, kept) in [("iss", "is"), ("messs", "mess"), ("asz", "a")] {
+            var b = feed(keys)
+            XCTAssertEqual(b.commitBoundary(autoRestore: true), .none, "\(keys) keeps composed")
+            XCTAssertEqual(commitText(keys, restore: true), kept)
+        }
     }
 
     // Empty engine: nothing to commit.

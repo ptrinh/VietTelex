@@ -53,6 +53,13 @@ let junk: Set<String> = ["aa", "aaa", "ar", "ee", "es", "las", "los", "der",
     "wi", "www", "est", "ie", "il", "ny", "ok"]
 let twoLetterWhitelist: Set<String> = ["of", "if", "is", "us", "or"]
 
+/// Từ tiếng Anh phổ biến NGOÀI top-maxWords vẫn đáng cover (chủ yếu lớp
+/// double-letter bị cancel ăn mất một chữ). Đuôi 4000-10000 của corpus là
+/// bãi mìn từ Việt (cos=có, gif=gì, mas=má, cow=cơ, zoo=zô…) nên KHÔNG quét
+/// tự động — chỉ nhận bổ sung tay, và vẫn đi qua đủ engine-check + protect.
+let extraEnglish = ["mess", "boss", "kiss", "chess", "bless", "gross",
+                    "grass", "brass", "cliff", "moss", "hiss", "fuss"]
+
 let args = CommandLine.arguments
 guard args.count >= 4,
       let content = try? String(contentsOfFile: args[1], encoding: .utf8),
@@ -69,21 +76,28 @@ func commitDefault(_ word: String) -> String {
     return e.commitText(autoRestore: true)
 }
 
-var kept: [String] = []
-var excluded: [(String, String)] = []
+nonisolated(unsafe) var kept: [String] = []
+nonisolated(unsafe) var excluded: [(String, String)] = []
+nonisolated(unsafe) var seen = Set<String>()
+@MainActor func consider(_ w: String) {
+    guard !seen.contains(w) else { return }
+    seen.insert(w)
+    let out = commitDefault(w)
+    guard out != w else { return }
+    if junk.contains(w) { return }
+    if w.count == 2, !twoLetterWhitelist.contains(w) { return }
+    if protected.contains(out) { excluded.append((w, out)); return }
+    kept.append(w)
+}
 var n = 0
 for line in content.split(separator: "\n") {
     if n >= maxWords { break }
     let w = line.trimmingCharacters(in: .whitespaces).lowercased()
     guard w.count >= 2, w.count <= 12, w.allSatisfy({ $0.isASCII && $0.isLetter }) else { continue }
     n += 1
-    let out = commitDefault(w)
-    guard out != w else { continue }
-    if junk.contains(w) { continue }
-    if w.count == 2, !twoLetterWhitelist.contains(w) { continue }
-    if protected.contains(out) { excluded.append((w, out)); continue }
-    kept.append(w)
+    consider(w)
 }
+for w in extraEnglish { consider(w) }
 kept.sort()
 
 var src = """
