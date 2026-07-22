@@ -48,16 +48,23 @@
 
 /* On-screen keyboard */
 .kb { max-width: 620px; margin: 16px auto 0; user-select: none; -webkit-user-select: none; position: relative; }
-/* Translucent hands resting on the home row (pointer-events off so keys stay tappable). */
-.kb-hands { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
-.kb-hands .hands-svg { width: 100%; height: 100%; display: block; }
-.kb-hands .palm { fill: #e6b485; opacity: .2; }
-.kb-hands .finger { fill: none; stroke: #e6b485; stroke-width: 30; stroke-linecap: round; opacity: .24; transition: stroke .15s, opacity .15s; }
-.kb-hands .finger.thumb { stroke-width: 26; }
-.kb-hands .finger.act { stroke: var(--gold); opacity: .78; }
+/* Translucent hands: fingertips on the home row, palms hanging below the space
+   bar (svg is taller than the keyboard and overflows downward). pointer-events
+   off so keys stay tappable. */
+.kb-hands { position: absolute; top: 0; left: 0; right: 0; overflow: visible; pointer-events: none; z-index: 3; }
+.kb-hands .hands-svg { width: 100%; height: auto; display: block; }
+/* Group-opacity composites the whole hand once, so overlapping fingers+palm
+   read as one silhouette (no darker seams where they meet). */
+.kb-hands .hand-base { opacity: .3; }
+.kb-hands .hand-base .palm, .kb-hands .hand-base .finger { fill: #e0a878; }
+/* Highlight layer on top: only the active finger's tip lights up gold. */
+.kb-hands .hand-hi .fingtip { fill: var(--gold); opacity: 0; transition: opacity .15s; }
+.kb-hands .hand-hi .fingtip.act { opacity: .82; }
 .kb.no-hands .kb-hands { display: none; }
 .kb.no-kb .row { visibility: hidden; }
-.kb-toggles { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+/* Reserve room for the palms hanging below the keyboard; collapse it when hands are off. */
+.kb-toggles { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 84px; }
+.kb.no-hands + .kb-toggles { margin-top: 16px; }
 .kb .row { display: flex; gap: 5px; justify-content: center; margin-bottom: 5px; }
 .kb .key { flex: 1; max-width: 52px; height: 46px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-family: var(--mono); font-size: .95rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; position: relative; }
 .kb .key.wide { max-width: 86px; flex: 1.6; font-size: .7rem; }

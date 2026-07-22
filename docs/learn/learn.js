@@ -361,24 +361,37 @@ function fingerName(ch) {
   return cls ? T().finger[cls] : '';
 }
 
-// Translucent two-hands overlay resting on the home row. Fingertips sit over
-// a s d f / j k l ; (viewBox x = home-key centres); the finger that owns the
-// next key lights up. Illustrative, not pixel-aligned to every key.
-var HANDS_SVG =
-  '<svg class="hands-svg" viewBox="0 0 565 200" preserveAspectRatio="xMidYMax meet" aria-hidden="true">' +
-    '<rect class="palm" x="52" y="138" width="128" height="58" rx="28"/>' +
-    '<rect class="palm" x="385" y="138" width="128" height="58" rx="28"/>' +
-    '<path class="finger" data-f="f1" d="M26 82 L78 150"/>' +
-    '<path class="finger" data-f="f2" d="M83 64 L98 150"/>' +
-    '<path class="finger" data-f="f3" d="M140 56 L122 150"/>' +
-    '<path class="finger" data-f="f4" d="M197 66 L152 150"/>' +
-    '<path class="finger thumb" data-f="th" d="M205 148 L262 184"/>' +
-    '<path class="finger" data-f="f5" d="M368 66 L413 150"/>' +
-    '<path class="finger" data-f="f6" d="M425 56 L443 150"/>' +
-    '<path class="finger" data-f="f7" d="M482 64 L467 150"/>' +
-    '<path class="finger" data-f="f8" d="M539 82 L487 150"/>' +
-    '<path class="finger thumb" data-f="th" d="M360 148 L303 184"/>' +
-  '</svg>';
+// Translucent two-hands overlay. Fingertips sit on the home row (viewBox x =
+// home-key centres a s d f / j k l ;); palms hang below the space bar. Fingers
+// root INTO the palm and a group-opacity composite merges the overlaps into one
+// silhouette (no seams). A separate highlight layer (same finger geometry) lights
+// the finger that owns the next key. Illustrative, not pixel-aligned per key.
+var HANDS_SVG = (function () {
+  var BOT = 216;                 // where fingers root into the palm
+  // [dataF, leftEdgeX, tipY] — width 30, so centre = x+15 aligns to a key centre.
+  var FING = [
+    ['f1', 11, 94], ['f2', 68, 76], ['f3', 125, 66], ['f4', 182, 88],
+    ['f5', 353, 88], ['f6', 410, 66], ['f7', 467, 76], ['f8', 524, 94]
+  ];
+  function finger(cls, e) {
+    return '<rect class="' + cls + '" data-f="' + e[0] + '" x="' + e[1] + '" y="' + e[2] +
+           '" width="30" height="' + (BOT - e[2]) + '" rx="15"/>';
+  }
+  var THUMBS = [
+    '<rect class="{C}" data-f="th" x="204" y="196" width="30" height="72" rx="15" transform="rotate(-40 219 232)"/>',
+    '<rect class="{C}" data-f="th" x="331" y="196" width="30" height="72" rx="15" transform="rotate(40 346 232)"/>'
+  ];
+  var palms = '<rect class="palm" x="0" y="208" width="240" height="64" rx="30"/>' +
+              '<rect class="palm" x="325" y="208" width="240" height="64" rx="30"/>';
+  var base = '<g class="hand-base">' + palms +
+             FING.map(function (e) { return finger('finger', e); }).join('') +
+             THUMBS.map(function (t) { return t.replace('{C}', 'finger'); }).join('') + '</g>';
+  var hi = '<g class="hand-hi">' +
+           FING.map(function (e) { return finger('fingtip', e); }).join('') +
+           THUMBS.map(function (t) { return t.replace('{C}', 'fingtip'); }).join('') + '</g>';
+  return '<svg class="hands-svg" viewBox="0 0 565 276" preserveAspectRatio="xMidYMin meet" aria-hidden="true">' +
+         base + hi + '</svg>';
+})();
 
 function buildKeyboard(container, onKey) {
   container.innerHTML = '';
@@ -388,7 +401,7 @@ function buildKeyboard(container, onKey) {
   hands.className = 'kb-hands';
   hands.innerHTML = HANDS_SVG;
   container.appendChild(hands);
-  var fingerEls = hands.querySelectorAll('.finger');
+  var fingerEls = hands.querySelectorAll('.fingtip');
   KB_ROWS.forEach(function (row) {
     var r = document.createElement('div'); r.className = 'row';
     row.forEach(function (k) {
