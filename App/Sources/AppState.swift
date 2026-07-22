@@ -620,6 +620,20 @@ func VTLocalized(_ key: String) -> String {
 /// and the GõNhanh/EVKey text style ("key:value", ";" or "#" comments). Returns
 /// nil when nothing parseable is found.
 enum ShortcutImporter {
+    /// Flat-YAML export — human-readable, round-trips through parse(), and
+    /// other IMEs' users can eyeball-edit it. Values with YAML-special leading
+    /// chars or wrapping spaces get double quotes.
+    static func exportYAML(_ shortcuts: [String: String]) -> String {
+        var out = "# VietTelex — bảng gõ tắt\n"
+        for key in shortcuts.keys.sorted() {
+            let value = shortcuts[key]!
+            let needsQuotes = value.hasPrefix(" ") || value.hasSuffix(" ")
+                || value.hasPrefix("'") || value.hasPrefix("\"") || value.hasPrefix("#")
+            out += needsQuotes ? "\(key): \"\(value)\"\n" : "\(key): \(value)\n"
+        }
+        return out
+    }
+
     static func parse(_ data: Data) -> [String: String]? {
         // 1. plist (our own export format; also covers generic XML dictionaries)
         if let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String],
