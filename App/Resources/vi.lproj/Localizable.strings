@@ -148,3 +148,19 @@
 "Stale permission body" = "macOS đang liệt kê VietTelex là được phép, nhưng từ chối cấp event tap — thường xảy ra khi bản cập nhật được ký lại nằm dưới quyền cũ.\n\nCách sửa (một lần):\n1. Mở System Settings → Privacy & Security → Accessibility\n2. Chọn VietTelex, bấm nút − để XÓA khỏi danh sách\n3. Bấm + và thêm lại VietTelex (trong ~/Library/Input Methods)\n4. Chuyển bàn phím qua ABC rồi quay lại VietTelex";
 
 "Open Accessibility Settings" = "Mở cài đặt Trợ năng";
+
+"Update now" = "Cập nhật ngay";
+
+"Update now body" = "Bấm Cập nhật ngay: tải bản mới, kiểm tra chữ ký, và thay thế tự động — không cần mật khẩu. Bàn phím sẽ khởi động lại sau khi xong.";
+
+"Updated to %@" = "Đã cập nhật lên %@";
+
+"Update done body" = "Bộ gõ sẽ khởi động lại ngay. Nếu app nào đang mở không gõ được, chuyển bàn phím qua ABC rồi quay lại VietTelex.";
+
+"Update failed" = "Cập nhật thất bại";
+
+"Update failed body" = "Lỗi: %@\n\nBạn có thể tải bản cài từ trang releases.";
+
+"Restart input method" = "Khởi động lại bộ gõ";
+
+"Open releases page" = "Mở trang releases";
