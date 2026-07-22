@@ -147,7 +147,7 @@ button{font-family:inherit}
   <div style="position:absolute;bottom:24px;left:24px;z-index:8;background:rgba(255,255,255,.88);border-radius:20px;padding:10px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(70,120,180,.2);flex-wrap:wrap">
     <span style="font-size:26px">🪁</span>
     <div>
-      <div style="font-size:13px;font-weight:800;letter-spacing:.06em;color:#5a7a9a">ĐỘ CAO CỦA DIỀU — <span id="pct">30</span>%</div>
+      <div style="font-size:13px;font-weight:800;letter-spacing:.06em;color:#5a7a9a"><span id="tAlt">ĐỘ CAO CỦA DIỀU</span> — <span id="pct">30</span>%</div>
       <div style="width:200px;height:10px;background:#e3eef7;border-radius:6px;margin-top:5px;overflow:hidden"><div id="bar" style="width:30%;height:100%;border-radius:6px;background:linear-gradient(90deg,#ffb037,#ff6b57)"></div></div>
     </div>
     <button id="lvlBtn" class="hudpill" style="color:#7a4fd0;background:#efe8fd;border:none;cursor:pointer;font-family:inherit" title="Chọn level">🎮 Level <span id="lvl">1</span> ▾</button>
@@ -156,16 +156,16 @@ button{font-family:inherit}
     <div class="hudpill" style="color:#3a6ea8;background:#e3f0fd">⏱ <span id="time">1:00</span></div>
   </div>
   <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;display:flex;gap:10px;align-items:center">
-    <div style="background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!</div>
+    <div id="tHint" style="background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!</div>
     <button id="skipBtn" style="background:linear-gradient(135deg,#4cb7ff,#3a6ea8);color:#fff;border:none;border-radius:16px;padding:9px 18px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.3);font-family:inherit;white-space:nowrap">⏭ Mây khác (Space)</button>
   </div>
-  <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)">← Lớp học</a>
+  <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)" id="tBack">← Lớp học</a>
   <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
   <button id="voiceBtn" title="Đọc từ khi đổi mây" style="position:absolute;top:16px;right:64px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
 
   <div id="picker" style="display:none;position:absolute;inset:0;z-index:10;background:rgba(225,242,255,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:28px;padding:30px 36px;text-align:center;box-shadow:0 24px 60px rgba(60,100,160,.3);max-width:86vw;max-height:80vh;overflow:auto">
-      <div style="font-size:26px;font-weight:800;color:#3a5a7a">Chọn level 🪁</div>
+      <div id="tPickTitle" style="font-size:26px;font-weight:800;color:#3a5a7a">Chọn level 🪁</div>
       <div id="pickerGrid" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px;max-width:520px"></div>
       <button id="pickerClose" style="margin-top:20px;font-size:16px;font-weight:800;color:#4a6b8a;background:#e3f0fd;border:none;border-radius:12px;padding:10px 26px;cursor:pointer">Đóng</button>
     </div>
@@ -334,6 +334,221 @@ function activeCloud() {
   return null;
 }
 var DEBUG = location.hash === '#debug';
+
+// ── i18n: theo ngôn ngữ đã chọn ở Lessons (vtlearn.lang) ────────────────────
+var GSTR = {
+"vi": {
+"altitude": "ĐỘ CAO CỦA DIỀU",
+"hint": "⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!",
+"skip": "⏭ Mây khác (Space)",
+"back": "← Lớp học",
+"voiceTitle": "Đọc từ khi đổi mây",
+"pickTitle": "Chọn level 🪁",
+"close": "Đóng",
+"titleCrash": "Level {n} — Ôi, diều rơi mất rồi!",
+"titleStars": "Level {n}: bạn được {s} sao!",
+"titleNoStar": "Level {n}: chưa được sao nào",
+"msgCrash": "Đừng buồn, thử thả diều lại nhé!",
+"msgSky": "Diều bay tít lên chín tầng mây — thắng luôn level này!",
+"msg3": "Tuyệt vời! Diều bay cao tít trên mây!",
+"msgSome": "Hay lắm! Thử đưa diều lên cao hơn nữa nhé!",
+"msgNone": "Gõ đúng hơn 30% số mây để được sao nhé!",
+"statPopped": "Mây đã phá",
+"statXp": "+{x} XP cho Level {n}",
+"btnRetry": "Chơi lại 🪁",
+"btnPick": "Chọn level 🎮",
+"btnNext": "Level tiếp theo ➜",
+"imeToast": "⚠️ Tắt bộ gõ tiếng Việt của máy (chuyển sang ABC) để chơi nhé!",
+"loadFail": "Không tải được từ vựng"
+},
+"en": {
+"altitude": "KITE ALTITUDE",
+"hint": "⌨️ Type the word in the underlined cloud to pop it — turn OFF your Vietnamese IME!",
+"skip": "⏭ Next cloud (Space)",
+"back": "← Classroom",
+"voiceTitle": "Speak the word on cloud change",
+"pickTitle": "Pick a level 🪁",
+"close": "Close",
+"titleCrash": "Level {n} — Oh no, the kite fell!",
+"titleStars": "Level {n}: you earned {s} stars!",
+"titleNoStar": "Level {n}: no stars yet",
+"msgCrash": "Don't worry — fly it again!",
+"msgSky": "The kite soared above the clouds — instant win!",
+"msg3": "Amazing! The kite is way up high!",
+"msgSome": "Nice! Try to fly it even higher!",
+"msgNone": "Type more than 30% of the clouds to earn a star!",
+"statPopped": "Clouds popped",
+"statXp": "+{x} XP for Level {n}",
+"btnRetry": "Play again 🪁",
+"btnPick": "Pick level 🎮",
+"btnNext": "Next level ➜",
+"imeToast": "⚠️ Turn off your system Vietnamese IME (switch to ABC) to play!",
+"loadFail": "Could not load the words"
+},
+"fr": {
+"altitude": "ALTITUDE DU CERF-VOLANT",
+"hint": "⌨️ Tape le mot dans le nuage souligné pour le faire éclater — désactive la saisie vietnamienne du système !",
+"skip": "⏭ Autre nuage (Espace)",
+"back": "← La classe",
+"voiceTitle": "Dire le mot quand le nuage change",
+"pickTitle": "Choisis un niveau 🪁",
+"close": "Fermer",
+"titleCrash": "Niveau {n} — Oh non, le cerf-volant est tombé !",
+"titleStars": "Niveau {n} : tu as gagné {s} étoiles !",
+"titleNoStar": "Niveau {n} : pas encore d'étoile",
+"msgCrash": "Pas grave, refais-le voler !",
+"msgSky": "Le cerf-volant s'est envolé au-dessus des nuages — gagné d'un coup !",
+"msg3": "Génial ! Le cerf-volant vole tout là-haut !",
+"msgSome": "Bravo ! Essaie de le faire voler encore plus haut !",
+"msgNone": "Tape plus de 30 % des nuages pour gagner une étoile !",
+"statPopped": "Nuages éclatés",
+"statXp": "+{x} XP pour le Niveau {n}",
+"btnRetry": "Rejouer 🪁",
+"btnPick": "Choisir un niveau 🎮",
+"btnNext": "Niveau suivant ➜",
+"imeToast": "⚠️ Désactive la saisie vietnamienne de ton système (passe en ABC) pour jouer !",
+"loadFail": "Impossible de charger les mots"
+},
+"de": {
+"altitude": "FLUGHÖHE DES DRACHENS",
+"hint": "⌨️ Tippe das Wort in der unterstrichenen Wolke, um sie platzen zu lassen — schalte die vietnamesische Eingabe deines Systems AUS!",
+"skip": "⏭ Andere Wolke (Leertaste)",
+"back": "← Klassenzimmer",
+"voiceTitle": "Wort vorlesen beim Wolkenwechsel",
+"pickTitle": "Wähle ein Level 🪁",
+"close": "Schließen",
+"titleCrash": "Level {n} — Oje, der Drachen ist abgestürzt!",
+"titleStars": "Level {n}: Du hast {s} Sterne bekommen!",
+"titleNoStar": "Level {n}: noch keine Sterne",
+"msgCrash": "Kein Problem — lass ihn nochmal fliegen!",
+"msgSky": "Der Drachen ist über die Wolken gestiegen — sofort gewonnen!",
+"msg3": "Fantastisch! Der Drachen fliegt ganz hoch oben!",
+"msgSome": "Super! Versuch, ihn noch höher fliegen zu lassen!",
+"msgNone": "Tippe mehr als 30 % der Wolken, um einen Stern zu bekommen!",
+"statPopped": "Geplatzte Wolken",
+"statXp": "+{x} XP für Level {n}",
+"btnRetry": "Nochmal spielen 🪁",
+"btnPick": "Level wählen 🎮",
+"btnNext": "Nächstes Level ➜",
+"imeToast": "⚠️ Schalte die vietnamesische Eingabe deines Systems aus (wechsle zu ABC), um zu spielen!",
+"loadFail": "Wörter konnten nicht geladen werden"
+},
+"ko": {
+"altitude": "연 높이",
+"hint": "⌨️ 밑줄 친 구름 속 단어를 입력해서 터뜨려요 — 베트남어 입력기는 꺼 주세요!",
+"skip": "⏭ 다른 구름 (스페이스)",
+"back": "← 교실",
+"voiceTitle": "구름이 바뀔 때 단어 읽어 주기",
+"pickTitle": "레벨 고르기 🪁",
+"close": "닫기",
+"titleCrash": "레벨 {n} — 어머, 연이 떨어졌어요!",
+"titleStars": "레벨 {n}: 별 {s}개를 받았어요!",
+"titleNoStar": "레벨 {n}: 아직 별이 없어요",
+"msgCrash": "괜찮아요, 다시 연을 날려 봐요!",
+"msgSky": "연이 구름 위로 높이 날아올랐어요 — 이 레벨 통과예요!",
+"msg3": "훌륭해요! 연이 구름 위로 높이 날아요!",
+"msgSome": "잘했어요! 연을 조금 더 높이 날려 봐요!",
+"msgNone": "구름의 30% 넘게 맞혀야 별을 받아요!",
+"statPopped": "터뜨린 구름",
+"statXp": "레벨 {n} +{x} XP",
+"btnRetry": "다시 하기 🪁",
+"btnPick": "레벨 고르기 🎮",
+"btnNext": "다음 레벨 ➜",
+"imeToast": "⚠️ 시스템의 베트남어 입력기를 끄고 (ABC로 전환) 놀아 봐요!",
+"loadFail": "단어를 불러오지 못했어요"
+},
+"ja": {
+"altitude": "たこの たかさ",
+"hint": "⌨️ 下線がついた雲の中の単語を入力してポン！と割ってね — ベトナム語IMEはオフにしてね！",
+"skip": "⏭ べつの雲 (スペース)",
+"back": "← きょうしつ",
+"voiceTitle": "雲がかわったら単語をよみあげる",
+"pickTitle": "レベルをえらぶ 🪁",
+"close": "とじる",
+"titleCrash": "レベル {n} — ああ、たこが おちちゃった！",
+"titleStars": "レベル {n}：ほしを {s}こ もらえたよ！",
+"titleNoStar": "レベル {n}：まだ ほしが ないよ",
+"msgCrash": "だいじょうぶ、もういちど たこを あげてみよう！",
+"msgSky": "たこが雲のうえまで たかく とんだよ — このレベル クリア！",
+"msg3": "すごい！たこが雲のうえまで たかく とんでるよ！",
+"msgSome": "いいね！たこを もっと たかく あげてみよう！",
+"msgNone": "雲の30%より おおく 入力すると ほしが もらえるよ！",
+"statPopped": "割った雲",
+"statXp": "レベル {n} に +{x} XP",
+"btnRetry": "もういちど あそぶ 🪁",
+"btnPick": "レベルをえらぶ 🎮",
+"btnNext": "つぎのレベル ➜",
+"imeToast": "⚠️ システムのベトナム語IMEをオフにして（ABCにきりかえて）あそんでね！",
+"loadFail": "単語を よみこめませんでした"
+},
+"zh": {
+"altitude": "风筝高度",
+"hint": "⌨️ 打出带下划线的云朵里的词语就能把它戳破 — 记得先关掉越南语输入法哦！",
+"skip": "⏭ 换一朵云（空格键）",
+"back": "← 教室",
+"voiceTitle": "换云朵时朗读词语",
+"pickTitle": "选择关卡 🪁",
+"close": "关闭",
+"titleCrash": "第{n}关 — 哎呀，风筝掉下来啦！",
+"titleStars": "第{n}关：你得到了 {s} 颗星！",
+"titleNoStar": "第{n}关：还没有得到星星哦",
+"msgCrash": "别难过，再放一次风筝吧！",
+"msgSky": "风筝飞上了九霄云外 — 这一关直接通关啦！",
+"msg3": "太棒了！风筝飞得好高好高！",
+"msgSome": "真不错！试着把风筝放得更高一点吧！",
+"msgNone": "打对超过 30% 的云朵才能得到星星哦！",
+"statPopped": "戳破的云朵",
+"statXp": "第{n}关 +{x} 经验值",
+"btnRetry": "再玩一次 🪁",
+"btnPick": "选择关卡 🎮",
+"btnNext": "下一关 ➜",
+"imeToast": "⚠️ 请关掉电脑的越南语输入法（切换到 ABC）再来玩哦！",
+"loadFail": "词汇加载失败"
+},
+"km": {
+"altitude": "កម្ពស់ខ្លែង",
+"hint": "⌨️ វាយពាក្យនៅក្នុងពពកដែលមានបន្ទាត់ពីក្រោមដើម្បីធ្វើឲ្យវាបែក — កុំភ្លេចបិទកម្មវិធីវាយអក្សរវៀតណាមណា!",
+"skip": "⏭ ពពកផ្សេង (Space)",
+"back": "← ថ្នាក់រៀន",
+"voiceTitle": "អានពាក្យពេលប្តូរពពក",
+"pickTitle": "ជ្រើសរើសកម្រិត 🪁",
+"close": "បិទ",
+"titleCrash": "កម្រិត {n} — អូ! ខ្លែងធ្លាក់បាត់ហើយ!",
+"titleStars": "កម្រិត {n}៖ អ្នកទទួលបាន {s} ផ្កាយ!",
+"titleNoStar": "កម្រិត {n}៖ មិនទាន់បានផ្កាយនៅឡើយទេ",
+"msgCrash": "កុំពិបាកចិត្ត សាកល្បងបង្ហោះខ្លែងម្តងទៀតណា!",
+"msgSky": "ខ្លែងហោះឡើងខ្ពស់ដល់លើពពក — ឈ្នះកម្រិតនេះភ្លាម!",
+"msg3": "អស្ចារ្យណាស់! ខ្លែងហោះឡើងខ្ពស់ណាស់!",
+"msgSome": "ល្អណាស់! សាកល្បងបង្ហោះខ្លែងឲ្យខ្ពស់ជាងនេះទៀតណា!",
+"msgNone": "វាយឲ្យត្រូវលើសពី 30% នៃពពកទើបបានផ្កាយណា!",
+"statPopped": "ពពកដែលបានបំបែក",
+"statXp": "+{x} XP សម្រាប់កម្រិត {n}",
+"btnRetry": "លេងម្តងទៀត 🪁",
+"btnPick": "ជ្រើសរើសកម្រិត 🎮",
+"btnNext": "កម្រិតបន្ទាប់ ➜",
+"imeToast": "⚠️ សូមបិទកម្មវិធីវាយអក្សរវៀតណាមរបស់ម៉ាស៊ីន (ប្តូរទៅ ABC) ដើម្បីលេងណា!",
+"loadFail": "មិនអាចផ្ទុកវាក្យសព្ទបានទេ"
+}
+};
+var LANG = (store.lang && GSTR[store.lang]) ? store.lang : ((store.lang && store.lang !== 'vi') ? 'en' : 'vi');
+function gt(key, vars) {
+  var t = (GSTR[LANG] && GSTR[LANG][key]) || GSTR.vi[key] || key;
+  if (vars) Object.keys(vars).forEach(function (k) { t = t.split('{' + k + '}').join(vars[k]); });
+  return t;
+}
+function applyStrings() {
+  document.getElementById('tAlt').textContent = gt('altitude');
+  document.getElementById('tHint').textContent = gt('hint');
+  document.getElementById('skipBtn').textContent = gt('skip');
+  document.getElementById('tBack').textContent = gt('back');
+  document.getElementById('tPickTitle').textContent = gt('pickTitle');
+  document.getElementById('pickerClose').textContent = gt('close');
+  document.getElementById('voiceBtn').title = gt('voiceTitle');
+  document.getElementById('btnRetry').textContent = gt('btnRetry');
+  document.getElementById('btnPick').textContent = gt('btnPick');
+  document.getElementById('btnNext').textContent = gt('btnNext');
+}
+document.addEventListener('DOMContentLoaded', applyStrings);
 
 // ── Đọc từ bằng speechSynthesis của browser ────────────────────────────────
 var voiceOn = store.kiteVoice !== false;      // default BẬT
@@ -537,7 +752,7 @@ document.addEventListener('compositionstart', function () {
   if (Date.now() - imeWarned < 60000) return;
   imeWarned = Date.now();
   var t = document.createElement('div');
-  t.textContent = '⚠️ Tắt bộ gõ tiếng Việt của máy (chuyển sang ABC) để chơi nhé!';
+  t.textContent = gt('imeToast');
   t.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#17233d;color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;z-index:99';
   document.body.appendChild(t);
   setTimeout(function () { t.remove(); }, 3200);
@@ -573,19 +788,19 @@ function endGame(crashed, forcedStars) {
   ov.style.display = 'flex';
   document.getElementById('ovEmoji').textContent = crashed ? '🍂' : (stars > 0 ? '⭐'.repeat(stars) : '🌥️');
   document.getElementById('ovTitle').textContent = crashed
-    ? 'Level ' + level + ' — Ôi, diều rơi mất rồi!'
-    : (stars > 0 ? 'Level ' + level + ': bạn được ' + stars + ' sao!' : 'Level ' + level + ': chưa được sao nào');
-  document.getElementById('ovMsg').textContent = crashed ? 'Đừng buồn, thử thả diều lại nhé!'
-    : forcedStars != null ? 'Diều bay tít lên chín tầng mây — thắng luôn level này!'
-    : stars === 3 ? 'Tuyệt vời! Diều bay cao tít trên mây!'
-    : stars > 0 ? 'Hay lắm! Thử đưa diều lên cao hơn nữa nhé!'
-    : 'Gõ đúng hơn 30% số mây để được sao nhé!';
+    ? gt('titleCrash', { n: level })
+    : (stars > 0 ? gt('titleStars', { n: level, s: stars }) : gt('titleNoStar', { n: level }));
+  document.getElementById('ovMsg').textContent = crashed ? gt('msgCrash')
+    : forcedStars != null ? gt('msgSky')
+    : stars === 3 ? gt('msg3')
+    : stars > 0 ? gt('msgSome')
+    : gt('msgNone');
   var mins = startedAt ? Math.max((Date.now() - startedAt) / 60000, 1 / 60) : 1;
   var acc = correctKeys + wrongKeys ? Math.round(correctKeys / (correctKeys + wrongKeys) * 100) : 100;
   document.getElementById('ovStats').innerHTML =
-    '⭐ Mây đã phá: ' + wordsDone + '/' + wordsTotal + ' (' + pctWords + '%) · ⚡ ' +
+    '⭐ ' + gt('statPopped') + ': ' + wordsDone + '/' + wordsTotal + ' (' + pctWords + '%) · ⚡ ' +
     Math.round(correctKeys / 5 / mins) + ' WPM · 🎯 ' + acc + '%' +
-    (gained ? '<br>✨ +' + gained + ' XP cho Level ' + level : '');
+    (gained ? '<br>✨ ' + gt('statXp', { x: gained, n: level }) : '');
   document.getElementById('btnNext').style.display = nextUnlocked ? '' : 'none';
   if (!crashed && stars > 0) {
     for (var i = 0; i < stars; i++) sStar(i);
@@ -686,7 +901,7 @@ fetch('lessons.json').then(function (r) { return r.json(); }).then(function (d) 
   WORDS = d.game || [];
   startLevel(level);
 }).catch(function () {
-  document.getElementById('ovTitle').textContent = 'Không tải được từ vựng';
+  document.getElementById('ovTitle').textContent = gt('loadFail');
   document.getElementById('overlay').style.display = 'flex';
 });
 })();
