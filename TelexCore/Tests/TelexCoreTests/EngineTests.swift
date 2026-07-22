@@ -140,18 +140,20 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(composeFree("cc"), "cc")
     }
 
-    /// Standalone-w cancel ladder under free marking (user request 2026-07-21):
-    /// w→ư, ww→u (cancel yields the bare u, no literal w), www→uw (the press
-    /// after a cancel is literal). The classic uw-typed revert is unchanged.
+    /// Standalone-w cancel ladder in full Telex (corrected 2026-07-22):
+    /// w→ư, ww→w (revert to the literal w), www→ww. Independent of free
+    /// marking. The classic uw-typed revert is unchanged.
     func testStandaloneWCancelLadder() {
-        XCTAssertEqual(composeFree("w"), "ư")
-        XCTAssertEqual(composeFree("ww"), "u")
-        XCTAssertEqual(composeFree("www"), "uw")
-        XCTAssertEqual(composeFree("nhw"), "như")
-        XCTAssertEqual(composeFree("nhww"), "nhu")
+        XCTAssertEqual(compose("w"), "ư")
+        XCTAssertEqual(compose("ww"), "w")
+        XCTAssertEqual(compose("www"), "ww")
+        XCTAssertEqual(composeFree("ww"), "w")
+        XCTAssertEqual(composeFree("www"), "ww")
+        XCTAssertEqual(compose("nhw"), "như")
+        XCTAssertEqual(compose("nhww"), "nhw")
         // uw-typed horn keeps the classic revert (the u was really typed)
-        XCTAssertEqual(composeFree("uw"), "ư")
-        XCTAssertEqual(composeFree("uww"), "uw")
+        XCTAssertEqual(compose("uw"), "ư")
+        XCTAssertEqual(compose("uww"), "uw")
     }
 
     /// Free-marking order tolerance (user request 2026-07-21): late modifier keys

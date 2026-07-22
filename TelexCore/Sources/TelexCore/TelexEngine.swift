@@ -118,10 +118,6 @@ public struct TelexEngine {
     private var pTone: Tone = .none
     private var pToneKeyCount = 0
     private var pCancelled = false
-    /// Letter index whose horn a standalone-w cancel just removed (w→ư, ww→u):
-    /// the NEXT w targeting this letter is literal (www→uw) instead of re-horning.
-    /// Cleared whenever any new letter is appended. -1 = none.
-    private var pWCancelIdx = -1
     private var pProcessed = 0
     private var pFreeMarking = false    // settings snapshot the state was built with
     private var pSimpleTelex = false
@@ -526,7 +522,6 @@ public struct TelexEngine {
         pTone = .none
         pToneKeyCount = 0
         pCancelled = false
-        pWCancelIdx = -1
         pProcessed = 0
     }
 
@@ -649,7 +644,6 @@ public struct TelexEngine {
         pTone = .none
         pToneKeyCount = 0
         pCancelled = false
-        pWCancelIdx = -1
         upperToneKey = false
         pFreeMarking = freeMarking
         pSimpleTelex = simpleTelex
@@ -776,13 +770,6 @@ public struct TelexEngine {
                 tIdx -= 1
             }
             if tIdx >= 0 {
-                // A standalone-w horn was just cancelled on this letter (ww→u):
-                // this next w is LITERAL (www→uw), not a fresh horn.
-                if tIdx == pWCancelIdx, letters[tIdx].mark == .none {
-                    appendLetter(base: UInt8(ascii: "w"), mark: .none, upper: upper)
-                    rawLetter[at] = pCount - 1
-                    return
-                }
                 let p = letters[tIdx]
                 if p.mark == .none && p.base == UInt8(ascii: "a") {
                     letters[tIdx].mark = .breve; rawLetter[at] = tIdx; return
@@ -799,13 +786,14 @@ public struct TelexEngine {
                 if p.mark == .horn && (p.base == UInt8(ascii: "o") || p.base == UInt8(ascii: "u")) {
                     letters[tIdx].mark = .none
                     pCancelled = true
-                    // Free marking + the ư was CREATED by a standalone w (no typed
-                    // u behind it): cancelling yields the bare u alone — w→ư,
-                    // ww→u — and the literal w only appears on the next press
-                    // (www→uw, via pWCancelIdx). A "uw"-typed horn keeps the
-                    // classic revert (uww→uw).
-                    if freeMarking, p.base == UInt8(ascii: "u"), letterCreatedByW(tIdx) {
-                        pWCancelIdx = tIdx
+                    // The ư was CREATED by a standalone w (full Telex, no typed u
+                    // behind it): cancelling reverts the letter ITSELF to a
+                    // literal w — w→ư, ww→w, www→ww (user decision 2026-07-22).
+                    // A 'w' letter is never a horn target, so the third w
+                    // appends literally with no extra state. A "uw"-typed horn
+                    // keeps the classic revert (uww→uw).
+                    if p.base == UInt8(ascii: "u"), letterCreatedByW(tIdx) {
+                        letters[tIdx].base = UInt8(ascii: "w")
                         rawLetter[at] = tIdx
                         return
                     }
@@ -1071,7 +1059,6 @@ public struct TelexEngine {
 
     @inline(__always)
     private mutating func appendLetter(base: UInt8, mark: Mark, upper: Bool) {
-        pWCancelIdx = -1
         guard pCount < Self.capacity else { return }
         letters[pCount] = LetterUnit(base: base, mark: mark, upper: upper)
         pCount += 1
