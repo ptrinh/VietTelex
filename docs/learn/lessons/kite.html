@@ -521,7 +521,9 @@ function endGame(crashed) {
   var ov = document.getElementById('overlay');
   ov.style.display = 'flex';
   document.getElementById('ovEmoji').textContent = crashed ? '🍂' : (stars > 0 ? '⭐'.repeat(stars) : '🌥️');
-  document.getElementById('ovTitle').textContent = crashed ? 'Ôi, diều rơi mất rồi!' : (stars > 0 ? 'Bạn được ' + stars + ' sao!' : 'Chưa được sao nào');
+  document.getElementById('ovTitle').textContent = crashed
+    ? 'Level ' + level + ' — Ôi, diều rơi mất rồi!'
+    : (stars > 0 ? 'Level ' + level + ': bạn được ' + stars + ' sao!' : 'Level ' + level + ': chưa được sao nào');
   document.getElementById('ovMsg').textContent = crashed ? 'Đừng buồn, thử thả diều lại nhé!'
     : forcedStars != null ? 'Diều bay tít lên chín tầng mây — thắng luôn level này!'
     : stars === 3 ? 'Tuyệt vời! Diều bay cao tít trên mây!'
@@ -532,7 +534,7 @@ function endGame(crashed) {
   document.getElementById('ovStats').innerHTML =
     '⭐ Mây đã phá: ' + wordsDone + '/' + wordsTotal + ' (' + pctWords + '%) · ⚡ ' +
     Math.round(correctKeys / 5 / mins) + ' WPM · 🎯 ' + acc + '%' +
-    (gained ? '<br>✨ +' + gained + ' XP' : '');
+    (gained ? '<br>✨ +' + gained + ' XP cho Level ' + level : '');
   document.getElementById('btnNext').style.display = nextUnlocked ? '' : 'none';
   if (!crashed && stars > 0) {
     for (var i = 0; i < stars; i++) sStar(i);
