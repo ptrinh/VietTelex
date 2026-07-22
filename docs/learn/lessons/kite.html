@@ -37,6 +37,9 @@ a{color:#2c7a4b}a:hover{color:#1d5c37}
 .word{font-size:27px;font-weight:700;color:#41648a;position:relative;z-index:1;padding-bottom:1px;
   border-bottom:4px solid transparent;white-space:nowrap}
 .cloud.active .word{border-bottom-color:#ff8a4c}
+.cloud.active{background:linear-gradient(180deg,#fffdf2,#ffe9a3);box-shadow:0 0 0 3px rgba(255,214,90,.55),0 10px 30px rgba(255,190,60,.45)}
+.cloud.active .puff{background:linear-gradient(180deg,#fffdf4,#ffedb0)}
+.cloud.active::after{content:'☀️';position:absolute;top:-42px;right:-14px;font-size:26px;filter:drop-shadow(0 0 8px rgba(255,214,90,.9))}
 .word .done{color:#1f9d63}
 .word .mid{color:#e8890c}
 .word .nx{display:inline-block;box-shadow:0 5px 0 #111;animation:blinkCursor 1s steps(1) infinite}
@@ -44,6 +47,7 @@ a{color:#2c7a4b}a:hover{color:#1d5c37}
 .word .todo{color:#a5b6c8}
 .hudpill{font-size:16px;font-weight:800;padding:5px 14px;border-radius:12px;white-space:nowrap}
 button{font-family:inherit}
+#stage.paused .cloud,#stage.paused #flocks>div,#stage.paused .bgcloud{animation-play-state:paused!important}
 </style>
 </head>
 <body>
@@ -144,7 +148,8 @@ button{font-family:inherit}
   <div id="clouds"></div>
   <div id="fireworks" style="position:absolute;inset:0;z-index:7;pointer-events:none"></div>
 
-  <div style="position:absolute;bottom:24px;left:24px;z-index:8;background:rgba(255,255,255,.88);border-radius:20px;padding:10px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(70,120,180,.2);flex-wrap:wrap">
+  <div id="dock" style="position:absolute;left:0;right:0;bottom:14px;z-index:8;display:flex;flex-direction:column;align-items:center;gap:9px;pointer-events:none">
+  <div style="pointer-events:auto;background:rgba(255,255,255,.88);border-radius:20px;padding:10px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(70,120,180,.2);flex-wrap:wrap;justify-content:center">
     <span style="font-size:26px">🪁</span>
     <div>
       <div style="font-size:13px;font-weight:800;letter-spacing:.06em;color:#5a7a9a"><span id="tAlt">ĐỘ CAO CỦA DIỀU</span> — <span id="pct">30</span>%</div>
@@ -155,13 +160,21 @@ button{font-family:inherit}
     <div class="hudpill" style="color:#1f9d63;background:#e6f6ee">⚡ <span id="wpm">0</span> WPM</div>
     <div class="hudpill" style="color:#3a6ea8;background:#e3f0fd">⏱ <span id="time">1:00</span></div>
   </div>
-  <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;display:flex;gap:10px;align-items:center">
+  <div style="pointer-events:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center">
     <div id="tHint" style="background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!</div>
     <button id="skipBtn" style="background:linear-gradient(135deg,#4cb7ff,#3a6ea8);color:#fff;border:none;border-radius:16px;padding:9px 18px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.3);font-family:inherit;white-space:nowrap">⏭ Mây khác (Space)</button>
+  </div>
   </div>
   <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)" id="tBack">← Lớp học</a>
   <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
   <button id="voiceBtn" title="Đọc từ khi đổi mây" style="position:absolute;top:16px;right:64px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
+  <button id="pauseBtn" style="position:absolute;top:16px;right:112px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">⏸</button>
+  <div id="pauseOverlay" style="display:none;position:absolute;inset:0;z-index:9;background:rgba(225,242,255,.6);backdrop-filter:blur(3px);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:24px;padding:30px 46px;text-align:center;box-shadow:0 20px 50px rgba(60,100,160,.3)">
+      <div style="font-size:52px">⏸</div>
+      <button id="resumeBtn" style="margin-top:14px;font-family:inherit;font-size:19px;font-weight:800;color:#fff;background:linear-gradient(135deg,#37c07e,#1f9d63);border:none;border-radius:16px;padding:12px 34px;cursor:pointer">▶</button>
+    </div>
+  </div>
 
   <div id="picker" style="display:none;position:absolute;inset:0;z-index:10;background:rgba(225,242,255,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:28px;padding:30px 36px;text-align:center;box-shadow:0 24px 60px rgba(60,100,160,.3);max-width:86vw;max-height:80vh;overflow:auto">
@@ -265,6 +278,20 @@ var correctKeys = 0, wrongKeys = 0, startedAt = 0;
 var wordsDone = 0, wordsTotal = 0;
 var clouds = [], cid = 0, rowFlip = 0, raf = 0, fireCooldown = false;
 var spawnT, timerT, flockT, wpmT;
+var paused = false, pausedAt = 0;
+function setPaused(on) {
+  if (over || paused === on) return;
+  paused = on;
+  document.getElementById('stage').classList.toggle('paused', on);
+  document.getElementById('pauseOverlay').style.display = on ? 'flex' : 'none';
+  document.getElementById('pauseBtn').textContent = on ? '▶' : '⏸';
+  if (on) {
+    pausedAt = Date.now();
+    if (window.speechSynthesis) speechSynthesis.cancel();
+  } else if (startedAt) {
+    startedAt += Date.now() - pausedAt;   // WPM không tính thời gian pause
+  }
+}
 
 // lv1=50%, +20%/level, TRẦN 200% (từ level 9 đi ngang) — số level KHÔNG giới
 // hạn; trần tốc độ giữ cho mọi level đều có thể đạt sao (endless mode).
@@ -609,7 +636,7 @@ function nextWord() {
   return bag.pop();
 }
 function spawnCloud() {
-  if (over || !WORDS.length) return;
+  if (over || paused || !WORDS.length) return;
   clouds.push(makeCloud(nextWord()));
   markActive();
 }
@@ -714,6 +741,10 @@ document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') pickerEl.style.display = 'none';
     return;
   }
+  if (paused) {
+    if (e.key === 'Escape' || e.key.toLowerCase() === 'p') { e.preventDefault(); setPaused(false); }
+    return;
+  }
   if (over) {
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); document.getElementById(nextUnlocked ? 'btnNext' : 'btnRetry').click(); }
     return;
@@ -768,7 +799,7 @@ document.addEventListener('compositionstart', function () {
 
 // ── WPM ─────────────────────────────────────────────────────────────────────
 function updateWPM() {
-  if (!startedAt) return;
+  if (!startedAt || paused) return;
   var mins = Math.max((Date.now() - startedAt) / 60000, 1 / 60);
   document.getElementById('wpm').textContent = Math.round(correctKeys / 5 / mins);
 }
@@ -828,6 +859,10 @@ function startLevel(l) {
   document.getElementById('overlay').style.display = 'none';
   clouds.forEach(function (c) { c.el.remove(); });
   clouds = [];
+  paused = false;
+  document.getElementById('stage').classList.remove('paused');
+  document.getElementById('pauseOverlay').style.display = 'none';
+  document.getElementById('pauseBtn').textContent = '⏸';
   over = false; score = 0; timeLeft = 60; kite = startAlt; kiteTarget = startAlt;
   correctKeys = 0; wrongKeys = 0; startedAt = 0; fireCooldown = false;
   wordsDone = 0; wordsTotal = 0;
@@ -840,7 +875,7 @@ function startLevel(l) {
   flockT = setInterval(function () { if (Math.random() < 0.6) spawnFlock(); }, 22000);
   wpmT = setInterval(updateWPM, 1000);
   timerT = setInterval(function () {
-    if (over) return;
+    if (over || paused) return;
     timeLeft--;
     document.getElementById('time').textContent = '0:' + String(Math.max(0, timeLeft)).padStart(2, '0');
     if (timeLeft <= 5 && timeLeft > 0) sTick();
@@ -850,7 +885,7 @@ function startLevel(l) {
   setTimeout(spawnFlock, 4000);
 }
 function skipActive() {
-  if (over) return;
+  if (over || paused) return;
   var a = activeCloud();
   if (a) { a.skipped = true; sDrop(); markActive(); }
 }
@@ -883,6 +918,8 @@ function openPicker() {
 document.getElementById('lvlBtn').addEventListener('click', openPicker);
 document.getElementById('btnPick').addEventListener('click', openPicker);
 document.getElementById('pickerClose').addEventListener('click', function () { pickerEl.style.display = 'none'; });
+document.getElementById('pauseBtn').addEventListener('click', function () { setPaused(!paused); });
+document.getElementById('resumeBtn').addEventListener('click', function () { setPaused(false); });
 document.getElementById('btnRetry').addEventListener('click', function () { startLevel(level); });
 document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1); });
 document.getElementById('soundBtn').addEventListener('click', function () {
