@@ -348,14 +348,63 @@ let chapters: [Chapter] = [
     ]),
 ]
 
+
+// MARK: - Kite-game vocabulary (docs/learn/lessons/kite.html)
+
+struct GameWord: Codable { var k: String; var d: String; var s: [String]; var a: String }
+
+func gw(_ keys: String, _ expect: String, _ emoji: String) -> GameWord {
+    let t = trace(keys)
+    if t.final != expect { failures.append("game \(keys) → \(t.final) (expected \(expect))") }
+    return GameWord(k: keys, d: t.final, s: t.states, a: emoji)
+}
+
+let gameWords: [GameWord] = [
+    gw("meof", "mèo", "🐈"), gw("chos", "chó", "🐕"), gw("gaf", "gà", "🐔"),
+    gw("vitj", "vịt", "🦆"), gw("cas", "cá", "🐟"), gw("bof", "bò", "🐄"),
+    gw("voi", "voi", "🐘"), gw("hoor", "hổ", "🐯"), gw("gaaus", "gấu", "🐻"),
+    gw("thor", "thỏ", "🐰"), gw("khir", "khỉ", "🐒"), gw("eechs", "ếch", "🐸"),
+    gw("ruaf", "rùa", "🐢"), gw("ong", "ong", "🐝"), gw("buwowms", "bướm", "🦋"),
+    gw("chim", "chim", "🐦"), gw("hoa", "hoa", "🌸"), gw("caay", "cây", "🌳"),
+    gw("las", "lá", "🍃"), gw("nhaf", "nhà", "🏠"), gw("xe", "xe", "🚗"),
+    gw("thuyeenf", "thuyền", "⛵"), gw("sachs", "sách", "📚"), gw("bongs", "bóng", "⚽"),
+    gw("mux", "mũ", "👒"), gw("kem", "kem", "🍦"), gw("taos", "táo", "🍎"),
+    gw("chuoois", "chuối", "🍌"), gw("duwa", "dưa", "🍉"), gw("sao", "sao", "⭐"),
+    gw("trawng", "trăng", "🌙"), gw("muwa", "mưa", "🌧️"), gw("nawngs", "nắng", "☀️"),
+    // gia đình & cơ thể
+    gw("bes", "bé", "👶"), gw("mej", "mẹ", "👩"), gw("ba", "ba", "👨"),
+    gw("oong", "ông", "👴"), gw("baf", "bà", "👵"), gw("em", "em", "🧒"),
+    gw("tay", "tay", "✋"), gw("mawts", "mắt", "👀"), gw("tai", "tai", "👂"),
+    gw("muix", "mũi", "👃"),
+    // con vật thêm
+    gw("heo", "heo", "🐷"), gw("dee", "dê", "🐐"), gw("nai", "nai", "🦌"),
+    gw("cua", "cua", "🦀"), gw("toom", "tôm", "🦐"), gw("oocs", "ốc", "🐌"),
+    gw("caos", "cáo", "🦊"), gw("vetj", "vẹt", "🦜"), gw("sois", "sói", "🐺"),
+    // đồ vật
+    gw("buts", "bút", "✏️"), gw("vowr", "vở", "📓"), gw("ghees", "ghế", "🪑"),
+    gw("cuwar", "cửa", "🚪"), gw("ddenf", "đèn", "💡"), gw("nooif", "nồi", "🍲"),
+    gw("bats", "bát", "🍚"), gw("keos", "kéo", "✂️"), gw("oo", "ô", "☂️"),
+    gw("dao", "dao", "🔪"), gw("thiaf", "thìa", "🥄"), gw("quatj", "quạt", "🪭"),
+    gw("dieeuf", "diều", "🪁"), gw("saos", "sáo", "🎶"), gw("cowf", "cờ", "🚩"),
+    // thiên nhiên
+    gw("gios", "gió", "💨"), gw("nuis", "núi", "⛰️"), gw("soong", "sông", "🏞️"),
+    gw("bieenr", "biển", "🌊"), gw("ddaor", "đảo", "🏝️"), gw("sen", "sen", "🪷"),
+    // đồ ăn
+    gw("keoj", "kẹo", "🍬"), gw("suwax", "sữa", "🥛"), gw("phowr", "phở", "🍜"),
+    gw("xooi", "xôi", "🍙"), gw("cowm", "cơm", "🍚"), gw("duwaf", "dừa", "🥥"),
+    gw("ddaof", "đào", "🍑"), gw("mits", "mít", "🍈"), gw("ooir", "ổi", "🍐"),
+    gw("khees", "khế", "⭐"), gw("chanh", "chanh", "🍋"), gw("traf", "trà", "🍵"),
+    gw("banhs", "bánh", "🍰"), gw("xoaif", "xoài", "🥭")
+]
+
 // MARK: - Emit
 
-struct Root: Codable { var version: Int; var chapters: [Chapter] }
+struct Root: Codable { var version: Int; var chapters: [Chapter]; var game: [GameWord] }
 
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "lessons.json"
 let enc = JSONEncoder()
 enc.outputFormatting = [.sortedKeys]
-let data = try enc.encode(Root(version: 1, chapters: chapters))
+let data = try enc.encode(Root(version: 1, chapters: chapters, game: gameWords))
 
 if !failures.isEmpty {
     FileHandle.standardError.write("MISMATCHES (\(failures.count)):\n".data(using: .utf8)!)

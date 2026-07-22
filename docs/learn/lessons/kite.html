@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thả diều — gõ chữ phá mây | ViệtTelex Learn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:'Baloo 2',system-ui,sans-serif}
+a{color:#2c7a4b}a:hover{color:#1d5c37}
+@keyframes driftLeft{from{transform:translateX(0)}to{transform:translateX(-135vw)}}
+@keyframes cloudPop{0%{transform:scale(1);opacity:1}100%{transform:scale(1.9);opacity:0}}
+@keyframes bgDrift{from{transform:translateX(20vw)}to{transform:translateX(-150vw)}}
+@keyframes sway{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-10px)}}
+@keyframes tailWag{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
+@keyframes graze{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+@keyframes flap{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.5)}}
+@keyframes flockFly{from{transform:translateX(-20vw)}to{transform:translateX(118vw)}}
+@keyframes gustLeft{0%{opacity:0;transform:translateX(10px)}25%{opacity:1}100%{opacity:0;transform:translateX(-140px)}}
+@keyframes legSwing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(9deg)}}
+@keyframes headSway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes buffHead{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(3deg)}}
+@keyframes tailSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
+@keyframes sunGlow{0%,100%{box-shadow:0 0 50px 18px rgba(255,214,90,.55)}50%{box-shadow:0 0 70px 30px rgba(255,214,90,.75)}}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes fwRise{from{transform:translateY(0);opacity:1}to{transform:translateY(-46vh);opacity:1}}
+@keyframes fwSpark{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.4);opacity:0}}
+@keyframes blinkCursor{50%{opacity:.15}}
+.bgcloud{position:absolute;background:#fff;border-radius:40px;z-index:3}
+.bgcloud i{position:absolute;background:#fff;border-radius:50%}
+.cloud{display:flex;align-items:center;gap:9px;padding:13px 26px;background:#fff;border-radius:46px;
+  box-shadow:0 8px 22px rgba(80,130,190,.28);position:absolute;left:100%;z-index:6}
+.cloud .puff{position:absolute;background:#fff;border-radius:50%}
+.cloud.shake{animation-name:driftLeft,shake!important;animation-duration:var(--dur),.18s!important;
+  animation-timing-function:linear,ease!important;animation-fill-mode:forwards,none!important}
+.word{font-size:27px;font-weight:700;color:#41648a;position:relative;z-index:1;padding-bottom:1px;
+  border-bottom:4px solid transparent;white-space:nowrap}
+.cloud.active .word{border-bottom-color:#ff8a4c}
+.word .done{color:#1f9d63}
+.word .mid{color:#e8890c}
+.word .nx{display:inline-block;box-shadow:0 5px 0 #111;animation:blinkCursor 1s steps(1) infinite}
+.word .nx.pad{width:.55em}
+.word .todo{color:#a5b6c8}
+.hudpill{font-size:16px;font-weight:800;padding:5px 14px;border-radius:12px;white-space:nowrap}
+button{font-family:inherit}
+</style>
+</head>
+<body>
+<div id="stage" style="position:fixed;inset:0;overflow:hidden;background:linear-gradient(#7ec9f2 0%,#a8dcf7 48%,#d6efFC 70%);user-select:none">
+  <div style="position:absolute;top:5%;right:10%;width:88px;height:88px;border-radius:50%;background:radial-gradient(circle at 38% 35%,#fff3b8,#ffd75e 70%);animation:sunGlow 5s ease-in-out infinite;z-index:1"></div>
+
+  <div class="bgcloud" style="top:9%;left:100%;width:150px;height:44px;opacity:.65;animation:bgDrift 75s linear infinite;animation-delay:-20s"><i style="top:-20px;left:26px;width:52px;height:52px"></i><i style="top:-13px;right:26px;width:38px;height:38px"></i></div>
+  <div class="bgcloud" style="top:34%;left:100%;width:120px;height:36px;opacity:.5;animation:bgDrift 95s linear infinite;animation-delay:-55s"><i style="top:-16px;left:22px;width:42px;height:42px"></i></div>
+  <div class="bgcloud" style="top:48%;left:100%;width:170px;height:46px;opacity:.4;animation:bgDrift 110s linear infinite;animation-delay:-80s"><i style="top:-22px;left:34px;width:56px;height:56px"></i><i style="top:-12px;right:30px;width:36px;height:36px"></i></div>
+
+  <div id="flocks"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;height:29%;background:linear-gradient(#b5df7e 0%,#8ccb5f 18%,#5fae46 60%,#4a9a3d 100%);z-index:4"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:29%;background:repeating-linear-gradient(100deg,rgba(255,255,255,.05) 0 60px,rgba(30,90,30,.05) 60px 130px);z-index:4;pointer-events:none"></div>
+
+<div style="position:absolute;bottom:22%;left:9%;z-index:4;animation:graze 3.2s ease-in-out infinite;opacity:.8"><span style="display:inline-block"><svg width="190" viewBox="0 0 200 150"><ellipse cx="112" cy="70" rx="68" ry="40" style="fill:#4a4a52"></ellipse><rect x="64" y="95" width="16" height="44" rx="7" style="fill:#3c3c44"></rect><rect x="92" y="100" width="15" height="40" rx="7" style="fill:#44444c"></rect><rect x="138" y="100" width="15" height="40" rx="7" style="fill:#44444c"></rect><rect x="160" y="95" width="16" height="44" rx="7" style="fill:#3c3c44"></rect><path d="M176 58 Q196 80 188 106" style="fill:none;stroke:#3c3c44;stroke-width:7;stroke-linecap:round"></path><ellipse cx="42" cy="100" rx="27" ry="31" style="fill:#44444c"></ellipse><ellipse cx="36" cy="123" rx="19" ry="14" style="fill:#55555e"></ellipse><circle cx="27" cy="122" r="3" style="fill:#2c2c30"></circle><path d="M30 78 Q8 62 16 40" style="fill:none;stroke:#9a9aa4;stroke-width:8;stroke-linecap:round"></path><path d="M56 74 Q68 56 62 38" style="fill:none;stroke:#8a8a94;stroke-width:8;stroke-linecap:round"></path><circle cx="34" cy="96" r="3.5" style="fill:#1d1d22"></circle></svg></span></div>
+<div style="position:absolute;bottom:6%;left:30%;z-index:5;animation:graze 3.8s ease-in-out infinite;animation-delay:1s"><span style="display:inline-block;transform:scaleX(-1)"><svg width="250" viewBox="0 0 200 150"><ellipse cx="112" cy="70" rx="68" ry="40" style="fill:#4a4a52"></ellipse><rect x="64" y="95" width="16" height="44" rx="7" style="fill:#3c3c44"></rect><rect x="92" y="100" width="15" height="40" rx="7" style="fill:#44444c"></rect><rect x="138" y="100" width="15" height="40" rx="7" style="fill:#44444c"></rect><rect x="160" y="95" width="16" height="44" rx="7" style="fill:#3c3c44"></rect><path d="M176 58 Q196 80 188 106" style="fill:none;stroke:#3c3c44;stroke-width:7;stroke-linecap:round"></path><ellipse cx="42" cy="100" rx="27" ry="31" style="fill:#44444c"></ellipse><ellipse cx="36" cy="123" rx="19" ry="14" style="fill:#55555e"></ellipse><circle cx="27" cy="122" r="3" style="fill:#2c2c30"></circle><path d="M30 78 Q8 62 16 40" style="fill:none;stroke:#9a9aa4;stroke-width:8;stroke-linecap:round"></path><path d="M56 74 Q68 56 62 38" style="fill:none;stroke:#8a8a94;stroke-width:8;stroke-linecap:round"></path><circle cx="34" cy="96" r="3.5" style="fill:#1d1d22"></circle></svg></span></div>
+<div style="position:absolute;bottom:23%;left:54%;z-index:4;animation:graze 3.5s ease-in-out infinite;animation-delay:.5s;opacity:.7"><span style="display:inline-block"><svg width="160" viewBox="0 0 200 150"><ellipse cx="112" cy="70" rx="68" ry="40" style="fill:#4a4a52"></ellipse><rect x="64" y="95" width="16" height="44" rx="7" style="fill:#3c3c44"></rect><rect x="92" y="100" width="15" height="40" rx="7" style="fill:#44444c"></rect><rect x="138" y="100" width="15" height="40" rx="7" style="fill:#44444c"></rect><rect x="160" y="95" width="16" height="44" rx="7" style="fill:#3c3c44"></rect><path d="M176 58 Q196 80 188 106" style="fill:none;stroke:#3c3c44;stroke-width:7;stroke-linecap:round"></path><ellipse cx="42" cy="100" rx="27" ry="31" style="fill:#44444c"></ellipse><ellipse cx="36" cy="123" rx="19" ry="14" style="fill:#55555e"></ellipse><circle cx="27" cy="122" r="3" style="fill:#2c2c30"></circle><path d="M30 78 Q8 62 16 40" style="fill:none;stroke:#9a9aa4;stroke-width:8;stroke-linecap:round"></path><path d="M56 74 Q68 56 62 38" style="fill:none;stroke:#8a8a94;stroke-width:8;stroke-linecap:round"></path><circle cx="34" cy="96" r="3.5" style="fill:#1d1d22"></circle></svg></span></div>
+<div style="position:absolute;bottom:6%;left:8%;font-size:26px;z-index:5">🌼</div>
+  <div style="position:absolute;bottom:14%;left:25%;font-size:20px;z-index:5">🌸</div>
+  <div style="position:absolute;bottom:4%;left:46%;font-size:24px;z-index:5">🌼</div>
+  <div style="position:absolute;bottom:16%;left:66%;font-size:20px;z-index:4">🌼</div>
+  <div style="position:absolute;bottom:5%;left:60%;font-size:22px;z-index:5">🌾</div>
+<div style="position:absolute;right:2%;bottom:8%;z-index:5;pointer-events:none">
+    <svg width="500" viewBox="0 0 320 300" style="display:block">
+      <ellipse cx="165" cy="284" rx="145" ry="15" style="fill:#5fae46"></ellipse>
+      <g style="animation:tailSwing 1.6s ease-in-out infinite;transform-origin:282px 148px">
+        <path d="M282 150 Q305 185 292 225" style="fill:none;stroke:#3c3c44;stroke-width:10;stroke-linecap:round"></path>
+        <circle cx="292" cy="228" r="9" style="fill:#2e2e34"></circle>
+      </g>
+      <rect x="238" y="205" width="30" height="72" rx="12" style="fill:#3c3c44"></rect>
+      <rect x="196" y="215" width="28" height="64" rx="12" style="fill:#44444c"></rect>
+      <rect x="78" y="210" width="30" height="70" rx="12" style="fill:#3c3c44"></rect>
+      <rect x="118" y="218" width="28" height="62" rx="12" style="fill:#44444c"></rect>
+      <rect x="238" y="266" width="30" height="14" rx="6" style="fill:#26262c"></rect>
+      <rect x="78" y="268" width="30" height="14" rx="6" style="fill:#26262c"></rect>
+      <ellipse cx="172" cy="172" rx="118" ry="78" style="fill:#4a4a52"></ellipse>
+      <g style="animation:legSwing 1s ease-in-out infinite;transform-origin:185px 116px">
+        <rect x="176" y="112" width="18" height="44" rx="9" style="fill:#34579f"></rect>
+        <rect x="179" y="146" width="12" height="32" rx="6" style="fill:#eec39f"></rect>
+        <ellipse cx="185" cy="181" rx="10" ry="6" style="fill:#69401f"></ellipse>
+      </g>
+      <g style="animation:legSwing 1s ease-in-out infinite;animation-delay:-.5s;transform-origin:208px 118px">
+        <rect x="198" y="114" width="20" height="48" rx="10" style="fill:#3b62b8"></rect>
+        <rect x="201" y="152" width="14" height="34" rx="7" style="fill:#ffd9b8"></rect>
+        <ellipse cx="208" cy="190" rx="12" ry="7" style="fill:#7a4a2b"></ellipse>
+      </g>
+      <path d="M142 70 Q170 58 198 70 L202 118 Q170 130 138 118 Z" style="fill:#3f7fd6"></path>
+      <rect x="138" y="108" width="64" height="14" rx="7" style="fill:#e04545"></rect>
+      <path d="M146 84 Q118 96 106 112" style="fill:none;stroke:#3f7fd6;stroke-width:16;stroke-linecap:round"></path>
+      <circle cx="104" cy="114" r="9" style="fill:#ffd9b8"></circle>
+      <path d="M150 66 Q170 76 190 66 L186 80 Q170 88 154 80 Z" style="fill:#e04545"></path>
+      <g style="animation:headSway 2.8s ease-in-out infinite;transform-origin:170px 72px">
+        <circle cx="170" cy="46" r="26" style="fill:#ffd9b8"></circle>
+        <path d="M146 40 Q150 22 170 22 Q190 22 194 40 Q182 32 170 34 Q158 32 146 40 Z" style="fill:#4a3524"></path>
+        <circle cx="158" cy="46" r="3" style="fill:#2c2c30"></circle>
+        <circle cx="174" cy="46" r="3" style="fill:#2c2c30"></circle>
+        <path d="M160 56 Q166 61 172 56" style="fill:none;stroke:#b06a4a;stroke-width:2.5;stroke-linecap:round"></path>
+        <circle cx="150" cy="53" r="4" style="fill:#ffb3a0;opacity:.7"></circle>
+        <circle cx="182" cy="53" r="4" style="fill:#ffb3a0;opacity:.7"></circle>
+        <path d="M126 38 Q170 -14 214 38 Q170 50 126 38 Z" style="fill:#d9b26a"></path>
+        <path d="M170 4 L150 38 M170 4 L170 42 M170 4 L190 38" style="fill:none;stroke:#b8924e;stroke-width:2"></path>
+        <path d="M126 38 Q170 52 214 38" style="fill:none;stroke:#b8924e;stroke-width:3"></path>
+      </g>
+      <g style="animation:buffHead 3.4s ease-in-out infinite;transform-origin:90px 130px">
+        <path d="M66 96 C40 92 20 70 18 38 C34 66 56 78 82 80 C80 90 74 95 66 96 Z" style="fill:#b9b9c2"></path>
+        <path d="M86 92 C114 86 134 62 136 32 C122 58 102 72 80 78 C80 86 82 90 86 92 Z" style="fill:#9d9da8"></path>
+        <path d="M28 96 Q60 82 84 104 Q96 128 88 158 Q66 186 40 176 Q14 160 16 128 Q18 108 28 96 Z" style="fill:#44444c"></path>
+        <ellipse cx="42" cy="172" rx="32" ry="24" style="fill:#55555e"></ellipse>
+        <circle cx="30" cy="172" r="4.5" style="fill:#2c2c30"></circle>
+        <path d="M34 188 Q46 194 58 188" style="fill:none;stroke:#2c2c30;stroke-width:3;stroke-linecap:round"></path>
+        <circle cx="44" cy="126" r="9" style="fill:#ffffff"></circle>
+        <circle cx="40" cy="123" r="4.5" style="fill:#1d1d22"></circle>
+        <ellipse cx="92" cy="98" rx="15" ry="8" style="fill:#3c3c44;transform:rotate(-24deg);transform-origin:92px 98px"></ellipse>
+        <path d="M20 190 Q46 204 74 192" style="fill:none;stroke:#c43d3d;stroke-width:8"></path>
+        <path d="M40 198 L52 198 L50 210 Q46 214 42 210 Z" style="fill:#f2c14e"></path>
+        <circle cx="46" cy="212" r="3" style="fill:#c8912e"></circle>
+      </g>
+    </svg>
+  </div>
+
+  <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none"><path id="string" d="" style="fill:none;stroke:#8a5a33;stroke-width:2px;opacity:.8"></path></svg>
+
+  <div id="kite" style="position:absolute;left:13%;top:47%;margin-left:-32px;z-index:5;pointer-events:none">
+    <div style="animation:sway 4s ease-in-out infinite">
+      <div style="position:relative;width:64px;height:84px;background:linear-gradient(135deg,#ff6b57,#ffc93c);clip-path:polygon(50% 0,100% 40%,50% 100%,0 40%)">
+        <div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:rgba(140,50,20,.3)"></div>
+        <div style="position:absolute;left:0;top:40%;width:100%;height:2px;background:rgba(140,50,20,.3)"></div>
+      </div>
+      <div style="position:relative;width:2px;height:74px;margin:0 auto;border-left:2px dashed rgba(255,255,255,.9);animation:tailWag 2.6s ease-in-out infinite;transform-origin:top center">
+        <div style="position:absolute;left:-7px;top:14px;width:13px;height:13px;background:#ff8a4c;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)"></div>
+        <div style="position:absolute;left:-7px;top:38px;width:13px;height:13px;background:#4cb7ff;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)"></div>
+        <div style="position:absolute;left:-7px;top:62px;width:13px;height:13px;background:#ffd75e;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="clouds"></div>
+  <div id="fireworks" style="position:absolute;inset:0;z-index:7;pointer-events:none"></div>
+
+  <div style="position:absolute;bottom:24px;left:24px;z-index:8;background:rgba(255,255,255,.88);border-radius:20px;padding:10px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(70,120,180,.2);flex-wrap:wrap">
+    <span style="font-size:26px">🪁</span>
+    <div>
+      <div style="font-size:13px;font-weight:800;letter-spacing:.06em;color:#5a7a9a">ĐỘ CAO CỦA DIỀU — <span id="pct">30</span>%</div>
+      <div style="width:200px;height:10px;background:#e3eef7;border-radius:6px;margin-top:5px;overflow:hidden"><div id="bar" style="width:30%;height:100%;border-radius:6px;background:linear-gradient(90deg,#ffb037,#ff6b57)"></div></div>
+    </div>
+    <div class="hudpill" style="color:#7a4fd0;background:#efe8fd">🎮 Level <span id="lvl">1</span></div>
+    <div class="hudpill" style="color:#e8890c;background:#fff3dd">⭐ <span id="score">0</span></div>
+    <div class="hudpill" style="color:#1f9d63;background:#e6f6ee">⚡ <span id="wpm">0</span> WPM</div>
+    <div class="hudpill" style="color:#3a6ea8;background:#e3f0fd">⏱ <span id="time">1:00</span></div>
+  </div>
+  <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong đám mây có gạch chân để phá mây — Space đổi mây, tắt bộ gõ tiếng Việt nhé!</div>
+  <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)">← Lớp học</a>
+  <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
+
+  <div id="overlay" style="display:none;position:absolute;inset:0;z-index:9;background:rgba(225,242,255,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:28px;padding:38px 52px;text-align:center;box-shadow:0 24px 60px rgba(60,100,160,.3);max-width:86vw">
+      <div id="ovEmoji" style="font-size:66px;line-height:1.1"></div>
+      <div id="ovTitle" style="font-size:32px;font-weight:800;color:#3a5a7a;margin-top:8px"></div>
+      <div id="ovMsg" style="font-size:17px;color:#7a8ba0;margin-top:6px"></div>
+      <div id="ovStats" style="font-size:17px;margin-top:12px;font-weight:800;color:#e8890c"></div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap">
+        <button id="btnRetry" style="font-size:19px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff8a4c,#ff5a5a);border:none;border-radius:16px;padding:12px 32px;cursor:pointer;box-shadow:0 10px 22px rgba(255,110,80,.4)">Chơi lại 🪁</button>
+        <button id="btnNext" style="display:none;font-size:19px;font-weight:800;color:#fff;background:linear-gradient(135deg,#37c07e,#1f9d63);border:none;border-radius:16px;padding:12px 32px;cursor:pointer;box-shadow:0 10px 22px rgba(40,160,100,.4)">Level tiếp theo ➜</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../telex.js"></script>
+<script>
+(function () {
+'use strict';
+
+// ── Progress store (shared with the classroom: vtlearn) ─────────────────────
+function loadStore() { try { return JSON.parse(localStorage.getItem('vtlearn') || '{}'); } catch (e) { return {}; } }
+function saveStore(st) { localStorage.setItem('vtlearn', JSON.stringify(st)); }
+var store = loadStore();
+if (!store.kite) store.kite = { best: {}, level: 1 };
+if (store.xp === undefined) store.xp = 0;
+var soundOn = store.sound !== false;
+
+// ── Sounds (WebAudio, no assets) ────────────────────────────────────────────
+var actx = null;
+function ac() { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+function tone(freq, dur, type, gain, when, glideTo) {
+  if (!soundOn) return;
+  try {
+    var c = ac(), o = c.createOscillator(), g = c.createGain();
+    var t = c.currentTime + (when || 0);
+    o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
+    g.gain.setValueAtTime(gain || 0.07, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) {}
+}
+function noise(dur, gain, when) {
+  if (!soundOn) return;
+  try {
+    var c = ac(), t = c.currentTime + (when || 0);
+    var b = c.createBuffer(1, c.sampleRate * dur, c.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    var s = c.createBufferSource(), g = c.createGain();
+    s.buffer = b; g.gain.value = gain || 0.12;
+    s.connect(g); g.connect(c.destination); s.start(t);
+  } catch (e) {}
+}
+// Gió thổi mạnh: filtered noise whose bandpass sweeps upward — feels like a
+// gust pushing the kite higher (replaces the old flat hiss).
+function wind(dur, gain) {
+  if (!soundOn) return;
+  try {
+    var c = ac(), t = c.currentTime;
+    var b = c.createBuffer(1, c.sampleRate * dur, c.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < d.length; i++) {
+      var env = Math.sin(Math.PI * (i / d.length));           // swell in, fade out
+      d[i] = (Math.random() * 2 - 1) * env;
+    }
+    var src = c.createBufferSource(); src.buffer = b;
+    var f = c.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 1.1;
+    f.frequency.setValueAtTime(280, t);
+    f.frequency.exponentialRampToValueAtTime(1500, t + dur * 0.8);
+    var g = c.createGain(); g.gain.value = gain || 0.5;
+    src.connect(f); f.connect(g); g.connect(c.destination);
+    src.start(t);
+  } catch (e) {}
+}
+var sTick  = function () { tone(920, 0.05, 'sine', 0.045); };
+var sBuzz  = function () { tone(150, 0.14, 'square', 0.05); };
+var sPop   = function () { wind(0.55, 0.55); tone(340, 0.4, 'sine', 0.04, 0.05, 760); };
+var sRise  = function () { tone(620, 0.18, 'sine', 0.05, 0, 980); };
+var sDrop  = function () { tone(420, 0.3, 'sine', 0.05, 0, 200); };
+var sCrash = function () { tone(600, 0.7, 'sawtooth', 0.07, 0, 60); noise(0.5, 0.16, 0.25); tone(70, 0.4, 'sine', 0.12, 0.3); };
+var sFire  = function () { for (var i = 0; i < 3; i++) { tone(300 + i * 180, 0.5, 'sine', 0.06, i * 0.18, 900 + i * 200); noise(0.3, 0.1, i * 0.18 + 0.1); } };
+var sStar  = function (n) { tone(523 * Math.pow(1.26, n), 0.35, 'triangle', 0.1, n * 0.35); };
+var sFan   = function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone(f, 0.28, 'triangle', 0.09, i * 0.13); }); };
+
+// ── Game state ──────────────────────────────────────────────────────────────
+var WORDS = [];
+var level = Math.max(1, store.kite.level || 1);
+var kite = 30, kiteTarget = 30, score = 0, timeLeft = 60, over = false;
+var correctKeys = 0, wrongKeys = 0, startedAt = 0;
+var wordsDone = 0, wordsTotal = 0;
+var clouds = [], cid = 0, rowFlip = 0, raf = 0, fireCooldown = false;
+var spawnT, timerT, flockT, wpmT;
+
+function speedMul(l) { return 0.50 + 0.20 * (l - 1); }        // lv1=50%, +20%/level
+function cloudDur() { return 16 / speedMul(level); }
+function spawnGap() { return Math.min(9, Math.max(3, cloudDur() / 6)); }
+
+// ── Cloud DOM ───────────────────────────────────────────────────────────────
+var cloudsEl = document.getElementById('clouds');
+function foldBase(t) {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+function makeCloud(w) {
+  var el = document.createElement('div');
+  el.className = 'cloud';
+  var dur = cloudDur();
+  el.style.setProperty('--dur', dur + 's');
+  el.style.top = (rowFlip ? 22 : 6) + '%';
+  el.style.animation = 'driftLeft ' + dur + 's linear forwards';
+  rowFlip ^= 1;
+  el.innerHTML =
+    '<span class="puff" style="top:-24px;left:50%;margin-left:-31px;width:62px;height:62px"></span>' +
+    '<span class="puff" style="top:-13px;right:12px;width:42px;height:42px"></span>' +
+    '<span class="puff" style="top:-13px;left:12px;width:40px;height:40px"></span>' +
+    '<span class="puff" style="top:2px;left:-6px;width:30px;height:30px"></span>' +
+    '<span class="puff" style="top:2px;right:-6px;width:30px;height:30px"></span>' +
+    '<span style="font-size:27px;position:relative;z-index:1">' + w.a + '</span>' +
+    '<span class="word"></span>';
+  cloudsEl.appendChild(el);
+  var c = { id: ++cid, el: el, w: w, eng: new Telex.TelexEngine({ freeMarking: true }), popped: false, skipped: false, dead: false };
+  el.addEventListener('animationend', function (e) {
+    if (e.animationName !== 'driftLeft') return;
+    removeCloud(c);
+    if (!c.popped) { wordsTotal++; moveKite(-10); sDrop(); }
+  });
+  renderWord(c);
+  return c;
+}
+function esc(s) { return String(s).replace(/[&<>]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]; }); }
+function renderWord(c) {
+  // Engine-driven: show what the child has composed so far, char-by-char
+  // against the target — green when the char is final, amber while a
+  // transform is still pending (mid free-marking states). The black cursor
+  // sits UNDER the next character (overlaying the orange active line).
+  var comp = Array.from(c.eng.composed);
+  var target = Array.from(c.w.d);
+  var doneDone = comp.join('') === c.w.d;
+  var html = '';
+  for (var i = 0; i < Math.max(comp.length, target.length); i++) {
+    if (i < comp.length) {
+      var cls = (i < target.length && comp[i] === target[i]) ? 'done' : 'mid';
+      html += '<span class="' + cls + '">' + esc(comp[i]) + '</span>';
+    } else if (i === comp.length && !doneDone) {
+      html += '<span class="todo nx">' + esc(target[i]) + '</span>';
+    } else {
+      html += '<span class="todo">' + esc(target[i]) + '</span>';
+    }
+  }
+  if (!doneDone && comp.length >= target.length) html += '<span class="nx pad">&nbsp;</span>';
+  c.el.querySelector('.word').innerHTML = html;
+}
+function activeCloud() {
+  for (var i = 0; i < clouds.length; i++) {
+    var c = clouds[i];
+    if (!c.dead && !c.popped && !c.skipped) return c;
+  }
+  return null;
+}
+var DEBUG = location.hash === '#debug';
+function markActive() {
+  var a = activeCloud();
+  clouds.forEach(function (c) { c.el.classList.toggle('active', a === c); });
+  if (DEBUG) document.title = 'K s=' + score + ' kite=' + Math.round(kiteTarget) +
+    ' wpm=' + document.getElementById('wpm').textContent +
+    (a ? ' keys=' + a.w.k + ' comp=' + a.eng.composed : ' keys=-');
+}
+function removeCloud(c) {
+  c.dead = true;
+  c.el.remove();
+  clouds = clouds.filter(function (x) { return x !== c; });
+  markActive();
+}
+function levelPool() {
+  var maxLen = level === 1 ? 3 : level === 2 ? 4 : Infinity;
+  var pool = WORDS.filter(function (w) { return Array.from(w.d).length <= maxLen; });
+  return pool.length ? pool : WORDS;
+}
+function spawnCloud() {
+  if (over || !WORDS.length) return;
+  var pool = levelPool();
+  var w = pool[Math.floor(Math.random() * pool.length)];
+  clouds.push(makeCloud(w));
+  markActive();
+}
+function popCloud(c) {
+  if (c.popped || over) return;
+  c.popped = true;
+  score++; wordsDone++; wordsTotal++;
+  document.getElementById('score').textContent = score;
+  var rect = c.el.getBoundingClientRect();
+  c.el.style.animation = 'cloudPop .55s ease forwards';
+  c.el.style.left = rect.left + 'px';
+  c.el.style.top = rect.top + 'px';
+  c.el.style.position = 'fixed';
+  var gust = document.createElement('span');
+  gust.innerHTML = '<span style="position:absolute;left:-16px;top:30%;font-size:34px;animation:gustLeft .65s ease-out forwards;display:inline-block;z-index:2"><span style="display:inline-block;transform:scaleX(-1)">💨</span></span>';
+  c.el.appendChild(gust);
+  sPop(); sRise();
+  moveKite((100 - kiteTarget) * 0.1);
+  setTimeout(function () { removeCloud(c); }, 650);
+  markActive();
+}
+
+// ── Kite ────────────────────────────────────────────────────────────────────
+function kiteTopPct(k) { return 64 - k * 0.56; }
+function layoutKite() {
+  var W = window.innerWidth || 1280, H = window.innerHeight || 800;
+  var top = kiteTopPct(kite);
+  document.getElementById('kite').style.top = top + '%';
+  var kx = W * 0.13, ky = H * top / 100 + 86;
+  var hx = W * 0.98 - 338, hy = H * 0.92 - 291;
+  document.getElementById('string').setAttribute('d',
+    'M ' + hx.toFixed(0) + ' ' + hy.toFixed(0) +
+    ' Q ' + ((kx + hx) / 2).toFixed(0) + ' ' + (Math.max(ky, hy) + 70).toFixed(0) +
+    ' ' + kx.toFixed(0) + ' ' + ky.toFixed(0));
+  document.getElementById('pct').textContent = Math.round(kite);
+  document.getElementById('bar').style.width = Math.round(kite) + '%';
+}
+function moveKite(d) {
+  if (over) return;
+  kiteTarget = Math.max(0, Math.min(100, kiteTarget + d));
+  if (kiteTarget >= 90 && !fireCooldown) { fireCooldown = true; fireworks(); sFire(); }
+  if (kiteTarget < 85) fireCooldown = false;
+  cancelAnimationFrame(raf);
+  var from = kite, to = kiteTarget, t0 = performance.now(), dur = 750;
+  function step(t) {
+    var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    kite = from + (to - from) * e;
+    layoutKite();
+    if (p < 1) raf = requestAnimationFrame(step);
+    else if (to <= 0) { sCrash(); endGame(true); }
+  }
+  raf = requestAnimationFrame(step);
+}
+
+// ── Fireworks ───────────────────────────────────────────────────────────────
+function fireworks() {
+  var box = document.getElementById('fireworks');
+  var colors = ['#ff5a5a', '#ffd75e', '#4cb7ff', '#37c07e', '#c86bff'];
+  for (var b = 0; b < 3; b++) {
+    (function (b) {
+      setTimeout(function () {
+        var cx = 15 + Math.random() * 60, cy = 20 + Math.random() * 25;
+        for (var i = 0; i < 16; i++) {
+          var sp = document.createElement('span');
+          var ang = (i / 16) * Math.PI * 2, r = 60 + Math.random() * 60;
+          sp.style.cssText = 'position:absolute;left:' + cx + '%;top:' + cy + '%;width:8px;height:8px;border-radius:50%;background:' +
+            colors[(i + b) % colors.length] + ';--dx:' + Math.cos(ang) * r + 'px;--dy:' + Math.sin(ang) * r +
+            'px;animation:fwSpark .9s ease-out forwards';
+          box.appendChild(sp);
+          (function (n) { setTimeout(function () { n.remove(); }, 1000); })(sp);
+        }
+      }, b * 220);
+    })(b);
+  }
+}
+
+// ── Flocks ──────────────────────────────────────────────────────────────────
+var flockSVG = '<span style="position:absolute;left:0;top:20px;animation:flap 1.5s ease-in-out infinite"><svg width="26" height="12" viewBox="0 0 26 12"><path d="M1 10 Q7 1 13 9 Q19 1 25 10" style="fill:none;stroke:#fff;stroke-width:2.4px;stroke-linecap:round"/></svg></span>' +
+  '<span style="position:absolute;left:34px;top:8px;animation:flap 1.5s ease-in-out infinite;animation-delay:.2s"><svg width="26" height="12" viewBox="0 0 26 12"><path d="M1 10 Q7 1 13 9 Q19 1 25 10" style="fill:none;stroke:#fff;stroke-width:2.4px;stroke-linecap:round"/></svg></span>' +
+  '<span style="position:absolute;left:70px;top:0;animation:flap 1.5s ease-in-out infinite;animation-delay:.4s"><svg width="28" height="13" viewBox="0 0 26 12"><path d="M1 10 Q7 1 13 9 Q19 1 25 10" style="fill:none;stroke:#fff;stroke-width:2.4px;stroke-linecap:round"/></svg></span>' +
+  '<span style="position:absolute;left:106px;top:10px;animation:flap 1.5s ease-in-out infinite;animation-delay:.15s"><svg width="26" height="12" viewBox="0 0 26 12"><path d="M1 10 Q7 1 13 9 Q19 1 25 10" style="fill:none;stroke:#fff;stroke-width:2.4px;stroke-linecap:round"/></svg></span>';
+function spawnFlock() {
+  if (over) return;
+  var f = document.createElement('div');
+  f.style.cssText = 'position:absolute;left:0;top:' + (4 + Math.random() * 13) + '%;width:170px;height:40px;z-index:2;pointer-events:none;animation:flockFly ' + (40 + Math.random() * 20) + 's linear forwards';
+  f.innerHTML = flockSVG;
+  f.addEventListener('animationend', function () { f.remove(); });
+  document.getElementById('flocks').appendChild(f);
+}
+
+// ── Typing ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', function (e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (over) {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); document.getElementById(nextUnlocked ? 'btnNext' : 'btnRetry').click(); }
+    return;
+  }
+  if (e.key === ' ') {                       // Space = skip the active cloud
+    e.preventDefault();
+    var a = activeCloud();
+    if (a) { a.skipped = true; markActive(); }
+    return;
+  }
+  var c = activeCloud();
+  if (!c) return;
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    c.eng.backspace();
+    renderWord(c);
+    return;
+  }
+  if (e.key.length !== 1 || !/[a-zA-Z]/.test(e.key)) return;
+  e.preventDefault();
+  if (!startedAt) startedAt = Date.now();
+  c.eng.feed(e.key);
+  var comp = c.eng.composed;
+  // BASE-letter prefix check (diacritics may arrive late in free order):
+  // a key whose folded result diverges from the target's folded prefix is
+  // wrong — buzz and bounce it off so the state stays clean.
+  var fb = foldBase(comp), ft = foldBase(c.w.d);
+  if (ft.slice(0, fb.length) !== fb || fb.length > ft.length) {
+    c.eng.backspace();
+    wrongKeys++;
+    sBuzz();
+    c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');
+    renderWord(c);
+    return;
+  }
+  correctKeys++;
+  sTick();
+  renderWord(c);
+  if (DEBUG) markActive();
+  if (comp === c.w.d) popCloud(c);
+});
+// composition = system Vietnamese IME is ON — remind (the game needs raw keys)
+var imeWarned = 0;
+document.addEventListener('compositionstart', function () {
+  if (Date.now() - imeWarned < 60000) return;
+  imeWarned = Date.now();
+  var t = document.createElement('div');
+  t.textContent = '⚠️ Tắt bộ gõ tiếng Việt của máy (chuyển sang ABC) để chơi nhé!';
+  t.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#17233d;color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;z-index:99';
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 3200);
+});
+
+// ── WPM ─────────────────────────────────────────────────────────────────────
+function updateWPM() {
+  if (!startedAt) return;
+  var mins = Math.max((Date.now() - startedAt) / 60000, 1 / 60);
+  document.getElementById('wpm').textContent = Math.round(correctKeys / 5 / mins);
+}
+
+// ── Level / end ─────────────────────────────────────────────────────────────
+var nextUnlocked = false;
+function endGame(crashed) {
+  if (over) return;
+  over = true;
+  clearInterval(spawnT); clearInterval(timerT); clearInterval(flockT); clearInterval(wpmT);
+  // Sao tính theo %% từ gõ đúng / tổng số từ đã xuất hiện (không theo độ cao diều)
+  var pctWords = wordsTotal ? Math.round(wordsDone / wordsTotal * 100) : 0;
+  var stars = crashed ? 0 : (pctWords > 90 ? 3 : pctWords > 60 ? 2 : pctWords > 30 ? 1 : 0);
+  var prevBest = store.kite.best[level] || 0;
+  var gained = Math.max(0, stars - prevBest) * 100;         // 100 XP per NEW star
+  if (stars > prevBest) store.kite.best[level] = stars;
+  if (gained) store.xp = (store.xp || 0) + gained;
+  nextUnlocked = stars >= 1;
+  if (nextUnlocked && level + 1 > (store.kite.level || 1)) store.kite.level = level + 1;
+  saveStore(store);
+
+  var ov = document.getElementById('overlay');
+  ov.style.display = 'flex';
+  document.getElementById('ovEmoji').textContent = crashed ? '🍂' : (stars > 0 ? '⭐'.repeat(stars) : '🌥️');
+  document.getElementById('ovTitle').textContent = crashed ? 'Ôi, diều rơi mất rồi!' : (stars > 0 ? 'Bạn được ' + stars + ' sao!' : 'Chưa được sao nào');
+  document.getElementById('ovMsg').textContent = crashed ? 'Đừng buồn, thử thả diều lại nhé!'
+    : stars === 3 ? 'Tuyệt vời! Diều bay cao tít trên mây!'
+    : stars > 0 ? 'Hay lắm! Thử đưa diều lên cao hơn nữa nhé!'
+    : 'Gõ đúng hơn 30%% số mây để được sao nhé!';
+  var mins = startedAt ? Math.max((Date.now() - startedAt) / 60000, 1 / 60) : 1;
+  var acc = correctKeys + wrongKeys ? Math.round(correctKeys / (correctKeys + wrongKeys) * 100) : 100;
+  document.getElementById('ovStats').innerHTML =
+    '⭐ Mây đã phá: ' + wordsDone + '/' + wordsTotal + ' (' + pctWords + '%) · ⚡ ' +
+    Math.round(correctKeys / 5 / mins) + ' WPM · 🎯 ' + acc + '%' +
+    (gained ? '<br>✨ +' + gained + ' XP' : '');
+  document.getElementById('btnNext').style.display = nextUnlocked ? '' : 'none';
+  if (!crashed && stars > 0) {
+    for (var i = 0; i < stars; i++) sStar(i);
+    setTimeout(sFan, stars * 350);
+    fireworks();
+  }
+}
+function startLevel(l) {
+  level = l;
+  document.getElementById('lvl').textContent = level;
+  document.getElementById('overlay').style.display = 'none';
+  clouds.forEach(function (c) { c.el.remove(); });
+  clouds = [];
+  over = false; score = 0; timeLeft = 60; kite = 30; kiteTarget = 30;
+  correctKeys = 0; wrongKeys = 0; startedAt = 0; fireCooldown = false;
+  wordsDone = 0; wordsTotal = 0;
+  document.getElementById('score').textContent = '0';
+  document.getElementById('wpm').textContent = '0';
+  document.getElementById('time').textContent = '1:00';
+  layoutKite();
+  clearInterval(spawnT); clearInterval(timerT); clearInterval(flockT); clearInterval(wpmT);
+  spawnT = setInterval(spawnCloud, spawnGap() * 1000);
+  flockT = setInterval(function () { if (Math.random() < 0.6) spawnFlock(); }, 22000);
+  wpmT = setInterval(updateWPM, 1000);
+  timerT = setInterval(function () {
+    if (over) return;
+    timeLeft--;
+    document.getElementById('time').textContent = '0:' + String(Math.max(0, timeLeft)).padStart(2, '0');
+    if (timeLeft <= 5 && timeLeft > 0) sTick();
+    if (timeLeft <= 0) endGame(false);
+  }, 1000);
+  setTimeout(spawnCloud, 700);
+  setTimeout(spawnFlock, 4000);
+}
+document.getElementById('btnRetry').addEventListener('click', function () { startLevel(level); });
+document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1); });
+document.getElementById('soundBtn').addEventListener('click', function () {
+  soundOn = !soundOn;
+  this.textContent = soundOn ? '🔊' : '🔇';
+});
+window.addEventListener('resize', layoutKite);
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+fetch('lessons.json').then(function (r) { return r.json(); }).then(function (d) {
+  WORDS = d.game || [];
+  startLevel(level);
+}).catch(function () {
+  document.getElementById('ovTitle').textContent = 'Không tải được từ vựng';
+  document.getElementById('overlay').style.display = 'flex';
+});
+})();
+</script>
+</body>
+</html>
