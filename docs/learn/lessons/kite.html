@@ -554,7 +554,10 @@ function endGame(crashed) {
   }
 }
 function startLevel(l) {
-  var startAlt = 50;   // độ cao khởi đầu cố định mọi level/mọi lần chơi
+  // Độ cao khởi đầu = 50% + 10% mỗi sao của LEVEL TRƯỚC (best đã lưu):
+  // lv1 = 50%, level sau được thưởng đà theo thành tích màn trước (tối đa 80%).
+  var prevStars = (store.kite.best && store.kite.best[l - 1]) || 0;
+  var startAlt = 50 + prevStars * 10;
   level = l;
   bag = [];
   document.getElementById('lvl').textContent = level;
