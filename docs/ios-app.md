@@ -8,6 +8,19 @@ tái sử dụng nguyên engine TelexCore của bản macOS. Khác macOS: iOS ke
 
 ## Nguyên tắc thiết kế (đã chốt với Phil)
 
+- **MINIMAL & TỐI ƯU TUYỆT ĐỐI — CPU/RAM/size** (cùng triết lý bản macOS):
+  - **Extension**: chỉ link TelexCore (vài trăm KB), KHÔNG kéo framework nào
+    khác vào target keyboard dù "tiện tay" (WebKit/audio/analytics… cấm).
+    Mục tiêu: cold-start bàn phím < 200ms, RAM extension < 20MB (trần hệ
+    thống ~60MB), 0% CPU khi không gõ (event-driven, không timer).
+  - **Container app**: cũng phải nhẹ — SwiftUI thuần, không dependency bên
+    thứ ba, asset nén (bài học từ size-diet macOS: strip + -Osize + LTO,
+    palette-compress ảnh). Mục tiêu download size cả bundle < 15MB.
+  - Hai process tách biệt hoàn toàn (app nặng không ảnh hưởng keyboard),
+    nhưng KHÔNG lấy đó làm cớ để app phình — minimal là giá trị thương hiệu.
+  - Mỗi milestone đo lại: binary size, RAM (Instruments), thời gian hiện
+    bàn phím. Ghi số vào bảng như BENCHMARKS.md.
+
 - **UI/behavior CLONE đúng bàn phím gốc Apple** (bàn phím Tiếng Việt của iOS,
   spacebar có chữ "VI EN" mờ): kích thước phím, khoảng cách, font, màu light/dark,
   balloon preview, shift/caps double-tap, backspace repeat + tăng tốc, giữ space
