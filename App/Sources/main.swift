@@ -59,7 +59,7 @@ axChangeObserver = DistributedNotificationCenter.default().addObserver(
     // value (that race skipped the teardown in build 7 and the wedged tap
     // survived). trustMayHaveChanged tears down unconditionally and re-creates
     // ~1.5s later iff genuinely trusted.
-    TerminalTapController.shared.trustMayHaveChanged()
+    TerminalTapController.shared.trustChangedExternally()
 }
 
 // Standard editing key equivalents (⌘A/⌘C/⌘V/⌘X/⌘Z, ⌘W) inside our OWN Settings

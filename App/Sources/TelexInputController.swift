@@ -880,6 +880,7 @@ final class TelexInputController: IMKInputController {
            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
+        TerminalTapController.shared.retryNow()
     }
 
     /// One-time gentle prompt on the FIRST activation with the permission missing —
