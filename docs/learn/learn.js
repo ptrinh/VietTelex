@@ -28,6 +28,8 @@ function load() {
   if (s.track === undefined) s.track = null;
   if (s.autoSpeak === undefined) s.autoSpeak = false;
   if (s.showArt === undefined) s.showArt = true;
+  if (s.showHands === undefined) s.showHands = true;
+  if (s.showKb === undefined) s.showKb = true;
   // First visit (no explicit choice): follow the browser's preferred language
   // if we have it; Vietnamese otherwise. A manual 🌐 pick sets langChosen and
   // wins forever after.
@@ -59,6 +61,8 @@ var STR = {
     imeToast: '⚠️ Hình như bộ gõ tiếng Việt của máy đang bật — hãy chuyển sang bàn phím English/ABC để bài học nhận đúng phím.',
     autoSpk: '🗣️ Tự đọc: Tắt', autoSpkOn: '🗣️ Tự đọc: Bật',
     art: '🖼️ Hình: Tắt', artOn: '🖼️ Hình: Bật',
+    handsShow: '🖐️ Hiện bàn tay', handsHide: '🖐️ Ẩn bàn tay',
+    kbShow: '⌨️ Hiện bàn phím', kbHide: '⌨️ Ẩn bàn phím',
     retry: '↻ Làm lại', next: 'Bài tiếp theo →', close: 'Đóng',
     badgeTitle: '🏅 Bộ sưu tập huy hiệu',
     r3: 'Xuất sắc! 🎉', r2: 'Giỏi lắm! 👏', r1: 'Hoàn thành! ✅',
@@ -100,6 +104,8 @@ var STR = {
     imeToast: '⚠️ Your system Vietnamese IME seems to be ON — switch to the English/ABC keyboard so lessons see your real keys.',
     autoSpk: '🗣️ Auto-speak: Off', autoSpkOn: '🗣️ Auto-speak: On',
     art: '🖼️ Pictures: Off', artOn: '🖼️ Pictures: On',
+    handsShow: '🖐️ Show hands', handsHide: '🖐️ Hide hands',
+    kbShow: '⌨️ Show keyboard', kbHide: '⌨️ Hide keyboard',
     retry: '↻ Retry', next: 'Next lesson →', close: 'Close',
     badgeTitle: '🏅 Badge collection',
     r3: 'Excellent! 🎉', r2: 'Great job! 👏', r1: 'Done! ✅',
@@ -355,10 +361,34 @@ function fingerName(ch) {
   return cls ? T().finger[cls] : '';
 }
 
+// Translucent two-hands overlay resting on the home row. Fingertips sit over
+// a s d f / j k l ; (viewBox x = home-key centres); the finger that owns the
+// next key lights up. Illustrative, not pixel-aligned to every key.
+var HANDS_SVG =
+  '<svg class="hands-svg" viewBox="0 0 565 200" preserveAspectRatio="xMidYMax meet" aria-hidden="true">' +
+    '<rect class="palm" x="52" y="138" width="128" height="58" rx="28"/>' +
+    '<rect class="palm" x="385" y="138" width="128" height="58" rx="28"/>' +
+    '<path class="finger" data-f="f1" d="M26 82 L78 150"/>' +
+    '<path class="finger" data-f="f2" d="M83 64 L98 150"/>' +
+    '<path class="finger" data-f="f3" d="M140 56 L122 150"/>' +
+    '<path class="finger" data-f="f4" d="M197 66 L152 150"/>' +
+    '<path class="finger thumb" data-f="th" d="M205 148 L262 184"/>' +
+    '<path class="finger" data-f="f5" d="M368 66 L413 150"/>' +
+    '<path class="finger" data-f="f6" d="M425 56 L443 150"/>' +
+    '<path class="finger" data-f="f7" d="M482 64 L467 150"/>' +
+    '<path class="finger" data-f="f8" d="M539 82 L487 150"/>' +
+    '<path class="finger thumb" data-f="th" d="M360 148 L303 184"/>' +
+  '</svg>';
+
 function buildKeyboard(container, onKey) {
   container.innerHTML = '';
   var keyEls = {};
   var shiftOn = false, shiftEl = null;
+  var hands = document.createElement('div');
+  hands.className = 'kb-hands';
+  hands.innerHTML = HANDS_SVG;
+  container.appendChild(hands);
+  var fingerEls = hands.querySelectorAll('.finger');
   KB_ROWS.forEach(function (row) {
     var r = document.createElement('div'); r.className = 'row';
     row.forEach(function (k) {
@@ -402,10 +432,15 @@ function buildKeyboard(container, onKey) {
     highlight: function (ch) {
       Object.keys(keyEls).forEach(function (k) { keyEls[k].classList.remove('next'); });
       if (shiftEl) shiftEl.classList.remove('next');
+      Array.prototype.forEach.call(fingerEls, function (f) { f.classList.remove('act'); });
       if (!ch) return;
       var el = keyEls[ch.toLowerCase()];
       if (el) el.classList.add('next');
       if (ch !== ch.toLowerCase() && shiftEl) shiftEl.classList.add('next');
+      var fkey = ch === ' ' ? 'th' : FINGER[ch.toLowerCase()];
+      if (fkey) Array.prototype.forEach.call(fingerEls, function (f) {
+        if (f.getAttribute('data-f') === fkey) f.classList.add('act');
+      });
     },
     flash: function (ch, cls) {
       var el = keyEls[(ch || '').toLowerCase()];
@@ -620,6 +655,7 @@ function openLesson(ci, li) {
   document.getElementById('resultBox').hidden = true;
   document.getElementById('playBox').hidden = false;
   kb = buildKeyboard(document.getElementById('kbArea'), handleKey);
+  refreshKbToggles();
   skipAutoPunct();
   renderStep(true);
   preloadLesson(lesson);
@@ -834,6 +870,20 @@ document.getElementById('artBtn').addEventListener('click', function () {
   store.showArt = !store.showArt; save();
   refreshArtBtn();
   if (cur) renderStep(false);
+});
+function refreshKbToggles() {
+  var area = document.getElementById('kbArea');
+  if (area) { area.classList.toggle('no-hands', !store.showHands); area.classList.toggle('no-kb', !store.showKb); }
+  var hb = document.getElementById('handsBtn');
+  if (hb) { hb.textContent = store.showHands ? T().handsHide : T().handsShow; hb.classList.toggle('on', store.showHands); }
+  var kbb = document.getElementById('kbBtn');
+  if (kbb) { kbb.textContent = store.showKb ? T().kbHide : T().kbShow; kbb.classList.toggle('on', store.showKb); }
+}
+document.getElementById('handsBtn').addEventListener('click', function () {
+  store.showHands = !store.showHands; save(); refreshKbToggles();
+});
+document.getElementById('kbBtn').addEventListener('click', function () {
+  store.showKb = !store.showKb; save(); refreshKbToggles();
 });
 document.getElementById('dictBtn').addEventListener('click', function () {
   if (!cur) return;
