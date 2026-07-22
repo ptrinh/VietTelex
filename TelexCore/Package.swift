@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "TelexCore",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v13), .iOS(.v16)],
     products: [
         .library(name: "TelexCore", targets: ["TelexCore"]),
         .executable(name: "gen-lessons", targets: ["GenLessons"]),

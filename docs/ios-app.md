@@ -55,7 +55,8 @@ VietTelex-iOS (cùng repo, project riêng qua xcodegen)
 ├── VietTelex (container app — App Store bắt buộc có)
 │   ├── Onboarding: hướng dẫn bật bàn phím (Settings → General → Keyboard)
 │   ├── Cài đặt: Simple Telex, bỏ dấu tự do, spell-check, tự khôi phục, gõ tắt
-│   └── 🎓 Learn: nhúng giáo trình /learn sẵn có (lessons.json + audio + 8 ngôn ngữ)
+│   └── 🎓 Link mở https://ptrinh.github.io/viettelex/learn/ trong browser
+│       (KHÔNG nhúng WebView — app chỉ để settings, giữ minimal)
 └── App Group "group.com.viettelex" — UserDefaults chia sẻ settings
 ```
 
@@ -93,7 +94,7 @@ Bundle id mới, không đụng registration macOS: `com.viettelex.ios` +
 | M0 | TelexCore + platform iOS, project xcodegen 2 target, App Group | 0.5 ngày |
 | M1 | Bàn phím chữ hoạt động: QWERTY + shift + backspace + engine diff-edit; gõ được tiếng Việt trong Notes/Messages trên máy thật | 1–2 ngày |
 | M2 | Clone đủ Apple: plane 123/#+= , globe, return theo `returnKeyType`, secure field, backspace repeat, giữ-space di chuyển con trỏ, balloon, âm click, dark mode, iPad layout, "VI EN" trên spacebar | 2–3 ngày |
-| M3 | Container app: onboarding, settings (App Group), Learn nhúng (WKWebView bọc /learn/lessons) | 1–2 ngày |
+| M3 | Container app: onboarding, settings (App Group), link mở Learn trên browser | 1 ngày |
 | M4 | Field-test matrix (Messages, Safari, Notes, mật khẩu, Zalo, Telegram…), TestFlight, App Store submit | ~1 tuần calendar (review) |
 
 ## Rủi ro
@@ -102,8 +103,8 @@ Bundle id mới, không đụng registration macOS: `com.viettelex.ios` +
 - Autocorrect host chen giữa composition → test sớm, plan B marked text.
 - Latency `insertText` là IPC mỗi phím (~ tương đương 1.9ms IMKit macOS) — diff
   tối thiểu giữ burst sửa dấu rẻ.
-- App Review: container phải có giá trị độc lập → Learn giải quyết; không Full
-  Access nên privacy review nhẹ.
+- App Review: container phải có giá trị độc lập → onboarding + settings đầy đủ;
+  không Full Access nên privacy review nhẹ. (Learn chỉ là link ra browser.)
 
 ## Quyết định còn mở (chốt trước khi bắt đầu M0)
 
