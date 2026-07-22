@@ -333,7 +333,8 @@ function removeCloud(c) {
   markActive();
 }
 function levelPool() {
-  var maxLen = level === 1 ? 3 : level === 2 ? 4 : Infinity;
+  // lv1 ≤2 chữ, lv2 ≤3, lv3 ≤4, lv4 ≤5, lv5+ không giới hạn
+  var maxLen = level <= 4 ? level + 1 : Infinity;
   var pool = WORDS.filter(function (w) { return Array.from(w.d).length <= maxLen; });
   return pool.length ? pool : WORDS;
 }
