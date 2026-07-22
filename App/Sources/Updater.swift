@@ -31,16 +31,21 @@ enum UpdateCheck {
                 AppState.shared.lastNotifiedUpdateVersion = latest
                 let alert = NSAlert()
                 alert.messageText = String(format: VTLocalized("VietTelex %@ is available"), latest)
-                alert.informativeText = VTLocalized("You can download the update from the releases page. This check ran because weekly update checks are enabled in Settings.")
-                alert.addButton(withTitle: VTLocalized("Download update…"))
+                alert.informativeText = VTLocalized("Update now body")
+                alert.addButton(withTitle: VTLocalized("Update now"))
                 alert.addButton(withTitle: VTLocalized("Later"))
+                alert.addButton(withTitle: VTLocalized("Open releases page"))
                 // Same accessory-app dance as the Accessibility alert: activate and
                 // float, or the panel opens behind the frontmost app.
                 NSApp.activate(ignoringOtherApps: true)
                 alert.window.level = .floating
                 alert.window.orderFrontRegardless()
-                if alert.runModal() == .alertFirstButtonReturn {
+                switch alert.runModal() {
+                case .alertFirstButtonReturn:
+                    SelfUpdater.run(version: latest)
+                case .alertThirdButtonReturn:
                     NSWorkspace.shared.open(url)
+                default: break
                 }
             }
         }
@@ -120,5 +125,104 @@ enum UpdateCheck {
             if x != y { return x > y }
         }
         return false
+    }
+}
+
+
+/// In-place self-update. The bundle lives in USER-writable
+/// ~/Library/Input Methods, so no admin rights are needed:
+/// download the release app.zip → verify the Developer ID signature →
+/// ditto over the installed bundle → exit (macOS relaunches the IME on the
+/// next keystroke; already-open apps may need an input-source flip, same as
+/// any IME restart).
+enum SelfUpdater {
+    static func run(version: String) {
+        let zipURL = URL(string:
+            "https://github.com/ptrinh/viettelex/releases/download/v\(version)/VietTelex-\(version).app.zip")!
+        Task.detached {
+            do {
+                let (tmp, response) = try await URLSession.shared.download(from: zipURL)
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                    throw NSError(domain: "SelfUpdater", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)"])
+                }
+                let work = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("viettelex-update-\(version)", isDirectory: true)
+                try? FileManager.default.removeItem(at: work)
+                try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+
+                try runTool("/usr/bin/ditto", ["-xk", tmp.path, work.path])
+                let newApp = work.appendingPathComponent("VietTelex.app")
+                guard FileManager.default.fileExists(atPath: newApp.path) else {
+                    throw NSError(domain: "SelfUpdater", code: 2,
+                                  userInfo: [NSLocalizedDescriptionKey: "app missing in zip"])
+                }
+                // Signature gate: Developer ID, OUR team — refuse anything else.
+                try runTool("/usr/bin/codesign", ["--verify", "--deep", "--strict", newApp.path])
+                let info = try toolOutput("/usr/bin/codesign", ["-dv", "--verbose=2", newApp.path])
+                guard info.contains("TeamIdentifier=84T567KMYD") else {
+                    throw NSError(domain: "SelfUpdater", code: 3,
+                                  userInfo: [NSLocalizedDescriptionKey: "unexpected signing team"])
+                }
+
+                let dest = ("~/Library/Input Methods/VietTelex.app" as NSString).expandingTildeInPath
+                try runTool("/usr/bin/ditto", [newApp.path, dest])
+                try? FileManager.default.removeItem(at: work)
+
+                await MainActor.run {
+                    let done = NSAlert()
+                    done.messageText = String(format: VTLocalized("Updated to %@"), version)
+                    done.informativeText = VTLocalized("Update done body")
+                    done.addButton(withTitle: VTLocalized("Restart input method"))
+                    NSApp.activate(ignoringOtherApps: true)
+                    done.window.level = .floating
+                    done.window.orderFrontRegardless()
+                    _ = done.runModal()
+                    exit(0)   // macOS relaunches the IME (new binary) on demand
+                }
+            } catch {
+                await MainActor.run {
+                    let fail = NSAlert()
+                    fail.messageText = VTLocalized("Update failed")
+                    fail.informativeText = String(format: VTLocalized("Update failed body"), error.localizedDescription)
+                    fail.addButton(withTitle: VTLocalized("Open releases page"))
+                    fail.addButton(withTitle: VTLocalized("Close"))
+                    NSApp.activate(ignoringOtherApps: true)
+                    fail.window.level = .floating
+                    fail.window.orderFrontRegardless()
+                    if fail.runModal() == .alertFirstButtonReturn,
+                       let u = URL(string: "https://github.com/ptrinh/viettelex/releases/latest") {
+                        NSWorkspace.shared.open(u)
+                    }
+                }
+            }
+        }
+    }
+
+    @discardableResult
+    private static func runTool(_ path: String, _ args: [String]) throws -> Int32 {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: path)
+        p.arguments = args
+        try p.run()
+        p.waitUntilExit()
+        guard p.terminationStatus == 0 else {
+            throw NSError(domain: "SelfUpdater", code: Int(p.terminationStatus),
+                          userInfo: [NSLocalizedDescriptionKey: "\(path) exit \(p.terminationStatus)"])
+        }
+        return p.terminationStatus
+    }
+
+    private static func toolOutput(_ path: String, _ args: [String]) throws -> String {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: path)
+        p.arguments = args
+        let pipe = Pipe()
+        p.standardError = pipe    // codesign -dv writes to stderr
+        p.standardOutput = pipe
+        try p.run()
+        p.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8) ?? ""
     }
 }

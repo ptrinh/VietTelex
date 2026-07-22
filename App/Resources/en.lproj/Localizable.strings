@@ -10,3 +10,19 @@
 "Stale permission body" = "macOS lists VietTelex as allowed but refuses the event tap — this can happen when an updated, re-signed build sits under an old grant.\n\nOne-time fix:\n1. Open System Settings → Privacy & Security → Accessibility\n2. Select VietTelex and press − to REMOVE it\n3. Press + and add VietTelex back (~/Library/Input Methods)\n4. Switch the keyboard to ABC and back to VietTelex";
 
 "Open Accessibility Settings" = "Open Accessibility Settings";
+
+"Update now" = "Update now";
+
+"Update now body" = "Update now downloads the new version, verifies its signature and swaps it in automatically — no password needed. The input method restarts when done.";
+
+"Updated to %@" = "Updated to %@";
+
+"Update done body" = "The input method will now restart. If an open app stops typing, flip the input source to ABC and back.";
+
+"Update failed" = "Update failed";
+
+"Update failed body" = "Error: %@\n\nYou can download the installer from the releases page.";
+
+"Restart input method" = "Restart input method";
+
+"Open releases page" = "Open releases page";
