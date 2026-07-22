@@ -377,18 +377,18 @@ var HANDS_SVG = (function () {
     return '<rect class="' + cls + '" data-f="' + e[0] + '" x="' + e[1] + '" y="' + e[2] +
            '" width="30" height="' + (BOT - e[2]) + '" rx="15"/>';
   }
-  var THUMBS = [
-    '<rect class="{C}" data-f="th" x="204" y="196" width="30" height="72" rx="15" transform="rotate(-40 219 232)"/>',
-    '<rect class="{C}" data-f="th" x="331" y="196" width="30" height="72" rx="15" transform="rotate(40 346 232)"/>'
-  ];
+  // Thumbs run as a stroke from inside the palm UP to the space bar (row 4,
+  // y≈155–199) so they visually connect the palm to the space key.
+  function thumb(cls, d) { return '<path class="' + cls + '" data-f="th" d="' + d + '"/>'; }
+  var THUMB_D = ['M214 224 L262 183', 'M351 224 L303 183'];
   var palms = '<rect class="palm" x="0" y="208" width="240" height="64" rx="30"/>' +
               '<rect class="palm" x="325" y="208" width="240" height="64" rx="30"/>';
   var base = '<g class="hand-base">' + palms +
              FING.map(function (e) { return finger('finger', e); }).join('') +
-             THUMBS.map(function (t) { return t.replace('{C}', 'finger'); }).join('') + '</g>';
+             THUMB_D.map(function (d) { return thumb('thumb', d); }).join('') + '</g>';
   var hi = '<g class="hand-hi">' +
            FING.map(function (e) { return finger('fingtip', e); }).join('') +
-           THUMBS.map(function (t) { return t.replace('{C}', 'fingtip'); }).join('') + '</g>';
+           THUMB_D.map(function (d) { return thumb('thumb-hi', d); }).join('') + '</g>';
   return '<svg class="hands-svg" viewBox="0 0 565 276" preserveAspectRatio="xMidYMin meet" aria-hidden="true">' +
          base + hi + '</svg>';
 })();
@@ -401,7 +401,7 @@ function buildKeyboard(container, onKey) {
   hands.className = 'kb-hands';
   hands.innerHTML = HANDS_SVG;
   container.appendChild(hands);
-  var fingerEls = hands.querySelectorAll('.fingtip');
+  var fingerEls = hands.querySelectorAll('.fingtip, .thumb-hi');
   KB_ROWS.forEach(function (row) {
     var r = document.createElement('div'); r.className = 'row';
     row.forEach(function (k) {

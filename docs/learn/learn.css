@@ -47,7 +47,9 @@
 .fingerhint b { color: var(--navy); }
 
 /* On-screen keyboard */
-.kb { max-width: 620px; margin: 16px auto 0; user-select: none; -webkit-user-select: none; position: relative; }
+/* Width == the home-row key area (10×52 + 9×5 gaps) so the hands-overlay viewBox
+   (565) maps 1:1 to the keys — otherwise the outer fingers splay past a and ;. */
+.kb { max-width: 565px; margin: 16px auto 0; user-select: none; -webkit-user-select: none; position: relative; }
 /* Translucent hands: fingertips on the home row, palms hanging below the space
    bar (svg is taller than the keyboard and overflows downward). pointer-events
    off so keys stay tappable. */
@@ -57,9 +59,12 @@
    read as one silhouette (no darker seams where they meet). */
 .kb-hands .hand-base { opacity: .3; }
 .kb-hands .hand-base .palm, .kb-hands .hand-base .finger { fill: #e0a878; }
-/* Highlight layer on top: only the active finger's tip lights up gold. */
+/* Thumbs are strokes from the palm up to the space bar (connect palm ↔ space). */
+.kb-hands .hand-base .thumb { fill: none; stroke: #e0a878; stroke-width: 34; stroke-linecap: round; }
+/* Highlight layer on top: only the active finger/thumb lights up gold. */
 .kb-hands .hand-hi .fingtip { fill: var(--gold); opacity: 0; transition: opacity .15s; }
-.kb-hands .hand-hi .fingtip.act { opacity: .82; }
+.kb-hands .hand-hi .thumb-hi { fill: none; stroke: var(--gold); stroke-width: 34; stroke-linecap: round; opacity: 0; transition: opacity .15s; }
+.kb-hands .hand-hi .fingtip.act, .kb-hands .hand-hi .thumb-hi.act { opacity: .82; }
 .kb.no-hands .kb-hands { display: none; }
 .kb.no-kb .row { visibility: hidden; }
 /* Reserve room for the palms hanging below the keyboard; collapse it when hands are off. */
