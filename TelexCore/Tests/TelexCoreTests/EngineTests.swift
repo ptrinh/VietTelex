@@ -180,11 +180,16 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(commitFree("sets"), "sét")
         XCTAssertEqual(commitFree("boots"), "bốt")
         XCTAssertEqual(commitFree("lots"), "lót")
-        // …while giant English words whose spelling is NOT a natural telex
-        // order stay English (his/this precedent).
-        XCTAssertEqual(commitFree("this"), "this")
+        // POLICY 2026-07-23: true collisions (English spelling == canonical
+        // telex of a REAL Vietnamese word) → Vietnamese always wins.
+        XCTAssertEqual(commitFree("this"), "thí")
+        XCTAssertEqual(commitFree("his"), "hí")
+        XCTAssertEqual(commitFree("is"), "í")
+        XCTAssertEqual(commitFree("of"), "ò")
+        // …but spellings that are NOT a natural telex order stay English.
         XCTAssertEqual(commitFree("there"), "there")
         XCTAssertEqual(commitFree("most"), "most")
+        XCTAssertEqual(commitFree("must"), "must")
         XCTAssertEqual(composeFree("luuw"), "lưu")
         XCTAssertEqual(composeFree("cuuws"), "cứu")
         XCTAssertEqual(composeFree("dad"), "đa")

@@ -54,6 +54,25 @@ let protected: Set<String> = [
     "tít",  // tits  (xa tít)
     "bốt",  // boots (giày bốt)
     "lót",  // lots, lost (lót đường)
+    // Chính sách 2026-07-23 (user): collision THẬT — chính tả tiếng Anh trùng
+    // đúng thứ tự telex chuẩn của một TỪ VIỆT THẬT — thì tiếng Việt luôn thắng,
+    // kể cả với từ tiếng Anh cực phổ biến (this, his, is, of...).
+    "hí",   // his
+    "thí",  // this  (thí dụ, thí nghiệm)
+    "há",   // has   (há miệng)
+    "í",    // is    (í ới)
+    "ì",    // if    (ì ạch)
+    "ò",    // of    (ò ó o)
+    "ú",    // us    (mập ú, ú òa)
+    "lé",   // les   (mắt lé)
+    "gá",   // gas   (gá lắp)
+    "nỏ",   // nor   (cái nỏ)
+    "dáy",  // days  (dơ dáy)
+    "mĩ",   // mix   (mĩ thuật — biến thể của mỹ)
+    "típ",  // tips  (tiền típ)
+    "trê",  // tree  (cá trê)
+    "rún",  // runs  (rún — phương ngữ Nam)
+    "ươn",  // won   (cá ươn)
     "sên",  // seen  (ốc sên)
     "sỉ",   // sir   (mua sỉ)
     "sĩ",   // six   (bác sĩ)

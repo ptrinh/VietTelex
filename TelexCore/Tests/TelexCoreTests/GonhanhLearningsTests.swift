@@ -17,15 +17,17 @@ final class EnglishCollisionTests: XCTestCase {
     }
 
     func testCommonEnglishRestores() {
-        for w in ["his", "this", "see", "of", "if", "is", "or", "us", "has",
-                  "must", "last", "list", "most", "does", "those", "these",
-                  "there", "here", "days", "test", "now"] where w != "now" {
+        // POLICY 2026-07-23: true collisions belong to Vietnamese now (his→hí,
+        // this→thí, is→í, of→ò, if→ì, us→ú, has→há, days→dáy — protect list);
+        // this golden keeps only the words whose spelling is NOT a natural
+        // telex order, which stay English.
+        for w in ["see", "or", "must", "last", "list", "most", "does", "those",
+                  "these", "there", "here", "test", "now"] where w != "now" {
             XCTAssertEqual(commit(w), w, "English '\(w)' must survive")
         }
-        // "did" left the table on purpose (user decision 2026-07-22): the common
-        // Vietnamese word wins — did→đi (same for theme→thêm). See gen-english
-        // protect list.
         XCTAssertEqual(commit("did"), "đi")
+        XCTAssertEqual(commit("his"), "hí")
+        XCTAssertEqual(commit("this"), "thí")
     }
 
     func testCancelRestoresEnglishDoubles() {
@@ -86,8 +88,9 @@ final class EnglishCollisionTests: XCTestCase {
     // MARK: - Collision-table mechanics (item 4)
 
     func testCollisionRestoreIsCaseInsensitive() {
-        XCTAssertEqual(commit("His"), "His")
-        XCTAssertEqual(commit("THIS"), "THIS")
+        // his/this belong to Vietnamese since 2026-07-23 — case carries over
+        XCTAssertEqual(commit("His"), "Hí")
+        XCTAssertEqual(commit("THIS"), "THÍ")
         XCTAssertEqual(commit("Off"), "Off")
         XCTAssertEqual(commit("OFF"), "OFF")        // dict beats the all-caps cancel escape
     }
@@ -111,14 +114,15 @@ final class EnglishCollisionTests: XCTestCase {
     // Regression net for future `gen-english` runs: the generated table must
     // keep the pain words, and must NEVER contain a protected/junk raw.
     func testGeneratedTableSanity() {
-        for expected in ["his", "this", "see", "test", "of", "if", "is",
+        for expected in ["see", "test",
                          "off", "class", "office", "mess", "boss"] {
             XCTAssertTrue(EnglishCollisions.words.contains(expected), "table lost '\(expected)'")
         }
         // protected: Vietnamese wins these raw sequences (sẽ=sex, ơn=own…)
         for banned in ["sex", "teen", "been", "own", "car", "too", "its", "as",
                        "low", "now", "how", "room", "box", "air", "bar", "beer",
-                       "bus", "lee", "max", "moon", "seen", "sir", "six", "tax", "ups"] {
+                       "bus", "lee", "max", "moon", "seen", "sir", "six", "tax", "ups",
+                       "his", "this", "is", "of", "if", "us", "has", "thus", "queen"] {
             XCTAssertFalse(EnglishCollisions.words.contains(banned), "protected '\(banned)' leaked into the table")
         }
         // web-corpus junk that would eat Vietnamese typing (sw = sư)
