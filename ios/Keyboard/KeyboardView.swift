@@ -10,8 +10,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         case letter(Character)
         case text(String)
         case space
+        case doubleSpacePeriod        // "  " fast → ". " (Apple behavior)
         case newline
         case backspace
+        case moveCursor(Int)          // space-hold trackpad mode
     }
 
     private enum Plane { case letters, numbers, symbols }
@@ -31,6 +33,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private var rowsContainer = UIStackView()
     private var repeatTimer: Timer?
+    private var lastSpaceTap: TimeInterval = 0
+    private var spaceHoldX: CGFloat = 0
+    private var backspaceHoldStart: TimeInterval = 0
 
     init(needsGlobe: Bool, onKey: @escaping (Key) -> Void, onGlobe: @escaping (UIButton) -> Void) {
         self.needsGlobe = needsGlobe
@@ -70,6 +75,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     func applyAppearance(_ appearance: UIKeyboardAppearance) {
         dark = appearance == .dark
         rebuild()
+    }
+
+    /// Sentence-start auto-shift (only upgrades OFF→ON; never downgrades CAPS).
+    func setAutoShift(_ on: Bool) {
+        guard shift != .caps else { return }
+        let want: ShiftState = on ? .on : .off
+        if shift != want { shift = want; rebuild() }
     }
 
     // MARK: layout
@@ -135,7 +147,32 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             }, for: .touchUpInside)
             views.append(globe)
         }
-        let space = controlButton(title: "space") { [weak self] in self?.tapped(.space) }
+        let space = baseButton(title: "space", special: true)
+        space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
+        // faint "VI EN" on the right edge, like the stock Vietnamese keyboard
+        let hint = UILabel()
+        hint.text = "VI EN"
+        hint.font = .systemFont(ofSize: 11, weight: .semibold)
+        hint.textColor = (dark ? UIColor.white : .black).withAlphaComponent(0.25)
+        hint.translatesAutoresizingMaskIntoConstraints = false
+        space.addSubview(hint)
+        NSLayoutConstraint.activate([
+            hint.rightAnchor.constraint(equalTo: space.rightAnchor, constant: -10),
+            hint.centerYAnchor.constraint(equalTo: space.centerYAnchor),
+        ])
+        space.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            let now = CACurrentMediaTime()
+            if now - self.lastSpaceTap < 0.35 {
+                self.tapped(.doubleSpacePeriod)
+            } else {
+                self.tapped(.space)
+            }
+            self.lastSpaceTap = now
+        }, for: .touchUpInside)
+        let spacePan = UILongPressGestureRecognizer(target: self, action: #selector(spaceHold(_:)))
+        spacePan.minimumPressDuration = 0.4
+        space.addGestureRecognizer(spacePan)
         space.setContentHuggingPriority(.defaultLow, for: .horizontal)
         views.append(space)
         let ret = controlButton(title: returnTitle) { [weak self] in self?.tapped(.newline) }
@@ -197,14 +234,39 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func letterButton(_ s: String) -> UIView {
         let title = (shift == .off) ? s : s.uppercased()
         let b = baseButton(title: title, special: false)
+        b.addAction(UIAction { [weak self, weak b] _ in
+            guard let self, let b else { return }
+            self.showBalloon(over: b, text: b.currentTitle ?? title)
+        }, for: .touchDown)
         b.addAction(UIAction { [weak self] _ in
             guard let self else { return }
+            self.hideBalloon()
             let cased: Character = (self.shift == .off) ? Character(s) : Character(s.uppercased())
             self.tapped(.letter(cased))
             if self.shift == .on { self.shift = .off; self.rebuild() }
-        }, for: .touchUpInside)
+        }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
         return b
     }
+
+    // MARK: key preview balloon (clipped to our own bounds on the top row —
+    // a documented extension limitation; see docs/ios-app.md)
+    private let balloon = UILabel()
+    private func showBalloon(over key: UIView, text: String) {
+        balloon.text = text
+        balloon.font = .systemFont(ofSize: 34)
+        balloon.textAlignment = .center
+        balloon.textColor = dark ? .white : .black
+        balloon.backgroundColor = dark ? UIColor(white: 0.35, alpha: 1) : .white
+        balloon.layer.cornerRadius = 8
+        balloon.layer.masksToBounds = true
+        balloon.layer.zPosition = 10
+        let f = convert(key.bounds, from: key)
+        let w = max(f.width + 16, 44)
+        balloon.frame = CGRect(x: f.midX - w / 2, y: max(f.minY - 52, 0), width: w, height: 50)
+        if balloon.superview == nil { addSubview(balloon) }
+        balloon.isHidden = false
+    }
+    private func hideBalloon() { balloon.isHidden = true }
 
     private func textButton(_ s: String) -> UIView {
         let b = baseButton(title: s, special: false)
@@ -252,12 +314,36 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     @objc private func backspaceHold(_ g: UILongPressGestureRecognizer) {
         switch g.state {
         case .began:
+            backspaceHoldStart = CACurrentMediaTime()
             repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.09, repeats: true) { [weak self] _ in
-                self?.tapped(.backspace)
+                guard let self else { return }
+                // Apple accelerates a sustained hold: after ~1.6s the cadence
+                // doubles (word-wise deletion comes later if ever needed).
+                self.tapped(.backspace)
+                if CACurrentMediaTime() - self.backspaceHoldStart > 1.6 {
+                    self.tapped(.backspace)
+                }
             }
         case .ended, .cancelled, .failed:
             repeatTimer?.invalidate()
             repeatTimer = nil
+        default: break
+        }
+    }
+
+    /// Space-hold = trackpad mode: sliding left/right moves the caret,
+    /// one position per ~9pt of travel (stock feel).
+    @objc private func spaceHold(_ g: UILongPressGestureRecognizer) {
+        let x = g.location(in: self).x
+        switch g.state {
+        case .began:
+            spaceHoldX = x
+        case .changed:
+            let delta = Int((x - spaceHoldX) / 9)
+            if delta != 0 {
+                tapped(.moveCursor(delta))
+                spaceHoldX = x
+            }
         default: break
         }
     }
