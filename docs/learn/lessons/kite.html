@@ -25,7 +25,7 @@ a{color:#2c7a4b}a:hover{color:#1d5c37}
 @keyframes sunGlow{0%,100%{box-shadow:0 0 50px 18px rgba(255,214,90,.55)}50%{box-shadow:0 0 70px 30px rgba(255,214,90,.75)}}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 @keyframes fwRise{from{transform:translateY(0);opacity:1}to{transform:translateY(-46vh);opacity:1}}
-@keyframes fwSpark{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.4);opacity:0}}
+@keyframes fwSpark{0%{transform:translate(0,0) scale(1);opacity:1}70%{opacity:.95}100%{transform:translate(var(--dx),var(--dy)) scale(.35);opacity:0}}
 @keyframes blinkCursor{50%{opacity:.15}}
 .bgcloud{position:absolute;background:#fff;border-radius:40px;z-index:3}
 .bgcloud i{position:absolute;background:#fff;border-radius:50%}
@@ -337,11 +337,21 @@ function levelPool() {
   var pool = WORDS.filter(function (w) { return Array.from(w.d).length <= maxLen; });
   return pool.length ? pool : WORDS;
 }
+// Bag draw: shuffle the level pool and deal without repeats; when the bag
+// runs out just reshuffle ("xoay lại") — game state (kite!) is untouched.
+var bag = [];
+function nextWord() {
+  if (!bag.length) {
+    bag = levelPool().slice();
+    for (var i = bag.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+    }
+  }
+  return bag.pop();
+}
 function spawnCloud() {
   if (over || !WORDS.length) return;
-  var pool = levelPool();
-  var w = pool[Math.floor(Math.random() * pool.length)];
-  clouds.push(makeCloud(w));
+  clouds.push(makeCloud(nextWord()));
   markActive();
 }
 function popCloud(c) {
@@ -358,7 +368,7 @@ function popCloud(c) {
   gust.innerHTML = '<span style="position:absolute;left:-16px;top:30%;font-size:34px;animation:gustLeft .65s ease-out forwards;display:inline-block;z-index:2"><span style="display:inline-block;transform:scaleX(-1)">💨</span></span>';
   c.el.appendChild(gust);
   sPop(); sRise();
-  moveKite((100 - kiteTarget) * 0.1);
+  moveKite(Math.max(1, (100 - kiteTarget) * 0.1));
   if (kiteTarget >= 90 && !over) { fireworks(); sFire(); }
   setTimeout(function () { removeCloud(c); }, 650);
   markActive();
@@ -406,7 +416,7 @@ function moveKite(d) {
 function fireworks() {
   var box = document.getElementById('fireworks');
   var colors = ['#ff5a5a', '#ffd75e', '#4cb7ff', '#37c07e', '#c86bff'];
-  for (var b = 0; b < 3; b++) {
+  for (var b = 0; b < 4; b++) {
     (function (b) {
       setTimeout(function () {
         var cx = 15 + Math.random() * 60, cy = 20 + Math.random() * 25;
@@ -415,11 +425,11 @@ function fireworks() {
           var ang = (i / 16) * Math.PI * 2, r = 60 + Math.random() * 60;
           sp.style.cssText = 'position:absolute;left:' + cx + '%;top:' + cy + '%;width:8px;height:8px;border-radius:50%;background:' +
             colors[(i + b) % colors.length] + ';--dx:' + Math.cos(ang) * r + 'px;--dy:' + Math.sin(ang) * r +
-            'px;animation:fwSpark .9s ease-out forwards';
+            'px;animation:fwSpark 1.8s ease-out forwards';
           box.appendChild(sp);
-          (function (n) { setTimeout(function () { n.remove(); }, 1000); })(sp);
+          (function (n) { setTimeout(function () { n.remove(); }, 1900); })(sp);
         }
-      }, b * 220);
+      }, b * 380);
     })(b);
   }
 }
@@ -542,13 +552,15 @@ function endGame(crashed) {
     fireworks();
   }
 }
-function startLevel(l) {
+function startLevel(l, keepKite) {
+  var startAlt = keepKite ? Math.max(10, Math.min(93, kiteTarget)) : 30;
   level = l;
+  bag = [];
   document.getElementById('lvl').textContent = level;
   document.getElementById('overlay').style.display = 'none';
   clouds.forEach(function (c) { c.el.remove(); });
   clouds = [];
-  over = false; score = 0; timeLeft = 60; kite = 30; kiteTarget = 30;
+  over = false; score = 0; timeLeft = 60; kite = startAlt; kiteTarget = startAlt;
   correctKeys = 0; wrongKeys = 0; startedAt = 0; fireCooldown = false;
   wordsDone = 0; wordsTotal = 0;
   document.getElementById('score').textContent = '0';
@@ -570,7 +582,7 @@ function startLevel(l) {
   setTimeout(spawnFlock, 4000);
 }
 document.getElementById('btnRetry').addEventListener('click', function () { startLevel(level); });
-document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1); });
+document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1, true); });
 document.getElementById('soundBtn').addEventListener('click', function () {
   soundOn = !soundOn;
   this.textContent = soundOn ? '🔊' : '🔇';
