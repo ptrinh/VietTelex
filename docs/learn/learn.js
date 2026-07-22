@@ -682,6 +682,8 @@ function openLesson(ci, li) {
           correct: 0, wrong: 0, t0: 0, done: false, dictation: false };
   mapEl.hidden = true;
   playerEl.hidden = false;
+  if (mobInp) { mobInp.value = ''; mobPrev = ''; }
+  mobFocus();   // mobile/tablet: bring the OS keyboard up right away
   document.getElementById('pTitle').textContent = lessonTitle(lesson);
   document.getElementById('pIntro').textContent = lessonIntro(lesson);
   document.getElementById('pBack').textContent = T().map;
@@ -940,23 +942,64 @@ document.getElementById('dictBtn').addEventListener('click', function () {
 });
 
 // ── Physical keyboard input (works with iPad hardware keyboards too) ───────
-document.addEventListener('keydown', function (e) {
-  if (!cur || playerEl.hidden) return;
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+function lessonKey(key) {
+  if (!cur || playerEl.hidden) return false;
   if (cur.done) {
     // result screen: Space/Enter advances to the next lesson (300ms guard so
     // the keystroke that finished the lesson can't double-fire)
-    if ((e.key === ' ' || e.key === 'Enter') && Date.now() - (cur.finishedAt || 0) > 300) {
-      e.preventDefault();
+    if ((key === ' ' || key === 'Enter') && Date.now() - (cur.finishedAt || 0) > 300) {
       document.getElementById('rNext').click();
+      return true;
     }
-    return;
+    return false;
   }
-  if (e.key === 'Backspace') { e.preventDefault(); return; }
-  if (e.key.length !== 1) return;
-  e.preventDefault();
-  handleKey(e.key);
+  if (key === 'Backspace') return true;   // swallow: lessons never delete
+  if (key.length !== 1) return false;
+  handleKey(key);
+  return true;
+}
+document.addEventListener('keydown', function (e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // virtual-keyboard characters arrive via mobInp's 'input' event — don't
+  // double-handle them here (control keys like Enter still pass through)
+  if (mobInp && e.target === mobInp && (e.key.length === 1 || e.key === 'Backspace')) return;
+  if (lessonKey(e.key)) e.preventDefault();
 });
+
+// ── Mobile/tablet: hidden input so the OS keyboard comes up ─────────────────
+var IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
+var mobInp = null, mobPrev = '';
+function mobFocus() {
+  if (!mobInp || !cur || playerEl.hidden) return;
+  // synchronous: iOS only shows the keyboard when focus() runs inside the
+  // user gesture — a setTimeout would silently fail
+  try { mobInp.focus({ preventScroll: true }); } catch (e) { mobInp.focus(); }
+}
+if (IS_TOUCH) {
+  mobInp = document.createElement('input');
+  mobInp.type = 'text';
+  mobInp.id = 'mobKey';
+  mobInp.setAttribute('autocapitalize', 'none');
+  mobInp.setAttribute('autocorrect', 'off');
+  mobInp.setAttribute('autocomplete', 'off');
+  mobInp.setAttribute('spellcheck', 'false');
+  mobInp.setAttribute('aria-hidden', 'true');
+  // 16px so iOS doesn't zoom on focus; visually invisible but still on-screen
+  mobInp.style.cssText = 'position:fixed;left:50%;bottom:2px;width:2px;height:2px;font-size:16px;opacity:.01;border:none;padding:0;background:none;z-index:1;caret-color:transparent;outline:none';
+  document.body.appendChild(mobInp);
+  mobInp.addEventListener('input', function () {
+    var v = mobInp.value, i = 0;
+    while (i < v.length && i < mobPrev.length && v.charAt(i) === mobPrev.charAt(i)) i++;
+    for (var a = i; a < v.length; a++) lessonKey(v.charAt(a));  // deletions ignored, like Backspace
+    mobPrev = v;
+    if (v.length > 40) { mobInp.value = ''; mobPrev = ''; }
+  });
+  playerEl.addEventListener('pointerup', function (e) {
+    var t = e.target;
+    if (t && t.closest && t.closest('button, a, select, input') && t !== mobInp) return;
+    mobFocus();
+  });
+}
 
 // ── Load data ───────────────────────────────────────────────────────────────
 fetch('lessons.json').then(function (r) { return r.json(); }).then(function (d) {

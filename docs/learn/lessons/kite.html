@@ -851,37 +851,37 @@ function spawnFlock() {
 }
 
 // ── Typing ──────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', function (e) {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+function noopPrevent() {}
+function gameKey(key, prevent) {
   if (pickerEl.style.display !== 'none' && pickerEl.style.display !== '') {
-    if (e.key === 'Escape') pickerEl.style.display = 'none';
+    if (key === 'Escape') pickerEl.style.display = 'none';
     return;
   }
   if (paused) {
-    if (e.key === 'Escape' || e.key.toLowerCase() === 'p') { e.preventDefault(); setPaused(false); }
+    if (key === 'Escape' || key.toLowerCase() === 'p') { prevent(); setPaused(false); }
     return;
   }
   if (over) {
-    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); document.getElementById(nextUnlocked ? 'btnNext' : 'btnRetry').click(); }
+    if (key === ' ' || key === 'Enter') { prevent(); document.getElementById(nextUnlocked ? 'btnNext' : 'btnRetry').click(); }
     return;
   }
-  if (e.key === ' ' || e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'Enter') {
-    e.preventDefault();                      // đều = bỏ qua mây active
+  if (key === ' ' || key === 'Tab' || key === 'ArrowRight' || key === 'Enter') {
+    prevent();                               // đều = bỏ qua mây active
     skipActive();
     return;
   }
   var c = activeCloud();
   if (!c) return;
-  if (e.key === 'Backspace') {
-    e.preventDefault();
+  if (key === 'Backspace') {
+    prevent();
     c.eng.backspace();
     renderWord(c);
     return;
   }
-  if (e.key.length !== 1 || !/[a-zA-Z]/.test(e.key)) return;
-  e.preventDefault();
+  if (key.length !== 1 || !/[a-zA-Z]/.test(key)) return;
+  prevent();
   if (!startedAt) startedAt = Date.now();
-  c.eng.feed(e.key);
+  c.eng.feed(key);
   var comp = c.eng.composed;
   // BASE-letter prefix check (diacritics may arrive late in free order):
   // a key whose folded result diverges from the target's folded prefix is
@@ -900,10 +900,55 @@ document.addEventListener('keydown', function (e) {
   renderWord(c);
   if (DEBUG) markActive();
   if (comp === c.w.d) popCloud(c);
+}
+document.addEventListener('keydown', function (e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // ký tự + Backspace của bàn phím ảo đi qua event 'input' của mobInp,
+  // đừng xử lý lần hai ở đây (phím điều khiển như Enter/Escape vẫn qua).
+  if (mobInp && e.target === mobInp && (e.key.length === 1 || e.key === 'Backspace')) return;
+  gameKey(e.key, function () { e.preventDefault(); });
 });
+
+// ── Mobile/tablet: input ẩn để bàn phím OS hiện lên ─────────────────────────
+var IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
+var mobInp = null;
+if (IS_TOUCH) {
+  mobInp = document.createElement('input');
+  mobInp.type = 'text';
+  mobInp.id = 'mobKey';
+  mobInp.setAttribute('autocapitalize', 'none');
+  mobInp.setAttribute('autocorrect', 'off');
+  mobInp.setAttribute('autocomplete', 'off');
+  mobInp.setAttribute('spellcheck', 'false');
+  mobInp.setAttribute('aria-hidden', 'true');
+  // 16px để iOS không zoom khi focus; gần như vô hình nhưng vẫn on-screen
+  mobInp.style.cssText = 'position:fixed;left:50%;bottom:2px;width:2px;height:2px;font-size:16px;opacity:.01;border:none;padding:0;background:none;z-index:1;caret-color:transparent;outline:none';
+  document.body.appendChild(mobInp);
+  var mobPrev = '';
+  mobInp.addEventListener('input', function () {
+    var v = mobInp.value, i = 0;
+    while (i < v.length && i < mobPrev.length && v.charAt(i) === mobPrev.charAt(i)) i++;
+    for (var r = mobPrev.length; r > i; r--) gameKey('Backspace', noopPrevent);
+    for (var a = i; a < v.length; a++) gameKey(v.charAt(a), noopPrevent);
+    mobPrev = v;
+    if (v.length > 40) { mobInp.value = ''; mobPrev = ''; }
+  });
+  // đồng bộ: iOS chỉ hiện bàn phím khi focus() chạy NGAY trong gesture
+  var mobFocus = function () {
+    try { mobInp.focus({ preventScroll: true }); } catch (e) { mobInp.focus(); }
+  };
+  document.addEventListener('pointerup', function (e) {
+    var t = e.target;
+    if (t && t.closest && t.closest('button, a, select, input') && t !== mobInp) return;
+    mobFocus();
+  });
+  mobFocus();
+}
+
 // composition = system Vietnamese IME is ON — remind (the game needs raw keys)
 var imeWarned = 0;
 document.addEventListener('compositionstart', function () {
+  if (IS_TOUCH) return;   // bàn phím ảo compose là chuyện thường, đừng cảnh báo
   if (Date.now() - imeWarned < 60000) return;
   imeWarned = Date.now();
   var t = document.createElement('div');
