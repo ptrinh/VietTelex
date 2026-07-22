@@ -617,7 +617,7 @@ func VTLocalized(_ key: String) -> String {
 
 /// Universal shortcut-table parser: accepts every format users bring from other
 /// IMEs (field request 2026-07-22) — plist/XML, JSON, flat YAML ("key: value"),
-/// and the GõNhanh/EVKey text style ("key:value", ";" or "#" comments). Returns
+/// and plain text ("key:value", ";" or "#" comments). Returns
 /// nil when nothing parseable is found.
 enum ShortcutImporter {
     /// Flat-YAML export — human-readable, round-trips through parse(), and
@@ -640,7 +640,7 @@ enum ShortcutImporter {
            !dict.isEmpty {
             return dict
         }
-        // 2. Line-based: GõNhanh txt ("key:value", ";" comments) and flat YAML
+        // 2. Line-based: plain txt ("key:value", ";" comments) and flat YAML
         //    ("key: value", "#" comments). One entry per line, first ":" splits.
         guard let text = String(data: data, encoding: .utf8) else { return nil }
         var out: [String: String] = [:]

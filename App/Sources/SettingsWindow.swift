@@ -529,7 +529,7 @@ struct ModeTableTab: View {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = VTLocalized("Couldn’t read the file")
-            alert.informativeText = VTLocalized("Supported formats: YAML, JSON, or one key:value per line (GõNhanh, EVKey…).")
+            alert.informativeText = VTLocalized("Supported formats: YAML, JSON, or one key:value per line.")
             alert.runModal()
             return
         }
@@ -803,7 +803,7 @@ struct ShortcutsTab: View {
     private func importPlist() {
         let panel = NSOpenPanel()
         // Any text-ish file: YAML, JSON, or "key:value" txt
-        // (GõNhanh/EVKey exports) — ShortcutImporter sniffs the format.
+        // (exports from other IMEs) — ShortcutImporter sniffs the format.
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let data = try? Data(contentsOf: url),
@@ -812,7 +812,7 @@ struct ShortcutsTab: View {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = VTLocalized("Couldn’t read the file")
-            alert.informativeText = VTLocalized("Supported formats: YAML, JSON, or one key:value per line (GõNhanh, EVKey…).")
+            alert.informativeText = VTLocalized("Supported formats: YAML, JSON, or one key:value per line.")
             alert.runModal()
             return
         }
