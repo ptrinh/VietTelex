@@ -359,6 +359,7 @@ function popCloud(c) {
   c.el.appendChild(gust);
   sPop(); sRise();
   moveKite((100 - kiteTarget) * 0.1);
+  if (kiteTarget >= 90 && !over) { fireworks(); sFire(); }
   setTimeout(function () { removeCloud(c); }, 650);
   markActive();
 }
@@ -381,8 +382,14 @@ function layoutKite() {
 function moveKite(d) {
   if (over) return;
   kiteTarget = Math.max(0, Math.min(100, kiteTarget + d));
-  if (kiteTarget >= 90 && !fireCooldown) { fireCooldown = true; fireworks(); sFire(); }
-  if (kiteTarget < 85) fireCooldown = false;
+  if (kiteTarget >= 94) {
+    // Thắng luôn: diều lên tít trời — full sao, khỏi chờ hết giờ
+    kite = kiteTarget;
+    layoutKite();
+    fireworks(); sFire();
+    endGame(false, 3);
+    return;
+  }
   cancelAnimationFrame(raf);
   var from = kite, to = kiteTarget, t0 = performance.now(), dur = 750;
   function step(t) {
@@ -516,6 +523,7 @@ function endGame(crashed) {
   document.getElementById('ovEmoji').textContent = crashed ? '🍂' : (stars > 0 ? '⭐'.repeat(stars) : '🌥️');
   document.getElementById('ovTitle').textContent = crashed ? 'Ôi, diều rơi mất rồi!' : (stars > 0 ? 'Bạn được ' + stars + ' sao!' : 'Chưa được sao nào');
   document.getElementById('ovMsg').textContent = crashed ? 'Đừng buồn, thử thả diều lại nhé!'
+    : forcedStars != null ? 'Diều bay tít lên chín tầng mây — thắng luôn level này!'
     : stars === 3 ? 'Tuyệt vời! Diều bay cao tít trên mây!'
     : stars > 0 ? 'Hay lắm! Thử đưa diều lên cao hơn nữa nhé!'
     : 'Gõ đúng hơn 30%% số mây để được sao nhé!';
