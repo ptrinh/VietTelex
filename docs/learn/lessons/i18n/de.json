@@ -1,0 +1,284 @@
+{
+ "_meta": {
+  "lang": "de"
+ },
+ "native": "Deutsch",
+ "ui": {
+  "days": "Tage in Folge",
+  "map": "← Karte",
+  "listen": "🔊 Anhören",
+  "dict": "🎧 Hören & tippen",
+  "dictOn": "🎧 Diktat an",
+  "fsOn": "Vollbild",
+  "fsOff": "Vollbild beenden",
+  "upNext": "Weiter",
+  "imeTitle": "Schalte zuerst dein vietnamesisches IME AUS",
+  "imeBody": "Die Lektionen setzen die Diakritika für dich aus einfachen Tastendrücken zusammen. Stelle deine Systemtastatur also auf <b>English / ABC</b> um (schalte VietTelex, Unikey, EVKey… aus), bevor du übst.<br><br>💡 Auf dem Mac: drücke 🌐 oder ⌃Space, um die Eingabequelle zu wechseln. Mit eingeschaltetem IME werden Buchstaben ZWEIMAL markiert und die Lektion kann deine Tasten nicht erkennen.",
+  "imeOk": "Alles klar, los geht's!",
+  "imeToast": "⚠️ Dein vietnamesisches System-IME scheint EIN zu sein — wechsle zur English/ABC-Tastatur, damit die Lektionen deine echten Tasten sehen.",
+  "autoSpk": "🗣️ Automatisch sprechen: Aus",
+  "autoSpkOn": "🗣️ Automatisch sprechen: An",
+  "art": "🖼️ Bilder: Aus",
+  "artOn": "🖼️ Bilder: An",
+  "retry": "↻ Nochmal",
+  "next": "Nächste Lektion →",
+  "close": "Schließen",
+  "badgeTitle": "🏅 Abzeichen-Sammlung",
+  "r3": "Ausgezeichnet! 🎉",
+  "r2": "Gut gemacht! 👏",
+  "r1": "Fertig! ✅",
+  "acc": "Genauigkeit",
+  "speed": "Geschwindigkeit",
+  "noVoice": "Keine vietnamesische Stimme auf diesem Gerät 😢",
+  "infoDone": "📖 +10 XP — Handhaltungs-Anleitung gelesen, nächste Lektion freigeschaltet!",
+  "fingerTo": "→ Taste",
+  "holdShift": "(⇧ Shift halten)",
+  "spaceKey": "LEERTASTE",
+  "spaceCap": "Leertaste",
+  "trackTitle": "Wo möchtest du anfangen?",
+  "trackNewT": "Ich bin neu an der Tastatur",
+  "trackNewD": "Beginne mit Handhaltung und Tastschreiben, dann lerne Telex.",
+  "trackTypistT": "Ich kann tippen —\nbring mir nur Telex bei",
+  "trackTypistD": "Springe direkt zu den Sonderbuchstaben und Tönen. Die ersten beiden Kapitel bleiben zum Wiederholen offen.",
+  "trackSwitch": "Lernweg wechseln",
+  "optional": "Wiederholung",
+  "loadFail": "Lektionen konnten nicht geladen werden — öffne die Seite über",
+  "finger": {
+   "f1": "Linker kleiner Finger",
+   "f2": "Linker Ringfinger",
+   "f3": "Linker Mittelfinger",
+   "f4": "Linker Zeigefinger",
+   "f5": "Rechter Zeigefinger",
+   "f6": "Rechter Mittelfinger",
+   "f7": "Rechter Ringfinger",
+   "f8": "Rechter kleiner Finger",
+   "th": "Daumen"
+  },
+  "badgeDefs": {
+   "first": [
+    "🐣",
+    "Erster Schritt",
+    "Schließe deine erste Lektion ab"
+   ],
+   "perfect": [
+    "💯",
+    "Perfekt",
+    "Hol dir 3 Sterne in einer Lektion"
+   ],
+   "tones": [
+    "🎵",
+    "Ton-Meister",
+    "Bestehe \"Alle fünf Töne\""
+   ],
+   "c2done": [
+    "✨",
+    "Buchstaben-Zauberer",
+    "Schließe das Kapitel Sonderbuchstaben ab"
+   ],
+   "streak3": [
+    "🔥",
+    "Fleißig",
+    "Lerne 3 Tage in Folge"
+   ],
+   "streak7": [
+    "🌋",
+    "Beharrlich",
+    "Lerne 7 Tage in Folge"
+   ],
+   "xp500": [
+    "🚀",
+    "Astronaut",
+    "Erreiche 500 XP"
+   ],
+   "boss": [
+    "🏆",
+    "Telex-Meister",
+    "Besiege den Endgegner"
+   ]
+  }
+ },
+ "chapters": {
+  "c0": "Lerne die Tastatur kennen",
+  "c1": "Wörter ohne Zeichen",
+  "c2": "Sonderbuchstaben: â ê ô ă ơ ư đ",
+  "c3": "Die fünf Töne",
+  "c4": "Wörter & Sätze",
+  "c5": "Fortgeschritten",
+  "c6": "Fortgeschritten 2: Kleine Geschichten",
+  "c7": "Fortgeschritten 3: Geschichten aus der Vergangenheit"
+ },
+ "lessons": {
+  "c0l1": [
+   "Haltung & Handposition",
+   "info"
+  ],
+  "c0l2": [
+   "Grundreihe",
+   "Lege deine Zeigefinger auf F und J (spüre die Erhebungen). Ein Finger pro Taste, dann zurück zur Grundstellung."
+  ],
+  "c0l3": [
+   "Obere Reihe",
+   "Greife nach oben, dann KEHRE zur Grundreihe zurück. Augen auf den Bildschirm, nicht auf die Tasten."
+  ],
+  "c0l4": [
+   "Untere Reihe",
+   "Vietnamesisch verwendet V, N, M, C sehr oft. Erst langsam und genau — Geschwindigkeit kommt später."
+  ],
+  "c1l1": [
+   "Zwei-Buchstaben-Wörter",
+   "Echte vietnamesische Wörter, noch ohne Diakritika. Drücke die LEERTASTE, um zum nächsten Wort zu gehen."
+  ],
+  "c1l2": [
+   "Längere Wörter",
+   "Noch keine Diakritika — baue das Muskelgedächtnis zwischen den Tasten auf."
+  ],
+  "c1l3": [
+   "Dein erster Satz",
+   "Ein ganzer Satz! Tippe jedes Wort, getrennt durch Leerzeichen."
+  ],
+  "c2l1": [
+   "dd → đ",
+   "Tippe d ZWEIMAL, um đ zu bekommen. Sieh zu, wie sich der Buchstabe beim Tippen verwandelt!"
+  ],
+  "c2l2": [
+   "aa → â",
+   "Tippe a zweimal, um â zu bekommen. Beispiel: caan → cân."
+  ],
+  "c2l3": [
+   "ee → ê, oo → ô",
+   "Gleiche Regel: verdopple den Vokal. teen → tên, coo → cô."
+  ],
+  "c2l4": [
+   "Die w-Taste: ă ơ ư",
+   "w ist die Zaubertaste: aw → ă, ow → ơ, uw → ư, und w allein → ư."
+  ],
+  "c2l5": [
+   "Alles mischen",
+   "Ein Wort kann mehrere Umwandlungen brauchen: thuwowng → thương (ư dann ơ)."
+  ],
+  "c3l1": [
+   "s → steigender Ton (´)",
+   "Schreibe das Wort zu Ende, dann drücke s für den steigenden Ton: mas → má."
+  ],
+  "c3l2": [
+   "f → fallender Ton (`)",
+   "Die f-Taste fügt den fallenden Ton hinzu: maf → mà."
+  ],
+  "c3l3": [
+   "r → fragender Ton (ˀ)",
+   "Die r-Taste fügt den fragenden Ton hinzu: har → hả."
+  ],
+  "c3l4": [
+   "x → purzelnder Ton (~)",
+   "Die x-Taste fügt den purzelnden Ton hinzu: max → mã."
+  ],
+  "c3l5": [
+   "j → schwerer Ton (.)",
+   "Die j-Taste fügt den schweren Ton hinzu: maj → mạ."
+  ],
+  "c3l6": [
+   "Töne ändern & entfernen",
+   "Tippe eine ANDERE Ton-Taste, um ihn zu ändern (más + f → mà); drücke z zum Entfernen."
+  ],
+  "c3l7": [
+   "Alle fünf Töne",
+   "Das ganze Set: ma má mà mả mã mạ — probiere bei jedem die 🔊-Taste!"
+  ],
+  "c4l1": [
+   "Zweisilbige Wörter",
+   "Der Name unseres Landes! Großbuchstaben: Shift halten und normal tippen."
+  ],
+  "c4l2": [
+   "Begrüßungen",
+   "Tippe den ganzen Satz — drücke 🔊, um ihn zuerst zu hören."
+  ],
+  "c4l3": [
+   "Familiensätze",
+   "Sätze über die Familie."
+  ],
+  "c4l4": [
+   "Volksvers",
+   "Vietnamesischer Volksvers — tippe und lerne die Sprache gleichzeitig."
+  ],
+  "c5l1": [
+   "Kanonische Telex-Reihenfolge",
+   "Vokalzeichen kommen DIREKT NACH dem Vokal, Töne ans Ende: daaus → dấu."
+  ],
+  "c5l2": [
+   "Lange Sätze",
+   "Vollständige Sätze mit Satzzeichen und Großbuchstaben."
+  ],
+  "c5l3": [
+   "Endgegner",
+   "Die letzte Herausforderung — jeder Sonderbuchstabe, alle fünf Töne."
+  ],
+  "c6l1": [
+   "Drache und Fee",
+   "Die Legende vom Ursprung der Vietnamesen — tippe sie Satz für Satz."
+  ],
+  "c6l2": [
+   "Die Legende vom bánh chưng",
+   "Warum gibt es zu Tết eckige bánh chưng?"
+  ],
+  "c6l3": [
+   "Die Legende vom Schwertsee",
+   "König Lê und die goldene Schildkröte in Hanoi."
+  ],
+  "c7l1": [
+   "Der Heilige Gióng",
+   "Der Junge aus dem Dorf Gióng, der zum Krieger heranwuchs."
+  ],
+  "c7l2": [
+   "Die Trưng-Schwestern",
+   "Unsere ersten Heldinnen."
+  ],
+  "c7l3": [
+   "Vietnamesisches Tết",
+   "Der Endgegner: tippe die ganze Tết-Geschichte!"
+  ]
+ },
+ "hands": {
+  "h2": "Handposition — Tastschreiben",
+  "lead": "Lege vor den Lektionen deine Hände richtig auf: jeder Finger besitzt ein paar Tasten und kehrt zur <b>Grundreihe</b> zurück. Das ist die Grundlage für alles Weitere.",
+  "notes": [
+   [
+    "1️⃣ Finde die Erhebungen auf F und J",
+    "Ertaste die Tastatur: <b>F</b> und <b>J</b> haben kleine Rillen. Lege deine Zeigefinger dort ab — ohne hinzusehen! Die anderen Finger liegen auf <b>A S D</b> (links) und <b>K L ;</b> (rechts); die Daumen schweben über der Leertaste."
+   ],
+   [
+    "2️⃣ Ein Finger, eine Zone",
+    "Die Lektions-Tastatur ist nach Fingern eingefärbt: jeder Finger drückt seine eigenen Tasten und <b>kehrt zur Grundstellung zurück</b>. Am Anfang langsam zu sein ist normal — deine Hände werden es sich merken."
+   ],
+   [
+    "3️⃣ Augen auf den Bildschirm",
+    "Versuche, nicht nach unten zu schauen. Die Lektionen <b>heben immer die nächste Taste hervor</b> und nennen den Finger, sodass du nie mit den Augen nach Tasten suchen musst."
+   ],
+   [
+    "4️⃣ Gerade sitzen, Handgelenke entspannt",
+    "Gerader Rücken, Ellbogen ca. 90°, Handgelenke gerade und nicht auf den Tisch gedrückt. Ruhe nach je 20 Minuten 5 Minuten aus."
+   ]
+  ]
+ },
+ "hoc": {
+  "h2": "Das Telex-Klassenzimmer 🎓",
+  "lead": "8 Kapitel, vom Kennenlernen der Tastatur bis zum Tippen von Geschichten aus der Vergangenheit. Verdiene mindestens ⭐ in einer Lektion, um die nächste freizuschalten. Auf einem Tablet ohne Tastatur tippe die Tasten auf dem Bildschirm in jeder Lektion an."
+ },
+ "landing": {
+  "heroH1": "Lerne vietnamesisches <span class=\"accent\">Telex</span>-Tippen",
+  "heroSub": "Tippe ohne Diakritika, erhalte vollständiges Vietnamesisch. Sofortiges Feedback — genau das Regelwerk der ViệtTelex-Eingabemethode.",
+  "sandboxLabel": "✏️ Probier es jetzt aus — tippe Vietnamesisch auf Telex-Art",
+  "kbdNote": "💡 Dieses Feld braucht eine echte Tastatur. Drücke <b>Leertaste</b>, um ein Wort zu beenden. Das <a href=\"lessons/\" style=\"color:#d4a94a\">Klassenzimmer</a> hat eine Bildschirmtastatur — Tablets funktionieren auch.",
+  "hocH2": "Willst du Telex lernen? 🎓",
+  "hocLead": "Ein Kurs mit 8 Kapiteln: Handhaltung → Sonderbuchstaben → Töne → ganze Geschichten.<br>Sterne ⭐, Abzeichen 🏅, gesprochene Beispiele 🔊 — und eine Bildschirmtastatur für Tablets.",
+  "ctaBtn": "🚀 Jetzt lernen",
+  "ctaNote": "Kostenlos, kein Konto — der Fortschritt wird auf deinem Gerät gespeichert.",
+  "cheatH2": "Telex-Regelblatt",
+  "cheatLead": "Klicke auf eine Kachel, um sie oben im Probierfeld laufen zu sehen. Merke dir diese wenigen Gruppen und du kannst ganz Vietnamesisch tippen.",
+  "groups": {
+   "Dấu thanh (gõ ở cuối từ)": "Töne (am Ende des Wortes getippt)",
+   "Nguyên âm đội mũ ^": "Vokale mit Hut ^",
+   "Nguyên âm có móc/ngoặc": "Vokale mit Haken",
+   "Đặc biệt": "Sonderfälle"
+  }
+ }
+}

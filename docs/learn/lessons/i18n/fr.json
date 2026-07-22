@@ -1,0 +1,284 @@
+{
+ "_meta": {
+  "lang": "fr"
+ },
+ "native": "Français",
+ "ui": {
+  "days": "jours d'affilée",
+  "map": "← Carte",
+  "listen": "🔊 Écouter",
+  "dict": "🎧 Écoute et tape",
+  "dictOn": "🎧 Dictée activée",
+  "fsOn": "Plein écran",
+  "fsOff": "Quitter le plein écran",
+  "upNext": "Continuer",
+  "imeTitle": "Désactive d'abord ton clavier vietnamien (IME)",
+  "imeBody": "Les leçons composent les accents pour toi à partir de frappes simples, alors bascule le clavier de ton système sur <b>English / ABC</b> (désactive VietTelex, Unikey, EVKey…) avant de t'entraîner.<br><br>💡 Sur un Mac : appuie sur 🌐 ou ⌃Espace pour changer de source de saisie. Avec un IME activé, les lettres reçoivent DEUX marques et la leçon ne peut pas reconnaître tes touches.",
+  "imeOk": "C'est compris, on y va !",
+  "imeToast": "⚠️ Ton IME vietnamien du système semble ACTIVÉ — bascule sur le clavier English/ABC pour que les leçons voient tes vraies touches.",
+  "autoSpk": "🗣️ Voix auto : Désactivée",
+  "autoSpkOn": "🗣️ Voix auto : Activée",
+  "art": "🖼️ Images : Désactivées",
+  "artOn": "🖼️ Images : Activées",
+  "retry": "↻ Réessayer",
+  "next": "Leçon suivante →",
+  "close": "Fermer",
+  "badgeTitle": "🏅 Collection de badges",
+  "r3": "Excellent ! 🎉",
+  "r2": "Bravo ! 👏",
+  "r1": "Terminé ! ✅",
+  "acc": "Précision",
+  "speed": "Vitesse",
+  "noVoice": "Aucune voix vietnamienne sur cet appareil 😢",
+  "infoDone": "📖 +10 XP — guide de position des mains lu, leçon suivante débloquée !",
+  "fingerTo": "→ touche",
+  "holdShift": "(maintiens ⇧ Maj)",
+  "spaceKey": "ESPACE",
+  "spaceCap": "espace",
+  "trackTitle": "Où veux-tu commencer ?",
+  "trackNewT": "Je débute avec le clavier",
+  "trackNewD": "Commence par la position des mains et la frappe au toucher, puis apprends le Telex.",
+  "trackTypistT": "Je sais taper —\napprends-moi juste le Telex",
+  "trackTypistD": "Passe directement aux lettres spéciales et aux tons. Les deux premiers chapitres restent ouverts pour réviser.",
+  "trackSwitch": "Changer de parcours",
+  "optional": "révision",
+  "loadFail": "Impossible de charger les leçons — ouvre la page via",
+  "finger": {
+   "f1": "Auriculaire gauche",
+   "f2": "Annulaire gauche",
+   "f3": "Majeur gauche",
+   "f4": "Index gauche",
+   "f5": "Index droit",
+   "f6": "Majeur droit",
+   "f7": "Annulaire droit",
+   "f8": "Auriculaire droit",
+   "th": "Pouce"
+  },
+  "badgeDefs": {
+   "first": [
+    "🐣",
+    "Premier pas",
+    "Termine ta première leçon"
+   ],
+   "perfect": [
+    "💯",
+    "Parfait",
+    "Obtiens 3 étoiles sur une leçon"
+   ],
+   "tones": [
+    "🎵",
+    "Maître des tons",
+    "Réussis « Les cinq tons »"
+   ],
+   "c2done": [
+    "✨",
+    "Magicien des lettres",
+    "Termine le chapitre des lettres spéciales"
+   ],
+   "streak3": [
+    "🔥",
+    "Assidu",
+    "Apprends 3 jours de suite"
+   ],
+   "streak7": [
+    "🌋",
+    "Persévérant",
+    "Apprends 7 jours de suite"
+   ],
+   "xp500": [
+    "🚀",
+    "Astronaute",
+    "Atteins 500 XP"
+   ],
+   "boss": [
+    "🏆",
+    "Maître du Telex",
+    "Bats le boss final"
+   ]
+  }
+ },
+ "chapters": {
+  "c0": "Découvre le clavier",
+  "c1": "Des mots sans marques",
+  "c2": "Lettres spéciales : â ê ô ă ơ ư đ",
+  "c3": "Les cinq tons",
+  "c4": "Mots et phrases",
+  "c5": "Avancé",
+  "c6": "Avancé 2 : Petites histoires",
+  "c7": "Avancé 3 : Récits historiques"
+ },
+ "lessons": {
+  "c0l1": [
+   "Posture et position des mains",
+   "info"
+  ],
+  "c0l2": [
+   "Rangée de repos",
+   "Pose tes index sur F et J (sens les petites bosses). Un doigt par touche, puis reviens à la rangée de repos."
+  ],
+  "c0l3": [
+   "Rangée du haut",
+   "Monte, puis REVIENS à la rangée de repos. Les yeux sur l'écran, pas sur les touches."
+  ],
+  "c0l4": [
+   "Rangée du bas",
+   "Le vietnamien utilise beaucoup V, N, M, C. D'abord lent et précis — la vitesse viendra plus tard."
+  ],
+  "c1l1": [
+   "Mots de deux lettres",
+   "De vrais mots vietnamiens, sans accents pour l'instant. Appuie sur ESPACE pour passer au mot suivant."
+  ],
+  "c1l2": [
+   "Mots plus longs",
+   "Toujours sans accents — construis ta mémoire musculaire entre les touches."
+  ],
+  "c1l3": [
+   "Ta première phrase",
+   "Une phrase complète ! Tape chaque mot, séparé par des espaces."
+  ],
+  "c2l1": [
+   "dd → đ",
+   "Tape d DEUX fois pour obtenir đ. Regarde la lettre se transformer pendant que tu tapes !"
+  ],
+  "c2l2": [
+   "aa → â",
+   "Tape a deux fois pour obtenir â. Exemple : caan → cân."
+  ],
+  "c2l3": [
+   "ee → ê, oo → ô",
+   "Même règle : double la voyelle. teen → tên, coo → cô."
+  ],
+  "c2l4": [
+   "La touche w : ă ơ ư",
+   "w est la touche magique : aw → ă, ow → ơ, uw → ư, et w seul → ư."
+  ],
+  "c2l5": [
+   "Mélange tout",
+   "Un seul mot peut nécessiter plusieurs transformations : thuwowng → thương (ư puis ơ)."
+  ],
+  "c3l1": [
+   "s → ton montant (´)",
+   "Termine le mot, puis appuie sur s pour le ton montant : mas → má."
+  ],
+  "c3l2": [
+   "f → ton descendant (`)",
+   "La touche f ajoute le ton descendant : maf → mà."
+  ],
+  "c3l3": [
+   "r → ton interrogatif (ˀ)",
+   "La touche r ajoute le ton interrogatif : har → hả."
+  ],
+  "c3l4": [
+   "x → ton culbutant (~)",
+   "La touche x ajoute le ton culbutant : max → mã."
+  ],
+  "c3l5": [
+   "j → ton lourd (.)",
+   "La touche j ajoute le ton lourd : maj → mạ."
+  ],
+  "c3l6": [
+   "Corriger et enlever les tons",
+   "Tape une touche de ton DIFFÉRENTE pour le changer (más + f → mà) ; appuie sur z pour l'enlever."
+  ],
+  "c3l7": [
+   "Les cinq tons",
+   "La série complète : ma má mà mả mã mạ — essaie le bouton 🔊 sur chacun !"
+  ],
+  "c4l1": [
+   "Mots de deux syllabes",
+   "Le nom de notre pays ! Majuscules : maintiens Maj et tape normalement."
+  ],
+  "c4l2": [
+   "Salutations",
+   "Tape la phrase entière — appuie sur 🔊 pour l'entendre d'abord."
+  ],
+  "c4l3": [
+   "Phrases sur la famille",
+   "Des phrases sur la famille."
+  ],
+  "c4l4": [
+   "Vers populaires",
+   "Des vers populaires vietnamiens — tape et apprends la langue en même temps."
+  ],
+  "c5l1": [
+   "Ordre Telex canonique",
+   "Les marques de voyelle se mettent JUSTE APRÈS la voyelle, les tons à la fin : daaus → dấu."
+  ],
+  "c5l2": [
+   "Phrases longues",
+   "Des phrases complètes avec ponctuation et majuscules."
+  ],
+  "c5l3": [
+   "Boss final",
+   "Le défi final — toutes les lettres spéciales, les cinq tons."
+  ],
+  "c6l1": [
+   "Le Dragon et la Fée",
+   "La légende des origines vietnamiennes — tape-la phrase par phrase."
+  ],
+  "c6l2": [
+   "La légende du bánh chưng",
+   "Pourquoi le bánh chưng carré au Tết ?"
+  ],
+  "c6l3": [
+   "La légende du lac de l'Épée",
+   "Le roi Lê et la tortue dorée à Hanoï."
+  ],
+  "c7l1": [
+   "Saint Gióng",
+   "Le garçon du village de Gióng devenu guerrier."
+  ],
+  "c7l2": [
+   "Les sœurs Trưng",
+   "Nos premières héroïnes."
+  ],
+  "c7l3": [
+   "Le Tết vietnamien",
+   "Le boss final : tape toute l'histoire du Tết !"
+  ]
+ },
+ "hands": {
+  "h2": "Position des mains — frappe au toucher",
+  "lead": "Avant les leçons, place bien tes mains : chaque doigt possède quelques touches et revient à la <b>rangée de repos</b>. C'est la base de tout ce qui suit.",
+  "notes": [
+   [
+    "1️⃣ Trouve les bosses de F et J",
+    "Sens le clavier : <b>F</b> et <b>J</b> ont de petites arêtes. Pose tes index dessus — sans regarder ! Les autres doigts se placent sur <b>A S D</b> (gauche) et <b>K L ;</b> (droite) ; les pouces survolent la barre d'espace."
+   ],
+   [
+    "2️⃣ Un doigt, une zone",
+    "Le clavier des leçons est coloré par doigt : chaque doigt appuie sur ses propres touches et <b>revient à la maison</b>. Être lent au début est normal — tes mains vont s'en souvenir."
+   ],
+   [
+    "3️⃣ Les yeux sur l'écran",
+    "Essaie de ne pas regarder en bas. Les leçons <b>mettent toujours en évidence la touche suivante</b> et nomment le doigt, pour que tu ne cherches jamais les touches des yeux."
+   ],
+   [
+    "4️⃣ Assieds-toi droit, poignets détendus",
+    "Dos droit, coudes à ~90°, poignets droits et non appuyés sur le bureau. Repose-toi 5 minutes toutes les 20 minutes."
+   ]
+  ]
+ },
+ "hoc": {
+  "h2": "La classe de Telex 🎓",
+  "lead": "8 chapitres, de la découverte du clavier à la frappe de récits historiques. Obtiens au moins ⭐ sur une leçon pour débloquer la suivante. Sur une tablette sans clavier, tape les touches à l'écran dans chaque leçon."
+ },
+ "landing": {
+  "heroH1": "Apprends à taper le vietnamien en <span class=\"accent\">Telex</span>",
+  "heroSub": "Tape sans accents, obtiens le vietnamien complet. Retour instantané — l'ensemble de règles exact de la méthode de saisie ViệtTelex.",
+  "sandboxLabel": "✏️ Essaie maintenant — tape le vietnamien à la manière Telex",
+  "kbdNote": "💡 Cette zone a besoin d'un vrai clavier. Appuie sur <b>espace</b> pour terminer un mot. La <a href=\"lessons/\" style=\"color:#d4a94a\">classe</a> a un clavier à l'écran — les tablettes marchent aussi.",
+  "hocH2": "Envie d'apprendre le Telex ? 🎓",
+  "hocLead": "Un cours en 8 chapitres : position des mains → lettres spéciales → tons → histoires complètes.<br>Étoiles ⭐, badges 🏅, exemples parlés 🔊 — et un clavier à l'écran pour les tablettes.",
+  "ctaBtn": "🚀 Commencer à apprendre",
+  "ctaNote": "Gratuit, sans compte — la progression est enregistrée sur ton appareil.",
+  "cheatH2": "Fiche des règles Telex",
+  "cheatLead": "Clique sur une tuile pour la voir en action dans la zone d'essai ci-dessus. Retiens ces quelques groupes et tu pourras taper tout le vietnamien.",
+  "groups": {
+   "Dấu thanh (gõ ở cuối từ)": "Tons (tapés à la fin du mot)",
+   "Nguyên âm đội mũ ^": "Voyelles à chapeau ^",
+   "Nguyên âm có móc/ngoặc": "Voyelles à crochet",
+   "Đặc biệt": "Spéciales"
+  }
+ }
+}
