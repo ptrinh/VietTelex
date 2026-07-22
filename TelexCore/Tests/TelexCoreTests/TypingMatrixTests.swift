@@ -203,12 +203,15 @@ final class TypingMatrixTests: XCTestCase {
     }
 
     // Trailing-d đ conversion across a formed syllable, with and without a tone.
+    // Free-marking only since 2026-07-22 (strict keeps "did"/"dand" literal).
     func testTrailingDConversion() {
-        XCTAssertEqual(compose("dand"), "đan")
-        XCTAssertEqual(compose("dangd"), "đang")
-        XCTAssertEqual(compose("duwowngd"), "đương")
-        XCTAssertEqual(compose("duwowngdf"), "đường")
-        XCTAssertEqual(compose("dieemd"), "điêm")     // no tone
-        XCTAssertEqual(compose("dieemdr"), "điểm")     // + hỏi
+        let free: (inout TelexEngine) -> Void = { $0.freeMarking = true }
+        XCTAssertEqual(compose("dand", free), "đan")
+        XCTAssertEqual(compose("dangd", free), "đang")
+        XCTAssertEqual(compose("duwowngd", free), "đương")
+        XCTAssertEqual(compose("duwowngdf", free), "đường")
+        XCTAssertEqual(compose("dieemd", free), "điêm")     // no tone
+        XCTAssertEqual(compose("dieemdr", free), "điểm")     // + hỏi
+        XCTAssertEqual(compose("dand"), "dand")             // strict: literal
     }
 }

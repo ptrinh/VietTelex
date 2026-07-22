@@ -173,6 +173,11 @@ final class EngineGoldenTests: XCTestCase {
         // no modifier → no reach-back side effects
         XCTAssertEqual(composeFree("luu"), "luu")
         XCTAssertEqual(composeFree("them"), "them")
+        // STRICT mode (freeMarking off): the trailing-d/vowel reach-backs are
+        // free-marking features — English stays literal (user decision 2026-07-22)
+        XCTAssertEqual(compose("did"), "did")
+        XCTAssertEqual(compose("dad"), "dad")
+        XCTAssertEqual(compose("theme"), "theme")
     }
     func testFreeMarkingDoublerCrossesNucleus() {
         XCTAssertEqual(composeFree("daua"), "dâu")
@@ -591,9 +596,12 @@ final class EngineGoldenTests: XCTestCase {
 
     // C1: a trailing d converts the onset d to đ.
     func testTrailingDMakesDbar() {
-        XCTAssertEqual(compose("dand"), "đan")
-        XCTAssertEqual(compose("duwowngd"), "đương")   // no tone key -> no tone
-        XCTAssertEqual(compose("duwowngdf"), "đường")  // + huyền
+        // Trailing-d reach-back is a FREE-MARKING feature (user decision
+        // 2026-07-22: strict mode keeps "did"/"dand" literal for English).
+        XCTAssertEqual(composeFree("dand"), "đan")
+        XCTAssertEqual(composeFree("duwowngd"), "đương")   // no tone key -> no tone
+        XCTAssertEqual(composeFree("duwowngdf"), "đường")  // + huyền
+        XCTAssertEqual(compose("dand"), "dand")            // strict: literal
         // Existing dd behavior is unchanged.
         XCTAssertEqual(compose("dd"), "đ")
         XCTAssertEqual(compose("ddd"), "dd")

@@ -884,8 +884,11 @@ public struct TelexEngine {
                 }
             }
             // A trailing d (after a formed syllable) converts the onset d to đ,
-            // so "dand"->đan, "duwowngd"->đường even without doubling at the start.
-            if pCount > 1, letters[0].base == UInt8(ascii: "d"), letters[0].mark == .none {
+            // so "did"->đi, "dand"->đan, "duwowngd"->đường even without doubling
+            // at the start. FREE MARKING ONLY (user decision 2026-07-22): with
+            // strict placement off…on, "did"/"dand" must stay literal English.
+            if freeMarking, pCount > 1,
+               letters[0].base == UInt8(ascii: "d"), letters[0].mark == .none {
                 letters[0].mark = .bar; rawLetter[at] = 0; return
             }
             appendLetter(base: UInt8(ascii: "d"), mark: .none, upper: upper)

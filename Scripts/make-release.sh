@@ -11,13 +11,13 @@
 # Prereq: run Scripts/notarize-install.sh first (builds → signs → notarizes →
 # staples the app at the derived path below). Re-run it if the app changed.
 #
-# Usage: Scripts/make-release.sh [OUTDIR]     (default OUTDIR = ~/Desktop)
+# Usage: Scripts/make-release.sh [OUTDIR]     (default OUTDIR = <repo>/build)
 set -e
 cd "$(dirname "$0")/.."
 
 VER=$(plutil -extract CFBundleShortVersionString raw App/Resources/Info.plist)
 APP="${TMPDIR:-/tmp}/viettelex-derived/Build/Products/Release/VietTelex.app"
-OUTDIR="${1:-$HOME/Desktop}"
+OUTDIR="${1:-$(cd "$(dirname "$0")/.." && pwd)/build}"
 mkdir -p "$OUTDIR"
 
 [ -d "$APP" ] || { echo "Stapled app not found at $APP — run Scripts/notarize-install.sh first."; exit 1; }
