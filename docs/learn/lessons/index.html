@@ -44,7 +44,9 @@
   .prog { height: 8px; background: var(--sky); border-radius: 999px; overflow: hidden; margin-bottom: 22px; }
   .prog > i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), #37c07e); width: 0; transition: width .3s; }
   .prompt { text-align: center; }
-  .prompt .task { font-size: .85rem; color: var(--ink-soft); margin-bottom: 6px; }
+  .prompt .task { display: inline-block; font-size: 1.02rem; font-weight: 600; line-height: 1.45;
+                  color: var(--navy); background: var(--sky); border: 1px solid var(--line);
+                  border-radius: 12px; padding: 10px 16px; margin: 0 auto 16px; max-width: 90%; }
   .prompt .target { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; color: var(--navy); letter-spacing: -0.01em; line-height: 1.1; }
   .lesson-tools { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .btn { border-radius: 11px; padding: 11px 20px; font-weight: 700; font-size: .95rem; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--sans); }
@@ -96,7 +98,7 @@
       <div class="hands-note"><h3>3️⃣ Mắt nhìn màn hình</h3><p>Cố gắng không nhìn xuống phím. Bài học luôn <b>tô sáng phím kế tiếp</b> và nhắc tên ngón tay, nên bạn không cần tìm phím bằng mắt.</p></div>
       <div class="hands-note"><h3>4️⃣ Ngồi thẳng, cổ tay thả lỏng</h3><p>Lưng thẳng, khuỷu tay gập ~90°, cổ tay thẳng và không tì mạnh xuống bàn. Nghỉ 5 phút sau mỗi 20 phút luyện.</p></div>
     </div>
-    <div class="kb-legend" style="margin-top:18px">
+    <div class="kb-legend" id="kbLegend" style="margin-top:18px">
       <span><i style="background:#fde8e8"></i> út trái</span><span><i style="background:#fdf3e0"></i> áp út trái</span>
       <span><i style="background:#eaf7e6"></i> giữa trái</span><span><i style="background:#e6f2fb"></i> trỏ trái</span>
       <span><i style="background:#e9e9fb"></i> trỏ phải</span><span><i style="background:#f3e6fb"></i> giữa phải</span>

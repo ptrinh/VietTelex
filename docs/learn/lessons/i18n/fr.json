@@ -54,6 +54,16 @@
    "f8": "Auriculaire droit",
    "th": "Pouce"
   },
+  "finShort": {
+   "f1": "auriculaire gauche",
+   "f2": "annulaire gauche",
+   "f3": "majeur gauche",
+   "f4": "index gauche",
+   "f5": "index droit",
+   "f6": "majeur droit",
+   "f7": "annulaire droit",
+   "f8": "auriculaire droit"
+  },
   "badgeDefs": {
    "first": [
     "🐣",
@@ -176,10 +186,6 @@
    "j → ton lourd (.)",
    "La touche j ajoute le ton lourd : maj → mạ."
   ],
-  "c3l6": [
-   "Corriger et enlever les tons",
-   "Tape une touche de ton DIFFÉRENTE pour le changer (más + f → mà) ; appuie sur z pour l'enlever."
-  ],
   "c3l7": [
    "Les cinq tons",
    "La série complète : ma má mà mả mã mạ — essaie le bouton 🔊 sur chacun !"
@@ -279,6 +285,16 @@
    "Nguyên âm đội mũ ^": "Voyelles à chapeau ^",
    "Nguyên âm có móc/ngoặc": "Voyelles à crochet",
    "Đặc biệt": "Spéciales"
-  }
+  },
+  "navClass": "🎓 Entrer dans la classe",
+  "navHome": "← Accueil",
+  "whyH2": "L'essentiel",
+  "why": [
+   "<h3><span class=\"e\">🎵</span>Les marques de ton</h3><p><b>s f r x j</b> = les cinq tons. Tape le ton à la fin du mot : <code>casa? </code> ex. <code>caf</code> → cà, <code>hoir</code> → hỏi.</p>",
+   "<h3><span class=\"e\">🔤</span>Voyelles à chapeau</h3><p>Double la lettre : <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Ajoute un crochet/une corne : <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p>",
+   "<h3><span class=\"e\">✨</span>La lettre đ &amp; l'effacement des tons</h3><p><b>dd</b>→đ. Tape <b>z</b> pour effacer un ton que tu viens d'ajouter. Retaper la même touche de ton l'efface aussi.</p>",
+   "<h3><span class=\"e\">🧠</span>Les erreurs, c'est normal</h3><p>L'IME reconnaît les mots non vietnamiens (comme <code>google</code>) et les laisse tels quels. Tape naturellement ; si c'est faux, efface et retape.</p>"
+  ],
+  "footer": "<a href=\"../\">ViệtTelex</a> — la méthode de saisie vietnamienne open-source pour macOS.<br>Le même ensemble de règles que dans la vraie application. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  }
 }

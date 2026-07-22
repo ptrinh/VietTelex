@@ -54,6 +54,16 @@
    "f8": "Rechter kleiner Finger",
    "th": "Daumen"
   },
+  "finShort": {
+   "f1": "kleiner Finger links",
+   "f2": "Ringfinger links",
+   "f3": "Mittelfinger links",
+   "f4": "Zeigefinger links",
+   "f5": "Zeigefinger rechts",
+   "f6": "Mittelfinger rechts",
+   "f7": "Ringfinger rechts",
+   "f8": "kleiner Finger rechts"
+  },
   "badgeDefs": {
    "first": [
     "🐣",
@@ -176,10 +186,6 @@
    "j → schwerer Ton (.)",
    "Die j-Taste fügt den schweren Ton hinzu: maj → mạ."
   ],
-  "c3l6": [
-   "Töne ändern & entfernen",
-   "Tippe eine ANDERE Ton-Taste, um ihn zu ändern (más + f → mà); drücke z zum Entfernen."
-  ],
   "c3l7": [
    "Alle fünf Töne",
    "Das ganze Set: ma má mà mả mã mạ — probiere bei jedem die 🔊-Taste!"
@@ -279,6 +285,16 @@
    "Nguyên âm đội mũ ^": "Vokale mit Hut ^",
    "Nguyên âm có móc/ngoặc": "Vokale mit Haken",
    "Đặc biệt": "Sonderfälle"
-  }
+  },
+  "navClass": "🎓 Zum Klassenzimmer",
+  "navHome": "← Startseite",
+  "whyH2": "Das Wichtigste",
+  "why": [
+   "<h3><span class=\"e\">🎵</span>Töne</h3><p><b>s f r x j</b> = die fünf Töne. Tippe den Ton am Ende des Wortes: <code>casa? </code> z. B. <code>caf</code> → cà, <code>hoir</code> → hỏi.</p>",
+   "<h3><span class=\"e\">🔤</span>Vokale mit Hut</h3><p>Verdopple den Buchstaben: <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Füge Haken/Horn hinzu: <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p>",
+   "<h3><span class=\"e\">✨</span>Der Buchstabe đ &amp; Töne löschen</h3><p><b>dd</b>→đ. Tippe <b>z</b>, um einen gerade gesetzten Ton zu löschen. Dieselbe Ton-Taste erneut zu tippen löscht ihn ebenfalls.</p>",
+   "<h3><span class=\"e\">🧠</span>Fehler sind okay</h3><p>Die Eingabemethode erkennt nicht-vietnamesische Wörter (wie <code>google</code>) und lässt sie unangetastet. Tippe einfach natürlich; wenn es falsch ist, lösche und tippe neu.</p>"
+  ],
+  "footer": "<a href=\"../\">ViệtTelex</a> — die quelloffene vietnamesische Eingabemethode für macOS.<br>Dasselbe Regelwerk wie in der echten App. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  }
 }

@@ -242,11 +242,6 @@ let chapters: [Chapter] = [
             w("maj", "mạ"), w("hoj", "họ"), w("ddepj", "đẹp"),
             w("meetj", "mệt"), w("hocj", "học"), w("chuyeenj", "chuyện")
         ]),
-        lesson("c3l6", "Sửa dấu & xóa dấu", "Gõ thanh KHÁC để đổi dấu (más + f → mà), gõ z để xóa dấu.", en: ("Fix & remove tones", "Type a DIFFERENT tone key to change it (más + f → mà); press z to remove."),
-               newKeys: ["z"], [
-            w("masf", "mà"), w("lafs", "lá"), w("masz", "ma"),
-            w("ngasx", "ngã"), w("hosj", "họ"), w("sangsz", "sang")
-        ]),
         lesson("c3l7", "Đủ năm thanh", "Bài tổng hợp: ma má mà mả mã mạ — nghe thử từng từ nhé!", en: ("All five tones", "The full set: ma má mà mả mã mạ — try the 🔊 button on each!"), type: "test", [
             w("ma", "ma"), w("mas", "má"), w("maf", "mà"),
             w("mar", "mả"), w("max", "mã"), w("maj", "mạ"),
