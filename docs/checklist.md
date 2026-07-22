@@ -12,7 +12,7 @@ Ma trận test tay theo app. Trạng thái: ☐ chưa test / ✅ pass / ❌ fail
 
 ---
 
-## ✅ Đã test pass (field-tested, mode chốt trong `typing-modes.plist`)
+## ✅ Đã test pass (field-tested, mode chốt trong `typing-modes.yml`)
 
 | App | Mode | Ghi chú |
 |---|---|---|

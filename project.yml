@@ -47,7 +47,7 @@ targets:
         buildPhase: resources
       # Built-in per-app typing rules — repo-root data file (see its header);
       # bundled so AppState loads defaults from data, attached to releases.
-      - path: typing-modes.plist
+      - path: typing-modes.yml
         buildPhase: resources
       - path: App/Resources/en.lproj
         buildPhase: resources

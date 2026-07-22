@@ -46,7 +46,7 @@ final class AppStateRoutingTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: Built-in rules come from typing-modes.plist
+    // MARK: Built-in rules come from typing-modes.yml
 
     func testBuiltInRulesLoadedFromPlist() {
         // Core promise entries must be present (the loader's own fallback also

@@ -106,7 +106,7 @@ hỏng in-place); (c) app pin cứng trong `markedTextApps` (hiện rỗng).
 ### 3. Tap: backspace-retype
 
 **Dùng cho:** Terminal.app, iTerm2 + nhóm Electron field-tested (Lark, Slack,
-Discord, VSCode, Claude Desktop — rule `tap` trong typing-modes.plist; in-place
+Discord, VSCode, Claude Desktop — rule `tap` trong typing-modes.yml; in-place
 của nhóm này hỏng Ở BIÊN TỪ dù giữa dòng trông ổn) + app học được qua probe
 (`fallbackApps`) — khi có AX.
 
@@ -132,7 +132,7 @@ Backspace×N + keyDown mang chuỗi Unicode.
 ### 4. Tap: selection-replace (Shift+←×N rồi ghi đè)
 
 **Dùng cho:** address/search bar của các browser (Chrome, Edge, Brave, Arc,
-Vivaldi, Opera, Chromium, **Safari** — mode `axDetect` trong typing-modes.plist)
+Vivaldi, Opera, Chromium, **Safari** — mode `axDetect` trong typing-modes.yml)
 — khi có AX. **Spotlight từng đi đường này** nhưng trên macOS 26 in-place đã
 sạch (race autocomplete lịch sử hết) → default hiện tại là inPlace; tap branch
 cho Spotlight chỉ còn chạy khi user pin tay.
@@ -243,7 +243,7 @@ không phân biệt được). Hai tầng:
   promotion đã lỡ commit (`unmarkInPlaceGood`) + đẩy vào `fallbackApps`.
 - Kết quả ghi UserDefaults: honored (đã confirm) → `probedApps`,
   appended → `fallbackApps` (→ tap nếu có AX, marked nếu không).
-- App có rule trong `typing-modes.plist` **không bao giờ probe** — rule là
+- App có rule trong `typing-modes.yml` **không bao giờ probe** — rule là
   kết quả field-test, tin hơn probe (probe vẫn phân loại đúng Lark nhờ rule
   2-offset, nhưng ship sẵn rule thì user mới không phải "học lại" sau reinstall).
   Settings có "Đặt lại (dò lại từ đầu)" cho probe hỏng vì app bận.

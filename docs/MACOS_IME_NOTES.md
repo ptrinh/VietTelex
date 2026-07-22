@@ -6,7 +6,7 @@ session on **macOS 26.5 Tahoe**. Read this BEFORE touching signing / bundle id /
 Info.plist again — every item below cost real time to discover.
 
 > Lessons here are HISTORY (what broke and why) — the *current* per-app strategy
-> selection lives in `TYPING-STRATEGIES.md` + `typing-modes.plist`; app lists
+> selection lives in `TYPING-STRATEGIES.md` + `typing-modes.yml`; app lists
 > named below may be stale.
 
 ## The working recipe (do all of these; they are AND, not OR)

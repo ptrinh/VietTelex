@@ -29,7 +29,7 @@ VietTelex.app  (một bundle duy nhất, LSUIElement)
 ├── TelexEngine        (TelexCore — pure Swift, zero-heap hot path)
 ├── SyllableValidator  (rule-based, không từ điển)
 ├── AppState           (UserDefaults, cache in-memory, học chiến lược per-app;
-│     rule mặc định load từ typing-modes.plist bundle — sửa rule = sửa data, không sửa Swift)
+│     rule mặc định load từ typing-modes.yml bundle — sửa rule = sửa data, không sửa Swift)
 └── SettingsWindow     (SwiftUI: Chung, Gõ tắt + khi bật "tính năng nâng cao":
       Bảng cơ chế gõ, Thử Nghiệm; chỉ tạo khi mở, đóng là giải phóng)
 ```
@@ -60,7 +60,7 @@ Quy tắc cứng:
 | **Tap: selection-replace** | Address bar browser (qua `axDetect` per-field) — cần AX | Shift+←×N chọn rồi ghi đè — né race với inline autocomplete; D1 gộp burst thành 1 AX write (default ON) |
 | **Tap: empty-reset** | Excel (cần AX) | Chèn U+202F hủy suggestion rồi Backspace-retype (Shift+← trong ô sẽ chọn ô kề) |
 
-- Rule mặc định per-app nằm trong **`typing-modes.plist`** (repo root, bundle vào app,
+- Rule mặc định per-app nằm trong **`typing-modes.yml`** (repo root, bundle vào app,
   đính kèm release) — đóng góp rule = sửa plist, không sửa Swift. Mode `axDetect`
   dò theo Ô đang focus (address bar → selection, nội dung trang → in-place).
 - App chưa phân loại được **probe** (2 tầng: verdict sơ bộ sync từ read-back/caret —

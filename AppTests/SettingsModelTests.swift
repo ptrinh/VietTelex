@@ -47,13 +47,13 @@ final class SettingsModelTests: XCTestCase {
     }
 
     func testImportingTheShippedRulesFileIsSafe() {
-        // The typing-modes.plist attached to releases is importable as manual pins
-        // — twice, without drift (the user-facing "Nhập từ plist…" path).
+        // The typing-modes.yml attached to releases is importable as manual pins
+        // — twice, without drift (the user-facing "Nhập…" path).
         guard let url = Bundle(for: TelexInputController.self)
-                .url(forResource: "typing-modes", withExtension: "plist"),
+                .url(forResource: "typing-modes", withExtension: "yml"),
               let data = try? Data(contentsOf: url),
-              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
-        else { return XCTFail("bundled typing-modes.plist unreadable") }
+              let dict = ShortcutImporter.parse(data)
+        else { return XCTFail("bundled typing-modes.yml unreadable") }
         let model = SettingsModel(selected: .modeTable)
         let n1 = model.importManualModes(dict)
         let snapshot = s.manualModes

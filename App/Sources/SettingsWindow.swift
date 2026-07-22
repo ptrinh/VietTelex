@@ -501,7 +501,7 @@ struct ModeTableTab: View {
                 }
                 Spacer()
                 Button(model.loc("Import from plist…")) { importModes() }
-                Button(model.loc("Export to plist…")) { exportModes() }
+                Button(model.loc("Export to YAML…")) { exportModes() }
             }
             Text(model.loc("An app types wrong or shows underlines? Pick Tap — real keystrokes, no underline (needs Accessibility). Marked text always renders correctly but underlines while typing. The modes below the divider are for special cases — leave them unless you know the app needs one. Clear forgets everything learned; manual picks are kept."))
                 .font(.caption).foregroundStyle(.secondary)
@@ -520,16 +520,16 @@ struct ModeTableTab: View {
     /// replace: imported entries win, everything else is kept.
     private func importModes() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.propertyList]
+        // YAML (typing-modes.yml, our export) — plist/JSON/txt also accepted.
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let data = try? Data(contentsOf: url),
-              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
+              let dict = ShortcutImporter.parse(data)
         else {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = VTLocalized("Couldn’t read the file")
-            alert.informativeText = VTLocalized("The file must be a String → String dictionary plist (like the one Export to plist… creates).")
+            alert.informativeText = VTLocalized("Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…).")
             alert.runModal()
             return
         }
@@ -543,14 +543,13 @@ struct ModeTableTab: View {
     /// Export the manual pins only — learned entries are per-machine probe results
     /// that re-learn themselves and would just be noise on another install.
     private func exportModes() {
+        // Flat YAML like typing-modes.yml (user decision 2026-07-22).
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.propertyList]
-        panel.nameFieldStringValue = "VietTelexAppModes.plist"
-        guard panel.runModal() == .OK, let url = panel.url,
-              let data = try? PropertyListSerialization.data(
-                fromPropertyList: AppState.shared.manualModes, format: .xml, options: 0)
-        else { return }
-        try? data.write(to: url)
+        panel.allowedContentTypes = [.yaml, .plainText]
+        panel.nameFieldStringValue = "viettelex-app-modes.yml"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let yaml = ShortcutImporter.exportYAML(AppState.shared.manualModes)
+        try? Data(yaml.utf8).write(to: url)
     }
 }
 
