@@ -98,6 +98,36 @@ final class EngineGoldenTests: XCTestCase {
     // so English/code types cleanly. Free mode: modifiers reach back over consonants.
     // FREE MARKING: circumflex doublers cross the whole nucleus (UniKey-style) —
     // "daua"→dâu, "dauas"→dấu — never the onset boundary (qu/gi stay safe).
+
+    /// Standalone-w cancel ladder under free marking (user request 2026-07-21):
+    /// w→ư, ww→u (cancel yields the bare u, no literal w), www→uw (the press
+    /// after a cancel is literal). The classic uw-typed revert is unchanged.
+    func testStandaloneWCancelLadder() {
+        XCTAssertEqual(composeFree("w"), "ư")
+        XCTAssertEqual(composeFree("ww"), "u")
+        XCTAssertEqual(composeFree("www"), "uw")
+        XCTAssertEqual(composeFree("nhw"), "như")
+        XCTAssertEqual(composeFree("nhww"), "nhu")
+        // uw-typed horn keeps the classic revert (the u was really typed)
+        XCTAssertEqual(composeFree("uw"), "ư")
+        XCTAssertEqual(composeFree("uww"), "uw")
+    }
+
+    /// Free-marking order tolerance (user request 2026-07-21): late modifier keys
+    /// find their target across the word — did→đi, theme→thêm — and w on a "uu"
+    /// nucleus horns the FIRST u (luuw→lưu, cuuws→cứu; "uư" is no nucleus).
+    func testFreeMarkingOutOfOrderTyping() {
+        XCTAssertEqual(composeFree("did"), "đi")
+        XCTAssertEqual(composeFree("theme"), "thêm")
+        XCTAssertEqual(composeFree("luuw"), "lưu")
+        XCTAssertEqual(composeFree("cuuws"), "cứu")
+        XCTAssertEqual(composeFree("dad"), "đa")
+        // qu glide is excluded from the uu retarget (same as the ua rule)
+        XCTAssertEqual(composeFree("quuw"), "quư")
+        // no modifier → no reach-back side effects
+        XCTAssertEqual(composeFree("luu"), "luu")
+        XCTAssertEqual(composeFree("them"), "them")
+    }
     func testFreeMarkingDoublerCrossesNucleus() {
         XCTAssertEqual(composeFree("daua"), "dâu")
         XCTAssertEqual(composeFree("dauas"), "dấu")

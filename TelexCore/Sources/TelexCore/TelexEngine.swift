@@ -112,6 +112,10 @@ public struct TelexEngine {
     private var pTone: Tone = .none
     private var pToneKeyCount = 0
     private var pCancelled = false
+    /// Letter index whose horn a standalone-w cancel just removed (w→ư, ww→u):
+    /// the NEXT w targeting this letter is literal (www→uw) instead of re-horning.
+    /// Cleared whenever any new letter is appended. -1 = none.
+    private var pWCancelIdx = -1
     private var pProcessed = 0
     private var pFreeMarking = false    // settings snapshot the state was built with
     private var pSimpleTelex = false
@@ -485,6 +489,16 @@ public struct TelexEngine {
     private var forceRestoreUpperTone: Bool { upperToneKey }
 
     /// True if any raw keystroke before index `at` is a lowercase ascii letter.
+    /// True if the FIRST raw key that produced letter `idx` was a w — i.e. the
+    /// letter is a standalone-w ư, not a typed u that a later w horned.
+    @inline(__always)
+    private func letterCreatedByW(_ idx: Int) -> Bool {
+        for i in 0..<rawCount where rawLetter[i] == idx {
+            return raw[i] == UInt8(ascii: "w") || raw[i] == UInt8(ascii: "W")
+        }
+        return false
+    }
+
     @inline(__always)
     private func hasLowercaseBefore(_ at: Int) -> Bool {
         for i in 0..<at where raw[i] >= UInt8(ascii: "a") && raw[i] <= UInt8(ascii: "z") {
@@ -504,6 +518,7 @@ public struct TelexEngine {
         pTone = .none
         pToneKeyCount = 0
         pCancelled = false
+        pWCancelIdx = -1
         pProcessed = 0
     }
 
@@ -626,6 +641,7 @@ public struct TelexEngine {
         pTone = .none
         pToneKeyCount = 0
         pCancelled = false
+        pWCancelIdx = -1
         upperToneKey = false
         pFreeMarking = freeMarking
         pSimpleTelex = simpleTelex
@@ -740,7 +756,24 @@ public struct TelexEngine {
                !(tIdx >= 2 && letters[tIdx - 2].base == UInt8(ascii: "q")) {
                 tIdx -= 1
             }
+            // "uu" nucleus: w horns the FIRST u (→ ưu: lưu, cứu, hưu) — "uư" is not
+            // a valid Vietnamese nucleus, so "luuw"→lưu / "cuuws"→cứu instead of
+            // the useless "luư". Same shape as the "ua" retarget above, and the
+            // same "qu" exclusion ("quuw" keeps the glide u untouched).
+            if tIdx >= 1,
+               letters[tIdx].base == UInt8(ascii: "u"), letters[tIdx].mark == .none,
+               letters[tIdx - 1].base == UInt8(ascii: "u"), letters[tIdx - 1].mark == .none,
+               !(tIdx >= 2 && letters[tIdx - 2].base == UInt8(ascii: "q")) {
+                tIdx -= 1
+            }
             if tIdx >= 0 {
+                // A standalone-w horn was just cancelled on this letter (ww→u):
+                // this next w is LITERAL (www→uw), not a fresh horn.
+                if tIdx == pWCancelIdx, letters[tIdx].mark == .none {
+                    appendLetter(base: UInt8(ascii: "w"), mark: .none, upper: upper)
+                    rawLetter[at] = pCount - 1
+                    return
+                }
                 let p = letters[tIdx]
                 if p.mark == .none && p.base == UInt8(ascii: "a") {
                     letters[tIdx].mark = .breve; rawLetter[at] = tIdx; return
@@ -757,6 +790,16 @@ public struct TelexEngine {
                 if p.mark == .horn && (p.base == UInt8(ascii: "o") || p.base == UInt8(ascii: "u")) {
                     letters[tIdx].mark = .none
                     pCancelled = true
+                    // Free marking + the ư was CREATED by a standalone w (no typed
+                    // u behind it): cancelling yields the bare u alone — w→ư,
+                    // ww→u — and the literal w only appears on the next press
+                    // (www→uw, via pWCancelIdx). A "uw"-typed horn keeps the
+                    // classic revert (uww→uw).
+                    if freeMarking, p.base == UInt8(ascii: "u"), letterCreatedByW(tIdx) {
+                        pWCancelIdx = tIdx
+                        rawLetter[at] = tIdx
+                        return
+                    }
                     appendLetter(base: UInt8(ascii: "w"), mark: .none, upper: upper)
                     rawLetter[at] = pCount - 1; return
                 }
@@ -988,6 +1031,7 @@ public struct TelexEngine {
 
     @inline(__always)
     private mutating func appendLetter(base: UInt8, mark: Mark, upper: Bool) {
+        pWCancelIdx = -1
         guard pCount < Self.capacity else { return }
         letters[pCount] = LetterUnit(base: base, mark: mark, upper: upper)
         pCount += 1
