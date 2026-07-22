@@ -155,8 +155,8 @@
       <option value="vi">🌐 Tiếng Việt</option>
       <option value="en">🌐 English</option>
     </select>
-    <a class="back" href="lessons/">🎓 Vào lớp học</a>
-    <a class="back" href="../">← Trang chủ</a>
+    <a class="back" id="navClass" href="lessons/">🎓 Vào lớp học</a>
+    <a class="back" id="navHome" href="../">← Trang chủ</a>
   </div>
 </div>
 
@@ -184,7 +184,7 @@
     <p class="lead" style="margin:10px auto 26px;">Khóa học 6 chương: đặt tay mười ngón → chữ đặc biệt → thanh điệu → gõ cả câu.<br>
     Có sao ⭐, huy hiệu 🏅, giọng đọc mẫu 🔊 — và bàn phím trên màn hình cho máy tính bảng.</p>
     <a class="cta-btn" href="lessons/">🚀 Bắt đầu học ngay</a>
-    <p style="margin-top:14px;font-size:.85rem;color:var(--ink-soft)">Miễn phí, không cần tài khoản — tiến độ lưu ngay trên máy bạn.</p>
+    <p id="ctaNote" style="margin-top:14px;font-size:.85rem;color:var(--ink-soft)">Miễn phí, không cần tài khoản — tiến độ lưu ngay trên máy bạn.</p>
   </div>
 </section>
 
@@ -204,17 +204,17 @@
 <!-- Quick why -->
 <section>
   <div class="wrap">
-    <h2>Cần nhớ nhất</h2>
+    <h2 id="whyH2">Cần nhớ nhất</h2>
     <div class="info-grid">
-      <div class="info"><h3><span class="e">🎵</span>Dấu thanh</h3><p><b>s f r x j</b> = sắc, huyền, hỏi, ngã, nặng. Gõ dấu ở cuối từ: <code>casa? </code> Ví dụ <code>caf</code> → cà, <code>hoir</code> → hỏi.</p></div>
-      <div class="info"><h3><span class="e">🔤</span>Nguyên âm đội mũ</h3><p>Gõ đúp: <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Thêm móc/ngoặc: <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p></div>
-      <div class="info"><h3><span class="e">✨</span>Chữ đ và xoá dấu</h3><p><b>dd</b>→đ. Gõ <b>z</b> để xoá dấu vừa bỏ. Gõ lại đúng phím dấu lần nữa cũng xoá dấu đó.</p></div>
-      <div class="info"><h3><span class="e">🧠</span>Gõ sai không sao</h3><p>Bộ gõ tự nhận từ không phải tiếng Việt (như <code>google</code>) và giữ nguyên. Cứ gõ tự nhiên, sai thì xoá gõ lại.</p></div>
+      <div class="info" id="why1"><h3><span class="e">🎵</span>Dấu thanh</h3><p><b>s f r x j</b> = sắc, huyền, hỏi, ngã, nặng. Gõ dấu ở cuối từ: <code>casa? </code> Ví dụ <code>caf</code> → cà, <code>hoir</code> → hỏi.</p></div>
+      <div class="info" id="why2"><h3><span class="e">🔤</span>Nguyên âm đội mũ</h3><p>Gõ đúp: <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Thêm móc/ngoặc: <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p></div>
+      <div class="info" id="why3"><h3><span class="e">✨</span>Chữ đ và xoá dấu</h3><p><b>dd</b>→đ. Gõ <b>z</b> để xoá dấu vừa bỏ. Gõ lại đúng phím dấu lần nữa cũng xoá dấu đó.</p></div>
+      <div class="info" id="why4"><h3><span class="e">🧠</span>Gõ sai không sao</h3><p>Bộ gõ tự nhận từ không phải tiếng Việt (như <code>google</code>) và giữ nguyên. Cứ gõ tự nhiên, sai thì xoá gõ lại.</p></div>
     </div>
   </div>
 </section>
 
-<footer>
+<footer id="pageFooter">
   Một phần của <a href="../">ViệtTelex</a> — bộ gõ tiếng Việt mã nguồn mở cho macOS.<br>
   Cùng bộ luật gõ chạy trong ứng dụng thật. © 2026 Phil Trịnh ·
   <a href="https://github.com/ptrinh/viettelex">GitHub</a>
@@ -254,6 +254,9 @@
       e.preventDefault();
       if (!this.engine.isEmpty) { this.engine.backspace(); this.keyLog.pop(); }
       else if (this.committed.length) { this.committed = this.committed.slice(0, -1); this.keyLog.pop(); }
+      // keyLog isn't 1:1 with visible chars (Telex folds e.g. aa→â), so once the
+      // field is fully empty the keystroke line must be too — clear any remainder.
+      if (this.engine.isEmpty && !this.committed.length) this.keyLog = [];
       this.render(); this.onUpdate(this); return;
     }
     if (k === 'Enter') { e.preventDefault(); this._boundary('\n'); return; }

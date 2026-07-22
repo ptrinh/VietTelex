@@ -54,6 +54,16 @@
    "f8": "右手小指",
    "th": "拇指"
   },
+  "finShort": {
+   "f1": "左小指",
+   "f2": "左无名指",
+   "f3": "左中指",
+   "f4": "左食指",
+   "f5": "右食指",
+   "f6": "右中指",
+   "f7": "右无名指",
+   "f8": "右小指"
+  },
   "badgeDefs": {
    "first": [
     "🐣",
@@ -176,10 +186,6 @@
    "j → nặng（重声，.）",
    "j 键加上 nặng（重声）：maj → mạ。"
   ],
-  "c3l6": [
-   "修改与去掉音调",
-   "打一个不同的音调键就能改变它（más + f → mà）；按 z 去掉音调。"
-  ],
   "c3l7": [
    "五个音调全部",
    "完整的一套：ma má mà mả mã mạ——每个都试试 🔊 按钮吧！"
@@ -279,6 +285,16 @@
    "Nguyên âm đội mũ ^": "戴帽子的元音 ^",
    "Nguyên âm có móc/ngoặc": "带钩的元音",
    "Đặc biệt": "特殊"
-  }
+  },
+  "navClass": "🎓 进入课堂",
+  "navHome": "← 首页",
+  "whyH2": "最需要记住的",
+  "why": [
+   "<h3><span class=\"e\">🎵</span>音调符号</h3><p><b>s f r x j</b> = 五个音调。把音调打在词的末尾：<code>casa? </code>例如 <code>caf</code> → cà，<code>hoir</code> → hỏi。</p>",
+   "<h3><span class=\"e\">🔤</span>戴帽子的元音</h3><p>把字母打两次：<b>aa</b>→â，<b>ee</b>→ê，<b>oo</b>→ô。加钩或角：<b>aw</b>→ă，<b>ow</b>→ơ，<b>uw</b>→ư。</p>",
+   "<h3><span class=\"e\">✨</span>字母 đ 与清除音调</h3><p><b>dd</b>→đ。打 <b>z</b> 可以清除你刚加上的音调。再打一次同一个音调键也能清除它。</p>",
+   "<h3><span class=\"e\">🧠</span>打错也没关系</h3><p>输入法能识别非越南语的词（比如 <code>google</code>）并保持原样。放心自然地打；如果错了，删掉重打就行。</p>"
+  ],
+  "footer": "<a href=\"../\">ViệtTelex</a> — 面向 macOS 的开源越南语输入法。<br>与真正的 App 运行的是同一套规则。© 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  }
 }

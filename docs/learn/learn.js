@@ -76,6 +76,8 @@ var STR = {
     loadFail: 'Không tải được bài học — hãy mở trang qua',
     finger: { f1: 'Ngón út trái', f2: 'Ngón áp út trái', f3: 'Ngón giữa trái', f4: 'Ngón trỏ trái',
               f5: 'Ngón trỏ phải', f6: 'Ngón giữa phải', f7: 'Ngón áp út phải', f8: 'Ngón út phải', th: 'Ngón cái' },
+    finShort: { f1: 'út trái', f2: 'áp út trái', f3: 'giữa trái', f4: 'trỏ trái',
+                f5: 'trỏ phải', f6: 'giữa phải', f7: 'áp út phải', f8: 'út phải' },
     badgeDefs: {
       first:   ['🐣', 'Bước đầu tiên', 'Hoàn thành bài học đầu tiên'],
       perfect: ['💯', 'Hoàn hảo', 'Đạt 3 sao một bài'],
@@ -115,6 +117,8 @@ var STR = {
     loadFail: 'Could not load lessons — open the page via',
     finger: { f1: 'Left pinky', f2: 'Left ring finger', f3: 'Left middle finger', f4: 'Left index finger',
               f5: 'Right index finger', f6: 'Right middle finger', f7: 'Right ring finger', f8: 'Right pinky', th: 'Thumb' },
+    finShort: { f1: 'L pinky', f2: 'L ring', f3: 'L middle', f4: 'L index',
+                f5: 'R index', f6: 'R middle', f7: 'R ring', f8: 'R pinky' },
     badgeDefs: {
       first:   ['🐣', 'First step', 'Finish your first lesson'],
       perfect: ['💯', 'Perfect', 'Get 3 stars on a lesson'],
@@ -173,14 +177,35 @@ function chapterTitle(c) {
   return c.titleEN || c.title;
 }
 
-// Static page translation: [selector, {vi, en}] — vi is the authored DOM text.
+// Static page translation: [selector, dyn(x)->string|null, { en }].
+// dyn pulls the translation from the fetched i18n JSON (x); vi restores the
+// authored DOM text; any missing key falls back to the inline English.
+var L = function (k) { return function (x) { return x && x.landing && x.landing[k]; }; };
 var STATIC_I18N = [
-  ['.hero h1', null, { en: 'Learn Vietnamese <span class="accent">Telex</span> typing' }],
-  ['.hero p.sub', null, { en: 'Type without diacritics, get full Vietnamese. Learn from easy to advanced with instant feedback — the exact rule set of the ViệtTelex input method.' }],
-  ['#hands h2', null, { en: 'Hand position — touch typing' }],
-  ['#hands .lead', null, { en: 'Before the lessons, place your hands right: each finger owns a few keys and returns to the <b>home row</b>. This is the foundation for everything below.' }],
-  ['#hoc h2', null, { en: 'The Telex classroom 🎓' }],
-  ['#hoc .lead', null, { en: '6 chapters, from meeting the keyboard to full paragraphs. Earn at least ⭐ on a lesson to unlock the next. On a tablet without a keyboard, tap the on-screen keys inside each lesson.' }]
+  ['.hero h1', L('heroH1'), { en: 'Learn Vietnamese <span class="accent">Telex</span> typing' }],
+  ['.hero p.sub', L('heroSub'), { en: 'Type without diacritics, get full Vietnamese. Learn from easy to advanced with instant feedback — the exact rule set of the ViệtTelex input method.' }],
+  ['.sandbox .label', L('sandboxLabel'), { en: '✏️ Try it now — type Vietnamese the Telex way' }],
+  ['.kbd-note', L('kbdNote'), { en: '💡 This box needs a real keyboard. Press <b>Space</b> to finish a word. The <a href="lessons/" style="color:#d4a94a">classroom</a> has an on-screen keyboard — works on a tablet too.' }],
+  ['#navClass', L('navClass'), { en: '🎓 Enter the classroom' }],
+  ['#navHome', L('navHome'), { en: '← Home' }],
+  ['#hoc h2', L('hocH2'), { en: 'Want to learn Telex? 🎓' }],
+  ['#hoc .lead', L('hocLead'), { en: 'A 6-chapter course: ten-finger hand position → special letters → tones → whole sentences.<br>With stars ⭐, badges 🏅 and sample audio 🔊 — plus an on-screen keyboard for tablets.' }],
+  ['.cta-btn', L('ctaBtn'), { en: '🚀 Start learning now' }],
+  ['#ctaNote', L('ctaNote'), { en: 'Free, no account needed — your progress is saved on this device.' }],
+  ['#cheatH2', L('cheatH2'), { en: 'Telex rules cheat sheet' }],
+  ['#cheatLead', L('cheatLead'), { en: 'Tap a tile to see it run in the try-box above. Remember these few groups and you can type all of Vietnamese.' }],
+  ['#whyH2', L('whyH2'), { en: 'The essentials' }],
+  ['#why1', function (x) { return x && x.landing && x.landing.why && x.landing.why[0]; },
+    { en: '<h3><span class="e">🎵</span>Tone marks</h3><p><b>s f r x j</b> = the five tones. Type the tone at the end of the word: <code>casa? </code> e.g. <code>caf</code> → cà, <code>hoir</code> → hỏi.</p>' }],
+  ['#why2', function (x) { return x && x.landing && x.landing.why && x.landing.why[1]; },
+    { en: '<h3><span class="e">🔤</span>Hatted vowels</h3><p>Double the letter: <b>aa</b>→â, <b>ee</b>→ê, <b>oo</b>→ô. Add a hook/horn: <b>aw</b>→ă, <b>ow</b>→ơ, <b>uw</b>→ư.</p>' }],
+  ['#why3', function (x) { return x && x.landing && x.landing.why && x.landing.why[2]; },
+    { en: '<h3><span class="e">✨</span>The letter đ &amp; clearing tones</h3><p><b>dd</b>→đ. Type <b>z</b> to clear a tone you just added. Typing the same tone key again also clears it.</p>' }],
+  ['#why4', function (x) { return x && x.landing && x.landing.why && x.landing.why[3]; },
+    { en: '<h3><span class="e">🧠</span>Mistakes are fine</h3><p>The IME recognises non-Vietnamese words (like <code>google</code>) and leaves them alone. Just type naturally; if it’s wrong, delete and retype.</p>' }],
+  ['#pageFooter', L('footer'), { en: 'Part of <a href="../">ViệtTelex</a> — the open-source Vietnamese input method for macOS.<br>The same rule set that runs in the real app. © 2026 Phil Trịnh · <a href="https://github.com/ptrinh/viettelex">GitHub</a>' }],
+  ['#hands h2', function (x) { return x && x.hands && x.hands.h2; }, { en: 'Hand position — touch typing' }],
+  ['#hands .lead', function (x) { return x && x.hands && x.hands.lead; }, { en: 'Before the lessons, place your hands right: each finger owns a few keys and returns to the <b>home row</b>. This is the foundation for everything below.' }]
 ];
 var HANDS_EN = [
   ['1️⃣ Find the F and J bumps', 'Feel the keyboard: <b>F</b> and <b>J</b> have small ridges. Rest your index fingers there — no looking! The other fingers sit on <b>A S D</b> (left) and <b>K L ;</b> (right); thumbs hover over the space bar.'],
@@ -199,15 +224,24 @@ function applyStaticLang() {
     var el = document.querySelector(e[0]);
     if (!el || staticVi[i] == null) return;
     if (store.lang === 'vi') { el.innerHTML = staticVi[i]; return; }
-    var dyn = null;
-    if (x) {
-      if (e[0] === '#hands h2') dyn = x.hands && x.hands.h2;
-      else if (e[0] === '#hands .lead') dyn = x.hands && x.hands.lead;
-      else if (e[0] === '#hoc h2') dyn = x.hoc && x.hoc.h2;
-      else if (e[0] === '#hoc .lead') dyn = x.hoc && x.hoc.lead;
-    }
+    var dyn = (typeof e[1] === 'function') ? e[1](x) : null;
     el.innerHTML = dyn || e[2].en;
   });
+  // Lessons page: keyboard finger legend + fullscreen tooltip (static HTML,
+  // no-op on the landing page where these elements don't exist).
+  var legend = document.getElementById('kbLegend');
+  if (legend) {
+    var fs = T().finShort || {};
+    var order = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'];
+    Array.prototype.forEach.call(legend.querySelectorAll('span'), function (sp, i) {
+      var key = order[i]; if (!key || !fs[key]) return;
+      var sw = sp.querySelector('i');
+      sp.textContent = ' ' + fs[key];
+      if (sw) sp.insertBefore(sw, sp.firstChild);
+    });
+  }
+  var fsB = document.getElementById('fsBtn');
+  if (fsB) fsB.title = (document.fullscreenElement || document.webkitFullscreenElement) ? T().fsOff : T().fsOn;
   var notes = document.querySelectorAll('#hands .hands-note');
   Array.prototype.forEach.call(notes, function (n, i) {
     if (store.lang === 'vi') {
