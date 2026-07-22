@@ -169,6 +169,10 @@ button{font-family:inherit}
   <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
   <button id="voiceBtn" title="Đọc từ khi đổi mây" style="position:absolute;top:16px;right:64px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
   <button id="pauseBtn" style="position:absolute;top:16px;right:112px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">⏸</button>
+  <div style="position:absolute;top:64px;right:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:7px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 16px rgba(70,120,180,.15)">
+    <button id="musicBtn" style="background:none;border:none;font-size:17px;cursor:pointer;padding:0">🎵</button>
+    <input id="musicVol" type="range" min="0" max="100" value="30" style="width:80px;accent-color:#3a6ea8">
+  </div>
   <div id="pauseOverlay" style="display:none;position:absolute;inset:0;z-index:9;background:rgba(225,242,255,.6);backdrop-filter:blur(3px);align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:24px;padding:30px 46px;text-align:center;box-shadow:0 20px 50px rgba(60,100,160,.3)">
       <div style="font-size:52px">⏸</div>
@@ -275,6 +279,79 @@ var sFire  = function () { for (var i = 0; i < 3; i++) { tone(300 + i * 180, 0.5
 var sStar  = function (n) { tone(523 * Math.pow(1.26, n), 0.35, 'triangle', 0.1, n * 0.35); };
 var sFan   = function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone(f, 0.28, 'triangle', 0.09, i * 0.13); }); };
 
+// ── Nhạc nền (WebAudio sequencer, không cần file) ───────────────────────────
+var musicOn = store.kiteMusic !== false;
+var musicVol = (store.kiteMusicVol != null ? store.kiteMusicVol : 30) / 100;
+var mGain = null, mTimer = null, mStep = 0, mNext = 0;
+var BPM = 132, STEP = 60 / BPM / 2;               // eighth notes
+function nf(n) { return 440 * Math.pow(2, (n - 69) / 12); }  // MIDI → Hz
+// giai điệu vui C-trưởng pentatonic (2 ô nhịp, 16 nốt; 0 = nghỉ)
+var MELODY = [72, 76, 79, 76, 81, 79, 76, 74, 72, 76, 79, 84, 81, 79, 76, 0,
+              74, 77, 81, 77, 84, 81, 77, 76, 72, 76, 79, 76, 74, 72, 67, 0];
+var BASS   = [48, 0, 55, 0, 45, 0, 52, 0, 50, 0, 57, 0, 43, 0, 55, 0,
+              50, 0, 57, 0, 53, 0, 48, 0, 48, 0, 55, 0, 43, 0, 48, 0];
+function ensureMusicGain() {
+  var c = ac();
+  if (!mGain) { mGain = c.createGain(); mGain.connect(c.destination); }
+  mGain.gain.value = musicOn && !paused && !over ? musicVol : 0;
+}
+function scheduleNote(freq, t, dur, type, gain) {
+  var c = ac(), o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(mGain);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function musicTick() {
+  var c = ac();
+  ensureMusicGain();
+  while (mNext < c.currentTime + 0.35) {
+    var i = mStep % MELODY.length;
+    if (MELODY[i]) scheduleNote(nf(MELODY[i]), mNext, STEP * 1.7, 'triangle', 0.32);
+    if (BASS[i])   scheduleNote(nf(BASS[i]),   mNext, STEP * 1.9, 'sine', 0.5);
+    if (i % 4 === 2) scheduleNote(nf(99), mNext, 0.03, 'square', 0.04);  // hat nhẹ
+    mNext += STEP;
+    mStep++;
+  }
+}
+function startMusic() {
+  if (mTimer) return;
+  try {
+    var c = ac();
+    if (c.state === 'suspended') c.resume();
+    ensureMusicGain();
+    mNext = c.currentTime + 0.05;
+    mTimer = setInterval(musicTick, 150);
+  } catch (e) {}
+}
+function renderMusicUI() {
+  document.getElementById('musicBtn').textContent = musicOn ? '🎵' : '🔕';
+  document.getElementById('musicVol').value = Math.round(musicVol * 100);
+  if (mGain) ensureMusicGain();
+}
+document.getElementById('musicBtn').addEventListener('click', function () {
+  musicOn = !musicOn;
+  store.kiteMusic = musicOn; saveStore(store);
+  if (musicOn) startMusic();
+  renderMusicUI();
+});
+document.getElementById('musicVol').addEventListener('input', function () {
+  musicVol = this.value / 100;
+  store.kiteMusicVol = Number(this.value); saveStore(store);
+  if (musicOn && !mTimer) startMusic();
+  if (mGain) ensureMusicGain();
+});
+// autoplay policy: chỉ start được sau tương tác đầu tiên
+document.addEventListener('keydown', function once() {
+  if (musicOn) startMusic();
+  document.removeEventListener('keydown', once);
+});
+document.addEventListener('pointerdown', function once2() {
+  if (musicOn) startMusic();
+  document.removeEventListener('pointerdown', once2);
+});
+
 // ── Game state ──────────────────────────────────────────────────────────────
 var WORDS = [];
 var level = Math.max(1, store.kite.level || 1);
@@ -290,6 +367,7 @@ function setPaused(on) {
   document.getElementById('stage').classList.toggle('paused', on);
   document.getElementById('pauseOverlay').style.display = on ? 'flex' : 'none';
   document.getElementById('pauseBtn').textContent = on ? '▶' : '⏸';
+  if (mGain) ensureMusicGain();
   if (on) {
     pausedAt = Date.now();
     if (window.speechSynthesis) speechSynthesis.cancel();
@@ -588,7 +666,7 @@ function applyStrings() {
   document.getElementById('btnPick').textContent = gt('btnPick');
   document.getElementById('btnNext').textContent = gt('btnNext');
 }
-document.addEventListener('DOMContentLoaded', applyStrings);
+document.addEventListener('DOMContentLoaded', function () { applyStrings(); renderMusicUI(); });
 
 // ── Đọc từ bằng speechSynthesis của browser ────────────────────────────────
 var voiceOn = store.kiteVoice !== false;      // default BẬT
@@ -823,6 +901,7 @@ var nextUnlocked = false;
 function endGame(crashed, forcedStars) {
   if (over) return;
   over = true;
+  if (mGain) ensureMusicGain();   // nhạc lặng khi màn kết thúc
   clearInterval(spawnT); clearInterval(timerT); clearInterval(flockT); clearInterval(wpmT);
   // Sao tính theo % từ gõ đúng / tổng số từ đã xuất hiện (không theo độ cao
   // diều); chạm 100% độ cao thì thắng luôn với full sao (forcedStars).
@@ -874,10 +953,12 @@ function startLevel(l) {
   clouds.forEach(function (c) { c.el.remove(); });
   clouds = [];
   paused = false;
+  if (musicOn) startMusic();
   document.getElementById('stage').classList.remove('paused');
   document.getElementById('pauseOverlay').style.display = 'none';
   document.getElementById('pauseBtn').textContent = '⏸';
   over = false; score = 0; timeLeft = 60; kite = startAlt; kiteTarget = startAlt;
+  if (mGain) ensureMusicGain();
   correctKeys = 0; wrongKeys = 0; startedAt = 0; fireCooldown = false;
   wordsDone = 0; wordsTotal = 0;
   document.getElementById('score').textContent = '0';
