@@ -412,13 +412,20 @@ public struct TelexEngine {
     }
 
     private mutating func composedIsValidSyllable() -> Bool {
-        // Accepted ABBREVIATION, not a real syllable: "đc" (= được, chat shorthand)
-        // survives auto-restore — typing "ddc" keeps đc instead of reverting to raw
-        // (user decision 2026-07-21). Zero-alloc direct compare, tone-less only.
-        if pCount == 2, lastEffTone == .none,
-           renderLetters[0].base == UInt8(ascii: "d"), renderLetters[0].mark == .bar,
-           renderLetters[1].base == UInt8(ascii: "c"), renderLetters[1].mark == .none {
-            return true
+        // Đ-initial ABBREVIATIONS (chat shorthand), not real syllables: đ, đc, đm,
+        // đk, đkm… survive auto-restore — typing "ddm" keeps đm instead of
+        // reverting to raw (generalized from the đc whitelist, user decision
+        // 2026-07-22). Shape: leading đ (from dd) + ZERO or more bare consonants,
+        // no tone. Vowelled words (đi, đau) take the normal validation path;
+        // a literal lowercase "dd…" remains reachable via the ddd cancel.
+        if pCount >= 1, lastEffTone == .none,
+           renderLetters[0].base == UInt8(ascii: "d"), renderLetters[0].mark == .bar {
+            var bareConsonantsOnly = true
+            for k in 1..<pCount {
+                let l = renderLetters[k]
+                if l.mark != .none || isVowelAscii(l.base) { bareConsonantsOnly = false; break }
+            }
+            if bareConsonantsOnly { return true }
         }
         // ALL-CAPS abbreviation whose only transform is DD→Đ ("ĐSQ" = Đại Sứ Quán,
         // "ĐHQG"…): the doubled D was deliberate, restoring to "DDSQ" is strictly

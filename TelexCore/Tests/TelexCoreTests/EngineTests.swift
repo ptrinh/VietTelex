@@ -166,8 +166,11 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(commit("DDN"), "ĐN")        // Đà Nẵng
         // escape hatch: the double-key cancel still yields a literal DD
         XCTAssertEqual(commit("DDDR"), "DDR")
-        // lowercase invalid words keep restoring
-        XCTAssertEqual(commit("ddsq"), "ddsq")
+        // lowercase đ+consonants is now an accepted abbreviation (2026-07-22)…
+        XCTAssertEqual(commit("ddsq"), "đsq")
+        // …but a vowel after the consonants exits the abbreviation rule and the
+        // normal validation restores the invalid word
+        XCTAssertEqual(commit("ddsqa"), "ddsqa")
         // vowel marks in caps are NOT covered by the acronym rule; "Â" survives
         // because the validator already accepts it as a syllable (pre-existing)
         XCTAssertEqual(commit("AA"), "Â")
@@ -176,8 +179,9 @@ final class EngineGoldenTests: XCTestCase {
     func testDcAbbreviationSurvivesAutoRestore() {
         XCTAssertEqual(commit("ddc"), "đc")
         XCTAssertEqual(compose("ddc"), "đc")
-        // Tone on it is NOT whitelisted → restores raw.
-        XCTAssertEqual(commit("ddcs"), "ddcs")
+        // s here is a literal consonant (no vowel to tone) → still đ+consonants,
+        // covered by the generalized abbreviation rule (2026-07-22)
+        XCTAssertEqual(commit("ddcs"), "đcs")
     }
 
     // Word-initial standalone w → ư belongs to FULL Telex (Simple Telex off) —
