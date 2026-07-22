@@ -529,13 +529,15 @@ function updateWPM() {
 
 // ── Level / end ─────────────────────────────────────────────────────────────
 var nextUnlocked = false;
-function endGame(crashed) {
+function endGame(crashed, forcedStars) {
   if (over) return;
   over = true;
   clearInterval(spawnT); clearInterval(timerT); clearInterval(flockT); clearInterval(wpmT);
-  // Sao tính theo %% từ gõ đúng / tổng số từ đã xuất hiện (không theo độ cao diều)
+  // Sao tính theo % từ gõ đúng / tổng số từ đã xuất hiện (không theo độ cao
+  // diều); chạm 100% độ cao thì thắng luôn với full sao (forcedStars).
   var pctWords = wordsTotal ? Math.round(wordsDone / wordsTotal * 100) : 0;
-  var stars = crashed ? 0 : (pctWords > 90 ? 3 : pctWords > 60 ? 2 : pctWords > 30 ? 1 : 0);
+  var stars = forcedStars != null ? forcedStars
+    : crashed ? 0 : (pctWords > 90 ? 3 : pctWords > 60 ? 2 : pctWords > 30 ? 1 : 0);
   var prevBest = store.kite.best[level] || 0;
   var gained = Math.max(0, stars - prevBest) * 100;         // 100 XP per NEW star
   if (stars > prevBest) store.kite.best[level] = stars;
@@ -554,7 +556,7 @@ function endGame(crashed) {
     : forcedStars != null ? 'Diều bay tít lên chín tầng mây — thắng luôn level này!'
     : stars === 3 ? 'Tuyệt vời! Diều bay cao tít trên mây!'
     : stars > 0 ? 'Hay lắm! Thử đưa diều lên cao hơn nữa nhé!'
-    : 'Gõ đúng hơn 30%% số mây để được sao nhé!';
+    : 'Gõ đúng hơn 30% số mây để được sao nhé!';
   var mins = startedAt ? Math.max((Date.now() - startedAt) / 60000, 1 / 60) : 1;
   var acc = correctKeys + wrongKeys ? Math.round(correctKeys / (correctKeys + wrongKeys) * 100) : 100;
   document.getElementById('ovStats').innerHTML =
