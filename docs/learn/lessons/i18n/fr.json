@@ -295,6 +295,14 @@
    "<h3><span class=\"e\">✨</span>La lettre đ &amp; l'effacement des tons</h3><p><b>dd</b>→đ. Tape <b>z</b> pour effacer un ton que tu viens d'ajouter. Retaper la même touche de ton l'efface aussi.</p>",
    "<h3><span class=\"e\">🧠</span>Les erreurs, c'est normal</h3><p>L'IME reconnaît les mots non vietnamiens (comme <code>google</code>) et les laisse tels quels. Tape naturellement ; si c'est faux, efface et retape.</p>"
   ],
-  "footer": "<a href=\"../\">ViệtTelex</a> — la méthode de saisie vietnamienne open-source pour macOS.<br>Le même ensemble de règles que dans la vraie application. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
+  "footer": "<a href=\"../\">ViệtTelex</a> — la méthode de saisie vietnamienne open-source pour macOS.<br>Le même ensemble de règles que dans la vraie application. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>",
+  "cheatText": {
+   "⌫ dấu": "⌫ accent",
+   "xoá dấu vừa bỏ": "efface l’accent qu’on vient d’ajouter"
+  },
+  "demoBtn1": "Exemple : Tiếng Việt",
+  "demoBtn2": "Exemple : Chào buổi sáng",
+  "clearBtn": "Effacer",
+  "sandboxPh": "Tapez ici… ex. : xin chaof"
  }
 }

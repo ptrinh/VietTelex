@@ -295,6 +295,14 @@
    "Nguyên âm đội mũ ^": "ស្រៈពាក់មួក ^",
    "Nguyên âm có móc/ngoặc": "ស្រៈមានទំពក់",
    "Đặc biệt": "ពិសេស"
-  }
+  },
+  "cheatText": {
+   "⌫ dấu": "⌫ សំឡេង",
+   "xoá dấu vừa bỏ": "លុបសំឡេងដែលទើបដាក់"
+  },
+  "demoBtn1": "ឧទាហរណ៍៖ Tiếng Việt",
+  "demoBtn2": "ឧទាហរណ៍៖ Chào buổi sáng",
+  "clearBtn": "សម្អាត",
+  "sandboxPh": "វាយនៅទីនេះ… ឧ. xin chaof"
  }
 }
