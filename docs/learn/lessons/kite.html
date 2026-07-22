@@ -253,7 +253,9 @@ var wordsDone = 0, wordsTotal = 0;
 var clouds = [], cid = 0, rowFlip = 0, raf = 0, fireCooldown = false;
 var spawnT, timerT, flockT, wpmT;
 
-function speedMul(l) { return 0.50 + 0.20 * (l - 1); }        // lv1=50%, +20%/level
+// lv1=50%, +20%/level, TRẦN 200% (từ level 9 đi ngang) — số level KHÔNG giới
+// hạn; trần tốc độ giữ cho mọi level đều có thể đạt sao (endless mode).
+function speedMul(l) { return Math.min(2.0, 0.50 + 0.20 * (l - 1)); }
 function cloudDur() { return 16 / speedMul(level); }
 function spawnGap() { return Math.min(9, Math.max(3, cloudDur() / 6)); }
 
