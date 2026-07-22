@@ -553,8 +553,8 @@ function endGame(crashed) {
     fireworks();
   }
 }
-function startLevel(l, keepKite) {
-  var startAlt = keepKite ? Math.max(10, Math.min(90, kiteTarget)) : 30;
+function startLevel(l) {
+  var startAlt = 50;   // độ cao khởi đầu cố định mọi level/mọi lần chơi
   level = l;
   bag = [];
   document.getElementById('lvl').textContent = level;
@@ -583,7 +583,7 @@ function startLevel(l, keepKite) {
   setTimeout(spawnFlock, 4000);
 }
 document.getElementById('btnRetry').addEventListener('click', function () { startLevel(level); });
-document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1, true); });
+document.getElementById('btnNext').addEventListener('click', function () { startLevel(level + 1); });
 document.getElementById('soundBtn').addEventListener('click', function () {
   soundOn = !soundOn;
   this.textContent = soundOn ? '🔊' : '🔇';
