@@ -875,6 +875,60 @@ final class TelexInputController: IMKInputController {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
             NSWorkspace.shared.open(url)
         }
+        // No URL deep-links into the "All Input Sources" Edit… sheet, so with
+        // Accessibility we press the button ourselves: in the Keyboard pane the
+        // Input-Sources summary line mentions our own name ("… and ViệtTelex") —
+        // a locale-independent anchor; the next AXButton after it is Edit…
+        // (verified via UI-tree dump on macOS 26). Best-effort: without AX or if
+        // the tree changed, the pane is simply left open.
+        guard Accessibility.isTrusted else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            for attempt in 0..<6 {
+                Thread.sleep(forTimeInterval: attempt == 0 ? 1.2 : 0.5)
+                if Self.pressInputSourcesEdit() { return }
+            }
+        }
+    }
+
+    /// Walk System Settings' AX tree in reading order; press the first button
+    /// after the Input-Sources anchor text. Returns true when pressed.
+    private static func pressInputSourcesEdit() -> Bool {
+        guard let settings = NSRunningApplication
+                .runningApplications(withBundleIdentifier: "com.apple.systempreferences").first
+        else { return false }
+        let app = AXUIElementCreateApplication(settings.processIdentifier)
+        var winRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, kAXMainWindowAttribute as CFString, &winRef) == .success,
+              let window = winRef else { return false }
+
+        var anchorSeen = false
+        var pressed = false
+        func walk(_ el: AXUIElement, depth: Int) {
+            if pressed || depth > 12 { return }
+            var roleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(el, kAXRoleAttribute as CFString, &roleRef)
+            let role = roleRef as? String ?? ""
+            if role == kAXStaticTextRole as String {
+                var valRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(el, kAXValueAttribute as CFString, &valRef)
+                if let v = valRef as? String,
+                   v.contains("Telex") || v.contains("Input Sources") || v.contains("Nguồn nhập") {
+                    anchorSeen = true
+                }
+            } else if role == kAXButtonRole as String, anchorSeen {
+                pressed = AXUIElementPerformAction(el, kAXPressAction as CFString) == .success
+                return
+            }
+            var kidsRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &kidsRef) == .success,
+                  let kids = kidsRef as? [AXUIElement] else { return }
+            for k in kids {
+                walk(k, depth: depth + 1)
+                if pressed { return }
+            }
+        }
+        walk(window as! AXUIElement, depth: 0)
+        return pressed
     }
 
 
