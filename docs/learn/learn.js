@@ -7,6 +7,16 @@
 
 // ── Progress store ──────────────────────────────────────────────────────────
 var store = load();
+function detectBrowserLang() {
+  var supported = ['vi', 'en', 'fr', 'de', 'ko', 'ja', 'zh', 'km'];
+  var prefs = (navigator.languages && navigator.languages.length)
+    ? navigator.languages : [navigator.language || ''];
+  for (var i = 0; i < prefs.length; i++) {
+    var code = String(prefs[i]).slice(0, 2).toLowerCase();
+    if (supported.indexOf(code) >= 0) return code;
+  }
+  return 'vi';
+}
 function load() {
   var s;
   try { s = JSON.parse(localStorage.getItem('vtlearn') || 'null'); } catch (e) { s = null; }
@@ -18,7 +28,10 @@ function load() {
   if (s.track === undefined) s.track = null;
   if (s.autoSpeak === undefined) s.autoSpeak = false;
   if (s.showArt === undefined) s.showArt = true;
-  if (!s.langChosen) { s.lang = 'vi'; }
+  // First visit (no explicit choice): follow the browser's preferred language
+  // if we have it; Vietnamese otherwise. A manual 🌐 pick sets langChosen and
+  // wins forever after.
+  if (!s.langChosen) { s.lang = detectBrowserLang(); }
   if (!s.lang) s.lang = 'vi';
   if (['vi','en','fr','de','ko','ja','zh','km'].indexOf(s.lang) < 0) s.lang = 'vi';
   return s;
