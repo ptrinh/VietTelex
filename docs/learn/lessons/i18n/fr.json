@@ -105,7 +105,11 @@
     "Maître du Telex",
     "Bats le boss final"
    ]
-  }
+  },
+  "gameChapter": "Jeu",
+  "gameTitle": "Cerf-volant — tape pour éclater les nuages",
+  "gameDesc": "Tape le mot de chaque nuage pour garder le cerf-volant en l’air. Niveaux, étoiles, feux d’artifice !",
+  "footer": "Une partie de <a href=\"../\">ViệtTelex</a> — la méthode de saisie vietnamienne open source pour macOS.<br>Les leçons viennent du vrai moteur de la méthode de saisie. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  },
  "chapters": {
   "c0": "Découvre le clavier",

@@ -105,7 +105,11 @@
     "Telex 마스터",
     "최종 보스 이기기"
    ]
-  }
+  },
+  "gameChapter": "게임",
+  "gameTitle": "연날리기 — 단어를 입력해 구름을 터뜨려요",
+  "gameDesc": "구름 속 단어를 입력해 연을 높이 띄워요. 레벨, 별, 불꽃놀이!",
+  "footer": "<a href=\"../\">ViệtTelex</a>의 일부 — macOS용 오픈소스 베트남어 입력기.<br>수업은 입력기의 실제 엔진에서 생성됩니다. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  },
  "chapters": {
   "c0": "키보드와 인사하기",

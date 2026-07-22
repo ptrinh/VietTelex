@@ -105,7 +105,11 @@
     "Telex 大师",
     "打败最终 Boss"
    ]
-  }
+  },
+  "gameChapter": "游戏",
+  "gameTitle": "放风筝 — 打字戳破云朵",
+  "gameDesc": "输入云朵里的词语，让风筝飞得更高。有关卡、星星和烟花！",
+  "footer": "<a href=\"../\">ViệtTelex</a> 的一部分 — macOS 上的开源越南语输入法。<br>课程由输入法的真实引擎生成。 © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  },
  "chapters": {
   "c0": "认识键盘",

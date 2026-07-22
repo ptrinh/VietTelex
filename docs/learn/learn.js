@@ -55,6 +55,7 @@ var STR = {
     map: '← Bản đồ', listen: '🔊 Nghe', dict: '🎧 Nghe rồi gõ', dictOn: '🎧 Đang nghe-gõ',
     fsOn: 'Toàn màn hình', fsOff: 'Thoát toàn màn hình',
     upNext: 'Học tiếp',
+    footer: 'Một phần của <a href="../">ViệtTelex</a> — bộ gõ tiếng Việt mã nguồn mở cho macOS.<br>Bài học sinh từ chính engine của bộ gõ. © 2026 Phil Trịnh · <a href="https://github.com/ptrinh/viettelex">GitHub</a>',
     gameChapter: 'Trò chơi', gameTitle: 'Thả diều — gõ chữ phá mây',
     gameDesc: 'Gõ đúng từ trong đám mây để diều bay cao. Có level, sao và pháo hoa!',
     imeTitle: 'Tắt bộ gõ tiếng Việt trước khi học',
@@ -100,6 +101,7 @@ var STR = {
     map: '← Map', listen: '🔊 Listen', dict: '🎧 Listen & type', dictOn: '🎧 Dictation on',
     fsOn: 'Fullscreen', fsOff: 'Exit fullscreen',
     upNext: 'Continue',
+    footer: 'Part of <a href="../">ViệtTelex</a> — the open-source Vietnamese input method for macOS.<br>Lessons come from the input method’s real engine. © 2026 Phil Trịnh · <a href="https://github.com/ptrinh/viettelex">GitHub</a>',
     gameChapter: 'Game', gameTitle: 'Kite flying — type to pop clouds',
     gameDesc: 'Type the word in each cloud to keep the kite up. Levels, stars, fireworks!',
     imeTitle: 'Turn OFF your Vietnamese IME first',
@@ -225,6 +227,8 @@ var HANDS_EN = [
 ];
 var staticVi = null;
 function applyStaticLang() {
+  var f = document.getElementById('tFooter');
+  if (f && T().footer) f.innerHTML = T().footer;
   if (!staticVi) {
     staticVi = STATIC_I18N.map(function (e) { var el = document.querySelector(e[0]); return el ? el.innerHTML : null; });
     staticVi.hands = Array.prototype.map.call(document.querySelectorAll('#hands .hands-note'), function (n) { return n.innerHTML; });

@@ -106,7 +106,11 @@
    "f6": "R middle",
    "f7": "R ring",
    "f8": "R pinky"
-  }
+  },
+  "gameChapter": "Game",
+  "gameTitle": "Kite flying — type to pop clouds",
+  "gameDesc": "Type the word in each cloud to keep the kite up. Levels, stars, fireworks!",
+  "footer": "Part of <a href=\"../\">ViệtTelex</a> — the open-source Vietnamese input method for macOS.<br>Lessons come from the input method’s real engine. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  },
  "chapters": {
   "c0": "Meet the keyboard",

@@ -105,7 +105,11 @@
     "Telexマスター",
     "ラスボスをたおそう"
    ]
-  }
+  },
+  "gameChapter": "ゲーム",
+  "gameTitle": "たこあげ — 入力して雲をわろう",
+  "gameDesc": "雲の中の単語を入力して、たこを高く飛ばそう。レベル・星・花火！",
+  "footer": "<a href=\"../\">ViệtTelex</a> の一部 — macOS向けオープンソースのベトナム語入力メソッド。<br>レッスンは入力メソッドの本物のエンジンから生成されています。 © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  },
  "chapters": {
   "c0": "キーボードとなかよく",

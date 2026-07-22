@@ -105,7 +105,11 @@
     "Telex-Meister",
     "Besiege den Endgegner"
    ]
-  }
+  },
+  "gameChapter": "Spiel",
+  "gameTitle": "Drachensteigen — tippe, um Wolken zu zerplatzen",
+  "gameDesc": "Tippe das Wort in jeder Wolke, damit der Drachen oben bleibt. Level, Sterne, Feuerwerk!",
+  "footer": "Teil von <a href=\"../\">ViệtTelex</a> — der Open-Source-Eingabemethode für Vietnamesisch auf macOS.<br>Die Lektionen stammen aus der echten Engine der Eingabemethode. © 2026 Phil Trịnh · <a href=\"https://github.com/ptrinh/viettelex\">GitHub</a>"
  },
  "chapters": {
   "c0": "Lerne die Tastatur kennen",
