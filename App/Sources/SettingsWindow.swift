@@ -372,6 +372,13 @@ struct GeneralTab: View {
                 Text(model.loc("Off = old style (hòa, thủy, khỏe). On = new style (hoà, thuý, khoẻ). Only oa/oe/uy differ."))
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section {
+                Button(model.loc("System Settings…")) {
+                    TelexInputController.openKeyboardInputSources()
+                }
+                Text(model.loc("Opens Keyboard settings — set automatic input-source switching per app / document there."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section(model.loc("Spelling")) {
                 Toggle(model.loc("Auto-restore invalid words"), isOn: $model.autoRestore)
                 Toggle(model.loc("Live spell-check"), isOn: $model.liveSpellCheck)
@@ -384,13 +391,6 @@ struct GeneralTab: View {
                     Text("Tiếng Việt").tag("vi")
                     Text("English").tag("en")
                 }
-            }
-            Section {
-                Button(model.loc("System Settings…")) {
-                    TelexInputController.openKeyboardInputSources()
-                }
-                Text(model.loc("Opens Keyboard settings — set automatic input-source switching per app / document there."))
-                    .font(.caption).foregroundStyle(.secondary)
             }
             Section {
                 Toggle(model.loc("Show advanced features"), isOn: $model.advancedFeatures)
