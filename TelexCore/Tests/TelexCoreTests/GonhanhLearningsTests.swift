@@ -131,6 +131,17 @@ final class EnglishCollisionTests: XCTestCase {
         // some users add a third f — BOTH inputs must end as "off" at the boundary
         XCTAssertEqual(commit("off"), "off")     // raw ∈ dict → restore
         XCTAssertEqual(commit("offf"), "off")    // cancel keeps composed
+        // same double-route for google (user requirement 2026-07-22):
+        // typed straight → restore; typed with a fixing 3rd o → cancel keeps composed
+        XCTAssertEqual(commit("google"), "google")    // "gôgle" restored (dict + validator)
+        XCTAssertEqual(commit("gooogle"), "google")   // ooo-cancel → what you see is kept
+        // and with live spell-check ON (the app default), both still hold
+        var sp1 = TelexEngine(); sp1.freeMarking = true; sp1.liveSpellCheck = true
+        for ch in "google" { _ = sp1.feed(ch) }
+        XCTAssertEqual(sp1.commitText(autoRestore: true), "google")
+        var sp2 = TelexEngine(); sp2.freeMarking = true; sp2.liveSpellCheck = true
+        for ch in "gooogle" { _ = sp2.feed(ch) }
+        XCTAssertEqual(sp2.commitText(autoRestore: true), "google")
     }
 
     // MARK: - Remote-desktop passthrough ids (item 3)
