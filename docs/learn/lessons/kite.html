@@ -392,8 +392,8 @@ function layoutKite() {
 function moveKite(d) {
   if (over) return;
   kiteTarget = Math.max(0, Math.min(100, kiteTarget + d));
-  if (kiteTarget >= 94) {
-    // Thắng luôn: diều lên tít trời — full sao, khỏi chờ hết giờ
+  if (kiteTarget >= 100) {
+    // Thắng luôn: diều chạm đỉnh trời — full sao, khỏi chờ hết giờ
     kite = kiteTarget;
     layoutKite();
     fireworks(); sFire();
@@ -553,7 +553,7 @@ function endGame(crashed) {
   }
 }
 function startLevel(l, keepKite) {
-  var startAlt = keepKite ? Math.max(10, Math.min(93, kiteTarget)) : 30;
+  var startAlt = keepKite ? Math.max(10, Math.min(90, kiteTarget)) : 30;
   level = l;
   bag = [];
   document.getElementById('lvl').textContent = level;

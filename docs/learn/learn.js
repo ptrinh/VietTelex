@@ -643,6 +643,20 @@ function renderMap() {
     if (autoOpen || ch.lessons.some(function (l) { return l.id === upNext; })) el.classList.add('open');
     mapEl.appendChild(el);
   });
+  // Kite game — the LAST item in the lesson list, always playable (no unlock)
+  var g = document.createElement('div');
+  g.className = 'chapter open';
+  var kiteStars = 0;
+  try {
+    var kb = (store.kite && store.kite.best) || {};
+    Object.keys(kb).forEach(function (k) { kiteStars += kb[k]; });
+  } catch (e) {}
+  g.innerHTML = '<header><span class="icon">🪁</span><h3>' + esc(T().gameChapter) + ': ' + esc(T().gameTitle) +
+    '</h3><span class="count">' + (kiteStars ? '⭐ ' + kiteStars : '') + '</span></header>' +
+    '<div class="nodes" style="display:flex"><a class="node" href="kite.html" style="text-decoration:none">' +
+    '<span class="t">🪁 ' + esc(T().gameTitle) + '</span>' +
+    '<span style="display:block;font-size:.8rem;color:var(--ink-soft);margin-top:4px">' + esc(T().gameDesc) + '</span></a></div>';
+  mapEl.appendChild(g);
 }
 
 // ── Player ──────────────────────────────────────────────────────────────────
