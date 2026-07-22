@@ -439,7 +439,18 @@
   }
   var sel = document.getElementById('langSel');
   sel.innerHTML = LANGS.map(function (l) { return '<option value="' + l[0] + '">🌐 ' + l[1] + '</option>'; }).join('');
-  var lang = state().lang;
+  var st0 = state();
+  var lang = st0.lang;
+  if (!st0.langChosen) {
+    // first visit: browser preferred language if supported, else Vietnamese
+    var prefs = (navigator.languages && navigator.languages.length)
+      ? navigator.languages : [navigator.language || ''];
+    lang = 'vi';
+    for (var i = 0; i < prefs.length; i++) {
+      var c = String(prefs[i]).slice(0, 2).toLowerCase();
+      if (LANGS.some(function (l) { return l[0] === c; })) { lang = c; break; }
+    }
+  }
   if (!LANGS.some(function (l) { return l[0] === lang; })) lang = 'vi';
   sel.value = lang;
   setLang(lang);
