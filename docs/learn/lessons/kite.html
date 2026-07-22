@@ -155,7 +155,10 @@ button{font-family:inherit}
     <div class="hudpill" style="color:#1f9d63;background:#e6f6ee">⚡ <span id="wpm">0</span> WPM</div>
     <div class="hudpill" style="color:#3a6ea8;background:#e3f0fd">⏱ <span id="time">1:00</span></div>
   </div>
-  <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong đám mây có gạch chân để phá mây — Space đổi mây, tắt bộ gõ tiếng Việt nhé!</div>
+  <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:8;display:flex;gap:10px;align-items:center">
+    <div style="background:rgba(255,255,255,.8);border-radius:16px;padding:8px 20px;font-size:15px;font-weight:700;color:#4a6b8a;white-space:nowrap;box-shadow:0 6px 16px rgba(70,120,180,.15)">⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!</div>
+    <button id="skipBtn" style="background:linear-gradient(135deg,#4cb7ff,#3a6ea8);color:#fff;border:none;border-radius:16px;padding:9px 18px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.3);font-family:inherit;white-space:nowrap">⏭ Mây khác (Space)</button>
+  </div>
   <a href="./" style="position:absolute;top:16px;left:16px;z-index:8;background:rgba(255,255,255,.85);border-radius:14px;padding:8px 16px;font-weight:800;text-decoration:none;box-shadow:0 6px 16px rgba(70,120,180,.15)">← Lớp học</a>
   <button id="soundBtn" style="position:absolute;top:16px;right:16px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
   <button id="voiceBtn" title="Đọc từ khi đổi mây" style="position:absolute;top:16px;right:64px;z-index:8;background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
@@ -492,10 +495,9 @@ document.addEventListener('keydown', function (e) {
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); document.getElementById(nextUnlocked ? 'btnNext' : 'btnRetry').click(); }
     return;
   }
-  if (e.key === ' ') {                       // Space = skip the active cloud
-    e.preventDefault();
-    var a = activeCloud();
-    if (a) { a.skipped = true; markActive(); }
+  if (e.key === ' ' || e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'Enter') {
+    e.preventDefault();                      // đều = bỏ qua mây active
+    skipActive();
     return;
   }
   var c = activeCloud();
@@ -623,6 +625,13 @@ function startLevel(l) {
   setTimeout(spawnCloud, 700);
   setTimeout(spawnFlock, 4000);
 }
+function skipActive() {
+  if (over) return;
+  var a = activeCloud();
+  if (a) { a.skipped = true; sDrop(); markActive(); }
+}
+document.getElementById('skipBtn').addEventListener('click', function () { skipActive(); });
+
 var pickerEl = document.getElementById('picker');
 function openPicker() {
   var maxL = Math.max(level, store.kite.level || 1);
