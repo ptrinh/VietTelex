@@ -688,6 +688,14 @@ struct AboutTab: View {
                 .foregroundStyle(.secondary)
             Link("Website", destination: URL(string: "https://ptrinh.github.io/viettelex/")!)
 
+            // Opens the browser-based Telex tutor (kept out of the app itself to
+            // stay minimal — see docs/learn).
+            Button(model.loc("Learn Telex typing")) {
+                NSWorkspace.shared.open(URL(string: "https://ptrinh.github.io/viettelex/learn/")!)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
+
             // Manual update check — the only thing that touches the network, and
             // only on this click (see Updater.swift).
             VStack(spacing: 4) {

@@ -38,6 +38,7 @@
 
 /* About tab */
 "Version %@ · %@" = "Version %@ ngày %@";
+"Learn Telex typing" = "🎓 Học gõ Telex";
 "Check for updates" = "Kiểm tra cập nhật";
 "Download update…" = "Tải bản mới…";
 "You’re up to date (%@)." = "Đã là bản mới nhất (%@).";
