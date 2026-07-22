@@ -472,6 +472,7 @@ var DEBUG = location.hash === '#debug';
 // ── i18n: theo ngôn ngữ đã chọn ở Lessons (vtlearn.lang) ────────────────────
 var GSTR = {
 "vi": {
+"mobileNotice": "📱 Trò chơi này được thiết kế để luyện gõ trên máy tính với bàn phím vật lý. Trên điện thoại/máy tính bảng vẫn chơi được nhưng trải nghiệm sẽ không tối ưu.",
 "altitude": "ĐỘ CAO CỦA DIỀU",
 "hint": "⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!",
 "skip": "⏭ Mây khác (Space)",
@@ -497,6 +498,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "en": {
+"mobileNotice": "📱 This game is designed for typing practice on a computer with a physical keyboard. It works on phones/tablets, but the experience won't be optimal.",
 "altitude": "KITE ALTITUDE",
 "hint": "⌨️ Type the word in the underlined cloud to pop it — turn OFF your Vietnamese IME!",
 "skip": "⏭ Next cloud (Space)",
@@ -522,6 +524,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "fr": {
+"mobileNotice": "📱 Ce jeu est conçu pour s'entraîner à taper sur un ordinateur avec un clavier physique. Il fonctionne sur téléphone/tablette, mais l'expérience ne sera pas optimale.",
 "altitude": "ALTITUDE DU CERF-VOLANT",
 "hint": "⌨️ Tape le mot dans le nuage souligné pour le faire éclater — désactive la saisie vietnamienne du système !",
 "skip": "⏭ Autre nuage (Espace)",
@@ -547,6 +550,7 @@ var GSTR = {
 "levelN": "Niveau {n}"
 },
 "de": {
+"mobileNotice": "📱 Dieses Spiel ist zum Tippen am Computer mit einer physischen Tastatur gedacht. Es funktioniert auch auf Handy/Tablet, aber das Erlebnis ist dort nicht optimal.",
 "altitude": "FLUGHÖHE DES DRACHENS",
 "hint": "⌨️ Tippe das Wort in der unterstrichenen Wolke, um sie platzen zu lassen — schalte die vietnamesische Eingabe deines Systems AUS!",
 "skip": "⏭ Andere Wolke (Leertaste)",
@@ -572,6 +576,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "ko": {
+"mobileNotice": "📱 이 게임은 실제 키보드가 있는 컴퓨터에서 타자 연습을 하도록 만들어졌어요. 휴대폰/태블릿에서도 되지만 최적의 경험은 아니에요.",
 "altitude": "연 높이",
 "hint": "⌨️ 밑줄 친 구름 속 단어를 입력해서 터뜨려요 — 베트남어 입력기는 꺼 주세요!",
 "skip": "⏭ 다른 구름 (스페이스)",
@@ -597,6 +602,7 @@ var GSTR = {
 "levelN": "레벨 {n}"
 },
 "ja": {
+"mobileNotice": "📱 このゲームは、じつぶつのキーボードがあるパソコンでのタイピングれんしゅうのために作られています。スマホ／タブレットでもあそべますが、さいてきなたいけんではありません。",
 "altitude": "たこの たかさ",
 "hint": "⌨️ 下線がついた雲の中の単語を入力してポン！と割ってね — ベトナム語IMEはオフにしてね！",
 "skip": "⏭ べつの雲 (スペース)",
@@ -622,6 +628,7 @@ var GSTR = {
 "levelN": "レベル {n}"
 },
 "zh": {
+"mobileNotice": "📱 这个游戏是为使用实体键盘的电脑打字练习设计的。手机/平板也能玩，但体验不是最佳。",
 "altitude": "风筝高度",
 "hint": "⌨️ 打出带下划线的云朵里的词语就能把它戳破 — 记得先关掉越南语输入法哦！",
 "skip": "⏭ 换一朵云（空格键）",
@@ -647,6 +654,7 @@ var GSTR = {
 "levelN": "第{n}关"
 },
 "km": {
+"mobileNotice": "📱 ល្បែងនេះត្រូវបានរចនាសម្រាប់ហាត់វាយអក្សរនៅលើកុំព្យូទ័រដែលមានក្ដារចុចពិត។ នៅលើទូរស័ព្ទ/ថេប្លេតក៏លេងបានដែរ ប៉ុន្តែបទពិសោធន៍មិនល្អបំផុតទេ។",
 "altitude": "កម្ពស់ខ្លែង",
 "hint": "⌨️ វាយពាក្យនៅក្នុងពពកដែលមានបន្ទាត់ពីក្រោមដើម្បីធ្វើឲ្យវាបែក — កុំភ្លេចបិទកម្មវិធីវាយអក្សរវៀតណាមណា!",
 "skip": "⏭ ពពកផ្សេង (Space)",
@@ -943,6 +951,13 @@ if (IS_TOUCH) {
     mobFocus();
   });
   mobFocus();
+  // notice: game thiết kế cho máy tính + bàn phím vật lý
+  var nb = document.createElement('div');
+  nb.textContent = gt('mobileNotice');
+  nb.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);max-width:min(520px,88vw);background:#17233d;color:#fff;padding:12px 18px;border-radius:14px;font-weight:600;font-size:14px;line-height:1.5;z-index:99;box-shadow:0 10px 30px rgba(0,0,0,.25)';
+  nb.addEventListener('pointerdown', function () { nb.remove(); });
+  document.body.appendChild(nb);
+  setTimeout(function () { nb.remove(); }, 12000);
 }
 
 // composition = system Vietnamese IME is ON — remind (the game needs raw keys)
