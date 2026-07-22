@@ -167,6 +167,24 @@ final class EngineGoldenTests: XCTestCase {
         // 2026-07-22: composed đi, committed "did").
         XCTAssertEqual(commitFree("did"), "đi")
         XCTAssertEqual(commitFree("theme"), "thêm")
+        // audit 2026-07-23: English spellings that ARE the canonical telex keys
+        // of common Vietnamese words — Vietnamese wins (protect list).
+        XCTAssertEqual(commitFree("thus"), "thú")
+        XCTAssertEqual(commitFree("queen"), "quên")
+        XCTAssertEqual(commitFree("songs"), "sóng")
+        XCTAssertEqual(commitFree("char"), "chả")
+        XCTAssertEqual(commitFree("chair"), "chải")
+        XCTAssertEqual(commitFree("hair"), "hải")
+        XCTAssertEqual(commitFree("lens"), "lén")
+        XCTAssertEqual(commitFree("hits"), "hít")
+        XCTAssertEqual(commitFree("sets"), "sét")
+        XCTAssertEqual(commitFree("boots"), "bốt")
+        XCTAssertEqual(commitFree("lots"), "lót")
+        // …while giant English words whose spelling is NOT a natural telex
+        // order stay English (his/this precedent).
+        XCTAssertEqual(commitFree("this"), "this")
+        XCTAssertEqual(commitFree("there"), "there")
+        XCTAssertEqual(commitFree("most"), "most")
         XCTAssertEqual(composeFree("luuw"), "lưu")
         XCTAssertEqual(composeFree("cuuws"), "cứu")
         XCTAssertEqual(composeFree("dad"), "đa")

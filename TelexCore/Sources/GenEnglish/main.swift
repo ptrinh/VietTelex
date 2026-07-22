@@ -40,6 +40,20 @@ let protected: Set<String> = [
     "rơ",   // row   (chơi rơ)
     "đi",   // did   (user 2026-07-22: free-marking did→đi thắng English "did")
     "thêm", // theme (cùng đợt: theme→thêm)
+    // Đợt audit 2026-07-23 (user báo thus→thus): raw tiếng Anh trùng ĐÚNG cách
+    // gõ telex chuẩn của từ Việt phổ biến → tiếng Việt thắng.
+    "thú",  // thus
+    "quên", // queen
+    "sóng", // songs
+    "chả",  // char
+    "chải", // chair
+    "hải",  // hair  (tên riêng Hải, hải sản)
+    "lén",  // lens
+    "hít",  // hits  (hít thở)
+    "sét",  // sets  (sấm sét)
+    "tít",  // tits  (xa tít)
+    "bốt",  // boots (giày bốt)
+    "lót",  // lots, lost (lót đường)
     "sên",  // seen  (ốc sên)
     "sỉ",   // sir   (mua sỉ)
     "sĩ",   // six   (bác sĩ)
