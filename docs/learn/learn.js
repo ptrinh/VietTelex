@@ -20,6 +20,10 @@ function detectBrowserLang() {
 function load() {
   var s;
   try { s = JSON.parse(localStorage.getItem('vtlearn') || 'null'); } catch (e) { s = null; }
+  // Store hỏng kiểu KHÔNG phải object (số/chuỗi/mảng): backfill bên dưới sẽ
+  // no-op im lặng trên primitive → "undefined ngày" + renderMap ném lỗi ở
+  // store.stars → map trống. Reset về mặc định.
+  if (s && (typeof s !== 'object' || Array.isArray(s))) s = null;
   if (!s) {
     s = { stars: {}, xp: 0, streak: 0, lastDay: '', badges: [], sound: true, track: null, lang: null };
     var old = parseInt(localStorage.getItem('telex-learn-stars') || '0', 10) || 0;
