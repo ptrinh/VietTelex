@@ -901,6 +901,15 @@ final class TelexInputController: IMKInputController {
         guard AXUIElementCopyAttributeValue(app, kAXMainWindowAttribute as CFString, &winRef) == .success,
               let window = winRef else { return false }
 
+        // The Edit… press SUCCEEDED on an earlier attempt if a sheet is already
+        // up — stop here. Walking again would anchor on the "ViệtTelex" row
+        // INSIDE the sheet and press deeper into it (field bug 2026-07-23).
+        var sheetsRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(window as! AXUIElement, "AXSheets" as CFString, &sheetsRef) == .success,
+           let sheets = sheetsRef as? [AXUIElement], !sheets.isEmpty {
+            return true
+        }
+
         var anchorSeen = false
         var pressed = false
         func walk(_ el: AXUIElement, depth: Int) {
