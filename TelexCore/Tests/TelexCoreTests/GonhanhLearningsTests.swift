@@ -19,9 +19,13 @@ final class EnglishCollisionTests: XCTestCase {
     func testCommonEnglishRestores() {
         for w in ["his", "this", "see", "of", "if", "is", "or", "us", "has",
                   "must", "last", "list", "most", "does", "those", "these",
-                  "there", "here", "did", "days", "test", "now"] where w != "now" {
+                  "there", "here", "days", "test", "now"] where w != "now" {
             XCTAssertEqual(commit(w), w, "English '\(w)' must survive")
         }
+        // "did" left the table on purpose (user decision 2026-07-22): the common
+        // Vietnamese word wins — did→đi (same for theme→thêm). See gen-english
+        // protect list.
+        XCTAssertEqual(commit("did"), "đi")
     }
 
     func testCancelRestoresEnglishDoubles() {
