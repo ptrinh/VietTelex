@@ -483,7 +483,7 @@ enum SyntheticKeyboard {
     /// A probe that never comes back means posts are being DROPPED (Accessibility
     /// grant REMOVED — AXIsProcessTrusted lies true in that state) or the tap is
     /// dead/wedged. No breaker or in-flight bookkeeping: probes are out-of-band.
-    static let probeKeycode: Int64 = 127
+    static let probeKeycode: Int64 = 90   // kVK_F20 — not on any physical Apple keyboard; keycode 127 gets FILTERED by the OS (never re-enters the tap)
     static func postProbe() {
         guard let src = source else { return }
         guard let ev = CGEvent(keyboardEventSource: src, virtualKey: CGKeyCode(probeKeycode), keyDown: true) else { return }
@@ -1089,7 +1089,8 @@ final class TerminalTapController {
         // ANY other logic — no app ever sees it, no counter counts it.
         if type == .keyDown,
            event.getIntegerValueField(.keyboardEventKeycode) == SyntheticKeyboard.probeKeycode,
-           SyntheticKeyboard.isSynthetic(event) {
+           SyntheticKeyboard.isSynthetic(event)
+            || event.getIntegerValueField(.eventSourceUnixProcessID) == Int64(getpid()) {
             stateLock.withLock { probeSeenTick = probeSentTick }
             return nil
         }
