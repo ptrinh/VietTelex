@@ -613,3 +613,42 @@ func VTLocalized(_ key: String) -> String {
     }
     return Bundle.main.localizedString(forKey: key, value: key, table: nil)
 }
+
+
+/// Universal shortcut-table parser: accepts every format users bring from other
+/// IMEs (field request 2026-07-22) — plist/XML, JSON, flat YAML ("key: value"),
+/// and the GõNhanh/EVKey text style ("key:value", ";" or "#" comments). Returns
+/// nil when nothing parseable is found.
+enum ShortcutImporter {
+    static func parse(_ data: Data) -> [String: String]? {
+        // 1. plist (our own export format; also covers generic XML dictionaries)
+        if let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String],
+           !dict.isEmpty {
+            return dict
+        }
+        // 2. JSON object of strings
+        if let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
+           !dict.isEmpty {
+            return dict
+        }
+        // 3. Line-based: GõNhanh txt ("key:value", ";" comments) and flat YAML
+        //    ("key: value", "#" comments). One entry per line, first ":" splits.
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+        var out: [String: String] = [:]
+        for rawLine in text.split(separator: "\n", omittingEmptySubsequences: true) {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty || line.hasPrefix(";") || line.hasPrefix("#") || line.hasPrefix("//") { continue }
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+            var value = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            // YAML niceties: strip a matching pair of quotes
+            if value.count >= 2,
+               (value.hasPrefix("\"") && value.hasSuffix("\"")) || (value.hasPrefix("'") && value.hasSuffix("'")) {
+                value = String(value.dropFirst().dropLast())
+            }
+            guard !key.isEmpty, !value.isEmpty, key.count <= 32 else { continue }
+            out[key] = value
+        }
+        return out.isEmpty ? nil : out
+    }
+}
