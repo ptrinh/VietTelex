@@ -324,7 +324,18 @@ final class TelexInputController: IMKInputController {
             // sanitizing; branch fired in logs, nothing reached the pty). This
             // two-press behavior is also standard CJK composition UX. Single-press
             // Enter in terminals is what the TAP path provides — grant Accessibility.
-            boundary(client); return false
+            let rewrote = boundary(client)
+            // When the commit REWROTE the word (gõ tắt "ko"→"không", auto-restore
+            // "thooiiii"), web-view editors (WhatsApp) apply that insertText
+            // asynchronously — an immediately-delivered Return fires "send" on the
+            // OLD text. With Accessibility we swallow the real key and re-post a
+            // stamped COPY of it (HID source intact) so it lands AFTER the edit;
+            // the copy re-enters handle() with an empty engine and passes through.
+            if rewrote, Accessibility.isTrusted, let cg = event.cgEvent {
+                SyntheticKeyboard.postBoundaryCopy(of: cg)
+                return true
+            }
+            return false
 
         default:
             break
@@ -709,9 +720,10 @@ final class TelexInputController: IMKInputController {
         onLen = 0
     }
 
-    private func boundary(_ client: IMKTextInput, suppressAutoRestore: Bool = false) {
+    @discardableResult
+    private func boundary(_ client: IMKTextInput, suppressAutoRestore: Bool = false) -> Bool {
         defer { tracking = false; onLen = 0 }
-        guard !engine.isEmpty else { engine.reset(); return }
+        guard !engine.isEmpty else { engine.reset(); return false }
         let marked = AppState.shared.usesMarkedText(AppState.shared.currentBundleID)
         let word = engine.composed
         // Raw keystrokes must be read BEFORE engine.reset() clears them. A shortcut key
@@ -730,7 +742,7 @@ final class TelexInputController: IMKInputController {
             engine.reset()
             if marked { client.insertText(expansion, replacementRange: kNoRange) }
             else { applyInPlace(bs: onScreen, insert: expansion, client) }
-            return
+            return true
         }
 
         // Auto-restore non-Vietnamese words to their raw keystrokes (resets engine).
@@ -740,9 +752,12 @@ final class TelexInputController: IMKInputController {
         if marked {
             // Commit the marked text (replaces it with the final word).
             client.insertText(restored, replacementRange: kNoRange)
+            return true
         } else if restored != word {
             applyInPlace(bs: onScreen, insert: restored, client)
+            return true
         }
+        return false
     }
 
     // MARK: - IMK lifecycle

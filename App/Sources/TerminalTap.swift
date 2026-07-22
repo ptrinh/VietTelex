@@ -693,6 +693,24 @@ enum SyntheticKeyboard {
         postVirtual(key)
     }
 
+    /// Re-post a COPY of the user's own boundary keyDown (Return/Tab/Esc) so it
+    /// lands AFTER a synthesized rewrite. Unlike postKey/postVirtual this keeps
+    /// the ORIGINAL event's HID source state: Electron editors (Discord/Slate)
+    /// treat a private-source synthetic Return as "insert newline" instead of
+    /// firing their Enter-to-send handler, but an event that is byte-identical
+    /// to the hardware one triggers the real action. The copy carries no magic
+    /// and no in-flight count on purpose — when it re-enters our tap it must be
+    /// handled as a REAL key (by then the engine is empty and the edit burst has
+    /// drained, so it passes straight through; ordering is by timestamp).
+    /// Only the keyDown is copied: the user's physical keyUp was never
+    /// intercepted and reaches the app on its own.
+    static func postBoundaryCopy(of event: CGEvent) {
+        guard Accessibility.isTrusted else { return }
+        guard let down = event.copy() else { return }
+        stamp(down)
+        down.post(tap: .cgSessionEventTap)
+    }
+
     /// Shift+LeftArrow: extend the selection one char left (used by selectionReplace).
     private static func postSelectLeft() {
         // Layer 2: a nil private source means CGEvent(keyboardEventSource: nil,…) would
@@ -1290,7 +1308,7 @@ final class TerminalTapController {
             // AFTER the async edit; otherwise the real key passes through untouched.
             if engine.isEmpty, SyntheticKeyboard.queueDrained() { return pass }
             if emitBoundary(suppressAutoRestore: false) || !SyntheticKeyboard.queueDrained() {
-                reemit(keyCode: keyCode, string: nil)
+                reemit(keyCode: keyCode, string: nil, original: event)
                 return nil
             }
             return pass
@@ -1424,11 +1442,21 @@ final class TerminalTapController {
         return false
     }
 
-    private func reemit(keyCode: Int, string: String?) {
+    private func reemit(keyCode: Int, string: String?, original: CGEvent? = nil) {
         switch keyCode {
-        case kReturn, kEnter: SyntheticKeyboard.postKey(CGKeyCode(kVK_Return))
-        case kTab:            SyntheticKeyboard.postKey(CGKeyCode(kVK_Tab))
-        case kEscape:         SyntheticKeyboard.postKey(CGKeyCode(kVK_Escape))
+        case kReturn, kEnter, kTab, kEscape:
+            // Prefer a stamped COPY of the user's own keyDown (HID source intact):
+            // Electron editors newline on a private-source synthetic Return but run
+            // their real Enter-to-send handler on a hardware-identical one.
+            if let original {
+                SyntheticKeyboard.postBoundaryCopy(of: original)
+            } else if keyCode == kTab {
+                SyntheticKeyboard.postKey(CGKeyCode(kVK_Tab))
+            } else if keyCode == kEscape {
+                SyntheticKeyboard.postKey(CGKeyCode(kVK_Escape))
+            } else {
+                SyntheticKeyboard.postKey(CGKeyCode(kVK_Return))
+            }
         default:              if let s = string { SyntheticKeyboard.apply(backspaces: 0, insert: s, mode: emitMode) }
         }
     }
