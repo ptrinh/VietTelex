@@ -783,7 +783,9 @@ function nextWord() {
 // Level 6+: 50% từ viết hoa chữ đầu — bé phải dùng Shift.
 // foldBase giữ nguyên hoa/thường nên gõ thường vào từ viết hoa sẽ buzz ngay.
 function maybeCapitalize(w) {
-  if (level < 6 || Math.random() >= 0.5) return w;
+  // Hard mode ẩn chữ — giọng đọc không phân biệt hoa/thường nên bé không có
+  // cách nào biết từ nào viết hoa: tắt viết hoa khi hard đang bật.
+  if (hardOn || level < 6 || Math.random() >= 0.5) return w;
   return { a: w.a, d: w.d.charAt(0).toLocaleUpperCase('vi') + w.d.slice(1), k: w.k, s: w.s };
 }
 function spawnCloud() {
