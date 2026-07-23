@@ -277,6 +277,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func rebuild() {
         letterKeys.removeAll()
         shiftKey = nil
+        rowsContainer.distribution = .fillEqually
         rowsContainer.arrangedSubviews.forEach { $0.removeFromSuperview() }
         switch plane {
         case .letters: buildLetters()
@@ -308,46 +309,21 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         rowsContainer.addArrangedSubview(bottomRow(planeKey: "123"))
     }
 
-    // M1 emoji plane: static grid of everyday emoji (extensions cannot summon
-    // the system emoji keyboard). Categories/search are M2.
-    private static let emojiSet: [[String]] = [
-        ["😀","😂","🥰","😍","😘","😊","😉","🤗"],
-        ["👍","🙏","👏","💪","🤝","👌","✌️","🫶"],
-        ["❤️","💕","😢","😭","😅","😴","🤔","😡"],
-        ["🎉","🔥","✨","⭐","🌸","☀️","🌈","🍀"],
-    ]
+    // Emoji plane render theo stock (video 2026-07-24): search bar + lưới
+    // cuộn ngang column-major theo category + hàng [ABC][icons][⌫].
+    // rowsContainer là fillEqually — plane emoji cần layout tự do nên đổi
+    // distribution sang .fill khi vào plane này (rebuild() phục hồi).
     private func buildEmoji() {
-        for line in Self.emojiSet {
-            let buttons: [UIView] = line.map { e in
-                let b = baseButton(title: e, special: false)
-                b.titleLabel?.font = .systemFont(ofSize: 28)
-                b.backgroundColor = .clear
-                b.layer.shadowOpacity = 0
-                b.addAction(UIAction { [weak self] _ in self?.tapped(.text(e)) }, for: .touchUpInside)
-                return b
-            }
-            rowsContainer.addArrangedSubview(row(buttons))
-        }
-        // hàng dưới: về ABC, space, xoá
-        var views: [UIView] = [controlButton(title: "ABC") { [weak self] in
+        rowsContainer.distribution = .fill
+        let plane = EmojiPlane(dark: dark)
+        plane.onEmoji = { [weak self] e in self?.tapped(.text(e)) }
+        plane.onABC = { [weak self] in
             guard let self else { return }
             self.plane = .letters
             self.rebuild()
-        }]
-        let space = baseButton(title: "", special: true)
-        space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
-        space.addAction(UIAction { [weak self] _ in self?.tapped(.space) }, for: .touchUpInside)
-        space.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        views.append(space)
-        views.append(backspaceButton())
-        let stack = UIStackView(arrangedSubviews: views)
-        stack.axis = .horizontal
-        stack.spacing = 6
-        stack.distribution = .fill
-        stack.isLayoutMarginsRelativeArrangement = true
-        stack.layoutMargins = UIEdgeInsets(top: 5, left: 3, bottom: 5, right: 3)
-        views[0].widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.16).isActive = true
-        rowsContainer.addArrangedSubview(stack)
+        }
+        plane.onBackspace = { [weak self] in self?.tapped(.backspace) }
+        rowsContainer.addArrangedSubview(plane)
     }
 
     private func buildPlane(rows planeRows: [[String]], moreKey: String, altKey: String) {
