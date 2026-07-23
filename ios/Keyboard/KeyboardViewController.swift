@@ -170,8 +170,8 @@ final class KeyboardViewController: UIInputViewController {
                         + (w.count == typedLen ? 1.5 : 0)
                 }
                 let ranked = pool.sorted { score($0.word, $0.freq) > score($1.word, $1.freq) }
-                set.word = ranked.first?.word
-                set.word2 = ranked.dropFirst().first?.word
+                set.word = ranked.first.map { DisplayCase.apply($0.word) }
+                set.word2 = ranked.dropFirst().first.map { DisplayCase.apply($0.word) }
             }
             var emojis = EmojiSuggest.emojis(for: composed)
             if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
@@ -180,9 +180,10 @@ final class KeyboardViewController: UIInputViewController {
             // vừa space sau một từ → gợi từ KẾ TIẾP (trigram/bigram cá nhân
             // interpolate với seed)
             set.nextWords = langModel.nextWords(after: prev, prev2: lastWord2, limit: 3)
+                .map(DisplayCase.apply)
         } else {
             // field trống chưa gõ gì → từ user hay mở đầu nhất
-            set.nextWords = langModel.topWords(limit: 3)
+            set.nextWords = langModel.topWords(limit: 3).map(DisplayCase.apply)
         }
         keyboard.showSuggestions(set)
     }

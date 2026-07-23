@@ -178,3 +178,25 @@ final class SeedDataTests: XCTestCase {
         XCTAssertLessThanOrEqual(SeedData.unigrams.values.max() ?? 0, 50)
     }
 }
+
+final class DisplayCaseTests: XCTestCase {
+    func testProperNounDisplay() {
+        XCTAssertEqual(DisplayCase.apply("senprints"), "SenPrints")
+        XCTAssertEqual(DisplayCase.apply("printik"), "Printik")
+        XCTAssertEqual(DisplayCase.apply("iphone"), "iPhone")
+        XCTAssertEqual(DisplayCase.apply("macos"), "macOS")
+        XCTAssertEqual(DisplayCase.apply("nguyễn"), "Nguyễn")
+        // từ thường giữ nguyên; token nhập nhằng KHÔNG được hoa
+        XCTAssertEqual(DisplayCase.apply("cảm"), "cảm")
+        XCTAssertEqual(DisplayCase.apply("trang"), "trang")
+        XCTAssertEqual(DisplayCase.apply("vũ"), "vũ")
+    }
+
+    func testLearningStaysCaseFolded() {
+        // bấm nhận "SenPrints" → datastore vẫn đếm dưới khóa thường
+        let m = UserLangModel(appGroup: nil)
+        m.record(word: "SenPrints", after: nil)
+        XCTAssertEqual(m.count(of: "senprints"), 1)
+        XCTAssertEqual(m.count(of: "SenPrints"), 1)   // count(of:) tự lowercase
+    }
+}
