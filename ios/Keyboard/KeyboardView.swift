@@ -429,7 +429,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         planeBtn.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.12).isActive = true
         emojiBtn.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.10).isActive = true
         comma.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.075).isActive = true
-        ret.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.20).isActive = true
+        ret.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.165).isActive = true
         return stack
     }
 
