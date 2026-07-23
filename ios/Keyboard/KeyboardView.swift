@@ -247,7 +247,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         // logo Vᴛ mờ ở mép phải nút space (thay "VI EN" — user 2026-07-23);
         // PNG 2x/3x render từ MenuIcon.pdf nên sắc nét, tint theo appearance.
         let hint = UIImageView(image: UIImage(named: "SpaceLogo")?.withRenderingMode(.alwaysTemplate))
-        hint.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.28)
+        hint.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.16)
         hint.contentMode = .scaleAspectFit
         hint.translatesAutoresizingMaskIntoConstraints = false
         space.addSubview(hint)
@@ -283,7 +283,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             ret.setImage(UIImage(systemName: "return.left",
                 withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular)), for: .normal)
             // mờ ngang logo Vᴛ trên spacebar (user 2026-07-23)
-            ret.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.28)
+            ret.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.16)
         }
         views.append(ret)
 
