@@ -699,6 +699,8 @@ struct AboutTab: View {
             Text(String(format: model.loc("Version %@ · %@"), appVersion, buildDate))
                 .foregroundStyle(.secondary)
             Link("Website", destination: URL(string: "https://ptrinh.github.io/viettelex/")!)
+            Link(model.loc("Learn Telex typing"),
+                 destination: URL(string: "https://ptrinh.github.io/viettelex/learn")!)
 
             // Manual update check — the only thing that touches the network, and
             // only on this click (see Updater.swift).
