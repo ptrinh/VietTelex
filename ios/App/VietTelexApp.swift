@@ -34,7 +34,7 @@ struct RootView: View {
                         Label("Website", systemImage: "globe")
                     }
                     Link(destination: URL(string: "https://ptrinh.github.io/viettelex/learn/")!) {
-                        Label("Học gõ Telex (mở trình duyệt)", systemImage: "graduationcap")
+                        Label("Học gõ Telex", systemImage: "graduationcap")
                     }
                     Link(destination: URL(string: "https://github.com/ptrinh/viettelex")!) {
                         Label("Mã nguồn trên GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
@@ -102,22 +102,32 @@ struct SettingsSection: View {
     @AppStorage("filterSensitive", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var filterSensitive = true
 
+    /// Toggle kèm chú giải nhỏ bên dưới tiêu đề.
+    private func toggle(_ title: String, _ caption: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(caption).font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+
     var body: some View {
         Section {
-            Toggle("Telex đơn giản", isOn: $simpleTelex)
-            Toggle("Bỏ dấu tự do", isOn: $freeMarking)
-            Toggle("Gõ nhanh (Quick Telex)", isOn: $quickTelex)
-            Toggle("Bỏ dấu kiểu mới", isOn: $modernTone)
+            toggle("Telex đơn giản", "Phím w đứng lẻ giữ nguyên là w, không thành ư.", isOn: $simpleTelex)
+            toggle("Bỏ dấu tự do", "Phím dấu đặt đâu cũng được, không cần đúng thứ tự.", isOn: $freeMarking)
+            toggle("Gõ nhanh (Quick Telex)", "Phụ âm đôi đầu từ thành phụ âm ghép: cc → ch, nn → ng, tt → th…", isOn: $quickTelex)
+            toggle("Bỏ dấu kiểu mới", "hoà, thuý thay vì hòa, thúy.", isOn: $modernTone)
         } header: { Text("Kiểu gõ") }
 
         Section {
-            Toggle("Tự khôi phục từ tiếng Anh", isOn: $autoRestore)
-            Toggle("Kiểm tra chính tả khi gõ", isOn: $liveSpellCheck)
-            Toggle("Hiện logo Vᴛ", isOn: $showSpaceLogo)
+            toggle("Tự khôi phục từ tiếng Anh", "Từ không phải tiếng Việt tự trả về như đã gõ (google, github…).", isOn: $autoRestore)
+            toggle("Kiểm tra chính tả khi gõ", "Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt.", isOn: $liveSpellCheck)
+            toggle("Hiện logo Vᴛ", "Logo mờ ở góc phải phím space.", isOn: $showSpaceLogo)
             // Thanh gợi ý bật = tự học từ hay dùng (learnWords đi theo, không
             // còn toggle riêng — quyết định 2026-07-24)
-            Toggle("Thanh gợi ý", isOn: $showSuggestions)
-            Toggle("Lọc từ nhạy cảm khỏi gợi ý", isOn: $filterSensitive)
+            toggle("Thanh gợi ý", "Gợi ý từ + emoji, tự học từ bạn hay dùng (chỉ trên máy).", isOn: $showSuggestions)
+            toggle("Lọc từ nhạy cảm khỏi gợi ý", "Không chủ động gợi ý từ tục — gõ tay và học vẫn bình thường.", isOn: $filterSensitive)
             Button("Xóa từ đã học", role: .destructive) {
                 if let dir = FileManager.default
                     .containerURL(forSecurityApplicationGroupIdentifier: "group.com.viettelex") {
