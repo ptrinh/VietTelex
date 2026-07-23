@@ -18,7 +18,7 @@ Triết lý: **tối giản, nhanh, ổn định, mã nguồn mở** — cài xo
 > Dự án của **Phil Trịnh**, viết lại từ đầu sau gần 20 năm dùng macOS mà chưa thấy bộ gõ tiếng Việt nào thật sự *ngon, chuẩn, mượt*.
 
 <p align="center">
-  <img src="assets/demo.gif" width="820" alt="Demo VietTelex — gõ ~380 WPM, dấu bung tức thì, từ tiếng Anh tự khôi phục">
+https://github.com/user-attachments/assets/b07b7321-912f-4d81-a741-bcaa9a43f07d
 </p>
 <p align="center"><sub>Demo gõ máy ở tốc độ ~380 WPM — dấu bung tức thì, không gạch chân, từ tiếng Anh tự khôi phục.</sub></p>
 
