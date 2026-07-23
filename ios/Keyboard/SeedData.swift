@@ -113,6 +113,9 @@ enum SeedData {
         "blockchain": 4, "eth": 4, "ethereum": 4, "token": 4, "usdt": 4,
         // — bổ sung 2026-07-24 (3): thương hiệu nội bộ —
         "printik": 6, "senprints": 6,
+        // — bổ sung 2026-07-24 (4): tên đệm —
+        "văn": 10, "thị": 9, "hồng": 7, "kim": 7, "xuân": 7, "duy": 6, "hữu": 6, "thùy": 6,
+        "đình": 6, "bá": 5, "bích": 5, "diệu": 5, "trọng": 5, "khắc": 4,
     ]
 
     static let bigrams: [(String, String, Int)] = [
@@ -208,5 +211,14 @@ enum SeedData {
         ("lan", "anh", 5), ("hải", "anh", 4), ("mai", "anh", 5), ("thanh", "tùng", 5), ("minh", "tuấn", 5),
         ("văn", "nam", 4), ("thị", "hoa", 3), ("tiền", "mã", 5), ("mã", "hóa", 6), ("đồng", "coin", 4),
         ("ví", "điện", 4), ("điện", "tử", 6), ("sàn", "binance", 3), ("giá", "bitcoin", 4), ("chơi", "coin", 4),
+        // — bổ sung 2026-07-24 (4): họ→đệm, đệm→tên —
+        ("nguyễn", "văn", 10), ("nguyễn", "thị", 10), ("trần", "văn", 8), ("trần", "thị", 8), ("lê", "văn", 8),
+        ("lê", "thị", 8), ("phạm", "văn", 7), ("phạm", "thị", 7), ("hoàng", "văn", 6), ("hoàng", "thị", 6),
+        ("vũ", "văn", 5), ("vũ", "thị", 5), ("đặng", "văn", 5), ("đặng", "thị", 5), ("bùi", "văn", 4),
+        ("bùi", "thị", 4), ("nguyễn", "đức", 6), ("nguyễn", "minh", 6), ("nguyễn", "ngọc", 6), ("nguyễn", "hữu", 5),
+        ("nguyễn", "xuân", 5), ("nguyễn", "quang", 5), ("nguyễn", "thanh", 5), ("nguyễn", "hoàng", 5), ("văn", "hùng", 5),
+        ("văn", "tuấn", 5), ("văn", "dũng", 4), ("văn", "sơn", 4), ("thị", "hương", 5), ("thị", "lan", 5),
+        ("thị", "thu", 5), ("thị", "ngọc", 4), ("thị", "hồng", 4), ("thị", "phương", 4), ("xuân", "trường", 4),
+        ("đình", "phong", 3),
     ]
 }
