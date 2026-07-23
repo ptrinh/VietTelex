@@ -218,7 +218,7 @@ final class KeyboardViewController: UIInputViewController {
             // field trống chưa gõ gì → từ user hay mở đầu nhất
             set.nextWords = SensitiveWords.filter(langModel.topWords(limit: 6),
                                                   enabled: filterSensitive)
-                .prefix(3).map(DisplayCase.apply)
+                .prefix(3).map { DisplayCase.apply($0) }
         }
         keyboard.showSuggestions(set)
     }
