@@ -246,17 +246,22 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         spaceBar = space
         // logo Vᴛ mờ ở mép phải nút space (thay "VI EN" — user 2026-07-23);
         // PNG 2x/3x render từ MenuIcon.pdf nên sắc nét, tint theo appearance.
-        let hint = UIImageView(image: UIImage(named: "SpaceLogo")?.withRenderingMode(.alwaysTemplate))
-        hint.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.16)
-        hint.contentMode = .scaleAspectFit
-        hint.translatesAutoresizingMaskIntoConstraints = false
-        space.addSubview(hint)
-        NSLayoutConstraint.activate([
-            hint.rightAnchor.constraint(equalTo: space.rightAnchor, constant: -10),
-            hint.centerYAnchor.constraint(equalTo: space.centerYAnchor),
-            hint.widthAnchor.constraint(equalToConstant: 22),
-            hint.heightAnchor.constraint(equalToConstant: 22),
-        ])
+        // Ẩn được qua Settings của app (showSpaceLogo, App Group).
+        let showLogo = UserDefaultsProvider.shared?.object(forKey: "showSpaceLogo") == nil
+            || UserDefaultsProvider.shared?.bool(forKey: "showSpaceLogo") == true
+        if showLogo {
+            let hint = UIImageView(image: UIImage(named: "SpaceLogo")?.withRenderingMode(.alwaysTemplate))
+            hint.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.16)
+            hint.contentMode = .scaleAspectFit
+            hint.translatesAutoresizingMaskIntoConstraints = false
+            space.addSubview(hint)
+            NSLayoutConstraint.activate([
+                hint.rightAnchor.constraint(equalTo: space.rightAnchor, constant: -10),
+                hint.centerYAnchor.constraint(equalTo: space.centerYAnchor),
+                hint.widthAnchor.constraint(equalToConstant: 22),
+                hint.heightAnchor.constraint(equalToConstant: 22),
+            ])
+        }
         space.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             let now = CACurrentMediaTime()

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */; };
 		3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B913AFA01B930811B2848696 /* SpaceLogo@2x.png */; };
+		3DE25701A4C0DB5C7124618A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07973B1798B754A6DDA969C3 /* Assets.xcassets */; };
 		5219B81A88BC7A0F77DC8467 /* TelexCore in Frameworks */ = {isa = PBXBuildFile; productRef = BE8679AE19C0C9801BE52ADF /* TelexCore */; };
 		54B0665D29CB3187CEBF5157 /* KeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941319FB73DCEB18DDE2E232 /* KeyboardView.swift */; };
 		593AA8DEA7AFB11D6005F173 /* EngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD709650C25830CA926EBCF /* EngineBridge.swift */; };
@@ -46,6 +47,7 @@
 
 /* Begin PBXFileReference section */
 		03B539001F2CE763F663710B /* VietTelexApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VietTelexApp.swift; sourceTree = "<group>"; };
+		07973B1798B754A6DDA969C3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		09561C431C2FC4B6BAFD5DB7 /* VietTelexKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = VietTelexKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		097463B6895C7327459CEF6A /* VietTelexKeyboardTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = VietTelexKeyboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		142CFBEA43046FC96EBF437F /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				142CFBEA43046FC96EBF437F /* App.entitlements */,
+				07973B1798B754A6DDA969C3 /* Assets.xcassets */,
 				03B539001F2CE763F663710B /* VietTelexApp.swift */,
 			);
 			path = App;
@@ -149,6 +152,7 @@
 			buildConfigurationList = 8A03A47E7620CB66F23051BC /* Build configuration list for PBXNativeTarget "VietTelexApp" */;
 			buildPhases = (
 				786919FF256438F39E6D3444 /* Sources */,
+				CB536D937CF8FDB69ADA35CB /* Resources */,
 				50C6CD8FDEFFC2F62BE61922 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -253,6 +257,14 @@
 			files = (
 				3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */,
 				D902A388BD011F37220F5C53 /* SpaceLogo@3x.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CB536D937CF8FDB69ADA35CB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3DE25701A4C0DB5C7124618A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
