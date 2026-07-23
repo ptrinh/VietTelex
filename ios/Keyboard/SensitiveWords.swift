@@ -12,6 +12,7 @@ enum SensitiveWords {
     static let set: Set<String> = [
         "đcm", "đm", "dm", "dcm", "vcl", "vkl", "vl", "cl", "clgt", "cmnr",
         "cứt", "lồn", "cặc", "buồi", "đĩ", "điếm", "đụ", "địt",
+        "tml", "sml", "dâm",
         "fuck", "shit", "bitch", "wtf",
     ]
 }
