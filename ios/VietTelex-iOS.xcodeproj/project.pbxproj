@@ -15,6 +15,7 @@
 		1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
 		36C564FD8BADBFB0BCC1E645 /* DisplayCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7D70220F7D14EBC3C3AACD /* DisplayCase.swift */; };
 		391082DF75889B3977A67837 /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE050ECA55A95B273F9E18A0 /* EmojiData.swift */; };
+		3D6C897D3E6A6D2A37325AD0 /* vnlexicon.bin in Resources */ = {isa = PBXBuildFile; fileRef = 915FC9A836F82E797FA0AEA1 /* vnlexicon.bin */; };
 		3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B913AFA01B930811B2848696 /* SpaceLogo@2x.png */; };
 		3DE25701A4C0DB5C7124618A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07973B1798B754A6DDA969C3 /* Assets.xcassets */; };
 		5219B81A88BC7A0F77DC8467 /* TelexCore in Frameworks */ = {isa = PBXBuildFile; productRef = BE8679AE19C0C9801BE52ADF /* TelexCore */; };
@@ -26,6 +27,7 @@
 		99E9949680619BC9BFBE9CB6 /* VNLexicon2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E29815B4F2B0747B961A561 /* VNLexicon2.swift */; };
 		A1D007E26A075E6497254AA7 /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE050ECA55A95B273F9E18A0 /* EmojiData.swift */; };
 		AC2407E83BA2FC77C45DE3FF /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738732B955CD39C76B2484C7 /* SeedData.swift */; };
+		BC7C55450CA36CBF6D0F8297 /* vnlexicon.bin in Resources */ = {isa = PBXBuildFile; fileRef = 915FC9A836F82E797FA0AEA1 /* vnlexicon.bin */; };
 		CE87DFF1AA26E9C3CF185681 /* VNSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C445BEBA75DFC20101EC3BA9 /* VNSuggest.swift */; };
 		CF7F1ABF1498FE511CA6CA87 /* VietTelexKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 09561C431C2FC4B6BAFD5DB7 /* VietTelexKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D4DEA988483DB59F683B8407 /* EngineBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AE58D76A8127D641A2AF62 /* EngineBridgeTests.swift */; };
@@ -75,6 +77,7 @@
 		738732B955CD39C76B2484C7 /* SeedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedData.swift; sourceTree = "<group>"; };
 		853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
 		8AD709650C25830CA926EBCF /* EngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridge.swift; sourceTree = "<group>"; };
+		915FC9A836F82E797FA0AEA1 /* vnlexicon.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = vnlexicon.bin; sourceTree = "<group>"; };
 		941319FB73DCEB18DDE2E232 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
 		B913AFA01B930811B2848696 /* SpaceLogo@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "SpaceLogo@2x.png"; sourceTree = "<group>"; };
 		C445BEBA75DFC20101EC3BA9 /* VNSuggest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VNSuggest.swift; sourceTree = "<group>"; };
@@ -118,6 +121,14 @@
 				DF35FD668408A625226DFE82 /* Packages */,
 				ACA2EF74601F7B3D920485DD /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		386A21A07F2A4BABEBD7B24B /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				915FC9A836F82E797FA0AEA1 /* vnlexicon.bin */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		9F75E32DB55D92888E77DE61 /* KeyboardTests */ = {
@@ -167,6 +178,7 @@
 				F316CA910C58A9377DC754A0 /* UserLangModel.swift */,
 				5E29815B4F2B0747B961A561 /* VNLexicon2.swift */,
 				C445BEBA75DFC20101EC3BA9 /* VNSuggest.swift */,
+				386A21A07F2A4BABEBD7B24B /* Resources */,
 			);
 			path = Keyboard;
 			sourceTree = "<group>";
@@ -207,6 +219,7 @@
 			buildConfigurationList = 037EBE2394924C7EECADEA4A /* Build configuration list for PBXNativeTarget "VietTelexKeyboardTests" */;
 			buildPhases = (
 				BE8947E5410721EE491143E9 /* Sources */,
+				8543D6DA204B06362A3665FF /* Resources */,
 				87E1F1E46F2E12B36BD37FF9 /* Frameworks */,
 			);
 			buildRules = (
@@ -292,6 +305,15 @@
 			files = (
 				3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */,
 				D902A388BD011F37220F5C53 /* SpaceLogo@3x.png in Resources */,
+				3D6C897D3E6A6D2A37325AD0 /* vnlexicon.bin in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8543D6DA204B06362A3665FF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BC7C55450CA36CBF6D0F8297 /* vnlexicon.bin in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

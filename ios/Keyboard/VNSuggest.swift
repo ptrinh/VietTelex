@@ -47,27 +47,19 @@ enum VNSuggest {
         return m
     }()
 
-    // MARK: dữ liệu giải nén một lần (lazy static, vài trăm µs)
+    // MARK: dữ liệu từ Resources/vnlexicon.bin (mmap) — offsets decode một lần
 
-    private static let offsets: [UInt32] = decodeU32(VNLexicon2Data.offsetsRaw)
-    private static let dispOffsets: [UInt32] = decodeU32(VNLexicon2Data.dispOffsetsRaw)
-    private static let freqs: [UInt8] = Array(Data(base64Encoded: VNLexicon2Data.freqRaw)!)
+    private static let offsets: [UInt32] = VNLexicon2Data.offsets
+    private static let dispOffsets: [UInt32] = VNLexicon2Data.dispOffsets
 
-    private static func decodeU32(_ b64: String) -> [UInt32] {
-        let data = Data(base64Encoded: b64)!
-        return data.withUnsafeBytes { raw in
-            Array(raw.bindMemory(to: UInt32.self)).map { UInt32(littleEndian: $0) }
-        }
-    }
-
-    private static func foldedEntry(_ id: Int) -> ArraySlice<UInt8> {
-        VNLexicon2Data.foldedBlob[Int(offsets[id])..<Int(offsets[id + 1])]
+    private static func foldedEntry(_ id: Int) -> Data {
+        VNLexicon2Data.foldedSlice(Int(offsets[id]), Int(offsets[id + 1]))
     }
 
     static func display(_ id: Int) -> String {
         let lo = Int(id == 0 ? 0 : dispOffsets[id])
         let hi = Int(dispOffsets[id + 1])
-        return String(decoding: VNLexicon2Data.displayBlob[lo..<hi], as: UTF8.self)
+        return String(decoding: VNLexicon2Data.displaySlice(lo, hi), as: UTF8.self)
     }
 
     // MARK: lookup
@@ -110,13 +102,13 @@ enum VNSuggest {
             for (i, (b, a)) in dec.enumerated() {
                 let fi = f.index(f.startIndex, offsetBy: i)
                 if f[fi] != b { ok = false; break }
-                let cand = VNLexicon2Data.attrBlob[attrBase + i]
+                let cand = VNLexicon2Data.attr(attrBase + i)
                 let q = a >> 3, t = a & 7
                 if q != 0 && q != cand >> 3 { ok = false; break }
                 if t != 0 && t != cand & 7 { ok = false; break }
             }
             guard ok else { continue }
-            pool.append((Int(freqs[id]), id))
+            pool.append((Int(VNLexicon2Data.freq(id)), id))
         }
         pool.sort { $0.0 != $1.0 ? $0.0 > $1.0 : $0.1 < $1.1 }
         var out: [(String, Int)] = []
