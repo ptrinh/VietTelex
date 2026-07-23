@@ -1,9 +1,8 @@
 // EmojiPlane — bàn phím emoji render theo đúng cấu trúc bàn phím US stock
-// (đối chiếu video 2026-07-24): thanh "Search Emoji" trên cùng, lưới emoji lớn
+// (đối chiếu video 2026-07-24): lưới emoji lớn
 // cuộn NGANG column-major liên tục theo category, hàng dưới
 // [ABC][icon 9 category][⌫] với category đang xem được highlight tròn.
-// Recents (🕐) lưu App Group, tối đa 30. Search bar hiện là visual placeholder
-// (search thật cần vòng riêng — extension phải tự làm ô nhập nội bộ).
+// Recents (🕐) lưu App Group, tối đa 30. (Search bar đã bỏ — user 2026-07-24.)
 import UIKit
 
 final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
@@ -16,7 +15,6 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
     private var sections: [(name: String, emoji: [String])] = []
     private var collection: UICollectionView!
     private var categoryButtons: [UIButton] = []
-    private let searchBar = UIView()
     private var repeatTimer: Timer?
 
     private static let recentsKey = "emojiRecents"
@@ -30,7 +28,6 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
         self.dark = dark
         isMultipleTouchEnabled = true
         reloadSections()
-        buildSearchBar()
         buildCollection()
         buildCategoryRow()
     }
@@ -58,36 +55,6 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
 
     // MARK: UI
 
-    private func buildSearchBar() {
-        searchBar.backgroundColor = dark ? UIColor(white: 1, alpha: 0.12)
-                                         : UIColor(white: 0, alpha: 0.08)
-        searchBar.layer.cornerRadius = 12
-        searchBar.translatesAutoresizingMaskIntoConstraints = false
-        let icon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
-        icon.tintColor = dark ? UIColor(white: 1, alpha: 0.45) : UIColor(white: 0, alpha: 0.4)
-        icon.translatesAutoresizingMaskIntoConstraints = false
-        let label = UILabel()
-        label.text = "Search Emoji"
-        label.font = .systemFont(ofSize: 16)
-        label.textColor = dark ? UIColor(white: 1, alpha: 0.45) : UIColor(white: 0, alpha: 0.4)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        searchBar.addSubview(icon)
-        searchBar.addSubview(label)
-        addSubview(searchBar)
-        NSLayoutConstraint.activate([
-            searchBar.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            searchBar.leftAnchor.constraint(equalTo: leftAnchor, constant: 10),
-            searchBar.rightAnchor.constraint(equalTo: rightAnchor, constant: -10),
-            searchBar.heightAnchor.constraint(equalToConstant: 34),
-            icon.leftAnchor.constraint(equalTo: searchBar.leftAnchor, constant: 10),
-            icon.centerYAnchor.constraint(equalTo: searchBar.centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: 18),
-            icon.heightAnchor.constraint(equalToConstant: 18),
-            label.leftAnchor.constraint(equalTo: icon.rightAnchor, constant: 6),
-            label.centerYAnchor.constraint(equalTo: searchBar.centerYAnchor),
-        ])
-    }
-
     private func buildCollection() {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal        // column-major như stock
@@ -104,7 +71,7 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
         collection.isMultipleTouchEnabled = true
         addSubview(collection)
         NSLayoutConstraint.activate([
-            collection.topAnchor.constraint(equalTo: searchBar.bottomAnchor, constant: 4),
+            collection.topAnchor.constraint(equalTo: topAnchor, constant: 6),
             collection.leftAnchor.constraint(equalTo: leftAnchor),
             collection.rightAnchor.constraint(equalTo: rightAnchor),
         ])
@@ -200,8 +167,14 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
         return s + 1
     }
 
+    private var pendingIcon: Int?
+
     private func jumpToCategory(_ i: Int) {
         guard let s = sectionIndex(forIcon: i), collection.numberOfItems(inSection: s) > 0 else { return }
+        // Giữ highlight ở icon vừa bấm: các section cuối (tim, cờ) không thể
+        // cuộn tới mép trái (clamp contentSize) nên leftmost-visible sẽ báo
+        // section trước đó — scroll callback không được đè trong lúc animate.
+        pendingIcon = i
         collection.scrollToItem(at: IndexPath(item: 0, section: s), at: .left, animated: true)
         highlightCategory(i)
     }
@@ -221,7 +194,16 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard pendingIcon == nil else { return }
         highlightCategory(iconIndex(forSection: sectionOnScreen()))
+    }
+
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        pendingIcon = nil          // user cuộn tay tiếp thì highlight lại bám theo
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        pendingIcon = nil
     }
 
     // MARK: collection
@@ -249,8 +231,15 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let e = sections[indexPath.section].emoji[indexPath.item]
         KeyboardView.clickLetter()
+        let hadRecents = sections.first?.name == "recents"
         noteUsed(e)
         onEmoji?(e)
+        if !hadRecents {
+            // lần dùng đầu tiên trong phiên: section 🕐 xuất hiện ngay,
+            // không phải đợi mở lại plane
+            reloadSections()
+            collection.reloadData()
+        }
     }
 
     private final class EmojiCell: UICollectionViewCell {

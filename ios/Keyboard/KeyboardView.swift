@@ -103,10 +103,16 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// Bật/tắt thanh gợi ý: mở rộng khoảng trống phía trên vừa đủ (44pt).
     func setSuggestionsEnabled(_ on: Bool) {
         suggestionsEnabled = on
-        suggestionBar.isHidden = !on
-        // strip 32pt sát nút (user 2026-07-24: A/B/C về zero) — phần C dưới
-        // hàng phím cuối là vùng globe/mic hệ thống, không thuộc view mình.
-        heightConstraint?.constant = on ? 246 : 216
+        updateSuggestionChrome()
+    }
+
+    /// Strip gợi ý chỉ hiện khi bật VÀ đang ở plane chữ/số — trong emoji plane
+    /// ẩn đi cho gọn (user 2026-07-24). strip 30pt sát nút; phần dưới hàng
+    /// phím cuối là vùng globe/mic hệ thống, không thuộc view mình.
+    private func updateSuggestionChrome() {
+        let visible = suggestionsEnabled && plane != .emoji
+        suggestionBar.isHidden = !visible
+        heightConstraint?.constant = visible ? 246 : 216
     }
 
     /// Cập nhật gợi ý theo layout stock: ["nguyên văn"] | từ gợi ý | emoji(≤3),
@@ -275,6 +281,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     // MARK: layout
 
     private func rebuild() {
+        updateSuggestionChrome()
         letterKeys.removeAll()
         shiftKey = nil
         rowsContainer.distribution = .fillEqually
