@@ -744,6 +744,11 @@ enum SyntheticKeyboard {
         let utf16 = Array(text.utf16)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
         else { return }
+        // Explicitly EMPTY flags: a unicode insert must never carry (or inherit)
+        // a modifier. Chromium applies the shift bit it last saw to the inserted
+        // text — after our Shift+← selection events, a racy read uppercased the
+        // replaced char ("lệch" → "lỆch", tester video 2026-07-23).
+        down.flags = []
         utf16.withUnsafeBufferPointer { buf in
             down.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
         }
@@ -756,6 +761,7 @@ enum SyntheticKeyboard {
         let up = AppState.shared.tapSkipSyntheticKeyUp
             ? nil : CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
         if let up {
+            up.flags = []
             utf16.withUnsafeBufferPointer { buf in
                 up.keyboardSetUnicodeString(stringLength: buf.count, unicodeString: buf.baseAddress)
             }

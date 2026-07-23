@@ -106,6 +106,7 @@ final class TelexInputController: IMKInputController {
     // from Chromium, which reports the whole window as one IMK client.
     private var fieldVerified = false
     private var fieldForcedMarked = false
+    private var fieldVerifyStrikes = 0
 
     /// Effective marked-text decision for the CURRENT field: a per-focus demotion
     /// (verify probe failed here) wins over the per-app classification.
@@ -585,15 +586,26 @@ final class TelexInputController: IMKInputController {
             // classification or the engine.
             return
         case .verify:
-            // One verify per focus regardless of outcome; a demotion is sticky for
-            // the focus anyway, and re-probing every key would pay the reads for
-            // nothing.
-            fieldVerified = true
+            // TWO consecutive appended verdicts before demoting (tester log #4:
+            // Chrome's attributedSubstring right after insertText can be STALE —
+            // regionMatch=no with an HONEST caret — and the one-shot demote reset
+            // the engine mid-word, turning "lỗi lệch" into "lôxi lêjch"). A first
+            // strike keeps fieldVerified=false so the NEXT replace re-probes; an
+            // honored read or an AX exoneration clears the strike.
             if verdict == .appended {
-                fieldForcedMarked = true
-                DebugLog.log("verify: field ignored replacementRange → marked text for this focus")
-                engine.reset()
-                tracking = false
+                fieldVerifyStrikes += 1
+                if fieldVerifyStrikes >= 2 {
+                    fieldVerified = true
+                    fieldForcedMarked = true
+                    DebugLog.log("verify: appended twice → marked text for this focus")
+                    engine.reset()
+                    tracking = false
+                } else {
+                    DebugLog.log("verify: appended (strike 1/2) — will re-probe next replace")
+                }
+            } else {
+                fieldVerifyStrikes = 0
+                fieldVerified = true
             }
         case .real:
             applyPreliminaryVerdict(verdict, id: id, expReplace: start + len)
@@ -647,13 +659,21 @@ final class TelexInputController: IMKInputController {
         DebugLog.log("probe(ax\(kind == .shadow ? "·shadow" : (kind == .verify ? "·verify" : ""))) \(id ?? "?"): axMatch=\(match ? "yes" : "no")")
         guard kind != .shadow else { return }
         if kind == .verify {
-            // LOG ONLY. Chromium serves AX from an async, lazily-built cache — the
-            // read races stale content and axMatch=no false-alarms (the Lark lesson,
-            // re-confirmed 2026-07-23: acting on it here demoted healthy Chrome
-            // fields MID-WORD and garbled the composition). The preliminary
-            // self-report verdict already catches real appenders — the tester's
-            // broken field showed regionMatch=no → appended from IMK's own
-            // read-back, no AX needed.
+            // axMatch=YES is strong evidence (the tree holds exactly what we
+            // inserted — a stale cache would still show the OLD text): clear the
+            // strikes and, if the self-report already demoted this focus, undo it
+            // (only between words — never flip modes mid-composition).
+            // axMatch=NO stays LOG ONLY: Chromium serves AX from an async cache and
+            // a stale read false-alarms (the Lark lesson; acting on it demoted
+            // healthy fields mid-word).
+            if match {
+                fieldVerifyStrikes = 0
+                fieldVerified = true
+                if fieldForcedMarked, engine.isEmpty, AppState.shared.currentBundleID == id {
+                    fieldForcedMarked = false
+                    DebugLog.log("verify(ax): replace landed — exonerated, back to in-place for this focus")
+                }
+            }
             return
         }
         if match {
@@ -829,6 +849,7 @@ final class TelexInputController: IMKInputController {
         tracking = false
         fieldVerified = false
         fieldForcedMarked = false
+        fieldVerifyStrikes = 0
         if let client = sender as? IMKTextInput {
             AppState.shared.currentBundleID = client.bundleIdentifier()
             // What identifier does this client REPORT? (Catalyst/Electron apps may not
@@ -856,6 +877,7 @@ final class TelexInputController: IMKInputController {
                 self?.tracking = false
                 self?.fieldVerified = false
                 self?.fieldForcedMarked = false
+                self?.fieldVerifyStrikes = 0
                 self?.onLen = 0
             }
         }
