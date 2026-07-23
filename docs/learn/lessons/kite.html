@@ -170,6 +170,7 @@ button{font-family:inherit}
     <div style="display:flex;gap:8px">
       <button id="pauseBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">⏸</button>
       <button id="voiceBtn" title="Đọc từ khi đổi mây" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
+      <button id="hardBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🅰️</button>
       <button id="soundBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
     </div>
     <div style="background:rgba(255,255,255,.85);border-radius:14px;padding:7px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 16px rgba(70,120,180,.15)">
@@ -447,6 +448,17 @@ function renderWord(c) {
   var target = Array.from(c.w.d);
   var doneDone = comp.join('') === c.w.d;
   var html = '';
+  if (hardOn) {
+    // Hard mode: KHÔNG hiện từ đích — chỉ emoji + giọng đọc. Vẫn hiện những gì
+    // bé đã gõ (xanh khi khớp đích) và con trỏ, để có phản hồi.
+    for (var hi = 0; hi < comp.length; hi++) {
+      var hcls = (hi < target.length && comp[hi] === target[hi]) ? 'done' : 'mid';
+      html += '<span class="' + hcls + '">' + esc(comp[hi]) + '</span>';
+    }
+    if (!doneDone) html += '<span class="nx pad">&nbsp;</span>';
+    c.el.querySelector('.word').innerHTML = html;
+    return;
+  }
   for (var i = 0; i < Math.max(comp.length, target.length); i++) {
     if (i < comp.length) {
       var cls = (i < target.length && comp[i] === target[i]) ? 'done' : 'mid';
@@ -472,6 +484,7 @@ var DEBUG = location.hash === '#debug';
 // ── i18n: theo ngôn ngữ đã chọn ở Lessons (vtlearn.lang) ────────────────────
 var GSTR = {
 "vi": {
+"hardTitle": "Chế độ khó: ẩn chữ — chỉ emoji + giọng đọc",
 "mobileNotice": "📱 Trò chơi này được thiết kế để luyện gõ trên máy tính với bàn phím vật lý. Trên điện thoại/máy tính bảng vẫn chơi được nhưng trải nghiệm sẽ không tối ưu.",
 "altitude": "ĐỘ CAO CỦA DIỀU",
 "hint": "⌨️ Gõ từ trong mây gạch chân để phá — tắt bộ gõ tiếng Việt nhé!",
@@ -498,6 +511,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "en": {
+"hardTitle": "Hard mode: letters hidden — emoji + voice only",
 "mobileNotice": "📱 This game is designed for typing practice on a computer with a physical keyboard. It works on phones/tablets, but the experience won't be optimal.",
 "altitude": "KITE ALTITUDE",
 "hint": "⌨️ Type the word in the underlined cloud to pop it — turn OFF your Vietnamese IME!",
@@ -524,6 +538,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "fr": {
+"hardTitle": "Mode difficile : lettres cachées — émoji + voix uniquement",
 "mobileNotice": "📱 Ce jeu est conçu pour s'entraîner à taper sur un ordinateur avec un clavier physique. Il fonctionne sur téléphone/tablette, mais l'expérience ne sera pas optimale.",
 "altitude": "ALTITUDE DU CERF-VOLANT",
 "hint": "⌨️ Tape le mot dans le nuage souligné pour le faire éclater — désactive la saisie vietnamienne du système !",
@@ -550,6 +565,7 @@ var GSTR = {
 "levelN": "Niveau {n}"
 },
 "de": {
+"hardTitle": "Schwerer Modus: Buchstaben versteckt — nur Emoji + Stimme",
 "mobileNotice": "📱 Dieses Spiel ist zum Tippen am Computer mit einer physischen Tastatur gedacht. Es funktioniert auch auf Handy/Tablet, aber das Erlebnis ist dort nicht optimal.",
 "altitude": "FLUGHÖHE DES DRACHENS",
 "hint": "⌨️ Tippe das Wort in der unterstrichenen Wolke, um sie platzen zu lassen — schalte die vietnamesische Eingabe deines Systems AUS!",
@@ -576,6 +592,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "ko": {
+"hardTitle": "어려움 모드: 글자 숨김 — 이모지와 목소리만",
 "mobileNotice": "📱 이 게임은 실제 키보드가 있는 컴퓨터에서 타자 연습을 하도록 만들어졌어요. 휴대폰/태블릿에서도 되지만 최적의 경험은 아니에요.",
 "altitude": "연 높이",
 "hint": "⌨️ 밑줄 친 구름 속 단어를 입력해서 터뜨려요 — 베트남어 입력기는 꺼 주세요!",
@@ -602,6 +619,7 @@ var GSTR = {
 "levelN": "레벨 {n}"
 },
 "ja": {
+"hardTitle": "ハードモード：もじをかくして、えもじと声だけ",
 "mobileNotice": "📱 このゲームは、じつぶつのキーボードがあるパソコンでのタイピングれんしゅうのために作られています。スマホ／タブレットでもあそべますが、さいてきなたいけんではありません。",
 "altitude": "たこの たかさ",
 "hint": "⌨️ 下線がついた雲の中の単語を入力してポン！と割ってね — ベトナム語IMEはオフにしてね！",
@@ -628,6 +646,7 @@ var GSTR = {
 "levelN": "レベル {n}"
 },
 "zh": {
+"hardTitle": "困难模式：隐藏文字——只有表情和语音",
 "mobileNotice": "📱 这个游戏是为使用实体键盘的电脑打字练习设计的。手机/平板也能玩，但体验不是最佳。",
 "altitude": "风筝高度",
 "hint": "⌨️ 打出带下划线的云朵里的词语就能把它戳破 — 记得先关掉越南语输入法哦！",
@@ -654,6 +673,7 @@ var GSTR = {
 "levelN": "第{n}关"
 },
 "km": {
+"hardTitle": "របៀបពិបាក៖ លាក់អក្សរ — មានតែសញ្ញាអារម្មណ៍ និងសំឡេង",
 "mobileNotice": "📱 ល្បែងនេះត្រូវបានរចនាសម្រាប់ហាត់វាយអក្សរនៅលើកុំព្យូទ័រដែលមានក្ដារចុចពិត។ នៅលើទូរស័ព្ទ/ថេប្លេតក៏លេងបានដែរ ប៉ុន្តែបទពិសោធន៍មិនល្អបំផុតទេ។",
 "altitude": "កម្ពស់ខ្លែង",
 "hint": "⌨️ វាយពាក្យនៅក្នុងពពកដែលមានបន្ទាត់ពីក្រោមដើម្បីធ្វើឲ្យវាបែក — កុំភ្លេចបិទកម្មវិធីវាយអក្សរវៀតណាមណា!",
@@ -702,6 +722,7 @@ document.addEventListener('DOMContentLoaded', function () { applyStrings(); rend
 
 // ── Đọc từ bằng speechSynthesis của browser ────────────────────────────────
 var voiceOn = store.kiteVoice !== false;      // default BẬT
+var hardOn = store.kiteHard === true;         // Hard mode: chỉ emoji + giọng đọc
 // PIN giọng NỮ tiếng Việt. getVoices() trả rỗng lúc mới load (voices nạp
 // async) — nếu đọc ngay khi chưa có giọng vi, browser rơi về giọng mặc định
 // (nam, đọc kiểu tiếng Anh). Vì vậy: chưa có giọng vi thì XẾP HÀNG chờ
@@ -716,7 +737,7 @@ function pickVoice() {
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function speakWord(text) {
-  if (!voiceOn || !window.speechSynthesis) return;
+  if ((!voiceOn && !hardOn) || !window.speechSynthesis) return;
   if (!viVoice) { pickVoice(); }
   if (!viVoice) { pendingSpeak = text; return; }   // chờ giọng vi, không đọc giọng sai
   speechSynthesis.cancel();
@@ -759,9 +780,15 @@ function nextWord() {
   }
   return bag.pop();
 }
+// Level 6+: 50% từ viết hoa chữ đầu — bé phải dùng Shift.
+// foldBase giữ nguyên hoa/thường nên gõ thường vào từ viết hoa sẽ buzz ngay.
+function maybeCapitalize(w) {
+  if (level < 6 || Math.random() >= 0.5) return w;
+  return { a: w.a, d: w.d.charAt(0).toLocaleUpperCase('vi') + w.d.slice(1), k: w.k, s: w.s };
+}
 function spawnCloud() {
   if (over || paused || !WORDS.length) return;
-  clouds.push(makeCloud(nextWord()));
+  clouds.push(makeCloud(maybeCapitalize(nextWord())));
   markActive();
 }
 function popCloud(c) {
@@ -1119,6 +1146,25 @@ voiceBtn.addEventListener('click', function () {
   if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel();
   else { var a = activeCloud(); if (a) speakWord(a.w.d); }
 });
+var hardBtn = document.getElementById('hardBtn');
+function renderHardBtn() {
+  hardBtn.textContent = hardOn ? '🙈' : '🅰️';
+  hardBtn.title = gt('hardTitle');
+  hardBtn.style.boxShadow = hardOn
+    ? '0 0 0 3px #e07b39 inset, 0 6px 16px rgba(70,120,180,.15)'
+    : '0 6px 16px rgba(70,120,180,.15)';
+}
+renderHardBtn();
+hardBtn.addEventListener('click', function () {
+  hardOn = !hardOn;
+  store.kiteHard = hardOn;
+  saveStore(store);
+  renderHardBtn();
+  clouds.forEach(renderWord);
+  // bật hard giữa chừng: đọc ngay từ đang active để có "đề bài"
+  if (hardOn) { var a = activeCloud(); if (a) speakWord(a.w.d); }
+});
+
 window.addEventListener('resize', layoutKite);
 
 // ── Boot ────────────────────────────────────────────────────────────────────
