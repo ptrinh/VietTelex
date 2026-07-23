@@ -508,6 +508,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func letterButton(_ s: String) -> UIView {
         let title = (shift == .off) ? s : s.uppercased()
         let b = baseButton(title: title, special: false)
+        // Touch của phím CHỮ do router (touchesBegan/Ended của KeyboardView)
+        // điều phối — nearest-key, không thể miss. Button chỉ còn là visual +
+        // hộp action được sendActions() kích.
+        b.isUserInteractionEnabled = false
         letterKeys.append((b, s))
         b.addAction(UIAction { [weak self, weak b] _ in
             guard let self, let b else { return }
@@ -654,6 +658,52 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             l.alpha = 0
         } completion: { _ in
             l.removeFromSuperview()
+        }
+    }
+
+    // MARK: touch router cho phím chữ (ForwardingView-style)
+    // UIButton event system có các mode fail đã biết (touch bị hệ thống cancel,
+    // hit-test theo z-order thay vì khoảng cách, tracking per-control không
+    // rollover được). Phím chữ tắt interaction; touch nổi lên đây và được gán
+    // cho phím GẦN NHẤT — mọi điểm chạm trong vùng chữ đều trúng một phím.
+    private var routedTouches: [ObjectIdentifier: UIButton] = [:]
+
+    private func nearestLetterButton(at point: CGPoint) -> UIButton? {
+        guard plane == .letters, !letterKeys.isEmpty else { return nil }
+        var best: (UIButton, CGFloat)?
+        for (b, _) in letterKeys {
+            let f = convert(b.bounds, from: b)
+            if f.insetBy(dx: -3, dy: -5.5).contains(point) { return b }
+            let dx = max(f.minX - point.x, 0, point.x - f.maxX)
+            let dy = max(f.minY - point.y, 0, point.y - f.maxY)
+            let d = dx * dx + dy * dy
+            if best == nil || d < best!.1 { best = (b, d) }
+        }
+        // chỉ nhận khi thật sự gần hàng phím chữ (~nửa chiều cao phím)
+        if let (b, d) = best, d <= 21 * 21 { return b }
+        return nil
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for t in touches {
+            guard let b = nearestLetterButton(at: t.location(in: self)) else { continue }
+            routedTouches[ObjectIdentifier(t)] = b
+            b.sendActions(for: .touchDown)
+        }
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for t in touches {
+            guard let b = routedTouches.removeValue(forKey: ObjectIdentifier(t)) else { continue }
+            b.sendActions(for: .touchUpInside)
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // hệ thống cancel (edge gesture…) — vẫn CHỐT chữ thay vì nuốt phím
+        for t in touches {
+            guard let b = routedTouches.removeValue(forKey: ObjectIdentifier(t)) else { continue }
+            b.sendActions(for: .touchUpInside)
         }
     }
 
