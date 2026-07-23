@@ -42,7 +42,7 @@ struct RootView: View {
                 } header: { Text("Tài nguyên") }
                 Section {
                     LabeledContent("Phiên bản", value: Self.versionLine)
-                    Text("© Phil Trinh \(Calendar.current.component(.year, from: Date()))")
+                    Text(verbatim: "© Phil Trinh \(String(Calendar.current.component(.year, from: Date())))")
                         .font(.footnote).foregroundStyle(.secondary)
                     Text("Không Full Access · Không mạng · Không thu thập dữ liệu")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -72,7 +72,8 @@ struct OnboardingCard: View {
                 Text("Mở Cài đặt").font(.headline).frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            // xanh đậm hẳn (user: .blue vẫn nhạt) — nền tối chữ trắng nổi rõ
+            .tint(Color(red: 0.02, green: 0.32, blue: 0.84))
         }
         .padding(20)
         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 18))
