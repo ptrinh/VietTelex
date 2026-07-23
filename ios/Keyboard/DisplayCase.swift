@@ -8,7 +8,59 @@ import Foundation
 
 enum DisplayCase {
     /// Trả về dạng hiển thị chuẩn; từ không có trong bảng giữ nguyên.
-    static func apply(_ w: String) -> String { proper[w] ?? w }
+    /// `after`: từ đứng ngay trước — token nhập nhằng được viết hoa THEO NGỮ
+    /// CẢNH chuỗi tên riêng ("hà"→"nội" hiện "Nội", nhưng "nội" đơn lẻ giữ
+    /// thường vì còn là "nội bộ").
+    static func apply(_ w: String, after prev: String? = nil) -> String {
+        if let p = prev?.lowercased(), chains[p]?.contains(w) == true {
+            return w.prefix(1).uppercased() + w.dropFirst()
+        }
+        return proper[w] ?? w
+    }
+
+    /// Chuỗi tên riêng: prev → các next chỉ-proper-khi-đứng-sau-prev.
+    static let chains: [String: Set<String>] = [
+        // địa danh VN
+        "hà": ["nội", "nam", "tĩnh", "giang"],
+        "đà": ["nẵng", "lạt"],
+        "nha": ["trang"],
+        "phú": ["quốc", "thọ", "yên"],
+        "sài": ["gòn"],
+        "hồ": ["chí"], "chí": ["minh"],
+        "việt": ["nam"],
+        "cần": ["thơ"],
+        "hải": ["phòng", "dương"],
+        "hạ": ["long"],
+        "quy": ["nhơn"],
+        "vũng": ["tàu"],
+        "biên": ["hòa"],
+        "bình": ["dương", "định", "thuận"],
+        "thanh": ["hóa"],
+        "hội": ["an"],
+        "quảng": ["ninh", "nam", "ngãi", "bình", "trị"],
+        "nghệ": ["an"],
+        "lâm": ["đồng"],
+        "đồng": ["nai", "tháp"],
+        "long": ["an"],
+        "tây": ["ninh"],
+        "new": ["york"], "san": ["francisco"], "hong": ["kong"],
+        // họ → đệm (chuỗi tên người)
+        "nguyễn": ["văn", "thị", "đức", "minh", "ngọc", "hữu", "xuân", "thùy", "kim", "hồng", "quốc", "đình"],
+        "trần": ["văn", "thị", "đức", "minh", "ngọc", "quốc"],
+        "lê": ["văn", "thị", "đức", "minh", "ngọc", "hữu"],
+        "phạm": ["văn", "thị", "minh", "ngọc"],
+        "hoàng": ["văn", "thị", "minh", "anh"],
+        "vũ": ["văn", "thị", "minh"],
+        "đặng": ["văn", "thị"],
+        "bùi": ["văn", "thị"],
+        "đỗ": ["văn", "thị"],
+        "ngô": ["văn", "thị"],
+        "dương": ["văn", "thị"],
+        "trịnh": ["văn", "thị", "xuân"],
+        // đệm → tên
+        "văn": ["hùng", "tuấn", "dũng", "sơn", "nam", "long", "hải", "minh"],
+        "thị": ["hương", "lan", "thu", "ngọc", "hồng", "phương", "hà", "linh"],
+    ]
 
     static let proper: [String: String] = [
         // thương hiệu / sản phẩm

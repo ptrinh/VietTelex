@@ -192,6 +192,13 @@ final class DisplayCaseTests: XCTestCase {
         // từ thường giữ nguyên; token nhập nhằng KHÔNG được hoa
         XCTAssertEqual(DisplayCase.apply("cảm"), "cảm")
         XCTAssertEqual(DisplayCase.apply("trang"), "trang")
+        // theo ngữ cảnh chuỗi: hà→Nội, nha→Trang; đơn lẻ vẫn thường
+        XCTAssertEqual(DisplayCase.apply("nội", after: "hà"), "Nội")
+        XCTAssertEqual(DisplayCase.apply("nội", after: "Hà"), "Nội")
+        XCTAssertEqual(DisplayCase.apply("nội"), "nội")
+        XCTAssertEqual(DisplayCase.apply("trang", after: "nha"), "Trang")
+        XCTAssertEqual(DisplayCase.apply("văn", after: "nguyễn"), "Văn")
+        XCTAssertEqual(DisplayCase.apply("văn"), "văn")
         XCTAssertEqual(DisplayCase.apply("vũ"), "vũ")
     }
 

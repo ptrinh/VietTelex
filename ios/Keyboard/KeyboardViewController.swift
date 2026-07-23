@@ -201,8 +201,8 @@ final class KeyboardViewController: UIInputViewController {
                 let ranked = SensitiveWords.filter(pool.sorted {
                     score($0.word, $0.freq) > score($1.word, $1.freq)
                 }.map { $0.word }, enabled: filterSensitive)
-                set.word = ranked.first.map(DisplayCase.apply)
-                set.word2 = ranked.dropFirst().first.map(DisplayCase.apply)
+                set.word = ranked.first.map { DisplayCase.apply($0, after: lastWord) }
+                set.word2 = ranked.dropFirst().first.map { DisplayCase.apply($0, after: lastWord) }
             }
             var emojis = EmojiSuggest.emojis(for: composed)
             if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
@@ -213,7 +213,7 @@ final class KeyboardViewController: UIInputViewController {
             set.nextWords = SensitiveWords.filter(
                 langModel.nextWords(after: prev, prev2: lastWord2, limit: 6),
                 enabled: filterSensitive
-            ).prefix(3).map(DisplayCase.apply)
+            ).prefix(3).map { DisplayCase.apply($0, after: prev) }
         } else {
             // field trống chưa gõ gì → từ user hay mở đầu nhất
             set.nextWords = SensitiveWords.filter(langModel.topWords(limit: 6),
