@@ -42,16 +42,25 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         self.onKey = onKey
         self.onGlobe = onGlobe
         super.init(frame: .zero)
-        heightAnchor.constraint(equalToConstant: 216).isActive = true
+        // Stock VN keyboard = 44pt candidate strip + ~216pt keys. The strip is
+        // empty in M1 but reserving it (a) matches Apple's height so the keys
+        // are the same size as stock, (b) gives top-row balloons room to render
+        // (they were clipped to our bounds — the 'cutoff' bug).
+        heightAnchor.constraint(equalToConstant: 260).isActive = true
+        // Fast typists ROLL fingers: the next key is pressed before the previous
+        // lifts. Default isMultipleTouchEnabled=false made iOS reject that second
+        // touch outright — the missed-keypress bug.
+        isMultipleTouchEnabled = true
         rowsContainer.axis = .vertical
         rowsContainer.distribution = .fillEqually
         rowsContainer.spacing = 0
+        rowsContainer.isMultipleTouchEnabled = true
         rowsContainer.translatesAutoresizingMaskIntoConstraints = false
         addSubview(rowsContainer)
         NSLayoutConstraint.activate([
             rowsContainer.leftAnchor.constraint(equalTo: leftAnchor),
             rowsContainer.rightAnchor.constraint(equalTo: rightAnchor),
-            rowsContainer.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            rowsContainer.topAnchor.constraint(equalTo: topAnchor, constant: 44),
             rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
         rebuild()
@@ -81,12 +90,32 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     func setAutoShift(_ on: Bool) {
         guard shift != .caps else { return }
         let want: ShiftState = on ? .on : .off
-        if shift != want { shift = want; rebuild() }
+        if shift != want { shift = want; applyShiftAppearance() }
+    }
+
+    // Shift changes must NEVER rebuild: tearing the buttons down mid-typing
+    // deallocates the key already under the user's finger, so its touch-up
+    // never fires (the missed-keypress bug). Retitle in place instead.
+    private var letterKeys: [(button: UIButton, base: String)] = []
+    private var shiftKey: UIButton?
+    private func applyShiftAppearance() {
+        for (b, s) in letterKeys {
+            b.setTitle(shift == .off ? s : s.uppercased(), for: .normal)
+        }
+        if let b = shiftKey {
+            let symbol = shift == .caps ? "capslock.fill" : (shift == .on ? "shift.fill" : "shift")
+            b.setImage(UIImage(systemName: symbol), for: .normal)
+            b.backgroundColor = (shift != .off && !dark)
+                ? .white
+                : (dark ? UIColor(white: 1, alpha: 0.14) : UIColor(red: 0.68, green: 0.70, blue: 0.74, alpha: 1))
+        }
     }
 
     // MARK: layout
 
     private func rebuild() {
+        letterKeys.removeAll()
+        shiftKey = nil
         rowsContainer.arrangedSubviews.forEach { $0.removeFromSuperview() }
         switch plane {
         case .letters: buildLetters()
@@ -215,7 +244,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
 
     private func baseButton(title: String, special: Bool) -> KeyButton {
-        let b = KeyButton(type: .system)
+        // .custom, not .system: system buttons run tint/highlight animations on
+        // the main thread per touch — visible latency on a keyboard.
+        let b = KeyButton(type: .custom)
+        b.isMultipleTouchEnabled = true
         b.isSpecial = special
         b.setTitle(title, for: .normal)
         b.titleLabel?.font = .systemFont(ofSize: special ? 16 : 23)
@@ -234,6 +266,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func letterButton(_ s: String) -> UIView {
         let title = (shift == .off) ? s : s.uppercased()
         let b = baseButton(title: title, special: false)
+        letterKeys.append((b, s))
         b.addAction(UIAction { [weak self, weak b] _ in
             guard let self, let b else { return }
             self.showBalloon(over: b, text: b.currentTitle ?? title)
@@ -243,7 +276,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             self.hideBalloon()
             let cased: Character = (self.shift == .off) ? Character(s) : Character(s.uppercased())
             self.tapped(.letter(cased))
-            if self.shift == .on { self.shift = .off; self.rebuild() }
+            if self.shift == .on { self.shift = .off; self.applyShiftAppearance() }
         }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
         return b
     }
@@ -262,7 +295,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         balloon.layer.zPosition = 10
         let f = convert(key.bounds, from: key)
         let w = max(f.width + 16, 44)
-        balloon.frame = CGRect(x: f.midX - w / 2, y: max(f.minY - 52, 0), width: w, height: 50)
+        balloon.frame = CGRect(x: f.midX - w / 2, y: max(f.minY - 52, -6), width: w, height: 50)
         if balloon.superview == nil { addSubview(balloon) }
         balloon.isHidden = false
     }
@@ -284,15 +317,16 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let symbol = shift == .caps ? "capslock.fill" : (shift == .on ? "shift.fill" : "shift")
         let b = baseButton(title: "", special: true)
         b.setImage(UIImage(systemName: symbol), for: .normal)
-        b.tintColor = (shift != .off) ? (dark ? .white : .black) : (dark ? .white : .black)
+        b.tintColor = dark ? .white : .black
         if shift != .off && !dark { b.backgroundColor = .white }
+        shiftKey = b
         b.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             let now = CACurrentMediaTime()
             if now - self.lastShiftTap < 0.3 { self.shift = .caps }
             else { self.shift = (self.shift == .off) ? .on : .off }
             self.lastShiftTap = now
-            self.rebuild()
+            self.applyShiftAppearance()
         }, for: .touchUpInside)
         b.widthAnchor.constraint(greaterThanOrEqualToConstant: 42).isActive = true
         return b
