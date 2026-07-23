@@ -19,6 +19,7 @@ struct KeyboardSettings {
     var liveSpellCheck = true
     var autoRestore = true
     var showSuggestions = true
+    var learnWords = true
 
     static func load() -> KeyboardSettings {
         var s = KeyboardSettings()
@@ -28,6 +29,7 @@ struct KeyboardSettings {
         if d.object(forKey: "liveSpellCheck") != nil { s.liveSpellCheck = d.bool(forKey: "liveSpellCheck") }
         if d.object(forKey: "autoRestore") != nil { s.autoRestore = d.bool(forKey: "autoRestore") }
         if d.object(forKey: "showSuggestions") != nil { s.showSuggestions = d.bool(forKey: "showSuggestions") }
+        if d.object(forKey: "learnWords") != nil { s.learnWords = d.bool(forKey: "learnWords") }
         return s
     }
 }
@@ -56,10 +58,20 @@ final class EngineBridge {
     }
 
     /// Space / return / punctuation: word boundary → auto-restore, then the char.
-    func boundary(_ text: String, proxy: TextProxyLike) {
-        guard !proxy.isSecure else { proxy.insertText(text); return }
-        apply(engine.commitBoundary(autoRestore: settings.autoRestore), literal: "", proxy: proxy)
+    /// Returns the FINAL committed word (post auto-restore) — the
+    /// personalization model must learn what actually landed on screen.
+    @discardableResult
+    func boundary(_ text: String, proxy: TextProxyLike) -> String {
+        guard !proxy.isSecure else { proxy.insertText(text); return "" }
+        let before = engine.composed
+        let action = engine.commitBoundary(autoRestore: settings.autoRestore)
+        var final = before
+        if case let .replace(bs, insert) = action {
+            final = String(before.dropLast(bs)) + insert
+        }
+        apply(action, literal: "", proxy: proxy)
         proxy.insertText(text)
+        return final
     }
 
     /// Backspace. Returns true when the bridge handled it (composition edit);

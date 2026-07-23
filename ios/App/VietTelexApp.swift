@@ -80,6 +80,8 @@ struct SettingsSection: View {
     private var showSpaceLogo = true
     @AppStorage("showSuggestions", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var showSuggestions = true
+    @AppStorage("learnWords", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var learnWords = true
 
     var body: some View {
         Section {
@@ -89,6 +91,13 @@ struct SettingsSection: View {
             Toggle("Tự khôi phục từ tiếng Anh", isOn: $autoRestore)
             Toggle("Hiện logo Vᴛ trên phím space", isOn: $showSpaceLogo)
             Toggle("Thanh gợi ý (emoji)", isOn: $showSuggestions)
+            Toggle("Học từ hay dùng (trên máy)", isOn: $learnWords)
+            Button("Xóa từ đã học", role: .destructive) {
+                if let dir = FileManager.default
+                    .containerURL(forSecurityApplicationGroupIdentifier: "group.com.viettelex") {
+                    try? FileManager.default.removeItem(at: dir.appendingPathComponent("userlm.json"))
+                }
+            }
         } header: { Text("Cách gõ") } footer: {
             Text("Cài đặt áp dụng ngay lần mở bàn phím kế tiếp. Ví dụ: vieetj → việt, dd → đ, w → ư.")
         }

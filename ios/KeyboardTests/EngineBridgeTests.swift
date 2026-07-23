@@ -91,3 +91,31 @@ final class SuggestionTests: XCTestCase {
         XCTAssertTrue(VNLexicon.completions(forFolded: "n", limit: 3, excluding: "n").isEmpty)
     }
 }
+
+final class UserLangModelTests: XCTestCase {
+    func testLearnAndSuggest() {
+        let m = UserLangModel(appGroup: nil)   // in-memory
+        for _ in 0..<3 { m.record(word: "anh", after: nil) }
+        m.record(word: "ơi", after: "anh")
+        m.record(word: "ơi", after: "anh")
+        m.record(word: "đang", after: "anh")
+        m.record(word: "chào", after: nil)
+        // đầu câu: top từ hay dùng
+        XCTAssertEqual(m.topWords(limit: 1), ["anh"])
+        // sau "anh": bigram cá nhân xếp trước, seed lấp sau
+        let next = m.nextWords(after: "anh", limit: 3)
+        XCTAssertEqual(next.first, "ơi")
+        XCTAssertTrue(next.contains("đang"))
+        // seed thuần khi chưa học gì
+        XCTAssertEqual(UserLangModel(appGroup: nil).nextWords(after: "cảm", limit: 1), ["ơn"])
+        // không học rác
+        m.record(word: "abc123", after: "anh")
+        XCTAssertEqual(m.count(of: "abc123"), 0)
+    }
+
+    func testEmojiFoldedKeys() {
+        // gõ mộc không dấu cũng ra emoji: yeu ≡ yêu
+        XCTAssertEqual(EmojiSuggest.emojis(for: "yeu"), EmojiSuggest.emojis(for: "yêu"))
+        XCTAssertFalse(EmojiSuggest.emojis(for: "meo").isEmpty)
+    }
+}

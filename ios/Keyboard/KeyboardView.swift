@@ -112,7 +112,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         var literal: String?
         var word: String?
         var emojis: [String] = []
-        var isEmpty: Bool { literal == nil && word == nil && emojis.isEmpty }
+        var nextWords: [String] = []   // gợi ý khi CHƯA gõ (đầu câu / sau space)
+        var isEmpty: Bool { literal == nil && word == nil && emojis.isEmpty && nextWords.isEmpty }
     }
 
     func showSuggestions(_ set: SuggestionSet) {
@@ -147,6 +148,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
 
         var slots: [UIView] = []
+        for w in set.nextWords.prefix(3) {
+            slots.append(slotButton(w, insert: w, font: .systemFont(ofSize: 17, weight: .regular)))
+        }
         if let l = set.literal {
             slots.append(slotButton("\u{201C}\(l)\u{201D}", insert: l,
                                     font: .systemFont(ofSize: 17, weight: .regular)))

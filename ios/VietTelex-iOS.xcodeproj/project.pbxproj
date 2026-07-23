@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		03737E5339AC43A75D973144 /* EmojiSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA79BB7903D0F4A2BC56B5 /* EmojiSuggest.swift */; };
+		18EB5C9002EAD3991F709FD5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
 		1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */; };
+		1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
 		3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B913AFA01B930811B2848696 /* SpaceLogo@2x.png */; };
 		3DE25701A4C0DB5C7124618A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07973B1798B754A6DDA969C3 /* Assets.xcassets */; };
 		5219B81A88BC7A0F77DC8467 /* TelexCore in Frameworks */ = {isa = PBXBuildFile; productRef = BE8679AE19C0C9801BE52ADF /* TelexCore */; };
@@ -67,6 +69,7 @@
 		DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "SpaceLogo@3x.png"; sourceTree = "<group>"; };
 		E5AE58D76A8127D641A2AF62 /* EngineBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridgeTests.swift; sourceTree = "<group>"; };
 		F2C9781CE8B936C962B3EBA8 /* TelexCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TelexCore; path = ../TelexCore; sourceTree = SOURCE_ROOT; };
+		F316CA910C58A9377DC754A0 /* UserLangModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserLangModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +142,7 @@
 				853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */,
 				B913AFA01B930811B2848696 /* SpaceLogo@2x.png */,
 				DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */,
+				F316CA910C58A9377DC754A0 /* UserLangModel.swift */,
 				B8E668817CF39902B99094C7 /* VNLexicon.swift */,
 			);
 			path = Keyboard;
@@ -287,6 +291,7 @@
 				593AA8DEA7AFB11D6005F173 /* EngineBridge.swift in Sources */,
 				54B0665D29CB3187CEBF5157 /* KeyboardView.swift in Sources */,
 				1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */,
+				1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */,
 				F97D2586E581143732FFBE09 /* VNLexicon.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -306,6 +311,7 @@
 				E295B1FEA8D18A42FF77BD3A /* EmojiSuggest.swift in Sources */,
 				6689B752583E4AE424F48573 /* EngineBridge.swift in Sources */,
 				D4DEA988483DB59F683B8407 /* EngineBridgeTests.swift in Sources */,
+				18EB5C9002EAD3991F709FD5 /* UserLangModel.swift in Sources */,
 				654F63A4AB91892BA093F56B /* VNLexicon.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
