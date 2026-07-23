@@ -153,7 +153,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 line.topAnchor.constraint(equalTo: v.topAnchor, constant: 7),
                 line.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -7),
             ])
-            v.tag = 77   // line lookup
+            line.tag = 77   // line lookup (tag phải nằm trên LINE, không phải wrapper)
             return v
         }
         emojiStack.axis = .horizontal
@@ -183,7 +183,6 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let ink: UIColor = dark ? .white : .black
         for d in slotDividers {
             d.viewWithTag(77)?.backgroundColor = ink.withAlphaComponent(0.18)
-            d.subviews.first?.backgroundColor = ink.withAlphaComponent(0.18)
         }
 
         // gom nội dung 3 slot chính: nextWords HOẶC literal/word/word2
