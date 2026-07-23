@@ -525,6 +525,17 @@ final class AppState: @unchecked Sendable {
         }
     }
 
+    /// Classified in-place-good WITHOUT a manual pin: probed-good or on the
+    /// built-in verified list. Drives the per-focus verify probe (a user's manual
+    /// In-place pin is a decision, not a classification — never second-guessed).
+    func isLearnedInPlace(_ bundleID: String?) -> Bool {
+        guard let id = bundleID else { return false }
+        return lock.withLock {
+            _manualMode(id) == nil
+                && (probedAppsCache.contains(id) || Self.builtInInPlaceApps.contains(id))
+        }
+    }
+
     /// In-place replacement verified working for this app.
     func markInPlaceGood(_ bundleID: String?) {
         guard let id = bundleID else { return }

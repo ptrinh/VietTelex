@@ -95,6 +95,24 @@ final class TelexInputController: IMKInputController {
     private var pendingReprobe: (id: String?, start: Int, len: Int, bs: Int,
                                  inserted: String, verdict: InPlaceProbe.Verdict)?
 
+    // Per-FOCUS re-verification of learned-in-place apps (tester log 2026-07-23).
+    // Classification is per APP, but Chromium-class apps host many editors: one
+    // site honors replacementRange, the next (EditContext-style) APPENDS — and a
+    // learned-good app was never probed again, so that field stayed broken until
+    // a reload ("gõ không ra gì / tự bôi đen rồi replace"). One verify probe per
+    // focus; a failure demotes to marked text for THIS focus only (the global
+    // per-app classification is untouched). Both reset on activateServer and on
+    // the click/⌘-combo reset notification — the focus anchors we actually get
+    // from Chromium, which reports the whole window as one IMK client.
+    private var fieldVerified = false
+    private var fieldForcedMarked = false
+
+    /// Effective marked-text decision for the CURRENT field: a per-focus demotion
+    /// (verify probe failed here) wins over the per-app classification.
+    private func usesMarkedNow(_ id: String?) -> Bool {
+        fieldForcedMarked || AppState.shared.usesMarkedText(id)
+    }
+
     // MARK: - Event handling (hot path)
 
     /// Also receive flagsChanged (default is keyDown only): the composition is
@@ -219,7 +237,7 @@ final class TelexInputController: IMKInputController {
             // same net effect, single press. In-place mode has no composition session
             // (text is already real), so it keeps the normal commit-and-pass path.
             if event.keyCode == kDelete, !engine.isEmpty,
-               AppState.shared.usesMarkedText(AppState.shared.currentBundleID) {
+               usesMarkedNow(AppState.shared.currentBundleID) {
                 client.setMarkedText("", selectionRange: kNoRange, replacementRange: kNoRange)
                 engine.reset()
                 tracking = false
@@ -278,9 +296,9 @@ final class TelexInputController: IMKInputController {
             return false
         }
         logDecision("handle \(id ?? "?")/front=\(frontID ?? "?"): "
-            + "\(AppState.shared.usesMarkedText(id) ? "marked" : "in-place") "
+            + "\(usesMarkedNow(id) ? "marked" : "in-place") "
             + "needsProbe=\(AppState.shared.needsProbe(id))")
-        spMode = AppState.shared.usesMarkedText(id) ? "marked"
+        spMode = usesMarkedNow(id) ? "marked"
                : (tracking || engine.isEmpty ? "in-place" : "in-place-per-op")
 
         // Reflect the current "bỏ dấu tự do" setting before any engine op (feed,
@@ -295,7 +313,7 @@ final class TelexInputController: IMKInputController {
         case kDelete:
             if engine.isEmpty { return false }   // not composing -> normal delete
             let action = engine.backspace()
-            if AppState.shared.usesMarkedText(id) { updateMarked(client); return true }
+            if usesMarkedNow(id) { updateMarked(client); return true }
             if tracking {
                 // Rewrite the whole composition via insertText (ordered, non-empty);
                 // also handles tone re-placement on delete ("toán"->"tóa").
@@ -377,7 +395,7 @@ final class TelexInputController: IMKInputController {
         }
 
         let action = engine.feed(ch)
-        if AppState.shared.usesMarkedText(id) { updateMarked(client); return true }
+        if usesMarkedNow(id) { updateMarked(client); return true }
         switch action {
         case .passthrough:
             // Insert the letter ourselves (do NOT return false to let the system
@@ -470,11 +488,23 @@ final class TelexInputController: IMKInputController {
         // verdict is never acted on. This is how the deferred re-probe can be exercised
         // against Lark (pin it to In-place in Thử Nghiệm → App mode, enable Debug
         // logging, type a few tone edits, copy the log).
-        let shadowProbe = !realProbe && AppState.shared.debugLogging
+        // Per-focus VERIFY of a learned-in-place app: the first real replacement in
+        // each focus re-checks that THIS field honors replacementRange (sites inside
+        // one browser differ — see fieldVerified). Passive on good fields (read-only
+        // probe of an edit that already happened); a failure demotes this focus to
+        // marked text. This is NOT the removed 2026-07-21 session-field probation:
+        // unknown apps aren't re-probed per focus — only apps already classified
+        // in-place-good get a read-back check, so good fields never glitch.
+        let verifyProbe = !realProbe && !fieldVerified
+            && AppState.shared.isLearnedInPlace(id)
             && InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
                                         bs: bs, clear: clear, needsProbe: true)
-        if realProbe || shadowProbe {
-            probeInPlace(inserted: insert, start: start, bs: bs, client, kind: shadowProbe ? .shadow : .real)
+        let shadowProbe = !realProbe && !verifyProbe && AppState.shared.debugLogging
+            && InPlaceProbe.shouldProbe(insertLength: (insert as NSString).length,
+                                        bs: bs, clear: clear, needsProbe: true)
+        if realProbe || verifyProbe || shadowProbe {
+            probeInPlace(inserted: insert, start: start, bs: bs, client,
+                         kind: realProbe ? .real : (verifyProbe ? .verify : .shadow))
         }
     }
 
@@ -506,11 +536,10 @@ final class TelexInputController: IMKInputController {
 
     /// How a probe's verdict is applied: `.real` classifies the app (persisted),
     /// `.shadow` only logs (debugLogging experiment).
-    private enum ProbeKind { case real, shadow }
+    private enum ProbeKind { case real, verify, shadow }
 
     private func probeInPlace(inserted: String, start: Int, bs: Int, _ client: IMKTextInput,
                               kind: ProbeKind) {
-        let shadow = kind == .shadow
         let len = (inserted as NSString).length
         // Primary signal: the post-edit caret (hard for an app to fake — it needs it
         // to place its candidate window). Fallback: the target-region read-back, used
@@ -530,7 +559,7 @@ final class TelexInputController: IMKInputController {
                                            inserted: inserted)
         // Structural diagnostics only — never the typed text itself. `regionMatch`
         // is a bool (did the read-back equal what we inserted), not the content.
-        DebugLog.log("probe\(shadow ? "(shadow)" : "") \(AppState.shared.currentBundleID ?? "?"): "
+        DebugLog.log("probe\(kind == .shadow ? "(shadow)" : (kind == .verify ? "(verify)" : "")) \(AppState.shared.currentBundleID ?? "?"): "
             + "start=\(start) bs=\(bs) len=\(len) "
             + "caret=\(caret.map(String.init) ?? "none") expReplace=\(start + len) expAppend=\(start + bs + len) "
             + "regionMatch=\(region.map { $0 == inserted ? "yes" : "no" } ?? "nil") → \(verdict)")
@@ -546,14 +575,29 @@ final class TelexInputController: IMKInputController {
             let axRegion = AXTextEdit.readString(at: start, length: len)
             guard axRegion != nil else { return }   // AX unavailable → preliminary stands
             DispatchQueue.main.async {
-                self?.applyAXVerdict(axRegion: axRegion, inserted: inserted, id: id, shadow: shadow)
+                self?.applyAXVerdict(axRegion: axRegion, inserted: inserted, id: id, kind: kind)
             }
         }
 
-        // A shadow probe is data-gathering only: log + arm the re-read, never touch
-        // the classification or the engine.
-        if shadow { return }
-        applyPreliminaryVerdict(verdict, id: id, expReplace: start + len)
+        switch kind {
+        case .shadow:
+            // Data-gathering only: log + arm the re-read, never touch the
+            // classification or the engine.
+            return
+        case .verify:
+            // One verify per focus regardless of outcome; a demotion is sticky for
+            // the focus anyway, and re-probing every key would pay the reads for
+            // nothing.
+            fieldVerified = true
+            if verdict == .appended {
+                fieldForcedMarked = true
+                DebugLog.log("verify: field ignored replacementRange → marked text for this focus")
+                engine.reset()
+                tracking = false
+            }
+        case .real:
+            applyPreliminaryVerdict(verdict, id: id, expReplace: start + len)
+        }
     }
 
     /// Classification from the SELF-REPORTED signals (caret / read-back) — the part
@@ -598,10 +642,20 @@ final class TelexInputController: IMKInputController {
     /// authoritative: it reports the field's REAL content independent of the app's
     /// IMKit self-report, and it read the tree after it settled. It overrides whatever
     /// the preliminary verdict did — including un-committing an in-place promotion.
-    private func applyAXVerdict(axRegion: String?, inserted: String, id: String?, shadow: Bool) {
+    private func applyAXVerdict(axRegion: String?, inserted: String, id: String?, kind: ProbeKind) {
         let match = axRegion == inserted
-        DebugLog.log("probe(ax\(shadow ? "·shadow" : "")) \(id ?? "?"): axMatch=\(match ? "yes" : "no")")
-        guard !shadow else { return }
+        DebugLog.log("probe(ax\(kind == .shadow ? "·shadow" : (kind == .verify ? "·verify" : ""))) \(id ?? "?"): axMatch=\(match ? "yes" : "no")")
+        guard kind != .shadow else { return }
+        if kind == .verify {
+            // LOG ONLY. Chromium serves AX from an async, lazily-built cache — the
+            // read races stale content and axMatch=no false-alarms (the Lark lesson,
+            // re-confirmed 2026-07-23: acting on it here demoted healthy Chrome
+            // fields MID-WORD and garbled the composition). The preliminary
+            // self-report verdict already catches real appenders — the tester's
+            // broken field showed regionMatch=no → appended from IMK's own
+            // read-back, no AX needed.
+            return
+        }
         if match {
             AppState.shared.markInPlaceGood(id)
             if let id { probeFailures[id] = nil; probeHonors[id] = nil }
@@ -705,7 +759,7 @@ final class TelexInputController: IMKInputController {
     /// In-place text is already on screen (we insert every key), so a reset suffices;
     /// marked text isn't real yet, so finalize it to the composed word first.
     private func endComposition(_ client: IMKTextInput) {
-        if !engine.isEmpty, AppState.shared.usesMarkedText(AppState.shared.currentBundleID) {
+        if !engine.isEmpty, usesMarkedNow(AppState.shared.currentBundleID) {
             client.insertText(engine.composed, replacementRange: kNoRange)
             client.setMarkedText("", selectionRange: kNoRange, replacementRange: kNoRange)
         }
@@ -731,7 +785,7 @@ final class TelexInputController: IMKInputController {
                           allowShortcuts: Bool = true) -> Bool {
         defer { tracking = false; onLen = 0 }
         guard !engine.isEmpty else { engine.reset(); return false }
-        let marked = AppState.shared.usesMarkedText(AppState.shared.currentBundleID)
+        let marked = usesMarkedNow(AppState.shared.currentBundleID)
         let word = engine.composed
         // Raw keystrokes must be read BEFORE engine.reset() clears them. A shortcut key
         // that contains Telex triggers (s f r x j w, doubled vowels) never survives
@@ -773,6 +827,8 @@ final class TelexInputController: IMKInputController {
         super.activateServer(sender)
         engine.reset()
         tracking = false
+        fieldVerified = false
+        fieldForcedMarked = false
         if let client = sender as? IMKTextInput {
             AppState.shared.currentBundleID = client.bundleIdentifier()
             // What identifier does this client REPORT? (Catalyst/Electron apps may not
@@ -798,6 +854,8 @@ final class TelexInputController: IMKInputController {
                 forName: .telexResetComposition, object: nil, queue: .main) { [weak self] _ in
                 self?.engine.reset()
                 self?.tracking = false
+                self?.fieldVerified = false
+                self?.fieldForcedMarked = false
                 self?.onLen = 0
             }
         }
