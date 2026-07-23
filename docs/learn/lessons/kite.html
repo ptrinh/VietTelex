@@ -1099,7 +1099,9 @@ document.getElementById('skipBtn').addEventListener('click', function () { skipA
 
 var pickerEl = document.getElementById('picker');
 function openPicker() {
-  var maxL = Math.max(level, store.kite.level || 1);
+  // Level 1-5 luôn mở sẵn (người biết gõ rồi nhảy thẳng lên 5 được);
+  // từ level 6 trở lên vẫn phải phá dần từng level.
+  var maxL = Math.max(5, level, store.kite.level || 1);
   var grid = document.getElementById('pickerGrid');
   grid.innerHTML = '';
   for (var l = 1; l <= maxL; l++) {
