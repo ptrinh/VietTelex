@@ -154,6 +154,16 @@ final class UserLangModelTests: XCTestCase {
         XCTAssertEqual(m.topWords(limit: 3), ["blib"])   // lần 3: đủ ngưỡng
     }
 
+    func testTriggerExpansion() {
+        // research 2026-07-24: done/xong/hoàn thành cùng bộ với đúng
+        XCTAssertEqual(EmojiSuggest.emojis(for: "done"), EmojiSuggest.emojis(for: "đúng"))
+        XCTAssertEqual(EmojiSuggest.emojis(for: "xong"), EmojiSuggest.emojis(for: "đúng"))
+        XCTAssertEqual(EmojiSuggest.emojis(for: "hoàn thành"), EmojiSuggest.emojis(for: "đúng"))
+        XCTAssertEqual(EmojiSuggest.emojis(for: "failed"), EmojiSuggest.emojis(for: "sai"))
+        XCTAssertFalse(EmojiSuggest.emojis(for: "trời ơi").isEmpty)   // cụm 2 token
+        XCTAssertFalse(EmojiSuggest.emojis(for: "hoan thanh").isEmpty) // folded cụm
+    }
+
     func testEmojiFoldedKeys() {
         // gõ mộc không dấu cũng ra emoji: yeu ≡ yêu
         XCTAssertEqual(EmojiSuggest.emojis(for: "yeu"), EmojiSuggest.emojis(for: "yêu"))
