@@ -640,8 +640,10 @@ struct ExperimentalTab: View {
         let inPlace = s.learnedInPlaceApps
         let fallback = s.learnedFallbackApps
         let manual = s.manualModes.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }
+        let os = ProcessInfo.processInfo.operatingSystemVersion
         return [
             "VietTelex debug log — v\(version) (build \(build))",
+            "macOS: \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)",
             "accessibility: \(Accessibility.isTrusted ? "granted" : "MISSING")",
             "tap running: \(TerminalTapController.shared.isRunning)",
             "current app: \(id ?? "?")  frontmost: \(frontID ?? "?")",
