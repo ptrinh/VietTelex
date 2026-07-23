@@ -199,12 +199,13 @@ final class KeyboardViewController: UIInputViewController {
             }
         }
         if !composed.isEmpty {
-            // Slot "nguyên văn" hiện RAW KEYSTROKES — lối thoát chuẩn QuickType
-            // cho collision: gõ L,o,s,s (composed "los", boundary restore
-            // "Loss") mà muốn đúng chữ đã bấm thì tap slot này. Trùng composed
-            // thì khỏi lặp.
-            let raw = bridge.rawWord
-            set.literal = raw == composed ? composed : raw
+            // Slot "nguyên văn" = phương án mà boundary SẼ KHÔNG cho ra —
+            // lối thoát cho cả hai chiều collision (user chốt 2026-07-24):
+            //   gõ l,o,s,s → boundary restore "loss"  → slot hiện "los" (composed)
+            //   gõ l,o,s   → boundary giữ "ló"        → slot hiện "los" (raw)
+            // Tap = chèn + reset engine nên boundary sau đó không restore nữa.
+            let predicted = bridge.predictedCommit
+            set.literal = predicted == composed ? bridge.rawWord : composed
             // Inline suggestion (research 2026-07-24): pool tương thích dấu từ
             // VNSuggest, re-rank = log(staticFreq) + λ₁·log(personal) +
             // λ₂·context-bonus + λ₃·chỉ-còn-thiếu-dấu.

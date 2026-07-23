@@ -98,6 +98,13 @@ final class EngineBridge {
     var composedWord: String { engine.composed }
     var rawWord: String { engine.rawKeystrokes }
 
+    /// Từ mà boundary SẼ chốt (auto-restore tính sẵn) — engine là struct nên
+    /// peek trên bản copy, không đụng state thật.
+    var predictedCommit: String {
+        var e = engine
+        return e.commitText(autoRestore: settings.autoRestore)
+    }
+
     private func apply(_ action: TelexAction, literal: String, proxy: TextProxyLike) {
         switch action {
         case .replace(let bs, let insert):
