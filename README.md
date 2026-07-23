@@ -58,6 +58,8 @@ Tùy chọn (Simple Telex, bỏ dấu tự do, kiểu cũ/mới, kiểm tra chí
 
 ## Đóng góp & giấy phép
 
+Gặp lỗi? Xem [hướng dẫn báo lỗi kèm cách lấy nhật ký gỡ lỗi](BAO-LOI.md) rồi [mở issue](https://github.com/ptrinh/viettelex/issues/new).
+
 Build, kiến trúc, benchmark: xem [`docs/CONTRIBUTE.md`](docs/CONTRIBUTE.md).
 
 [MIT License](LICENSE) — © 2026 Phil Trinh (SENPRINTS LLC). Tự do dùng/sửa/tích hợp (kể cả thương mại), miễn giữ lại thông báo bản quyền.
