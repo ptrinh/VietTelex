@@ -10,6 +10,7 @@ final class KeyboardViewController: UIInputViewController {
     private var keyboard: KeyboardView!
     private let langModel = UserLangModel()
     private var lastWord: String?         // từ liền trước trong câu (context bigram)
+    private var lastWord2: String?        // từ trước nữa (context trigram)
     private var learnEnabled = true
 
     override func viewDidLoad() {
@@ -21,6 +22,8 @@ final class KeyboardViewController: UIInputViewController {
                 self?.handleInputModeList(from: sender, with: UIEvent())
             }
         )
+        let lexicon = Set(VNLexicon.words)
+        langModel.isKnownWord = { lexicon.contains($0) }
         keyboard.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(keyboard)
         NSLayoutConstraint.activate([
@@ -70,7 +73,7 @@ final class KeyboardViewController: UIInputViewController {
         // Selection is about to change from OUTSIDE our own edits (tap elsewhere,
         // field switch) — the composition anchor is gone. Our own proxy edits do
         // not call this re-entrantly during handle().
-        if !applyingEdit { bridge.reset(); lastWord = nil }
+        if !applyingEdit { bridge.reset(); lastWord = nil; lastWord2 = nil }
     }
 
     private var applyingEdit = false
@@ -91,7 +94,7 @@ final class KeyboardViewController: UIInputViewController {
             bridge.letter(ch, proxy: proxy)
         case .text(let s):                            // numbers, symbols
             commitAndLearn(bridge.boundary(s, proxy: proxy))
-            lastWord = nil                             // dấu câu/ký hiệu = ngắt câu
+            lastWord = nil; lastWord2 = nil            // dấu câu/ký hiệu = ngắt câu
         case .space:
             commitAndLearn(bridge.boundary(" ", proxy: proxy))
         case .doubleSpacePeriod:
@@ -99,20 +102,20 @@ final class KeyboardViewController: UIInputViewController {
             if textDocumentProxy.documentContextBeforeInput?.hasSuffix(" ") == true {
                 textDocumentProxy.deleteBackward()
                 textDocumentProxy.insertText(". ")
-                lastWord = nil
+                lastWord = nil; lastWord2 = nil
             } else {
                 commitAndLearn(bridge.boundary(" ", proxy: proxy))
             }
         case .moveCursor(let delta):
             bridge.reset()                        // caret moved → composition gone
-            lastWord = nil
+            lastWord = nil; lastWord2 = nil
             textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
         case .newline:
             commitAndLearn(bridge.boundary("\n", proxy: proxy))
-            lastWord = nil
+            lastWord = nil; lastWord2 = nil
         case .backspace:
             bridge.backspace(proxy: proxy)
-            if !bridge.isComposing { lastWord = nil }  // xoá lấn vào chữ cũ → context mờ
+            if !bridge.isComposing { lastWord = nil; lastWord2 = nil }  // xoá lấn vào chữ cũ → context mờ
         }
         UIDevice.current.playInputClick()
         switch key {
@@ -123,11 +126,20 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
     }
 
-    /// Từ vừa chốt: nạp vào model cá nhân + nối context bigram.
-    private func commitAndLearn(_ word: String) {
+    /// Từ vừa chốt: nạp vào model cá nhân + trượt cửa sổ context (prev2, prev1).
+    /// `accepted` = user bấm nhận suggestion → weight 2 (tín hiệu mạnh hơn).
+    private func commitAndLearn(_ word: String, accepted: Bool = false) {
         guard !word.isEmpty else { return }
-        if learnEnabled { langModel.record(word: word, after: lastWord) }
-        lastWord = UserLangModel.learnable(word) ? word : nil
+        if learnEnabled {
+            langModel.record(word: word, after: lastWord, prev2: lastWord2,
+                             weight: accepted ? 2 : 1)
+        }
+        if UserLangModel.learnable(word) {
+            lastWord2 = lastWord
+            lastWord = word
+        } else {
+            lastWord = nil; lastWord2 = nil
+        }
     }
 
     /// Gợi ý cho từ đang gõ: emoji (khớp cả "yêu" lẫn "love" — bảng
@@ -147,8 +159,9 @@ final class KeyboardViewController: UIInputViewController {
             if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
             set.emojis = emojis
         } else if let prev = lastWord {
-            // vừa space sau một từ → gợi từ KẾ TIẾP (bigram cá nhân + seed)
-            set.nextWords = langModel.nextWords(after: prev, limit: 3)
+            // vừa space sau một từ → gợi từ KẾ TIẾP (trigram/bigram cá nhân
+            // interpolate với seed)
+            set.nextWords = langModel.nextWords(after: prev, prev2: lastWord2, limit: 3)
         } else {
             // field trống chưa gõ gì → từ user hay mở đầu nhất
             set.nextWords = langModel.topWords(limit: 3)
@@ -166,7 +179,7 @@ final class KeyboardViewController: UIInputViewController {
         for _ in 0..<n { textDocumentProxy.deleteBackward() }
         textDocumentProxy.insertText(isWord ? item + " " : item)
         bridge.reset()
-        if isWord { commitAndLearn(item) } else { lastWord = nil }
+        if isWord { commitAndLearn(item, accepted: true) } else { lastWord = nil; lastWord2 = nil }
         UIDevice.current.playInputClick()
         updateAutoShift()
         updateSuggestions()

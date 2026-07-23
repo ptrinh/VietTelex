@@ -95,6 +95,7 @@ struct SettingsSection: View {
             Button("Xóa từ đã học", role: .destructive) {
                 if let dir = FileManager.default
                     .containerURL(forSecurityApplicationGroupIdentifier: "group.com.viettelex") {
+                    try? FileManager.default.removeItem(at: dir.appendingPathComponent("userlm.plist"))
                     try? FileManager.default.removeItem(at: dir.appendingPathComponent("userlm.json"))
                 }
             }

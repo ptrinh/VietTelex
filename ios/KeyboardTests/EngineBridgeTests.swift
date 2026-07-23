@@ -93,24 +93,52 @@ final class SuggestionTests: XCTestCase {
 }
 
 final class UserLangModelTests: XCTestCase {
-    func testLearnAndSuggest() {
+    private func freshModel() -> UserLangModel {
         let m = UserLangModel(appGroup: nil)   // in-memory
+        m.isKnownWord = { _ in true }          // tests ranking không dính threshold
+        return m
+    }
+
+    func testLearnAndSuggest() {
+        let m = freshModel()
         for _ in 0..<3 { m.record(word: "anh", after: nil) }
-        m.record(word: "ơi", after: "anh")
-        m.record(word: "ơi", after: "anh")
+        for _ in 0..<3 { m.record(word: "ơi", after: "anh") }
         m.record(word: "đang", after: "anh")
         m.record(word: "chào", after: nil)
         // đầu câu: top từ hay dùng
         XCTAssertEqual(m.topWords(limit: 1), ["anh"])
-        // sau "anh": bigram cá nhân xếp trước, seed lấp sau
-        let next = m.nextWords(after: "anh", limit: 3)
+        // sau "anh": bigram cá nhân thắng, seed vẫn có mặt
+        let next = m.nextWords(after: "anh", limit: 4)
         XCTAssertEqual(next.first, "ơi")
         XCTAssertTrue(next.contains("đang"))
         // seed thuần khi chưa học gì
-        XCTAssertEqual(UserLangModel(appGroup: nil).nextWords(after: "cảm", limit: 1), ["ơn"])
+        XCTAssertEqual(freshModel().nextWords(after: "cảm", limit: 1), ["ơn"])
+        // shrinkage: MỘT lần gõ nhầm không đè nổi seed đầu bảng
+        let m2 = freshModel()
+        m2.record(word: "xong", after: "cảm")
+        XCTAssertEqual(m2.nextWords(after: "cảm", limit: 1), ["ơn"])
         // không học rác
         m.record(word: "abc123", after: "anh")
         XCTAssertEqual(m.count(of: "abc123"), 0)
+        XCTAssertFalse(UserLangModel.learnable("heeeyyy"))
+    }
+
+    func testTrigramContext(){
+        let m = freshModel()
+        // nền bigram (cảm→ơn) đủ 2 rồi trigram (cảm,ơn)→nhiều mới được ghi
+        for _ in 0..<2 { m.record(word: "ơn", after: "cảm") }
+        for _ in 0..<3 { m.record(word: "nhiều", after: "ơn", prev2: "cảm") }
+        m.record(word: "anh", after: "ơn", prev2: "cảm")
+        XCTAssertEqual(m.nextWords(after: "ơn", prev2: "cảm", limit: 1), ["nhiều"])
+    }
+
+    func testUnknownWordThreshold() {
+        let m = UserLangModel(appGroup: nil)   // isKnownWord = false mặc định
+        m.record(word: "blib", after: nil)
+        m.record(word: "blib", after: nil)
+        XCTAssertTrue(m.topWords(limit: 3).isEmpty)      // 2 lần: chưa được gợi ý
+        m.record(word: "blib", after: nil)
+        XCTAssertEqual(m.topWords(limit: 3), ["blib"])   // lần 3: đủ ngưỡng
     }
 
     func testEmojiFoldedKeys() {
