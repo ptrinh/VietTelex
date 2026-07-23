@@ -1101,9 +1101,15 @@ document.getElementById('skipBtn').addEventListener('click', function () { skipA
 
 var pickerEl = document.getElementById('picker');
 function openPicker() {
-  // Level 1-5 luôn mở sẵn (người biết gõ rồi nhảy thẳng lên 5 được);
-  // từ level 6 trở lên vẫn phải phá dần từng level.
-  var maxL = Math.max(5, level, store.kite.level || 1);
+  // Level 1-5 luôn mở sẵn (người biết gõ rồi nhảy thẳng lên 5 được).
+  // Đạt 3 sao ở level N thì được nhảy cóc 5 level: mở tới N+5
+  // (vd 3⭐ level 6 → chọn được tới level 11).
+  var jump = 0;
+  var best = store.kite.best || {};
+  Object.keys(best).forEach(function (l) {
+    if (best[l] >= 3) jump = Math.max(jump, parseInt(l, 10) + 5);
+  });
+  var maxL = Math.max(5, level, store.kite.level || 1, jump);
   var grid = document.getElementById('pickerGrid');
   grid.innerHTML = '';
   for (var l = 1; l <= maxL; l++) {
