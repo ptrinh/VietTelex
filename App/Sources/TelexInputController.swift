@@ -360,6 +360,15 @@ final class TelexInputController: IMKInputController {
                 SyntheticKeyboard.postBoundaryCopy(of: cg)
                 return true
             }
+            // No Accessibility → no re-post. Returning false raced the async
+            // MARKED commit and the terminal submitted the line missing its tail
+            // ("cho tôi⏎" → "cho tô", tester log #6 2026-07-23, Warp untrusted).
+            // Swallow instead: first press commits the word, the second acts —
+            // the documented two-press UX for marked compositions, no text loss.
+            if rewrote, !Accessibility.isTrusted,
+               usesMarkedNow(AppState.shared.currentBundleID) {
+                return true
+            }
             return false
 
         default:
