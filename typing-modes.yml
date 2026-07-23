@@ -28,6 +28,7 @@
 # Terminals — lời hứa cốt lõi, hỏng in-place theo thiết kế
 com.apple.Terminal: tap
 com.googlecode.iterm2: tap
+dev.warp.Warp-Stable: tap
 
 # Electron/CEF — in-place hỏng ở biên từ
 com.larksuite.larkApp: tap

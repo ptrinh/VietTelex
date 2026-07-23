@@ -81,6 +81,8 @@
   .brew { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: .84rem; color: #d8dce8; cursor: pointer; }
   .brew:hover { border-color: rgba(255,255,255,.3); }
   .brew .copied { color: var(--gold); font-family: var(--sans); font-size: .78rem; }
+  .demo-video { display: block; width: min(760px, 100%); margin: 44px auto 0; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+  .demo-caption { margin: 12px auto 0; font-size: .84rem; color: #9aa3b8; text-align: center; }
   .hero .meta { margin-top: 20px; font-size: .82rem; color: #7f889f; }
   .hero .philosophy { margin-top: 14px; font-size: .9rem; color: #9aa3b8; letter-spacing: .02em; }
   .hero .philosophy span { color: var(--gold); font-weight: 700; }
@@ -144,7 +146,7 @@
   <div class="hero-inner">
     <img class="logo" src="assets/VietTelex-logo.png" alt="Logo ViệtTelex — phím keycap đỏ chữ VT" width="96" height="96">
     <h1>Gõ tiếng Việt trên&nbsp;Mac,<br>nhanh, mượt, <span class="accent">chuẩn 2026</span></h1>
-    <p class="sub">VietTelex (ViệtTelex / ViếtTelex) là bộ gõ Telex mã nguồn mở miễn phí, được xây dựng trên InputMethodKit của macOS để tích hợp sâu: nhanh, tiện, tối giản, mượt cho mọi app.</p>
+    <p class="sub">VietTelex (ViệtTelex / ViếtTelex) là bộ gõ Telex <a href="https://github.com/ptrinh/viettelex" rel="noopener" style="color:var(--gold);text-decoration:underline;text-underline-offset:3px">mã nguồn mở</a> miễn phí, được xây dựng trên InputMethodKit của macOS để tích hợp sâu: nhanh, tiện, tối giản, mượt cho mọi app.</p>
 
     <div class="typebox" aria-label="Mô phỏng gõ Telex">
       <div class="keys" id="keys">&nbsp;</div>
@@ -164,6 +166,10 @@
     <div class="cta-row" style="margin-top:26px">
       <a class="btn btn-learn" href="learn/">🎓 Học gõ Telex — miễn phí, có trò chơi</a>
     </div>
+
+    <video class="demo-video" src="assets/demo.mp4" autoplay muted loop playsinline
+           aria-label="Video demo VietTelex: gõ ~380 WPM, dấu bung tức thì, từ tiếng Anh tự khôi phục"></video>
+    <p class="demo-caption">Demo gõ máy ở tốc độ ~380 WPM — dấu bung tức thì, không gạch chân, từ tiếng Anh tự khôi phục.</p>
   </div>
 </header>
 
