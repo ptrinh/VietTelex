@@ -10,7 +10,28 @@ struct VietTelexApp: App {
     }
 }
 
+/// Màu nhấn thích ứng sáng/tối — xanh đậm ở nền sáng (user: .blue vẫn nhạt),
+/// xanh sáng hơn ở nền tối để chữ trắng vẫn nổi rõ.
+let accentBlue = Color(UIColor { trait in
+    trait.userInterfaceStyle == .dark
+        ? UIColor(red: 0.30, green: 0.52, blue: 1.00, alpha: 1)
+        : UIColor(red: 0.02, green: 0.32, blue: 0.84, alpha: 1)
+})
+
+/// Bàn phím VietTelex đã được bật trong Cài đặt chưa — quét danh sách bàn phím
+/// đang hoạt động tìm bundle id của extension.
+func isKeyboardEnabled() -> Bool {
+    UITextInputMode.activeInputModes.contains {
+        ($0.value(forKey: "identifier") as? String)?
+            .hasPrefix("com.viettelex.ios.keyboard") == true
+    }
+}
+
 struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var keyboardEnabled = isKeyboardEnabled()
+    @State private var tryItText = ""
+
     /// "1.0.0 · build 24/07/2026" — ngày build = mtime của binary.
     static var versionLine: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -24,9 +45,17 @@ struct RootView: View {
         NavigationStack {
             List {
                 Section {
-                    OnboardingCard()
+                    OnboardingCard(enabled: keyboardEnabled)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
+                }
+                Section {
+                    TextField("Thử gõ tại đây…", text: $tryItText, axis: .vertical)
+                        .lineLimit(1...4)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } header: { Text("Thử gõ") } footer: {
+                    Text("Bấm 🌐 dưới bàn phím để chuyển sang Tiếng Việt (VietTelex), rồi gõ thử: vieejt → việt.")
                 }
                 SettingsSection()
                 Section {
@@ -46,36 +75,95 @@ struct RootView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     Text("Không Full Access · Không mạng · Không thu thập dữ liệu")
                         .font(.footnote).foregroundStyle(.secondary)
+                    Text("Không rung phím — VietTelex không xin quyền Truy cập Toàn phần, mọi thứ chạy ngay trên máy của bạn.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 } header: { Text("Giới thiệu") }
             }
             .navigationTitle("VietTelex")
+        }
+        .onChange(of: scenePhase) { phase in
+            // Quay lại từ Cài đặt → cập nhật trạng thái bật bàn phím ngay.
+            if phase == .active { keyboardEnabled = isKeyboardEnabled() }
         }
     }
 }
 
 struct OnboardingCard: View {
+    let enabled: Bool
+
+    /// Icon app từ asset catalog (AppIcon) — đọc tên file icon từ Info.plist.
+    private static let appIcon: UIImage? = {
+        guard let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+              let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
+              let files = primary["CFBundleIconFiles"] as? [String],
+              let name = files.last else { return nil }
+        return UIImage(named: name)
+    }()
+
+    @ViewBuilder private var hero: some View {
+        if let icon = Self.appIcon {
+            Image(uiImage: icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        } else {
+            Text("⌨️").font(.system(size: 52))
+        }
+    }
+
+    /// Một dòng checklist: xong = tick xanh, chưa = số thứ tự.
+    private func step(_ n: Int, _ title: String, done: Bool) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(n).circle.fill")
+                .foregroundStyle(done ? Color.green : Color.secondary)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 14) {
-            Text("⌨️").font(.system(size: 52))
-            Text("Bật bàn phím VietTelex").font(.title3.bold())
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Cài đặt → Cài đặt chung → Bàn phím → Bàn phím", systemImage: "1.circle.fill")
-                Label("Thêm bàn phím mới… → Tiếng Việt (VietTelex)", systemImage: "2.circle.fill")
-                Label("Khi gõ, bấm 🌐 để chuyển sang VietTelex", systemImage: "3.circle.fill")
-            }
-            .font(.subheadline)
-            Button {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
+            if enabled {
+                // Đã bật — thu gọn, chỉ xác nhận + nhắc thử gõ.
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2).foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Bàn phím đã bật").font(.headline)
+                        Text("Thử gõ ngay bên dưới.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer()
                 }
-            } label: {
-                Text("Mở Cài đặt").font(.headline).frame(maxWidth: .infinity)
+            } else {
+                hero
+                Text("Bật bàn phím VietTelex").font(.title3.bold())
+                VStack(alignment: .leading, spacing: 10) {
+                    step(1, "Bật bàn phím trong Cài đặt", done: enabled)
+                    step(2, "Thử gõ ngay bên dưới", done: false)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Cài đặt → Cài đặt chung → Bàn phím → Bàn phím")
+                        Text("Thêm bàn phím mới… → Tiếng Việt (VietTelex)")
+                        Text("Khi gõ, bấm 🌐 để chuyển sang VietTelex")
+                    }
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .padding(.leading, 30)
+                }
+                .font(.subheadline)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Mở Cài đặt").font(.headline).frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accentBlue)
             }
-            .buttonStyle(.borderedProminent)
-            // xanh đậm hẳn (user: .blue vẫn nhạt) — nền tối chữ trắng nổi rõ
-            .tint(Color(red: 0.02, green: 0.32, blue: 0.84))
         }
-        .padding(20)
+        .padding(enabled ? 14 : 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 18))
         .padding(.vertical, 6)
     }
@@ -123,7 +211,9 @@ struct SettingsSection: View {
         Section {
             toggle("Tự khôi phục từ tiếng Anh", "Từ không phải tiếng Việt tự trả về như đã gõ (google, github…).", isOn: $autoRestore)
             toggle("Kiểm tra chính tả khi gõ", "Ngừng bỏ dấu ngay khi từ không thể là tiếng Việt.", isOn: $liveSpellCheck)
-            toggle("Hiện logo Vᴛ", "Logo mờ ở góc phải phím space.", isOn: $showSpaceLogo)
+        } header: { Text("Chính tả") }
+
+        Section {
             // Thanh gợi ý bật = tự học từ hay dùng (learnWords đi theo, không
             // còn toggle riêng — quyết định 2026-07-24)
             toggle("Thanh gợi ý", "Gợi ý từ + emoji, tự học từ bạn hay dùng (chỉ trên máy).", isOn: $showSuggestions)
@@ -135,7 +225,11 @@ struct SettingsSection: View {
                     try? FileManager.default.removeItem(at: dir.appendingPathComponent("userlm.json"))
                 }
             }
-        } header: { Text("Tính năng") } footer: {
+        } header: { Text("Gợi ý") }
+
+        Section {
+            toggle("Hiện logo Vᴛ", "Logo mờ ở góc phải phím space.", isOn: $showSpaceLogo)
+        } header: { Text("Giao diện") } footer: {
             Text("Cài đặt áp dụng ngay lần mở bàn phím kế tiếp.")
         }
     }

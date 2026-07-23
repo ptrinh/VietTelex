@@ -18,16 +18,16 @@ final class KeyboardViewController: UIInputViewController {
         super.viewDidLoad()
         keyboard = KeyboardView(
             needsGlobe: needsInputModeSwitchKey,
-            onKey: { [weak self] key in self?.handle(key) },
-            onGlobe: { [weak self] sender in
-                self?.handleInputModeList(from: sender, with: UIEvent())
-            }
+            inputController: self,     // globe key addTarget thẳng vào handleInputModeList
+            onKey: { [weak self] key in self?.handle(key) }
         )
         langModel.isKnownWord = { VNSuggest.contains($0) }
         // Datastore trống (lần đầu / vừa reset) → mồi bằng seed corpus để
         // ngày đầu tiên đã có gợi ý hợp lý; dữ liệu học thật vượt seed sau
         // vài ngày (weight seed ≤50, gõ thật +1/lần, decay tuần).
         langModel.seedIfEmpty(unigrams: SeedData.unigrams, bigrams: SeedData.bigrams)
+        // Load plist chạy nền — bar mở-đầu refresh khi dữ liệu sẵn sàng.
+        langModel.onReady = { [weak self] in self?.updateSuggestions() }
         keyboard.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(keyboard)
         NSLayoutConstraint.activate([
@@ -41,6 +41,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         bridge = EngineBridge()                       // fresh settings + buffer
+        lastKeyWasEmailTrigger = false
+        restoreUndo = nil; undoOfferActive = false
         keyboard.configureReturnKey(type: textDocumentProxy.returnKeyType ?? .default)
         keyboard.applyAppearance(textDocumentProxy.keyboardAppearance ?? .default)
         // Thanh gợi ý: gate qua toggle trong app; tự tắt ở field từ chối
@@ -50,7 +52,8 @@ final class KeyboardViewController: UIInputViewController {
         let settings = KeyboardSettings.load()
         learnEnabled = settings.learnWords
         filterSensitive = settings.filterSensitive
-        keyboard.setSuggestionsEnabled(settings.showSuggestions && traitsAllow)
+        suggestionsActive = settings.showSuggestions && traitsAllow
+        keyboard.setSuggestionsEnabled(suggestionsActive)
         keyboard.onSuggestion = { [weak self] item in self?.acceptSuggestion(item) }
         updateAutoShift()
         updateSuggestions()            // field trống → gợi mở đầu ngay khi hiện
@@ -59,7 +62,16 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        langModel.save()
+        langModel.saveNow()   // extension có thể bị kill ngay sau disappear
+    }
+
+    // Host truyền .default là thường — dark/light thật nằm ở trait hệ thống,
+    // đổi giữa chừng (auto dark theo giờ…) phải áp lại appearance.
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+            keyboard?.applyAppearance(textDocumentProxy.keyboardAppearance ?? .default)
+        }
     }
 
     /// Apple behavior: shift turns on at sentence start when the field asks for
@@ -79,7 +91,10 @@ final class KeyboardViewController: UIInputViewController {
         // Selection is about to change from OUTSIDE our own edits (tap elsewhere,
         // field switch) — the composition anchor is gone. Our own proxy edits do
         // not call this re-entrantly during handle().
-        if !applyingEdit { bridge.reset(); lastWord = nil; lastWord2 = nil }
+        if !applyingEdit {
+            bridge.reset(); lastWord = nil; lastWord2 = nil
+            restoreUndo = nil; undoOfferActive = false
+        }
     }
 
     private var applyingEdit = false
@@ -98,36 +113,61 @@ final class KeyboardViewController: UIInputViewController {
         switch key {
         case .letter(let ch):
             bridge.letter(ch, proxy: proxy)
+            restoreUndo = nil; undoOfferActive = false
         case .text(let s):                            // numbers, symbols
             commitAndLearn(bridge.boundary(s, proxy: proxy))
             lastWord = nil; lastWord2 = nil            // dấu câu/ký hiệu = ngắt câu
+            restoreUndo = nil; undoOfferActive = false
         case .space:
-            commitAndLearn(bridge.boundary(" ", proxy: proxy))
+            let composedBefore = bridge.composedWord
+            let committed = bridge.boundary(" ", proxy: proxy)
+            // Auto-restore vừa ghi đè dạng có dấu → nhớ lại cho backspace-undo.
+            restoreUndo = (!composedBefore.isEmpty && committed != composedBefore)
+                ? (raw: committed, composed: composedBefore) : nil
+            undoOfferActive = false
+            lastSpaceAfterText = !composedBefore.isEmpty
+            commitAndLearn(committed)
         case .doubleSpacePeriod:
             // Apple: double-space converts the just-typed space into ". ".
             // Track bằng state thay vì documentContextBeforeInput — đọc proxy
-            // là XPC round-trip, không được nằm trên hot path.
-            if lastInsertWasSpace {
+            // là XPC round-trip, không được nằm trên hot path. Yêu cầu có chữ
+            // trước space đầu (không biến "␣␣" ở đầu field thành ". ").
+            if lastInsertWasSpace && lastSpaceAfterText {
                 textDocumentProxy.deleteBackward()
                 textDocumentProxy.insertText(". ")
                 lastWord = nil; lastWord2 = nil
             } else {
                 commitAndLearn(bridge.boundary(" ", proxy: proxy))
             }
+            restoreUndo = nil; undoOfferActive = false
         case .moveCursor(let delta):
             bridge.reset()                        // caret moved → composition gone
             lastWord = nil; lastWord2 = nil
+            restoreUndo = nil; undoOfferActive = false
             textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
         case .newline:
             commitAndLearn(bridge.boundary("\n", proxy: proxy))
             lastWord = nil; lastWord2 = nil
+            restoreUndo = nil; undoOfferActive = false
         case .backspace:
+            // Backspace NGAY SAU space có restore → xoá space và chào lại dạng
+            // có dấu ở slot literal (trust fix cho collision kiểu "his"≡"hí").
+            if !bridge.isComposing, lastInsertWasSpace, restoreUndo != nil {
+                undoOfferActive = true
+            } else {
+                restoreUndo = nil; undoOfferActive = false
+            }
             bridge.backspace(proxy: proxy)
             if !bridge.isComposing { lastWord = nil; lastWord2 = nil }  // xoá lấn vào chữ cũ → context mờ
         }
         switch key {
         case .space, .doubleSpacePeriod: lastInsertWasSpace = true
         default: lastInsertWasSpace = false
+        }
+        if case .text(let s) = key, s == "@" || s == "." {
+            lastKeyWasEmailTrigger = true
+        } else {
+            lastKeyWasEmailTrigger = false
         }
         // updateAutoShift đọc documentContextBeforeInput (XPC) → cùng khối
         // async với suggestions, coalesce theo generation: gõ nhanh chỉ tính
@@ -149,6 +189,18 @@ final class KeyboardViewController: UIInputViewController {
     private var suggestionGen = 0
     private var lastInsertWasSpace = false
     private var autoShiftOn = false
+    private var suggestionsActive = true
+    /// Phím vừa gõ là "@" hoặc "." → rule email/TLD mới có thể ăn; chỉ khi đó
+    /// mới đáng trả giá XPC đọc documentContextBeforeInput.
+    private var lastKeyWasEmailTrigger = false
+    /// Space vừa rồi có chữ đứng trước không — chặn double-space ". " ở đầu field.
+    private var lastSpaceAfterText = false
+    /// (raw đã chốt, dạng có dấu) khi auto-restore ghi đè — backspace ngay sau đó
+    /// mở lại lối thoát: slot literal hiện dạng có dấu để 1 tap đổi từ.
+    private var restoreUndo: (raw: String, composed: String)?
+    private var undoOfferActive = false
+    private var ctxCacheKey: String?
+    private var ctxCache: Set<String> = []
 
     /// iOS defer touch gần mép ~1s để phân xử system gesture — nguồn số 1 của
     /// "ấn phím hàng dưới không ăn". Xin quyền nhận touch trước ở mép dưới.
@@ -179,14 +231,21 @@ final class KeyboardViewController: UIInputViewController {
     private static let domainTLDs = ["com", "vn", "net"]
 
     private func updateSuggestions() {
+        guard suggestionsActive else { return }       // bar tắt → khỏi tính toán
         let composed = bridge.composedWord
         var set = KeyboardView.SuggestionSet()
         // đầu câu (auto-shift): gợi ý viết hoa chữ đầu như stock (Em, Anh, Tôi)
         func caseForContext(_ w: String) -> String {
             autoShiftOn ? w.prefix(1).uppercased() + w.dropFirst() : w
         }
+        // Backspace-undo sau auto-restore: chào dạng có dấu ở slot literal.
+        if composed.isEmpty, undoOfferActive, let u = restoreUndo {
+            set.literal = u.composed
+        }
         // Ngữ cảnh email/domain: "phuc@" → gợi đuôi mail; "github." → gợi TLD.
-        if composed.isEmpty, let before = textDocumentProxy.documentContextBeforeInput,
+        // Đọc proxy (XPC) chỉ khi phím vừa gõ là @/. — không phải mọi boundary.
+        if composed.isEmpty, lastKeyWasEmailTrigger,
+           let before = textDocumentProxy.documentContextBeforeInput,
            let last = before.split(separator: " ").last {
             if last.hasSuffix("@"), last.count > 1 {
                 keyboard.showSuggestions(.init(nextWords: Self.emailSuffixes))
@@ -212,9 +271,16 @@ final class KeyboardViewController: UIInputViewController {
             let pool = VNSuggest.matches(composed, poolLimit: 24,
                                          excluding: composed.lowercased())
             if !pool.isEmpty {
-                let ctx: Set<String> = lastWord.map {
-                    Set(langModel.nextWords(after: $0, prev2: lastWord2, limit: 24))
-                } ?? []
+                // ctx chỉ đổi khi (lastWord, lastWord2) đổi — cache, khỏi gọi
+                // nextWords mỗi keystroke trong lúc đang gõ dở một từ.
+                let ctxKey = (lastWord ?? "") + "\u{1}" + (lastWord2 ?? "")
+                if ctxKey != ctxCacheKey {
+                    ctxCache = lastWord.map {
+                        Set(langModel.nextWords(after: $0, prev2: lastWord2, limit: 24))
+                    } ?? []
+                    ctxCacheKey = ctxKey
+                }
+                let ctx = ctxCache
                 let typedLen = composed.count
                 func score(_ w: String, _ f: Int) -> Double {
                     log(Double(f) + 1)
@@ -222,14 +288,28 @@ final class KeyboardViewController: UIInputViewController {
                         + (ctx.contains(w) ? 4 : 0)
                         + (w.count == typedLen ? 1.5 : 0)
                 }
-                let ranked = SensitiveWords.filter(pool.sorted {
-                    score($0.word, $0.freq) > score($1.word, $1.freq)
-                }.map { $0.word }, enabled: filterSensitive)
+                // score tính 1 lần/ứng viên rồi sort tuple — không gọi lại
+                // trong comparator (2·n·log n lần).
+                let scored = pool.map { ($0.word, score($0.word, $0.freq)) }
+                let ranked = SensitiveWords.filter(
+                    scored.sorted { $0.1 > $1.1 }.map { $0.0 },
+                    enabled: filterSensitive)
                 set.word = ranked.first.map { DisplayCase.apply($0, after: lastWord) }
                 set.word2 = ranked.dropFirst().first.map { DisplayCase.apply($0, after: lastWord) }
             }
-            var emojis = EmojiSuggest.emojis(for: composed)
-            if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
+            // thử cụm 2 từ trước ("hoàn thành", "sinh nhật") rồi mới tới từ đơn.
+            // Từ trigger nằm trong bộ lọc nhạy cảm (vcl…) → emoji cũng ẩn khi
+            // filter bật, nhất quán với chính sách gợi ý từ.
+            var emojis: [String] = []
+            let cLow = composed.lowercased()
+            let sensitiveTrigger = filterSensitive && SensitiveWords.set.contains(cLow)
+            if !sensitiveTrigger {
+                if let prev = lastWord {
+                    emojis = EmojiSuggest.emojis(for: prev.lowercased() + " " + cLow)
+                }
+                if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: composed) }
+                if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
+            }
             set.emojis = emojis
         } else if let prev = lastWord {
             // vừa space sau một từ → gợi từ KẾ TIẾP (trigram/bigram cá nhân
@@ -252,6 +332,21 @@ final class KeyboardViewController: UIInputViewController {
     private func acceptSuggestion(_ item: String) {
         applyingEdit = true
         defer { applyingEdit = false }
+        // Undo auto-restore: caret đang đứng ngay sau từ raw đã chốt (space vừa
+        // bị backspace) → thay cả từ raw bằng dạng có dấu + space.
+        if undoOfferActive, let u = restoreUndo, item == u.composed,
+           bridge.composedWord.isEmpty {
+            for _ in 0..<u.raw.count { textDocumentProxy.deleteBackward() }
+            textDocumentProxy.insertText(u.composed + " ")
+            restoreUndo = nil; undoOfferActive = false
+            bridge.reset()
+            commitAndLearn(u.composed, accepted: true)
+            KeyboardView.clickModifier()
+            updateAutoShift()
+            updateSuggestions()
+            return
+        }
+        restoreUndo = nil; undoOfferActive = false
         let isFragment = item.contains(".") || item.contains("@")   // gmail.com, com…
         let isWord = !isFragment && item.first?.isLetter == true
         let n = bridge.composedWord.count

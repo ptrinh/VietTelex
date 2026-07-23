@@ -3,7 +3,6 @@
 // globe/space/return. Metrics follow Apple's stock layout; the pixel-perfect
 // fidelity pass (balloons, exact colors per appearance, iPad) is M2.
 import UIKit
-import AudioToolbox
 
 final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
@@ -23,8 +22,11 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     var enableInputClicksWhenVisible: Bool { true }
 
     private let onKey: (Key) -> Void
-    private let onGlobe: (UIButton) -> Void
     private let needsGlobe: Bool
+    // Globe key theo hợp đồng Apple: addTarget thẳng vào UIInputViewController
+    // với .allTouchEvents — long-press mở picker bàn phím chỉ chạy khi
+    // handleInputModeList nhận event THẬT.
+    private weak var inputController: UIInputViewController?
 
     /// M2 suggestion bar: gate qua toggle showSuggestions trong app.
     var onSuggestion: ((String) -> Void)?
@@ -39,15 +41,25 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var lastShiftTap: TimeInterval = 0
 
     private var rowsContainer = UIStackView()
+    private var rowsHeightConstraint: NSLayoutConstraint?
     private var repeatTimer: Timer?
     private var lastSpaceTap: TimeInterval = 0
     private var spaceHoldX: CGFloat = 0
     private var backspaceHoldStart: TimeInterval = 0
 
-    init(needsGlobe: Bool, onKey: @escaping (Key) -> Void, onGlobe: @escaping (UIButton) -> Void) {
+    // Fill đục xấp xỉ stock — alpha-white trên nền trong suốt làm phím
+    // đổi sắc theo màu app phía sau.
+    private var plainFill: UIColor {
+        dark ? UIColor(white: 0.42, alpha: 1) : .white
+    }
+    private var specialFill: UIColor {
+        dark ? UIColor(white: 0.26, alpha: 1) : UIColor(red: 0.68, green: 0.70, blue: 0.74, alpha: 1)
+    }
+
+    init(needsGlobe: Bool, inputController: UIInputViewController?, onKey: @escaping (Key) -> Void) {
         self.needsGlobe = needsGlobe
+        self.inputController = inputController
         self.onKey = onKey
-        self.onGlobe = onGlobe
         super.init(frame: .zero)
         // Compact (user 2026-07-23): no reserved candidate strip — 4pt breathing
         // room on top, keys, 2pt below. Top-row balloons now overlap the key
@@ -74,12 +86,14 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         // from the top: while the host settles on the final height (~100ms at
         // keyboard switch), any excess shows as empty strip ABOVE the keys —
         // invisible — instead of stretching every key tall (the 'flash' bug).
+        let rowsHeight = rowsContainer.heightAnchor.constraint(equalToConstant: 212)
         NSLayoutConstraint.activate([
             rowsContainer.leftAnchor.constraint(equalTo: leftAnchor),
             rowsContainer.rightAnchor.constraint(equalTo: rightAnchor),
-            rowsContainer.heightAnchor.constraint(equalToConstant: 212),
+            rowsHeight,
             rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
         ])
+        rowsHeightConstraint = rowsHeight
         // Suggestion bar sống trong "khoảng trống 2" — chỉ hiện khi bật.
         suggestionBar.axis = .horizontal
         suggestionBar.distribution = .fillProportionally
@@ -100,10 +114,20 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    deinit { repeatTimer?.invalidate() }
+
     /// Bật/tắt thanh gợi ý: mở rộng khoảng trống phía trên vừa đủ (44pt).
     func setSuggestionsEnabled(_ on: Bool) {
         suggestionsEnabled = on
         updateSuggestionChrome()
+    }
+
+    /// 216pt dọc / ~162pt ngang trên iPhone (stock co chiều cao khi xoay).
+    private func keyAreaHeight() -> CGFloat {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return 216 }
+        let landscape = window?.windowScene?.interfaceOrientation.isLandscape
+            ?? (bounds.width > 500)
+        return landscape ? 162 : 216
     }
 
     /// Strip gợi ý chỉ hiện khi bật VÀ đang ở plane chữ/số — trong emoji plane
@@ -112,7 +136,24 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func updateSuggestionChrome() {
         let visible = suggestionsEnabled && plane != .emoji
         suggestionBar.isHidden = !visible
-        heightConstraint?.constant = visible ? 246 : 216
+        let keyArea = keyAreaHeight()
+        heightConstraint?.constant = visible ? keyArea + 30 : keyArea
+        rowsHeightConstraint?.constant = keyArea - 4
+    }
+
+    // Rotation / Split View: indent hàng 2 và chiều cao tính theo bounds THẬT,
+    // không dùng UIScreen.main (deprecated, sai trong Split View).
+    private var lastLayoutWidth: CGFloat = 0
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if bounds.width != lastLayoutWidth {
+            lastLayoutWidth = bounds.width
+            updateSuggestionChrome()
+            if let r = indentedRow {
+                let inset = 3 + indentedRowInset * bounds.width / 10
+                r.layoutMargins = UIEdgeInsets(top: 5, left: inset, bottom: 5, right: inset)
+            }
+        }
     }
 
     /// Cập nhật gợi ý theo layout stock: ["nguyên văn"] | từ gợi ý | emoji(≤3),
@@ -246,7 +287,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
 
     func applyAppearance(_ appearance: UIKeyboardAppearance) {
-        dark = appearance == .dark
+        // Hầu hết host truyền .default — phải dò trait hệ thống, nếu không
+        // bàn phím sáng trưng trên máy dark mode.
+        dark = (appearance == .dark)
+            || (appearance != .light && traitCollection.userInterfaceStyle == .dark)
         rebuild()
     }
 
@@ -263,7 +307,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     // never fires (the missed-keypress bug). Retitle in place instead.
     private var letterKeys: [(button: UIButton, base: String)] = []
     private weak var spaceBar: UIButton?
-    private var shiftKey: UIButton?
+    private weak var spaceLogo: UIImageView?
+    private weak var indentedRow: UIStackView?
+    private var indentedRowInset: CGFloat = 0
+    private var shiftKey: KeyButton?
     private func applyShiftAppearance() {
         for (b, s) in letterKeys {
             b.setTitle(shift == .off ? s : s.uppercased(), for: .normal)
@@ -271,17 +318,35 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         if let b = shiftKey {
             let symbol = shift == .caps ? "capslock.fill" : (shift == .on ? "shift.fill" : "shift")
             b.setImage(UIImage(systemName: symbol), for: .normal)
-            b.backgroundColor = (shift != .off && !dark)
-                ? .white
-                : (dark ? UIColor(white: 1, alpha: 0.14) : UIColor(red: 0.68, green: 0.70, blue: 0.74, alpha: 1))
+            // Shift ON/CAPS = phím đảo màu (nền trắng, glyph đen) như stock —
+            // cả dark mode, nếu không ON và OFF trông y hệt nhau.
+            if shift != .off {
+                b.backgroundColor = .white
+                b.tintColor = .black
+            } else {
+                b.backgroundColor = specialFill
+                b.tintColor = dark ? .white : .black
+            }
+            b.normalBackground = b.backgroundColor
         }
     }
 
 
     // MARK: layout
 
+    // Dedupe: rebuild bị gọi 3 lần mỗi lần hiện (init, configureReturnKey,
+    // applyAppearance) — chỉ xé/dựng lại khi có gì đó thật sự đổi.
+    private var builtPlane: Plane?
+    private var builtReturn = ""
+    private var builtDark = false
+    private var builtWidth: CGFloat = -1
+
     private func rebuild() {
         updateSuggestionChrome()
+        if builtPlane == plane, builtReturn == returnTitle,
+           builtDark == dark, builtWidth == bounds.width { return }
+        builtPlane = plane; builtReturn = returnTitle
+        builtDark = dark; builtWidth = bounds.width
         letterKeys.removeAll()
         shiftKey = nil
         rowsContainer.distribution = .fillEqually
@@ -336,11 +401,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func buildPlane(rows planeRows: [[String]], moreKey: String, altKey: String) {
         rowsContainer.addArrangedSubview(row(planeRows[0].map(textButton)))
         rowsContainer.addArrangedSubview(row(planeRows[1].map(textButton)))
-        var third: [UIView] = [controlButton(title: moreKey) { [weak self] in
+        let more = controlButton(title: moreKey) { [weak self] in
             guard let self else { return }
             self.plane = (self.plane == .numbers) ? .symbols : .numbers
             self.rebuild()
-        }]
+        }
+        more.accessibilityLabel = moreKey == "#+=" ? "Ký hiệu" : "Số"
+        var third: [UIView] = [more]
         third += [".",",","?","!","'"].map(textButton)
         third.append(backspaceButton())
         rowsContainer.addArrangedSubview(row(third))
@@ -355,7 +422,22 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             if self.plane == .letters, self.shift == .on { self.shift = .off }
             self.rebuild()
         }
+        planeBtn.accessibilityLabel = planeKey == "123" ? "Số" : "Chữ"
         views.append(planeBtn)
+        // globe sát bên phải [123] như stock (muscle memory), emoji sau đó
+        if needsGlobe {
+            let globe = baseButton(title: "", special: true)
+            globe.setImage(UIImage(systemName: "globe"), for: .normal)
+            globe.tintColor = dark ? .white : .black
+            globe.accessibilityLabel = "Bàn phím tiếp theo"
+            if let c = inputController {
+                // hợp đồng Apple: event thật + allTouchEvents để long-press
+                // mở keyboard picker hoạt động
+                globe.addTarget(c, action: #selector(UIInputViewController.handleInputModeList(from:with:)),
+                                for: .allTouchEvents)
+            }
+            views.append(globe)
+        }
         // nút emoji bên trái space — icon đơn sắc như stock (user 2026-07-23)
         let emojiBtn = controlButton(title: "") { [weak self] in
             guard let self else { return }
@@ -365,18 +447,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         emojiBtn.setImage(UIImage(systemName: "face.smiling.inverse",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)), for: .normal)
         emojiBtn.tintColor = dark ? .white : .black
+        emojiBtn.accessibilityLabel = "Emoji"
         views.append(emojiBtn)
-        if needsGlobe {
-            let globe = baseButton(title: "", special: true)
-            globe.setImage(UIImage(systemName: "globe"), for: .normal)
-            globe.tintColor = dark ? .white : .black
-            globe.addAction(UIAction { [weak self, weak globe] _ in
-                if let g = globe { self?.onGlobe(g) }
-            }, for: .touchUpInside)
-            views.append(globe)
-        }
         let space = baseButton(title: "", special: true)
-        space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
+        space.backgroundColor = plainFill
+        space.normalBackground = plainFill
+        space.pressedBackground = specialFill      // space sẫm lại khi đè
+        space.accessibilityLabel = "Dấu cách"
         spaceBar = space
         // logo Vᴛ mờ ở mép phải nút space (thay "VI EN" — user 2026-07-23);
         // PNG 2x/3x render từ MenuIcon.pdf nên sắc nét, tint theo appearance.
@@ -388,6 +465,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             hint.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.16)
             hint.contentMode = .scaleAspectFit
             hint.translatesAutoresizingMaskIntoConstraints = false
+            spaceLogo = hint
             space.addSubview(hint)
             NSLayoutConstraint.activate([
                 hint.rightAnchor.constraint(equalTo: space.rightAnchor, constant: -10),
@@ -414,11 +492,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         views.append(space)
         // dấu phẩy bên phải space (user 2026-07-23)
         let comma = baseButton(title: ",", special: false)
+        comma.pressedBackground = specialFill
         comma.addAction(UIAction { [weak self] _ in self?.tapped(.text(",")) }, for: .touchUpInside)
         views.append(comma)
         let ret = controlButton(title: returnTitle == "return" ? "" : returnTitle) { [weak self] in
             self?.tapped(.newline)
         }
+        ret.accessibilityLabel = returnTitle == "return" ? "Xuống dòng" : returnTitle
         if returnTitle == "return" {
             ret.setImage(UIImage(systemName: "return.left",
                 withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular)), for: .normal)
@@ -446,9 +526,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         stack.spacing = 6
         stack.distribution = .fillProportionally
         stack.isLayoutMarginsRelativeArrangement = true
-        let unit = UIScreen.main.bounds.width / 10
+        // bounds.width có thể = 0 lúc init — layoutSubviews chỉnh lại ngay
+        // pass đầu (và sau mỗi lần xoay / đổi cỡ Split View)
+        let unit = bounds.width / 10
         stack.layoutMargins = UIEdgeInsets(top: 5, left: 3 + sideInset * unit,
                                            bottom: 5, right: 3 + sideInset * unit)
+        if sideInset > 0 { indentedRow = stack; indentedRowInset = sideInset }
         // equal widths for plain letter keys
         let letters = views.filter { ($0 as? KeyButton)?.isSpecial == false }
         if let first = letters.first {
@@ -464,6 +547,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private final class KeyButton: UIButton {
         var isSpecial = false
         var payload: String?    // suggestion slot: nội dung sẽ chèn khi bấm
+        var normalBackground: UIColor?
+        var pressedBackground: UIColor?   // nil = không đổi màu khi đè (phím chữ dùng balloon)
         // Khe hở giữa phím (spacing 6 + padding hàng 5) là VÙNG CHẾT với
         // UIButton thường — chạm trúng khe = mất phím. Stock keyboard route
         // mọi điểm chạm về phím gần nhất; mở rộng hit area phủ nửa khe cho
@@ -480,25 +565,34 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         b.isMultipleTouchEnabled = true
         b.isSpecial = special
         b.setTitle(title, for: .normal)
-        b.titleLabel?.font = .systemFont(ofSize: special ? 16 : 23)
+        b.titleLabel?.font = .systemFont(ofSize: special ? 16 : 25)
         b.layer.cornerRadius = 5
         b.setTitleColor(dark ? .white : .black, for: .normal)
-        b.backgroundColor = special
-            ? (dark ? UIColor(white: 1, alpha: 0.14) : UIColor(red: 0.68, green: 0.70, blue: 0.74, alpha: 1))
-            : (dark ? UIColor(white: 1, alpha: 0.30) : .white)
+        b.backgroundColor = special ? specialFill : plainFill
+        b.normalBackground = b.backgroundColor
         b.layer.shadowColor = UIColor.black.cgColor
         b.layer.shadowOffset = CGSize(width: 0, height: 1)
-        b.layer.shadowOpacity = dark ? 0 : 0.35
+        b.layer.shadowOpacity = dark ? 0.30 : 0.35
         b.layer.shadowRadius = 0
+        // Pressed state cho phím chức năng: swap màu phẳng, KHÔNG
+        // UIView.animate — animation per-touch trên main thread là latency
+        // thấy được trên bàn phím (lý do dùng .custom ở trên).
+        if special { b.pressedBackground = plainFill }
+        b.addAction(UIAction { [weak b] _ in
+            if let c = b?.pressedBackground { b?.backgroundColor = c }
+        }, for: .touchDown)
+        b.addAction(UIAction { [weak b] _ in
+            if b?.pressedBackground != nil, let c = b?.normalBackground { b?.backgroundColor = c }
+        }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
         return b
     }
 
-    // Âm click phát ở TOUCH-DOWN như stock (nguồn cảm giác "nhanh"), qua
-    // AudioServices — không cần Full Access: 1123 chữ, 1155 backspace, 1156 phím
-    // chức năng (kinh nghiệm IME cộng đồng).
-    static func clickLetter() { AudioServicesPlaySystemSound(1123) }
-    static func clickDelete() { AudioServicesPlaySystemSound(1155) }
-    static func clickModifier() { AudioServicesPlaySystemSound(1156) }
+    // Âm click phát ở TOUCH-DOWN như stock (nguồn cảm giác "nhanh").
+    // playInputClick tôn trọng Settings→Sounds→Keyboard Clicks (AudioServices
+    // trước đây bỏ qua setting); mất phân biệt 3 tông — chấp nhận.
+    static func clickLetter() { UIDevice.current.playInputClick() }
+    static func clickDelete() { UIDevice.current.playInputClick() }
+    static func clickModifier() { UIDevice.current.playInputClick() }
 
     // ROLLOVER: gõ nhanh thì ngón sau chạm xuống khi phím trước còn đè —
     // stock chốt phím trước ngay lúc đó. Thiếu rollover là ca "chữ ra chậm /
@@ -544,6 +638,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     // MARK: key preview balloon (clipped to our own bounds on the top row —
     // a documented extension limitation; see docs/ios-app.md)
     private let balloon = UILabel()
+    private var balloonShadowWidth: CGFloat = -1
     private func showBalloon(over key: UIView, text: String) {
         balloon.text = text
         balloon.font = .systemFont(ofSize: 34)
@@ -551,11 +646,23 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         balloon.textColor = dark ? .white : .black
         balloon.backgroundColor = dark ? UIColor(white: 0.35, alpha: 1) : .white
         balloon.layer.cornerRadius = 8
-        balloon.layer.masksToBounds = true
+        balloon.layer.masksToBounds = false   // cornerRadius vẫn bo nền; cần false để đổ bóng
+        balloon.layer.shadowColor = UIColor.black.cgColor
+        balloon.layer.shadowOffset = CGSize(width: 0, height: 1)
+        balloon.layer.shadowRadius = 2
+        balloon.layer.shadowOpacity = 0.3
         balloon.layer.zPosition = 10
         let f = convert(key.bounds, from: key)
         let w = max(f.width + 16, 44)
-        balloon.frame = CGRect(x: f.midX - w / 2, y: max(f.minY - 52, -6), width: w, height: 50)
+        // Bar gợi ý hiện = có 30pt headroom phía trên hàng phím đầu — cho
+        // balloon leo vào đó thay vì kẹp sát -6.
+        let topLimit: CGFloat = suggestionBar.isHidden ? -6 : 0
+        balloon.frame = CGRect(x: f.midX - w / 2, y: max(f.minY - 52, topLimit), width: w, height: 50)
+        if w != balloonShadowWidth {   // shadowPath cache theo width — tránh alloc mỗi phím
+            balloonShadowWidth = w
+            balloon.layer.shadowPath = UIBezierPath(
+                roundedRect: CGRect(x: 0, y: 0, width: w, height: 50), cornerRadius: 8).cgPath
+        }
         if balloon.superview == nil { addSubview(balloon) }
         balloon.isHidden = false
     }
@@ -563,8 +670,16 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private func textButton(_ s: String) -> UIView {
         let b = baseButton(title: s, special: false)
-        b.addAction(UIAction { _ in Self.clickLetter() }, for: .touchDown)
-        b.addAction(UIAction { [weak self] _ in self?.tapped(.text(s)) }, for: .touchUpInside)
+        b.addAction(UIAction { [weak self, weak b] _ in
+            Self.clickLetter()
+            if let self, let b { self.showBalloon(over: b, text: s) }
+        }, for: .touchDown)
+        b.addAction(UIAction { [weak self] _ in
+            self?.hideBalloon()
+            self?.tapped(.text(s))
+        }, for: .touchUpInside)
+        b.addAction(UIAction { [weak self] _ in self?.hideBalloon() },
+                    for: [.touchUpOutside, .touchCancel])
         return b
     }
 
@@ -579,9 +694,17 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let symbol = shift == .caps ? "capslock.fill" : (shift == .on ? "shift.fill" : "shift")
         let b = baseButton(title: "", special: true)
         b.setImage(UIImage(systemName: symbol), for: .normal)
-        b.tintColor = dark ? .white : .black
-        if shift != .off && !dark { b.backgroundColor = .white }
+        b.accessibilityLabel = "Shift"
+        if shift != .off {
+            b.backgroundColor = .white
+            b.tintColor = .black
+        } else {
+            b.tintColor = dark ? .white : .black
+        }
+        b.normalBackground = b.backgroundColor
         shiftKey = b
+        // Toggle ở TOUCH-DOWN: roll shift+chữ nhanh phải ra chữ hoa —
+        // touch-up thì chữ đã kịp chốt trước khi shift bật.
         b.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             let now = CACurrentMediaTime()
@@ -589,7 +712,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             else { self.shift = (self.shift == .off) ? .on : .off }
             self.lastShiftTap = now
             self.applyShiftAppearance()
-        }, for: .touchUpInside)
+        }, for: .touchDown)
         b.widthAnchor.constraint(greaterThanOrEqualToConstant: 42).isActive = true
         return b
     }
@@ -597,7 +720,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func backspaceButton() -> UIView {
         let b = baseButton(title: "", special: true)
         b.setImage(UIImage(systemName: "delete.left"), for: .normal)
+        b.setImage(UIImage(systemName: "delete.left.fill"), for: .highlighted)
         b.tintColor = dark ? .white : .black
+        b.accessibilityLabel = "Xoá"
         b.addAction(UIAction { [weak self] _ in
             Self.clickDelete()
             self?.tapped(.backspace)
@@ -637,14 +762,35 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         switch g.state {
         case .began:
             spaceHoldX = x
+            setTrackpadDimmed(true)
         case .changed:
             let delta = Int((x - spaceHoldX) / 9)
             if delta != 0 {
                 tapped(.moveCursor(delta))
                 spaceHoldX = x
             }
+        case .ended, .cancelled, .failed:
+            setTrackpadDimmed(false)
         default: break
         }
+    }
+
+    /// Trackpad mode: mờ keycap + phẳng màu phím như stock — báo hiệu đang
+    /// di caret chứ không gõ. Không nằm trên hot path (chỉ chạy khi hold 0.4s).
+    private var trackpadDimmed = false
+    private func setTrackpadDimmed(_ dim: Bool) {
+        guard dim != trackpadDimmed else { return }
+        trackpadDimmed = dim
+        hideBalloon()
+        func walk(_ v: UIView) {
+            if let b = v as? KeyButton {
+                for sub in b.subviews { sub.alpha = dim ? 0.2 : 1 }
+                b.backgroundColor = dim ? plainFill : (b.normalBackground ?? b.backgroundColor)
+            } else {
+                v.subviews.forEach(walk)
+            }
+        }
+        walk(rowsContainer)
     }
 
     /// Stock iOS flashes the layout name ("English (US)") on the spacebar when
@@ -656,6 +802,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         l.font = .systemFont(ofSize: 16, weight: .regular)
         l.textColor = dark ? .white : .black
         l.translatesAutoresizingMaskIntoConstraints = false
+        spaceLogo?.isHidden = true     // logo Vᴛ nhường chỗ, khỏi đè lên badge
         space.addSubview(l)
         NSLayoutConstraint.activate([
             l.centerXAnchor.constraint(equalTo: space.centerXAnchor),
@@ -663,8 +810,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         ])
         UIView.animate(withDuration: 0.3, delay: 0.7, options: [.curveEaseOut]) {
             l.alpha = 0
-        } completion: { _ in
+        } completion: { [weak self] _ in
             l.removeFromSuperview()
+            self?.spaceLogo?.isHidden = false
         }
     }
 

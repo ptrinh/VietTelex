@@ -22,6 +22,14 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
         "clock", "face.smiling", "hare", "fork.knife", "soccerball",
         "car.fill", "lightbulb", "heart", "flag",
     ]
+    // Tiêu đề section nhỏ màu xám phía trên cột đầu của category (như stock).
+    private static let headerBand: CGFloat = 14
+    private static let displayNames: [String: String] = [
+        "recents": "THƯỜNG DÙNG", "smileys": "MẶT CƯỜI & NGƯỜI",
+        "animals": "ĐỘNG VẬT & THIÊN NHIÊN", "food": "ĐỒ ĂN & ĐỒ UỐNG",
+        "activity": "HOẠT ĐỘNG", "travel": "DU LỊCH & ĐỊA ĐIỂM",
+        "objects": "ĐỒ VẬT", "symbols": "BIỂU TƯỢNG", "flags": "CỜ",
+    ]
 
     init(dark: Bool) {
         super.init(frame: .zero)
@@ -33,6 +41,8 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    deinit { repeatTimer?.invalidate() }
 
     private var recents: [String] {
         UserDefaultsProvider.shared?.stringArray(forKey: Self.recentsKey) ?? []
@@ -60,13 +70,17 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
         layout.scrollDirection = .horizontal        // column-major như stock
         layout.minimumLineSpacing = 8
         layout.minimumInteritemSpacing = 4
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 6, bottom: 0, right: 6)
+        // dải trống phía trên nhường chỗ cho tiêu đề section
+        layout.sectionInset = UIEdgeInsets(top: Self.headerBand, left: 6, bottom: 0, right: 6)
         collection = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collection.backgroundColor = .clear
         collection.showsHorizontalScrollIndicator = false
         collection.dataSource = self
         collection.delegate = self
         collection.register(EmojiCell.self, forCellWithReuseIdentifier: "e")
+        collection.register(HeaderView.self,
+                            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+                            withReuseIdentifier: "h")
         collection.translatesAutoresizingMaskIntoConstraints = false
         collection.isMultipleTouchEnabled = true
         addSubview(collection)
@@ -222,10 +236,26 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
 
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout,
                         sizeForItemAt indexPath: IndexPath) -> CGSize {
-        // 4 hàng lấp đầy chiều cao — cỡ emoji lớn như stock
-        let rows: CGFloat = 4
-        let h = (collectionView.bounds.height - 3 * 4) / rows
+        // 5 hàng như stock; trừ dải tiêu đề section phía trên
+        let rows: CGFloat = 5
+        let h = (collectionView.bounds.height - Self.headerBand - (rows - 1) * 4) / rows
         return CGSize(width: max(h, 10), height: max(h, 10))
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout,
+                        referenceSizeForHeaderInSection section: Int) -> CGSize {
+        // strip dọc mảnh; label không clip nên nổi ngang qua dải headerBand
+        CGSize(width: 8, height: 0)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String,
+                        at indexPath: IndexPath) -> UICollectionReusableView {
+        let v = collectionView.dequeueReusableSupplementaryView(
+            ofKind: kind, withReuseIdentifier: "h", for: indexPath) as! HeaderView
+        let name = sections[indexPath.section].name
+        v.label.text = Self.displayNames[name] ?? name.uppercased()
+        v.label.textColor = (dark ? UIColor.white : .black).withAlphaComponent(0.5)
+        return v
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -256,6 +286,22 @@ final class EmojiPlane: UIView, UICollectionViewDataSource, UICollectionViewDele
                 label.rightAnchor.constraint(equalTo: contentView.rightAnchor),
                 label.topAnchor.constraint(equalTo: contentView.topAnchor),
                 label.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            ])
+        }
+        required init?(coder: NSCoder) { fatalError() }
+    }
+
+    private final class HeaderView: UICollectionReusableView {
+        let label = UILabel()
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            clipsToBounds = false          // label rộng hơn strip 8pt — cố ý
+            label.font = .systemFont(ofSize: 11, weight: .semibold)
+            label.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(label)
+            NSLayoutConstraint.activate([
+                label.leftAnchor.constraint(equalTo: leftAnchor, constant: 2),
+                label.topAnchor.constraint(equalTo: topAnchor),
             ])
         }
         required init?(coder: NSCoder) { fatalError() }

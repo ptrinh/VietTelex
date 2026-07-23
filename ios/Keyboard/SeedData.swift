@@ -5,8 +5,12 @@
 // (+1/lần, accepted +2) sẽ vượt seed sau vài ngày; decay tuần làm seed mờ dần.
 import Foundation
 
+// PERF: computed var (không phải stored let) — literal ~1400 entries chỉ build
+// khi thật sự seed (store trống), giải phóng ngay sau đó thay vì găm
+// ~150-250KB suốt đời keyboard; seedIfEmpty nhận @autoclosure nên store đã có
+// dữ liệu thì literal không bao giờ được build.
 enum SeedData {
-    static let unigrams: [String: Int] = [
+    static var unigrams: [String: Int] { [
         "không": 47, "tôi": 48, "anh": 49, "là": 47, "có": 44, "của": 42, "đi": 42, "đã": 42,
         "gì": 41, "sẽ": 41, "ta": 41, "và": 41, "đó": 41, "được": 41, "cô": 40, "một": 40,
         "này": 40, "phải": 40, "rồi": 40, "cho": 39, "người": 39, "em": 50, "làm": 38, "nó": 38,
@@ -121,9 +125,9 @@ enum SeedData {
         "github": 5, "claude": 5, "tesla": 5, "openai": 4, "anthropic": 3, "yahoo": 4, "outlook": 4, "hotmail": 3,
         "đcm": 8, "đm": 8, "dm": 8, "vcl": 10, "vkl": 6, "vl": 12, "clgt": 4, "cứt": 8, "vãi": 10, "cmnr": 5, "chửi": 8, "cướp": 6, "giết": 8, "hiếp": 3, "trộm": 5, "fuck": 5, "shit": 5, "lừa": 7, "đểu": 5, "xạo": 6,
         "lồn": 5, "địt": 5, "đụ": 4, "đĩ": 4, "tml": 5, "sml": 5, "dâm": 4, "dê": 4, "tục": 4, "tĩu": 3, "thối": 5, "um": 3, "rắm": 4, "sấp": 4, "ngu": 8, "si": 4, "đần": 4, "độn": 3, "tha": 4, "khốn": 5, "nạn": 5, "má": 8,
-    ]
+    ] }
 
-    static let bigrams: [(String, String, Int)] = [
+    static var bigrams: [(String, String, Int)] { [
         ("chúng", "ta", 49), ("có", "thể", 46), ("chúng", "tôi", 41), ("cảm", "ơn", 40), ("hôm", "nay", 40),
         ("không", "thể", 36), ("anh", "ơi", 35), ("xin", "lỗi", 35), ("tất", "cả", 33), ("em", "ơi", 32),
         ("được", "rồi", 30), ("bao", "giờ", 29), ("tại", "sao", 29), ("bây", "giờ", 28), ("không", "sao", 28),
@@ -227,5 +231,5 @@ enum SeedData {
         ("đình", "phong", 3),
         ("như", "cứt", 6), ("ngon", "vl", 8), ("mệt", "vl", 6), ("đau", "vcl", 4), ("fuck", "you", 6), ("vãi", "cả", 4), ("lừa", "đảo", 7), ("cướp", "giật", 4),
         ("vãi", "lồn", 5), ("địt", "mẹ", 5), ("bố", "mày", 7), ("con", "đĩ", 4), ("thằng", "mặt", 4), ("mặt", "lồn", 4), ("dâm", "dê", 4), ("tục", "tĩu", 4), ("cả", "lồn", 4), ("đụ", "má", 4), ("má", "mày", 4), ("thối", "um", 3), ("đánh", "rắm", 4), ("sấp", "mặt", 5), ("ngu", "si", 4), ("đần", "độn", 4), ("thối", "tha", 4), ("khốn", "nạn", 6), ("mất", "dạy", 4),
-    ]
+    ] }
 }
