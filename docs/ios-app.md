@@ -111,3 +111,6 @@ Bundle id mới, không đụng registration macOS: `com.viettelex.ios` +
 1. Phím emoji: bỏ (giữ globe) hay tự làm picker? — đề xuất BỎ.
 2. iOS tối thiểu: đề xuất **iOS 16**.
 3. Suggestion bar: phase 2 hay bỏ hẳn (cần từ điển tần suất, ngoài scope engine).
+
+
+> Thiết kế chi tiết hệ thống gợi ý (suggestion bar, datastore cá nhân hóa, inline suggestion): xem [IOS-SUGGESTIONS.md](IOS-SUGGESTIONS.md).
