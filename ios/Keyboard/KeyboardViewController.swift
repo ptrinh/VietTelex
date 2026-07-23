@@ -148,9 +148,27 @@ final class KeyboardViewController: UIInputViewController {
     /// Gợi ý cho từ đang gõ: emoji (khớp cả "yêu" lẫn "love" — bảng
     /// EmojiSuggest) + hoàn thiện từ tiếng Việt từ VNLexicon ("nguoi"/"ng" →
     /// "người"): ưu tiên ứng viên chỉ khác dấu, rồi completion dài hơn.
+    /// Đuôi email/domain phổ biến — rule cứng theo ngữ cảnh, không qua datastore
+    /// (token chứa @/. không phải "từ" học được).
+    private static let emailSuffixes = ["gmail.com", "yahoo.com", "outlook.com"]
+    private static let domainTLDs = ["com", "vn", "net"]
+
     private func updateSuggestions() {
         let composed = bridge.composedWord
         var set = KeyboardView.SuggestionSet()
+        // Ngữ cảnh email/domain: "phuc@" → gợi đuôi mail; "github." → gợi TLD.
+        if composed.isEmpty, let before = textDocumentProxy.documentContextBeforeInput,
+           let last = before.split(separator: " ").last {
+            if last.hasSuffix("@"), last.count > 1 {
+                keyboard.showSuggestions(.init(nextWords: Self.emailSuffixes))
+                return
+            }
+            if last.hasSuffix("."), last.count > 1,
+               last.dropLast().allSatisfy({ $0.isLetter || $0.isNumber }) {
+                keyboard.showSuggestions(.init(nextWords: Self.domainTLDs))
+                return
+            }
+        }
         if !composed.isEmpty {
             set.literal = composed
             // Inline suggestion (research 2026-07-24): pool tương thích dấu từ
@@ -193,7 +211,8 @@ final class KeyboardViewController: UIInputViewController {
     private func acceptSuggestion(_ item: String) {
         applyingEdit = true
         defer { applyingEdit = false }
-        let isWord = item.first?.isLetter == true
+        let isFragment = item.contains(".") || item.contains("@")   // gmail.com, com…
+        let isWord = !isFragment && item.first?.isLetter == true
         let n = bridge.composedWord.count
         for _ in 0..<n { textDocumentProxy.deleteBackward() }
         textDocumentProxy.insertText(isWord ? item + " " : item)

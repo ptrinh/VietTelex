@@ -23,6 +23,9 @@ enum DisplayCase {
         "arsenal": "Arsenal", "liverpool": "Liverpool", "chelsea": "Chelsea",
         "manchester": "Manchester", "bitcoin": "Bitcoin", "ethereum": "Ethereum",
         "binance": "Binance", "netflix": "Netflix", "spotify": "Spotify",
+        "github": "GitHub", "claude": "Claude", "chatgpt": "ChatGPT",
+        "tesla": "Tesla", "openai": "OpenAI", "anthropic": "Anthropic",
+        "yahoo": "Yahoo", "hotmail": "Hotmail",
         // OS / phần mềm
         "windows": "Windows", "macos": "macOS", "ios": "iOS",
         "android": "Android", "linux": "Linux", "chrome": "Chrome",

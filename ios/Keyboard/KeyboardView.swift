@@ -109,9 +109,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// Cập nhật gợi ý theo layout stock: ["nguyên văn"] | từ gợi ý | emoji(≤3),
     /// ngăn cách bằng divider mảnh. Mảng rỗng → dọn bar.
     struct SuggestionSet {
-        var literal: String?
-        var word: String?
-        var word2: String?             // ứng viên inline thứ hai (khi không có emoji)
+        var literal: String? = nil
+        var word: String? = nil
+        var word2: String? = nil       // ứng viên inline thứ hai (khi không có emoji)
         var emojis: [String] = []
         var nextWords: [String] = []   // gợi ý khi CHƯA gõ (đầu câu / sau space)
         var isEmpty: Bool {

@@ -118,6 +118,7 @@ enum SeedData {
         "đình": 6, "bá": 5, "bích": 5, "diệu": 5, "trọng": 5, "khắc": 4,
         // — bổ sung 2026-07-24 (5): hệ điều hành / phần mềm —
         "windows": 6, "macos": 6, "ios": 6, "android": 6, "chrome": 5, "linux": 4, "safari": 4, "excel": 4, "word": 4,
+        "github": 5, "claude": 5, "tesla": 5, "openai": 4, "anthropic": 3, "yahoo": 4, "outlook": 4, "hotmail": 3,
     ]
 
     static let bigrams: [(String, String, Int)] = [

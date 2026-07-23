@@ -186,6 +186,9 @@ final class DisplayCaseTests: XCTestCase {
         XCTAssertEqual(DisplayCase.apply("iphone"), "iPhone")
         XCTAssertEqual(DisplayCase.apply("macos"), "macOS")
         XCTAssertEqual(DisplayCase.apply("nguyễn"), "Nguyễn")
+        XCTAssertEqual(DisplayCase.apply("github"), "GitHub")
+        XCTAssertEqual(DisplayCase.apply("chatgpt"), "ChatGPT")
+        XCTAssertEqual(DisplayCase.apply("claude"), "Claude")
         // từ thường giữ nguyên; token nhập nhằng KHÔNG được hoa
         XCTAssertEqual(DisplayCase.apply("cảm"), "cảm")
         XCTAssertEqual(DisplayCase.apply("trang"), "trang")
