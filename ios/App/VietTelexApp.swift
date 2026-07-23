@@ -85,7 +85,7 @@ struct SettingsSection: View {
     @AppStorage("freeMarking", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var freeMarking = true
     @AppStorage("simpleTelex", store: UserDefaults(suiteName: "group.com.viettelex"))
-    private var simpleTelex = false
+    private var simpleTelex = true
     @AppStorage("quickTelex", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var quickTelex = false
     @AppStorage("modernTone", store: UserDefaults(suiteName: "group.com.viettelex"))

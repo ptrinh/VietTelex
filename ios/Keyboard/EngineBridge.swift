@@ -14,8 +14,10 @@ protocol TextProxyLike {
 
 /// Shared settings (App Group on device; in-memory defaults in tests).
 struct KeyboardSettings {
-    var freeMarking = true       // app defaults, same as macOS 1.3.x
-    var simpleTelex = false
+    // Defaults iOS (user 2026-07-24): Telex đơn giản BẬT + bỏ dấu tự do BẬT +
+    // tự khôi phục tiếng Anh BẬT. (Khác macOS: simpleTelex mặc định tắt.)
+    var freeMarking = true
+    var simpleTelex = true
     var liveSpellCheck = true
     var autoRestore = true
     var quickTelex = false
