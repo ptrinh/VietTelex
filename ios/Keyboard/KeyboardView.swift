@@ -228,7 +228,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             self.plane = .emoji
             self.rebuild()
         }
-        emojiBtn.setImage(UIImage(systemName: "face.grinning",
+        emojiBtn.setImage(UIImage(systemName: "face.smiling.inverse",
             withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)), for: .normal)
         emojiBtn.tintColor = dark ? .white : .black
         views.append(emojiBtn)
