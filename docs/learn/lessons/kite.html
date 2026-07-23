@@ -804,8 +804,10 @@ function langWords() {
   return out.length ? out : WORDS;
 }
 function levelPool() {
-  // lv1 ≤2 chữ, lv2 ≤3, lv3 ≤4, lv4 ≤5, lv5+ không giới hạn
-  var maxLen = level <= 4 ? level + 1 : Infinity;
+  // VI: lv1 ≤2 chữ, lv2 ≤3, lv3 ≤4, lv4 ≤5, lv5+ không giới hạn.
+  // EN dài hơn tiếng Việt một nhịp (từ 2 chữ gần như chỉ có "up" — pool
+  // level 1 toàn một từ): nới +1 → lv1 ≤3, lv2 ≤4, lv3 ≤5, lv4 ≤6.
+  var maxLen = level <= 4 ? level + (gameLang === 'en' ? 2 : 1) : Infinity;
   var all = langWords();
   var pool = all.filter(function (w) { return Array.from(w.d).length <= maxLen; });
   return pool.length ? pool : all;
