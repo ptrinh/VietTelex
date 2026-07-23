@@ -11,6 +11,15 @@ struct VietTelexApp: App {
 }
 
 struct RootView: View {
+    /// "1.0.0 · build 24/07/2026" — ngày build = mtime của binary.
+    static var versionLine: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let exe = (Bundle.main.executableURL ?? Bundle.main.bundleURL).path
+        let date = (try? FileManager.default.attributesOfItem(atPath: exe)[.modificationDate]) as? Date ?? Date()
+        let f = DateFormatter(); f.dateFormat = "dd/MM/yyyy"
+        return "\(v) · build \(f.string(from: date))"
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -21,6 +30,9 @@ struct RootView: View {
                 }
                 SettingsSection()
                 Section {
+                    Link(destination: URL(string: "https://ptrinh.github.io/viettelex/")!) {
+                        Label("Website", systemImage: "globe")
+                    }
                     Link(destination: URL(string: "https://ptrinh.github.io/viettelex/learn/")!) {
                         Label("Học gõ Telex (mở trình duyệt)", systemImage: "graduationcap")
                     }
@@ -29,11 +41,12 @@ struct RootView: View {
                     }
                 } header: { Text("Tài nguyên") }
                 Section {
-                    LabeledContent("Phiên bản",
-                                   value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+                    LabeledContent("Phiên bản", value: Self.versionLine)
+                    Text("© Phil Trinh \(Calendar.current.component(.year, from: Date()))")
+                        .font(.footnote).foregroundStyle(.secondary)
                     Text("Không Full Access · Không mạng · Không thu thập dữ liệu")
                         .font(.footnote).foregroundStyle(.secondary)
-                }
+                } header: { Text("Giới thiệu") }
             }
             .navigationTitle("VietTelex")
         }
@@ -59,6 +72,7 @@ struct OnboardingCard: View {
                 Text("Mở Cài đặt").font(.headline).frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .tint(.blue)
         }
         .padding(20)
         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 18))
@@ -72,6 +86,10 @@ struct SettingsSection: View {
     private var freeMarking = true
     @AppStorage("simpleTelex", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var simpleTelex = false
+    @AppStorage("quickTelex", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var quickTelex = false
+    @AppStorage("modernTone", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var modernTone = false
     @AppStorage("liveSpellCheck", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var liveSpellCheck = true
     @AppStorage("autoRestore", store: UserDefaults(suiteName: "group.com.viettelex"))
@@ -80,20 +98,24 @@ struct SettingsSection: View {
     private var showSpaceLogo = true
     @AppStorage("showSuggestions", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var showSuggestions = true
-    @AppStorage("learnWords", store: UserDefaults(suiteName: "group.com.viettelex"))
-    private var learnWords = true
     @AppStorage("filterSensitive", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var filterSensitive = true
 
     var body: some View {
         Section {
+            Toggle("Telex đơn giản", isOn: $simpleTelex)
             Toggle("Bỏ dấu tự do", isOn: $freeMarking)
-            Toggle("Simple Telex (w lẻ giữ nguyên)", isOn: $simpleTelex)
-            Toggle("Kiểm tra chính tả khi gõ", isOn: $liveSpellCheck)
+            Toggle("Gõ nhanh (Quick Telex)", isOn: $quickTelex)
+            Toggle("Bỏ dấu kiểu mới", isOn: $modernTone)
+        } header: { Text("Kiểu gõ") }
+
+        Section {
             Toggle("Tự khôi phục từ tiếng Anh", isOn: $autoRestore)
-            Toggle("Hiện logo Vᴛ trên phím space", isOn: $showSpaceLogo)
-            Toggle("Thanh gợi ý (emoji)", isOn: $showSuggestions)
-            Toggle("Học từ hay dùng (trên máy)", isOn: $learnWords)
+            Toggle("Kiểm tra chính tả khi gõ", isOn: $liveSpellCheck)
+            Toggle("Hiện logo Vᴛ", isOn: $showSpaceLogo)
+            // Thanh gợi ý bật = tự học từ hay dùng (learnWords đi theo, không
+            // còn toggle riêng — quyết định 2026-07-24)
+            Toggle("Thanh gợi ý", isOn: $showSuggestions)
             Toggle("Lọc từ nhạy cảm khỏi gợi ý", isOn: $filterSensitive)
             Button("Xóa từ đã học", role: .destructive) {
                 if let dir = FileManager.default
@@ -102,8 +124,8 @@ struct SettingsSection: View {
                     try? FileManager.default.removeItem(at: dir.appendingPathComponent("userlm.json"))
                 }
             }
-        } header: { Text("Cách gõ") } footer: {
-            Text("Cài đặt áp dụng ngay lần mở bàn phím kế tiếp. Ví dụ: vieetj → việt, dd → đ, w → ư.")
+        } header: { Text("Tính năng") } footer: {
+            Text("Cài đặt áp dụng ngay lần mở bàn phím kế tiếp.")
         }
     }
 }

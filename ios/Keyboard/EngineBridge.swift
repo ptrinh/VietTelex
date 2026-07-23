@@ -18,8 +18,10 @@ struct KeyboardSettings {
     var simpleTelex = false
     var liveSpellCheck = true
     var autoRestore = true
+    var quickTelex = false
+    var modernTone = false
     var showSuggestions = true
-    var learnWords = true
+    var learnWords = true      // đi theo showSuggestions (không còn toggle riêng)
     var filterSensitive = true
 
     static func load() -> KeyboardSettings {
@@ -29,9 +31,11 @@ struct KeyboardSettings {
         if d.object(forKey: "simpleTelex") != nil { s.simpleTelex = d.bool(forKey: "simpleTelex") }
         if d.object(forKey: "liveSpellCheck") != nil { s.liveSpellCheck = d.bool(forKey: "liveSpellCheck") }
         if d.object(forKey: "autoRestore") != nil { s.autoRestore = d.bool(forKey: "autoRestore") }
+        if d.object(forKey: "quickTelex") != nil { s.quickTelex = d.bool(forKey: "quickTelex") }
+        if d.object(forKey: "modernTone") != nil { s.modernTone = d.bool(forKey: "modernTone") }
         if d.object(forKey: "showSuggestions") != nil { s.showSuggestions = d.bool(forKey: "showSuggestions") }
-        if d.object(forKey: "learnWords") != nil { s.learnWords = d.bool(forKey: "learnWords") }
         if d.object(forKey: "filterSensitive") != nil { s.filterSensitive = d.bool(forKey: "filterSensitive") }
+        s.learnWords = s.showSuggestions   // bật gợi ý = bật học (quyết định 2026-07-24)
         return s
     }
 }
@@ -51,6 +55,8 @@ final class EngineBridge {
         engine.freeMarking = settings.freeMarking
         engine.simpleTelex = settings.simpleTelex
         engine.liveSpellCheck = settings.liveSpellCheck
+        engine.quickTelex = settings.quickTelex
+        engine.modernTone = settings.modernTone
     }
 
     /// A letter key ("a"…"z", already cased by the shift state).
