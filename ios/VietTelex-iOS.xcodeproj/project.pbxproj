@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */; };
+		3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B913AFA01B930811B2848696 /* SpaceLogo@2x.png */; };
 		5219B81A88BC7A0F77DC8467 /* TelexCore in Frameworks */ = {isa = PBXBuildFile; productRef = BE8679AE19C0C9801BE52ADF /* TelexCore */; };
 		54B0665D29CB3187CEBF5157 /* KeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941319FB73DCEB18DDE2E232 /* KeyboardView.swift */; };
 		593AA8DEA7AFB11D6005F173 /* EngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD709650C25830CA926EBCF /* EngineBridge.swift */; };
@@ -15,6 +16,7 @@
 		6689B752583E4AE424F48573 /* EngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD709650C25830CA926EBCF /* EngineBridge.swift */; };
 		CF7F1ABF1498FE511CA6CA87 /* VietTelexKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 09561C431C2FC4B6BAFD5DB7 /* VietTelexKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D4DEA988483DB59F683B8407 /* EngineBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AE58D76A8127D641A2AF62 /* EngineBridgeTests.swift */; };
+		D902A388BD011F37220F5C53 /* SpaceLogo@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */; };
 		DBE4AB9A3B654D9D44392251 /* TelexCore in Frameworks */ = {isa = PBXBuildFile; productRef = E6EA46A66DF9410EF89A3FC9 /* TelexCore */; };
 /* End PBXBuildFile section */
 
@@ -51,8 +53,10 @@
 		853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
 		8AD709650C25830CA926EBCF /* EngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridge.swift; sourceTree = "<group>"; };
 		941319FB73DCEB18DDE2E232 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
+		B913AFA01B930811B2848696 /* SpaceLogo@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "SpaceLogo@2x.png"; sourceTree = "<group>"; };
 		CAD72939A03B2CDB528A0C4A /* Keyboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Keyboard.entitlements; sourceTree = "<group>"; };
 		CCEDEE554C73498F36146A9D /* VietTelexApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VietTelexApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "SpaceLogo@3x.png"; sourceTree = "<group>"; };
 		E5AE58D76A8127D641A2AF62 /* EngineBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridgeTests.swift; sourceTree = "<group>"; };
 		F2C9781CE8B936C962B3EBA8 /* TelexCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TelexCore; path = ../TelexCore; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -123,6 +127,8 @@
 				CAD72939A03B2CDB528A0C4A /* Keyboard.entitlements */,
 				941319FB73DCEB18DDE2E232 /* KeyboardView.swift */,
 				853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */,
+				B913AFA01B930811B2848696 /* SpaceLogo@2x.png */,
+				DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */,
 			);
 			path = Keyboard;
 			sourceTree = "<group>";
@@ -181,6 +187,7 @@
 			buildConfigurationList = 6D180C3F93EC4E175187C06C /* Build configuration list for PBXNativeTarget "VietTelexKeyboard" */;
 			buildPhases = (
 				607477B7E605AF0A89A20B21 /* Sources */,
+				2030DF129A4B1A93660EB0A2 /* Resources */,
 				8B71F08A9B2078628BECDB15 /* Frameworks */,
 			);
 			buildRules = (
@@ -238,6 +245,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2030DF129A4B1A93660EB0A2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D9FF1966D0667F67B245548 /* SpaceLogo@2x.png in Resources */,
+				D902A388BD011F37220F5C53 /* SpaceLogo@3x.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		607477B7E605AF0A89A20B21 /* Sources */ = {

@@ -16,7 +16,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         case moveCursor(Int)          // space-hold trackpad mode
     }
 
-    private enum Plane { case letters, numbers, symbols }
+    private enum Plane { case letters, numbers, symbols, emoji }
     private enum ShiftState { case off, on, caps }
 
     var enableInputClicksWhenVisible: Bool { true }
@@ -130,12 +130,15 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         case .letters: buildLetters()
         case .numbers: buildPlane(rows: [
             ["1","2","3","4","5","6","7","8","9","0"],
-            ["-","/",":",";","(",")","₫","&","@","\""],
+            // $ ở đúng chỗ bàn phím EN (user 2026-07-23); ₫ chuyển sang plane #+=
+            ["-","/",":",";","(",")","$","&","@","\""],
         ], moreKey: "#+=", altKey: "ABC")
         case .symbols: buildPlane(rows: [
             ["[","]","{","}","#","%","^","*","+","="],
-            ["_","\\","|","~","<",">","$","£","¥","•"],
+            // 3 currencies: EUR, CNY, VND (₫ thế chỗ JPY của layout EN)
+            ["_","\\","|","~","<",">","€","¥","₫","•"],
         ], moreKey: "123", altKey: "ABC")
+        case .emoji: buildEmoji()
         }
     }
 
@@ -151,6 +154,48 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         third.append(backspaceButton())
         rowsContainer.addArrangedSubview(row(third))
         rowsContainer.addArrangedSubview(bottomRow(planeKey: "123"))
+    }
+
+    // M1 emoji plane: static grid of everyday emoji (extensions cannot summon
+    // the system emoji keyboard). Categories/search are M2.
+    private static let emojiSet: [[String]] = [
+        ["😀","😂","🥰","😍","😘","😊","😉","🤗"],
+        ["👍","🙏","👏","💪","🤝","👌","✌️","🫶"],
+        ["❤️","💕","😢","😭","😅","😴","🤔","😡"],
+        ["🎉","🔥","✨","⭐","🌸","☀️","🌈","🍀"],
+    ]
+    private func buildEmoji() {
+        for line in Self.emojiSet {
+            let buttons: [UIView] = line.map { e in
+                let b = baseButton(title: e, special: false)
+                b.titleLabel?.font = .systemFont(ofSize: 28)
+                b.backgroundColor = .clear
+                b.layer.shadowOpacity = 0
+                b.addAction(UIAction { [weak self] _ in self?.tapped(.text(e)) }, for: .touchUpInside)
+                return b
+            }
+            rowsContainer.addArrangedSubview(row(buttons))
+        }
+        // hàng dưới: về ABC, space, xoá
+        var views: [UIView] = [controlButton(title: "ABC") { [weak self] in
+            guard let self else { return }
+            self.plane = .letters
+            self.rebuild()
+        }]
+        let space = baseButton(title: "space", special: true)
+        space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
+        space.addAction(UIAction { [weak self] _ in self?.tapped(.space) }, for: .touchUpInside)
+        space.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        views.append(space)
+        views.append(backspaceButton())
+        let stack = UIStackView(arrangedSubviews: views)
+        stack.axis = .horizontal
+        stack.spacing = 6
+        stack.distribution = .fill
+        stack.isLayoutMarginsRelativeArrangement = true
+        stack.layoutMargins = UIEdgeInsets(top: 5, left: 3, bottom: 5, right: 3)
+        views[0].widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.16).isActive = true
+        rowsContainer.addArrangedSubview(stack)
     }
 
     private func buildPlane(rows planeRows: [[String]], moreKey: String, altKey: String) {
@@ -176,6 +221,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             self.rebuild()
         }
         views.append(planeBtn)
+        // nút emoji bên trái space (user 2026-07-23)
+        let emojiBtn = controlButton(title: "😀") { [weak self] in
+            guard let self else { return }
+            self.plane = .emoji
+            self.rebuild()
+        }
+        views.append(emojiBtn)
         if needsGlobe {
             let globe = baseButton(title: "", special: true)
             globe.setImage(UIImage(systemName: "globe"), for: .normal)
@@ -187,16 +239,18 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         let space = baseButton(title: "space", special: true)
         space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
-        // faint "VI EN" on the right edge, like the stock Vietnamese keyboard
-        let hint = UILabel()
-        hint.text = "VI EN"
-        hint.font = .systemFont(ofSize: 11, weight: .semibold)
-        hint.textColor = (dark ? UIColor.white : .black).withAlphaComponent(0.25)
+        // logo Vᴛ mờ ở mép phải nút space (thay "VI EN" — user 2026-07-23);
+        // PNG 2x/3x render từ MenuIcon.pdf nên sắc nét, tint theo appearance.
+        let hint = UIImageView(image: UIImage(named: "SpaceLogo")?.withRenderingMode(.alwaysTemplate))
+        hint.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.28)
+        hint.contentMode = .scaleAspectFit
         hint.translatesAutoresizingMaskIntoConstraints = false
         space.addSubview(hint)
         NSLayoutConstraint.activate([
             hint.rightAnchor.constraint(equalTo: space.rightAnchor, constant: -10),
             hint.centerYAnchor.constraint(equalTo: space.centerYAnchor),
+            hint.widthAnchor.constraint(equalToConstant: 22),
+            hint.heightAnchor.constraint(equalToConstant: 22),
         ])
         space.addAction(UIAction { [weak self] _ in
             guard let self else { return }
@@ -213,6 +267,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         space.addGestureRecognizer(spacePan)
         space.setContentHuggingPriority(.defaultLow, for: .horizontal)
         views.append(space)
+        // dấu phẩy bên phải space (user 2026-07-23)
+        let comma = baseButton(title: ",", special: false)
+        comma.addAction(UIAction { [weak self] _ in self?.tapped(.text(",")) }, for: .touchUpInside)
+        views.append(comma)
         let ret = controlButton(title: returnTitle) { [weak self] in self?.tapped(.newline) }
         views.append(ret)
 
@@ -223,7 +281,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         stack.isLayoutMarginsRelativeArrangement = true
         stack.layoutMargins = UIEdgeInsets(top: 5, left: 3, bottom: 5, right: 3)
         planeBtn.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.12).isActive = true
-        ret.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.24).isActive = true
+        emojiBtn.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.10).isActive = true
+        comma.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.10).isActive = true
+        ret.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.20).isActive = true
         return stack
     }
 
