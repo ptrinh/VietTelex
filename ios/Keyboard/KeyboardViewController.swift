@@ -128,8 +128,17 @@ final class KeyboardViewController: UIInputViewController {
             updateAutoShift()
         default: break
         }
-        updateSuggestions()
+        // Gợi ý tính SAU khi ký tự đã lên màn hình (async main) và coalesce
+        // theo generation — gõ nhanh chỉ tính cho phím cuối, không chặn render.
+        suggestionGen += 1
+        let gen = suggestionGen
+        DispatchQueue.main.async { [weak self] in
+            guard let self, gen == self.suggestionGen else { return }
+            self.updateSuggestions()
+        }
     }
+
+    private var suggestionGen = 0
 
     /// Từ vừa chốt: nạp vào model cá nhân + trượt cửa sổ context (prev2, prev1).
     /// `accepted` = user bấm nhận suggestion → weight 2 (tín hiệu mạnh hơn).

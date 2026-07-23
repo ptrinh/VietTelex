@@ -119,65 +119,109 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
     }
 
-    func showSuggestions(_ set: SuggestionSet) {
-        guard suggestionsEnabled else { return }
-        suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        if set.isEmpty { return }
-        let ink: UIColor = dark ? .white : .black
+    // Pool cố định: 3 nút chính + 2 divider + 3 nút emoji con. Mỗi keystroke
+    // CHỈ đổi title/hidden — không removeFromSuperview/addSubview (churn view +
+    // Auto Layout invalidate mỗi phím chính là nguồn lag/miss touch).
+    private var slotButtons: [KeyButton] = []
+    private var slotDividers: [UIView] = []
+    private var emojiStack = UIStackView()
+    private var emojiButtons: [KeyButton] = []
 
-        func divider() -> UIView {
-            let v = UIView()
-            v.backgroundColor = ink.withAlphaComponent(0.18)
-            v.translatesAutoresizingMaskIntoConstraints = false
-            v.widthAnchor.constraint(equalToConstant: 1).isActive = true
-            let wrap = UIView()
-            wrap.addSubview(v)
-            NSLayoutConstraint.activate([
-                v.centerXAnchor.constraint(equalTo: wrap.centerXAnchor),
-                v.topAnchor.constraint(equalTo: wrap.topAnchor, constant: 10),
-                v.bottomAnchor.constraint(equalTo: wrap.bottomAnchor, constant: -10),
-            ])
-            wrap.widthAnchor.constraint(equalToConstant: 1).isActive = true
-            return wrap
-        }
-        func slotButton(_ title: String, insert: String, font: UIFont) -> UIButton {
+    private func buildSuggestionPoolIfNeeded() {
+        guard slotButtons.isEmpty else { return }
+        func makeSlot() -> KeyButton {
             let b = KeyButton(type: .custom)
-            b.setTitle(title, for: .normal)
-            b.titleLabel?.font = font
-            b.setTitleColor(ink, for: .normal)
             b.backgroundColor = .clear
-            b.addAction(UIAction { [weak self] _ in self?.onSuggestion?(insert) }, for: .touchUpInside)
+            b.isMultipleTouchEnabled = true
+            b.addAction(UIAction { [weak self, weak b] _ in
+                if let s = b?.payload { self?.onSuggestion?(s) }
+            }, for: .touchUpInside)
             return b
         }
-
-        var slots: [UIView] = []
-        for w in set.nextWords.prefix(3) {
-            slots.append(slotButton(w, insert: w, font: .systemFont(ofSize: 17, weight: .regular)))
+        func makeDivider() -> UIView {
+            let v = UIView()
+            v.translatesAutoresizingMaskIntoConstraints = false
+            v.widthAnchor.constraint(equalToConstant: 1).isActive = true
+            let line = UIView()
+            line.translatesAutoresizingMaskIntoConstraints = false
+            v.addSubview(line)
+            NSLayoutConstraint.activate([
+                line.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+                line.widthAnchor.constraint(equalToConstant: 1),
+                line.topAnchor.constraint(equalTo: v.topAnchor, constant: 10),
+                line.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -10),
+            ])
+            v.tag = 77   // line lookup
+            return v
         }
-        if let l = set.literal {
-            slots.append(slotButton("\u{201C}\(l)\u{201D}", insert: l,
-                                    font: .systemFont(ofSize: 17, weight: .regular)))
+        emojiStack.axis = .horizontal
+        emojiStack.distribution = .fillEqually
+        for _ in 0..<3 {
+            let b = makeSlot()
+            b.titleLabel?.font = .systemFont(ofSize: 24)
+            emojiButtons.append(b)
+            emojiStack.addArrangedSubview(b)
         }
-        if let w = set.word {
-            slots.append(slotButton(w, insert: w, font: .systemFont(ofSize: 17, weight: .regular)))
-        }
-        // slot 3 = emoji nếu có, không thì ứng viên inline thứ hai
-        if set.emojis.isEmpty, let w2 = set.word2 {
-            slots.append(slotButton(w2, insert: w2, font: .systemFont(ofSize: 17, weight: .regular)))
-        }
-        if !set.emojis.isEmpty {
-            let emojiStack = UIStackView()
-            emojiStack.axis = .horizontal
-            emojiStack.distribution = .fillEqually
-            for e in set.emojis.prefix(3) {
-                emojiStack.addArrangedSubview(slotButton(e, insert: e, font: .systemFont(ofSize: 24)))
+        for i in 0..<3 {
+            let b = makeSlot()
+            slotButtons.append(b)
+            suggestionBar.addArrangedSubview(b)
+            if i < 2 {
+                let d = makeDivider()
+                slotDividers.append(d)
+                suggestionBar.addArrangedSubview(d)
             }
-            slots.append(emojiStack)
         }
-        for (i, s) in slots.enumerated() {
-            if i > 0 { suggestionBar.addArrangedSubview(divider()) }
-            suggestionBar.addArrangedSubview(s)
+        suggestionBar.addArrangedSubview(emojiStack)
+    }
+
+    func showSuggestions(_ set: SuggestionSet) {
+        guard suggestionsEnabled else { return }
+        buildSuggestionPoolIfNeeded()
+        let ink: UIColor = dark ? .white : .black
+        for d in slotDividers {
+            d.viewWithTag(77)?.backgroundColor = ink.withAlphaComponent(0.18)
+            d.subviews.first?.backgroundColor = ink.withAlphaComponent(0.18)
         }
+
+        // gom nội dung 3 slot chính: nextWords HOẶC literal/word/word2
+        var texts: [(display: String, insert: String)?] = [nil, nil, nil]
+        if !set.nextWords.isEmpty {
+            for (i, w) in set.nextWords.prefix(3).enumerated() { texts[i] = (w, w) }
+        } else {
+            if let l = set.literal { texts[0] = ("\u{201C}\(l)\u{201D}", l) }
+            if let w = set.word { texts[1] = (w, w) }
+            if set.emojis.isEmpty, let w2 = set.word2 { texts[2] = (w2, w2) }
+        }
+        for (i, b) in slotButtons.enumerated() {
+            if let t = texts[i] {
+                b.setTitle(t.display, for: .normal)
+                b.setTitleColor(ink, for: .normal)
+                b.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
+                b.payload = t.insert
+                b.isHidden = false
+            } else {
+                b.isHidden = true
+                b.payload = nil
+            }
+        }
+        // slot emoji (chỉ ở chế độ đang gõ, khi có emoji)
+        let emojis = set.nextWords.isEmpty ? Array(set.emojis.prefix(3)) : []
+        for (i, b) in emojiButtons.enumerated() {
+            if i < emojis.count {
+                b.setTitle(emojis[i], for: .normal)
+                b.payload = emojis[i]
+                b.isHidden = false
+            } else {
+                b.isHidden = true; b.payload = nil
+            }
+        }
+        emojiStack.isHidden = emojis.isEmpty
+        // divider hiện giữa các slot đang hiển thị
+        let vis0 = !(slotButtons[0].isHidden), vis1 = !(slotButtons[1].isHidden)
+        let vis2 = !(slotButtons[2].isHidden) || !emojiStack.isHidden
+        slotDividers[0].isHidden = !(vis0 && (vis1 || vis2))
+        slotDividers[1].isHidden = !(vis1 && vis2)
     }
 
     func configureReturnKey(type: UIReturnKeyType) {
@@ -433,6 +477,14 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private final class KeyButton: UIButton {
         var isSpecial = false
+        var payload: String?    // suggestion slot: nội dung sẽ chèn khi bấm
+        // Khe hở giữa phím (spacing 6 + padding hàng 5) là VÙNG CHẾT với
+        // UIButton thường — chạm trúng khe = mất phím. Stock keyboard route
+        // mọi điểm chạm về phím gần nhất; mở rộng hit area phủ nửa khe cho
+        // hiệu quả tương đương, không đổi kiến trúc touch.
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            bounds.insetBy(dx: -3, dy: -5.5).contains(point)
+        }
     }
 
     private func baseButton(title: String, special: Bool) -> KeyButton {
