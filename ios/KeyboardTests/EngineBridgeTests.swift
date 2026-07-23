@@ -34,7 +34,8 @@ final class EngineBridgeTests: XCTestCase {
 
     func testAutoRestoreAndCollisions() {
         XCTAssertEqual(type("google "), "google ")
-        XCTAssertEqual(type("his "), "his ")        // collision table
+        // Chính sách 2026-07-23: collision THẬT thì tiếng Việt thắng (his ≡ hí)
+        XCTAssertEqual(type("his "), "hí ")
         XCTAssertEqual(type("off "), "off ")
         XCTAssertEqual(type("Deffault "), "Default ")   // cancel keeps composed
     }
@@ -67,5 +68,26 @@ final class EngineBridgeTests: XCTestCase {
         XCTAssertEqual(type("cw ", settings: s), "cw ")   // simple: lone w stays
         s.simpleTelex = false
         XCTAssertEqual(type("nhw ", settings: s), "như ")
+    }
+}
+
+final class SuggestionTests: XCTestCase {
+    func testEmojiSameForViAndEn() {
+        // "love"/"yêu" → 3 ứng viên giống nhau (❤️ 💕 💗), như stock QuickType
+        XCTAssertEqual(EmojiSuggest.emojis(for: "love").count, 3)
+        XCTAssertEqual(EmojiSuggest.emojis(for: "yêu"), EmojiSuggest.emojis(for: "love"))
+        XCTAssertEqual(EmojiSuggest.emojis(for: "mèo"), EmojiSuggest.emojis(for: "cat"))
+        XCTAssertTrue(EmojiSuggest.emojis(for: "").isEmpty)
+    }
+
+    func testLexiconDiacriticCompletion() {
+        // "nguoi" (đã fold) → ứng viên chỉ-khác-dấu đứng đầu
+        let c = VNLexicon.completions(forFolded: "nguoi", limit: 3, excluding: "nguoi")
+        XCTAssertEqual(c.first, "người")
+        // prefix ngắn: "ng" → có "người"/"ngày" trong top
+        let p = VNLexicon.completions(forFolded: "ng", limit: 3, excluding: "ng")
+        XCTAssertFalse(p.isEmpty)
+        // dưới 2 ký tự: không gợi ý
+        XCTAssertTrue(VNLexicon.completions(forFolded: "n", limit: 3, excluding: "n").isEmpty)
     }
 }

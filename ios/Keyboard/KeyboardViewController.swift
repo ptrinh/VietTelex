@@ -38,7 +38,7 @@ final class KeyboardViewController: UIInputViewController {
         let traitsAllow = textDocumentProxy.autocorrectionType != .no
             && (textDocumentProxy as UITextInputTraits).isSecureTextEntry != true
         keyboard.setSuggestionsEnabled(KeyboardSettings.load().showSuggestions && traitsAllow)
-        keyboard.onSuggestion = { [weak self] emoji in self?.acceptEmoji(emoji) }
+        keyboard.onSuggestion = { [weak self] item in self?.acceptSuggestion(item) }
         updateAutoShift()
         keyboard.showLanguageBadge()   // "ViệtTelex" thoáng trên spacebar như stock
     }
@@ -107,28 +107,36 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
     }
 
-    /// Emoji cho từ đang gõ: khớp cả dạng có dấu ("yêu") lẫn phím thô tiếng
-    /// Anh ("love") — hai đường cùng trỏ về một emoji (bảng EmojiSuggest).
+    /// Gợi ý cho từ đang gõ: emoji (khớp cả "yêu" lẫn "love" — bảng
+    /// EmojiSuggest) + hoàn thiện từ tiếng Việt từ VNLexicon ("nguoi"/"ng" →
+    /// "người"): ưu tiên ứng viên chỉ khác dấu, rồi completion dài hơn.
     private func updateSuggestions() {
-        let composed = bridge.composedWord.lowercased()
-        let raw = bridge.rawWord.lowercased()
-        var items: [String] = []
-        if let e = EmojiSuggest.emoji(for: composed) ?? EmojiSuggest.emoji(for: raw) {
-            items.append(e)
+        let composed = bridge.composedWord
+        var set = KeyboardView.SuggestionSet()
+        if !composed.isEmpty {
+            set.literal = composed
+            set.word = VNLexicon.completions(forFolded: VNLexicon.fold(composed),
+                                             limit: 1, excluding: composed.lowercased()).first
+            var emojis = EmojiSuggest.emojis(for: composed)
+            if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
+            set.emojis = emojis
         }
-        keyboard.showSuggestions(items)
+        keyboard.showSuggestions(set)
     }
 
-    /// Tap gợi ý: thay từ đang gõ bằng emoji (hành vi QuickType của stock).
-    private func acceptEmoji(_ emoji: String) {
+    /// Tap gợi ý (hành vi QuickType): emoji thay hẳn từ; từ tiếng Việt thay
+    /// từ + thêm space để gõ tiếp luôn.
+    private func acceptSuggestion(_ item: String) {
         applyingEdit = true
         defer { applyingEdit = false }
+        let isWord = item.first?.isLetter == true
         let n = bridge.composedWord.count
         for _ in 0..<n { textDocumentProxy.deleteBackward() }
-        textDocumentProxy.insertText(emoji)
+        textDocumentProxy.insertText(isWord ? item + " " : item)
         bridge.reset()
-        keyboard.showSuggestions([])
+        keyboard.showSuggestions(KeyboardView.SuggestionSet())
         UIDevice.current.playInputClick()
+        updateAutoShift()
     }
 }
 

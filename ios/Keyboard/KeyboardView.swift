@@ -81,7 +81,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         ])
         // Suggestion bar sống trong "khoảng trống 2" — chỉ hiện khi bật.
         suggestionBar.axis = .horizontal
-        suggestionBar.distribution = .fillEqually
+        suggestionBar.distribution = .fillProportionally
         suggestionBar.spacing = 6
         suggestionBar.isLayoutMarginsRelativeArrangement = true
         suggestionBar.layoutMargins = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
@@ -106,17 +106,66 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         heightConstraint?.constant = on ? 260 : 216
     }
 
-    /// Cập nhật gợi ý (hiện tại: emoji cho từ đang gõ). Chuỗi rỗng → ẩn nút.
-    func showSuggestions(_ items: [String]) {
+    /// Cập nhật gợi ý theo layout stock: ["nguyên văn"] | từ gợi ý | emoji(≤3),
+    /// ngăn cách bằng divider mảnh. Mảng rỗng → dọn bar.
+    struct SuggestionSet {
+        var literal: String?
+        var word: String?
+        var emojis: [String] = []
+        var isEmpty: Bool { literal == nil && word == nil && emojis.isEmpty }
+    }
+
+    func showSuggestions(_ set: SuggestionSet) {
         guard suggestionsEnabled else { return }
         suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for item in items.prefix(3) where !item.isEmpty {
+        if set.isEmpty { return }
+        let ink: UIColor = dark ? .white : .black
+
+        func divider() -> UIView {
+            let v = UIView()
+            v.backgroundColor = ink.withAlphaComponent(0.18)
+            v.translatesAutoresizingMaskIntoConstraints = false
+            v.widthAnchor.constraint(equalToConstant: 1).isActive = true
+            let wrap = UIView()
+            wrap.addSubview(v)
+            NSLayoutConstraint.activate([
+                v.centerXAnchor.constraint(equalTo: wrap.centerXAnchor),
+                v.topAnchor.constraint(equalTo: wrap.topAnchor, constant: 10),
+                v.bottomAnchor.constraint(equalTo: wrap.bottomAnchor, constant: -10),
+            ])
+            wrap.widthAnchor.constraint(equalToConstant: 1).isActive = true
+            return wrap
+        }
+        func slotButton(_ title: String, insert: String, font: UIFont) -> UIButton {
             let b = KeyButton(type: .custom)
-            b.setTitle(item, for: .normal)
-            b.titleLabel?.font = .systemFont(ofSize: 24)
+            b.setTitle(title, for: .normal)
+            b.titleLabel?.font = font
+            b.setTitleColor(ink, for: .normal)
             b.backgroundColor = .clear
-            b.addAction(UIAction { [weak self] _ in self?.onSuggestion?(item) }, for: .touchUpInside)
-            suggestionBar.addArrangedSubview(b)
+            b.addAction(UIAction { [weak self] _ in self?.onSuggestion?(insert) }, for: .touchUpInside)
+            return b
+        }
+
+        var slots: [UIView] = []
+        if let l = set.literal {
+            slots.append(slotButton("\u{201C}\(l)\u{201D}", insert: l,
+                                    font: .systemFont(ofSize: 17, weight: .regular)))
+        }
+        if let w = set.word {
+            slots.append(slotButton(w, insert: w, font: .systemFont(ofSize: 17, weight: .regular)))
+        }
+        if !set.emojis.isEmpty {
+            let emojiStack = UIStackView()
+            emojiStack.axis = .horizontal
+            emojiStack.distribution = .fillEqually
+            for e in set.emojis.prefix(3) {
+                emojiStack.addArrangedSubview(slotButton(e, insert: e, font: .systemFont(ofSize: 24)))
+            }
+            slots.append(emojiStack)
+        }
+        for (i, s) in slots.enumerated() {
+            if i > 0 { suggestionBar.addArrangedSubview(divider()) }
+            suggestionBar.addArrangedSubview(s)
         }
     }
 
@@ -145,6 +194,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         if shift != want { shift = want; applyShiftAppearance() }
     }
 
+
     // Shift changes must NEVER rebuild: tearing the buttons down mid-typing
     // deallocates the key already under the user's finger, so its touch-up
     // never fires (the missed-keypress bug). Retitle in place instead.
@@ -163,6 +213,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 : (dark ? UIColor(white: 1, alpha: 0.14) : UIColor(red: 0.68, green: 0.70, blue: 0.74, alpha: 1))
         }
     }
+
 
     // MARK: layout
 

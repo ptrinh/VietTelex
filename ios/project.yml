@@ -66,6 +66,9 @@ targets:
   VietTelexKeyboardTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [KeyboardTests, Keyboard/EngineBridge.swift]
+    sources: [KeyboardTests, Keyboard/EngineBridge.swift, Keyboard/VNLexicon.swift, Keyboard/EmojiSuggest.swift]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - package: TelexCore
