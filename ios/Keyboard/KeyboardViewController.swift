@@ -22,8 +22,7 @@ final class KeyboardViewController: UIInputViewController {
                 self?.handleInputModeList(from: sender, with: UIEvent())
             }
         )
-        let lexicon = Set(VNLexicon.words)
-        langModel.isKnownWord = { lexicon.contains($0) }
+        langModel.isKnownWord = { VNSuggest.contains($0) }
         // Datastore trống (lần đầu / vừa reset) → mồi bằng seed corpus để
         // ngày đầu tiên đã có gợi ý hợp lý; dữ liệu học thật vượt seed sau
         // vài ngày (weight seed ≤50, gõ thật +1/lần, decay tuần).
@@ -154,11 +153,26 @@ final class KeyboardViewController: UIInputViewController {
         var set = KeyboardView.SuggestionSet()
         if !composed.isEmpty {
             set.literal = composed
-            // completion: re-rank theo tần suất cá nhân, rồi thứ tự lexicon
-            let cands = VNLexicon.completions(forFolded: VNLexicon.fold(composed),
-                                              limit: 3, excluding: composed.lowercased())
-            set.word = cands.max { langModel.count(of: $0) < langModel.count(of: $1) }
-                ?? cands.first
+            // Inline suggestion (research 2026-07-24): pool tương thích dấu từ
+            // VNSuggest, re-rank = log(staticFreq) + λ₁·log(personal) +
+            // λ₂·context-bonus + λ₃·chỉ-còn-thiếu-dấu.
+            let pool = VNSuggest.matches(composed, poolLimit: 24,
+                                         excluding: composed.lowercased())
+            if !pool.isEmpty {
+                let ctx: Set<String> = lastWord.map {
+                    Set(langModel.nextWords(after: $0, prev2: lastWord2, limit: 24))
+                } ?? []
+                let typedLen = composed.count
+                func score(_ w: String, _ f: Int) -> Double {
+                    log(Double(f) + 1)
+                        + 2.5 * log(Double(langModel.count(of: w)) + 1)
+                        + (ctx.contains(w) ? 4 : 0)
+                        + (w.count == typedLen ? 1.5 : 0)
+                }
+                let ranked = pool.sorted { score($0.word, $0.freq) > score($1.word, $1.freq) }
+                set.word = ranked.first?.word
+                set.word2 = ranked.dropFirst().first?.word
+            }
             var emojis = EmojiSuggest.emojis(for: composed)
             if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
             set.emojis = emojis

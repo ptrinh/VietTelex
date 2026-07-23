@@ -66,7 +66,7 @@ targets:
   VietTelexKeyboardTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [KeyboardTests, Keyboard/EngineBridge.swift, Keyboard/VNLexicon.swift, Keyboard/EmojiSuggest.swift, Keyboard/UserLangModel.swift, Keyboard/SeedData.swift]
+    sources: [KeyboardTests, Keyboard/EngineBridge.swift, Keyboard/VNSuggest.swift, Keyboard/VNLexicon2.swift, Keyboard/EmojiSuggest.swift, Keyboard/UserLangModel.swift, Keyboard/SeedData.swift]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

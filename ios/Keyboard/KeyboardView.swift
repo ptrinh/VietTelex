@@ -111,9 +111,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     struct SuggestionSet {
         var literal: String?
         var word: String?
+        var word2: String?             // ứng viên inline thứ hai (khi không có emoji)
         var emojis: [String] = []
         var nextWords: [String] = []   // gợi ý khi CHƯA gõ (đầu câu / sau space)
-        var isEmpty: Bool { literal == nil && word == nil && emojis.isEmpty && nextWords.isEmpty }
+        var isEmpty: Bool {
+            literal == nil && word == nil && word2 == nil && emojis.isEmpty && nextWords.isEmpty
+        }
     }
 
     func showSuggestions(_ set: SuggestionSet) {
@@ -157,6 +160,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         if let w = set.word {
             slots.append(slotButton(w, insert: w, font: .systemFont(ofSize: 17, weight: .regular)))
+        }
+        // slot 3 = emoji nếu có, không thì ứng viên inline thứ hai
+        if set.emojis.isEmpty, let w2 = set.word2 {
+            slots.append(slotButton(w2, insert: w2, font: .systemFont(ofSize: 17, weight: .regular)))
         }
         if !set.emojis.isEmpty {
             let emojiStack = UIStackView()

@@ -80,15 +80,28 @@ final class SuggestionTests: XCTestCase {
         XCTAssertTrue(EmojiSuggest.emojis(for: "").isEmpty)
     }
 
-    func testLexiconDiacriticCompletion() {
-        // "nguoi" (đã fold) → ứng viên chỉ-khác-dấu đứng đầu
-        let c = VNLexicon.completions(forFolded: "nguoi", limit: 3, excluding: "nguoi")
-        XCTAssertEqual(c.first, "người")
-        // prefix ngắn: "ng" → có "người"/"ngày" trong top
-        let p = VNLexicon.completions(forFolded: "ng", limit: 3, excluding: "ng")
-        XCTAssertFalse(p.isEmpty)
-        // dưới 2 ký tự: không gợi ý
-        XCTAssertTrue(VNLexicon.completions(forFolded: "n", limit: 3, excluding: "n").isEmpty)
+    func testInlineDiacriticCompatibleMatch() {
+        // spec user 2026-07-24: "to" khớp mọi biến thể; "tô" chỉ khớp họ ô
+        let to = VNSuggest.matches("to").map { $0.word }
+        XCTAssertTrue(to.contains("tôi"))
+        XCTAssertTrue(to.contains("toàn"))
+        let toCirc = VNSuggest.matches("tô").map { $0.word }
+        XCTAssertTrue(toCirc.contains("tôi"))
+        XCTAssertTrue(toCirc.contains("tối") || toCirc.contains("tồi") || toCirc.contains("tội"))
+        XCTAssertFalse(toCirc.contains("toàn"))     // quality đã chốt ô
+        XCTAssertFalse(toCirc.contains("tơi"))      // ơ ≠ ô
+        // tone đã chốt huyền: loại ngang/sắc; quality chưa chốt nên "tồi" vẫn hợp lệ
+        let toGrave = VNSuggest.matches("tò").map { $0.word }
+        XCTAssertTrue(toGrave.contains("tòa"))
+        XCTAssertFalse(toGrave.contains("tôi"))     // ngang ≠ huyền
+        XCTAssertFalse(toGrave.contains("tới"))     // sắc ≠ huyền
+        // 1 phím: hot-path bucket có kết quả tần suất cao
+        XCTAssertTrue(VNSuggest.matches("t").map { $0.word }.contains("tôi"))
+        // nguoi → người đứng top nhờ tần suất
+        XCTAssertEqual(VNSuggest.matches("nguoi").first?.word, "người")
+        // contains: lexicon membership
+        XCTAssertTrue(VNSuggest.contains("người"))
+        XCTAssertFalse(VNSuggest.contains("nguo"))
     }
 }
 
