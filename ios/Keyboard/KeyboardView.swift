@@ -42,14 +42,14 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         self.onKey = onKey
         self.onGlobe = onGlobe
         super.init(frame: .zero)
-        // Stock VN keyboard = 44pt candidate strip + ~216pt keys. The strip is
-        // empty in M1 but reserving it (a) matches Apple's height so the keys
-        // are the same size as stock, (b) gives top-row balloons room to render
-        // (they were clipped to our bounds — the 'cutoff' bug).
+        // Compact (user 2026-07-23): no reserved candidate strip — 4pt breathing
+        // room on top, keys, 2pt below. Top-row balloons now overlap the key
+        // area (extensions cannot draw outside their own bounds); the strip
+        // returns in M2 when suggestions land there.
         // Priority 999, NOT required: during extension load the host briefly
         // imposes its own (much taller) frame — a required constant fought it
         // and Auto Layout broke OUR constraint for those frames.
-        let height = heightAnchor.constraint(equalToConstant: 260)
+        let height = heightAnchor.constraint(equalToConstant: 218)
         height.priority = UILayoutPriority(999)
         height.isActive = true
         // Fast typists ROLL fingers: the next key is pressed before the previous
@@ -70,7 +70,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             rowsContainer.leftAnchor.constraint(equalTo: leftAnchor),
             rowsContainer.rightAnchor.constraint(equalTo: rightAnchor),
             rowsContainer.heightAnchor.constraint(equalToConstant: 212),
-            rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+            rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
         ])
         rebuild()
     }
