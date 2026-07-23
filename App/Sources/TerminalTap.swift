@@ -806,6 +806,23 @@ final class TerminalTapController {
         DebugLog.log("selectionChanged(isVietTelex=\(isVietTelex)) → imeActive=\(active)")
     }
 
+    /// Turn-ON self-heal (tester log 2026-07-23): IMKit routes keys ONLY to the
+    /// OS-selected input method, so a REAL key reaching the IMK controller is
+    /// authoritative proof VietTelex is selected — stronger than the TIS cache,
+    /// whose switch-time query can report the OUTGOING source and latch
+    /// imeActive FALSE (per-app input switching). A false latch made the tap
+    /// dormant while IMK kept deferring tap-mode apps to it: dead Vietnamese in
+    /// the focused field until a focus change fired activateServer. Called from
+    /// IMK handle() per real key; no-ops (one lock read) while already active.
+    func noteIMKKeyProvesSelected() {
+        let healed: Bool = activationLock.withLock {
+            guard !activation.isActive else { return false }
+            activation.selectionChanged(isVietTelex: true)
+            return activation.isActive
+        }
+        if healed { DebugLog.log("imk-key self-heal: key reached IMK while imeActive=false → imeActive=true") }
+    }
+
     /// TAP-thread confined: only ever touched inside the tap callback (and
     /// emergencyStop, which fires from the posting path on the same thread).
     private var engine = TelexEngine()

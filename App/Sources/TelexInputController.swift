@@ -159,6 +159,11 @@ final class TelexInputController: IMKInputController {
 
         if synth { return false }
 
+        // A real key reaching handle() proves VietTelex is the selected source —
+        // un-latch a stale imeActive=false so tap-mode apps aren't left dormant
+        // (see noteIMKKeyProvesSelected).
+        TerminalTapController.shared.noteIMKKeyProvesSelected()
+
         // Secure input active (password field, or an app holding secure input like
         // some chat apps): DROP the pending composition without rewriting it, then
         // pass through untouched. We must NOT call boundary() here: boundary runs
