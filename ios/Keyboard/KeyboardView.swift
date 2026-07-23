@@ -49,7 +49,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         // Priority 999, NOT required: during extension load the host briefly
         // imposes its own (much taller) frame — a required constant fought it
         // and Auto Layout broke OUR constraint for those frames.
-        let height = heightAnchor.constraint(equalToConstant: 218)
+        let height = heightAnchor.constraint(equalToConstant: 216)
         height.priority = UILayoutPriority(999)
         height.isActive = true
         // Fast typists ROLL fingers: the next key is pressed before the previous
@@ -70,7 +70,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             rowsContainer.leftAnchor.constraint(equalTo: leftAnchor),
             rowsContainer.rightAnchor.constraint(equalTo: rightAnchor),
             rowsContainer.heightAnchor.constraint(equalToConstant: 212),
-            rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+            rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
         ])
         rebuild()
     }
@@ -282,7 +282,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         if returnTitle == "return" {
             ret.setImage(UIImage(systemName: "return.left",
                 withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular)), for: .normal)
-            ret.tintColor = dark ? .white : .black
+            // mờ ngang logo Vᴛ trên spacebar (user 2026-07-23)
+            ret.tintColor = (dark ? UIColor.white : .black).withAlphaComponent(0.28)
         }
         views.append(ret)
 
