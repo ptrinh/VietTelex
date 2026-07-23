@@ -82,6 +82,8 @@ struct SettingsSection: View {
     private var showSuggestions = true
     @AppStorage("learnWords", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var learnWords = true
+    @AppStorage("filterSensitive", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var filterSensitive = true
 
     var body: some View {
         Section {
@@ -92,6 +94,7 @@ struct SettingsSection: View {
             Toggle("Hiện logo Vᴛ trên phím space", isOn: $showSpaceLogo)
             Toggle("Thanh gợi ý (emoji)", isOn: $showSuggestions)
             Toggle("Học từ hay dùng (trên máy)", isOn: $learnWords)
+            Toggle("Lọc từ nhạy cảm khỏi gợi ý", isOn: $filterSensitive)
             Button("Xóa từ đã học", role: .destructive) {
                 if let dir = FileManager.default
                     .containerURL(forSecurityApplicationGroupIdentifier: "group.com.viettelex") {

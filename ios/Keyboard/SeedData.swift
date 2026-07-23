@@ -119,6 +119,7 @@ enum SeedData {
         // — bổ sung 2026-07-24 (5): hệ điều hành / phần mềm —
         "windows": 6, "macos": 6, "ios": 6, "android": 6, "chrome": 5, "linux": 4, "safari": 4, "excel": 4, "word": 4,
         "github": 5, "claude": 5, "tesla": 5, "openai": 4, "anthropic": 3, "yahoo": 4, "outlook": 4, "hotmail": 3,
+        "đcm": 8, "đm": 8, "dm": 8, "vcl": 10, "vkl": 6, "vl": 12, "clgt": 4, "cứt": 8, "vãi": 10, "cmnr": 5, "chửi": 8, "cướp": 6, "giết": 8, "hiếp": 3, "trộm": 5, "fuck": 5, "shit": 5, "lừa": 7, "đểu": 5, "xạo": 6,
     ]
 
     static let bigrams: [(String, String, Int)] = [
@@ -223,5 +224,6 @@ enum SeedData {
         ("văn", "tuấn", 5), ("văn", "dũng", 4), ("văn", "sơn", 4), ("thị", "hương", 5), ("thị", "lan", 5),
         ("thị", "thu", 5), ("thị", "ngọc", 4), ("thị", "hồng", 4), ("thị", "phương", 4), ("xuân", "trường", 4),
         ("đình", "phong", 3),
+        ("như", "cứt", 6), ("ngon", "vl", 8), ("mệt", "vl", 6), ("đau", "vcl", 4), ("fuck", "you", 6), ("vãi", "cả", 4), ("lừa", "đảo", 7), ("cướp", "giật", 4),
     ]
 }

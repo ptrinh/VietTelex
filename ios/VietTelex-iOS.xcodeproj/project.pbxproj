@@ -10,6 +10,7 @@
 		03737E5339AC43A75D973144 /* EmojiSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA79BB7903D0F4A2BC56B5 /* EmojiSuggest.swift */; };
 		0FC30ADCCD6DA0E278D59DD3 /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738732B955CD39C76B2484C7 /* SeedData.swift */; };
 		18EB5C9002EAD3991F709FD5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
+		19A0B9BFBF4CF5C3FEE6785B /* SensitiveWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9F4445707DBA22FE5219CD /* SensitiveWords.swift */; };
 		1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */; };
 		1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
 		36C564FD8BADBFB0BCC1E645 /* DisplayCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7D70220F7D14EBC3C3AACD /* DisplayCase.swift */; };
@@ -30,6 +31,7 @@
 		DBE4AB9A3B654D9D44392251 /* TelexCore in Frameworks */ = {isa = PBXBuildFile; productRef = E6EA46A66DF9410EF89A3FC9 /* TelexCore */; };
 		DD68A1CBFFCFAC0280ACC90C /* VNSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C445BEBA75DFC20101EC3BA9 /* VNSuggest.swift */; };
 		E295B1FEA8D18A42FF77BD3A /* EmojiSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA79BB7903D0F4A2BC56B5 /* EmojiSuggest.swift */; };
+		E29FDF78A65EA7E6F0F8EF8F /* SensitiveWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9F4445707DBA22FE5219CD /* SensitiveWords.swift */; };
 		FE2B9309D2217292E28A9A44 /* VNLexicon2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E29815B4F2B0747B961A561 /* VNLexicon2.swift */; };
 /* End PBXBuildFile section */
 
@@ -79,6 +81,7 @@
 		E5AE58D76A8127D641A2AF62 /* EngineBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridgeTests.swift; sourceTree = "<group>"; };
 		F2C9781CE8B936C962B3EBA8 /* TelexCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TelexCore; path = ../TelexCore; sourceTree = SOURCE_ROOT; };
 		F316CA910C58A9377DC754A0 /* UserLangModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserLangModel.swift; sourceTree = "<group>"; };
+		FF9F4445707DBA22FE5219CD /* SensitiveWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensitiveWords.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +154,7 @@
 				941319FB73DCEB18DDE2E232 /* KeyboardView.swift */,
 				853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */,
 				738732B955CD39C76B2484C7 /* SeedData.swift */,
+				FF9F4445707DBA22FE5219CD /* SensitiveWords.swift */,
 				B913AFA01B930811B2848696 /* SpaceLogo@2x.png */,
 				DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */,
 				F316CA910C58A9377DC754A0 /* UserLangModel.swift */,
@@ -305,6 +309,7 @@
 				54B0665D29CB3187CEBF5157 /* KeyboardView.swift in Sources */,
 				1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */,
 				AC2407E83BA2FC77C45DE3FF /* SeedData.swift in Sources */,
+				19A0B9BFBF4CF5C3FEE6785B /* SensitiveWords.swift in Sources */,
 				1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */,
 				99E9949680619BC9BFBE9CB6 /* VNLexicon2.swift in Sources */,
 				DD68A1CBFFCFAC0280ACC90C /* VNSuggest.swift in Sources */,
@@ -328,6 +333,7 @@
 				6689B752583E4AE424F48573 /* EngineBridge.swift in Sources */,
 				D4DEA988483DB59F683B8407 /* EngineBridgeTests.swift in Sources */,
 				0FC30ADCCD6DA0E278D59DD3 /* SeedData.swift in Sources */,
+				E29FDF78A65EA7E6F0F8EF8F /* SensitiveWords.swift in Sources */,
 				18EB5C9002EAD3991F709FD5 /* UserLangModel.swift in Sources */,
 				FE2B9309D2217292E28A9A44 /* VNLexicon2.swift in Sources */,
 				CE87DFF1AA26E9C3CF185681 /* VNSuggest.swift in Sources */,

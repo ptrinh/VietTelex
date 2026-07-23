@@ -203,3 +203,13 @@ final class DisplayCaseTests: XCTestCase {
         XCTAssertEqual(m.count(of: "SenPrints"), 1)   // count(of:) tự lowercase
     }
 }
+
+final class SensitiveWordsTests: XCTestCase {
+    func testFilterGate() {
+        let words = ["vcl", "vui", "đcm", "cảm"]
+        XCTAssertEqual(SensitiveWords.filter(words, enabled: true), ["vui", "cảm"])
+        XCTAssertEqual(SensitiveWords.filter(words, enabled: false), words)
+        // từ bạo lực phổ thông KHÔNG bị lọc (từ vựng đời thường/báo chí)
+        XCTAssertEqual(SensitiveWords.filter(["cướp", "giết"], enabled: true), ["cướp", "giết"])
+    }
+}

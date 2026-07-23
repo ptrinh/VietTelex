@@ -12,6 +12,7 @@ final class KeyboardViewController: UIInputViewController {
     private var lastWord: String?         // từ liền trước trong câu (context bigram)
     private var lastWord2: String?        // từ trước nữa (context trigram)
     private var learnEnabled = true
+    private var filterSensitive = true
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,6 +49,7 @@ final class KeyboardViewController: UIInputViewController {
             && (textDocumentProxy as UITextInputTraits).isSecureTextEntry != true
         let settings = KeyboardSettings.load()
         learnEnabled = settings.learnWords
+        filterSensitive = settings.filterSensitive
         keyboard.setSuggestionsEnabled(settings.showSuggestions && traitsAllow)
         keyboard.onSuggestion = { [weak self] item in self?.acceptSuggestion(item) }
         updateAutoShift()
@@ -187,9 +189,11 @@ final class KeyboardViewController: UIInputViewController {
                         + (ctx.contains(w) ? 4 : 0)
                         + (w.count == typedLen ? 1.5 : 0)
                 }
-                let ranked = pool.sorted { score($0.word, $0.freq) > score($1.word, $1.freq) }
-                set.word = ranked.first.map { DisplayCase.apply($0.word) }
-                set.word2 = ranked.dropFirst().first.map { DisplayCase.apply($0.word) }
+                let ranked = SensitiveWords.filter(pool.sorted {
+                    score($0.word, $0.freq) > score($1.word, $1.freq)
+                }.map { $0.word }, enabled: filterSensitive)
+                set.word = ranked.first.map(DisplayCase.apply)
+                set.word2 = ranked.dropFirst().first.map(DisplayCase.apply)
             }
             var emojis = EmojiSuggest.emojis(for: composed)
             if emojis.isEmpty { emojis = EmojiSuggest.emojis(for: bridge.rawWord.lowercased()) }
@@ -197,11 +201,15 @@ final class KeyboardViewController: UIInputViewController {
         } else if let prev = lastWord {
             // vừa space sau một từ → gợi từ KẾ TIẾP (trigram/bigram cá nhân
             // interpolate với seed)
-            set.nextWords = langModel.nextWords(after: prev, prev2: lastWord2, limit: 3)
-                .map(DisplayCase.apply)
+            set.nextWords = SensitiveWords.filter(
+                langModel.nextWords(after: prev, prev2: lastWord2, limit: 6),
+                enabled: filterSensitive
+            ).prefix(3).map(DisplayCase.apply)
         } else {
             // field trống chưa gõ gì → từ user hay mở đầu nhất
-            set.nextWords = langModel.topWords(limit: 3).map(DisplayCase.apply)
+            set.nextWords = SensitiveWords.filter(langModel.topWords(limit: 6),
+                                                  enabled: filterSensitive)
+                .prefix(3).map(DisplayCase.apply)
         }
         keyboard.showSuggestions(set)
     }

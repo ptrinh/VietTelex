@@ -20,6 +20,7 @@ struct KeyboardSettings {
     var autoRestore = true
     var showSuggestions = true
     var learnWords = true
+    var filterSensitive = true
 
     static func load() -> KeyboardSettings {
         var s = KeyboardSettings()
@@ -30,6 +31,7 @@ struct KeyboardSettings {
         if d.object(forKey: "autoRestore") != nil { s.autoRestore = d.bool(forKey: "autoRestore") }
         if d.object(forKey: "showSuggestions") != nil { s.showSuggestions = d.bool(forKey: "showSuggestions") }
         if d.object(forKey: "learnWords") != nil { s.learnWords = d.bool(forKey: "learnWords") }
+        if d.object(forKey: "filterSensitive") != nil { s.filterSensitive = d.bool(forKey: "filterSensitive") }
         return s
     }
 }
