@@ -71,6 +71,7 @@ final class KeyboardViewController: UIInputViewController {
         let auto = before.isEmpty
             || (before.hasSuffix(" ") && (t.hasSuffix(".") || t.hasSuffix("!") || t.hasSuffix("?")))
             || before.hasSuffix("\n")
+        autoShiftOn = auto
         keyboard.setAutoShift(auto)
     }
 
@@ -147,6 +148,7 @@ final class KeyboardViewController: UIInputViewController {
 
     private var suggestionGen = 0
     private var lastInsertWasSpace = false
+    private var autoShiftOn = false
 
     /// iOS defer touch gần mép ~1s để phân xử system gesture — nguồn số 1 của
     /// "ấn phím hàng dưới không ăn". Xin quyền nhận touch trước ở mép dưới.
@@ -179,6 +181,10 @@ final class KeyboardViewController: UIInputViewController {
     private func updateSuggestions() {
         let composed = bridge.composedWord
         var set = KeyboardView.SuggestionSet()
+        // đầu câu (auto-shift): gợi ý viết hoa chữ đầu như stock (Em, Anh, Tôi)
+        func caseForContext(_ w: String) -> String {
+            autoShiftOn ? w.prefix(1).uppercased() + w.dropFirst() : w
+        }
         // Ngữ cảnh email/domain: "phuc@" → gợi đuôi mail; "github." → gợi TLD.
         if composed.isEmpty, let before = textDocumentProxy.documentContextBeforeInput,
            let last = before.split(separator: " ").last {
@@ -193,7 +199,12 @@ final class KeyboardViewController: UIInputViewController {
             }
         }
         if !composed.isEmpty {
-            set.literal = composed
+            // Slot "nguyên văn" hiện RAW KEYSTROKES — lối thoát chuẩn QuickType
+            // cho collision: gõ L,o,s,s (composed "los", boundary restore
+            // "Loss") mà muốn đúng chữ đã bấm thì tap slot này. Trùng composed
+            // thì khỏi lặp.
+            let raw = bridge.rawWord
+            set.literal = raw == composed ? composed : raw
             // Inline suggestion (research 2026-07-24): pool tương thích dấu từ
             // VNSuggest, re-rank = log(staticFreq) + λ₁·log(personal) +
             // λ₂·context-bonus + λ₃·chỉ-còn-thiếu-dấu.
@@ -225,12 +236,12 @@ final class KeyboardViewController: UIInputViewController {
             set.nextWords = SensitiveWords.filter(
                 langModel.nextWords(after: prev, prev2: lastWord2, limit: 6),
                 enabled: filterSensitive
-            ).prefix(3).map { DisplayCase.apply($0, after: prev) }
+            ).prefix(3).map { caseForContext(DisplayCase.apply($0, after: prev)) }
         } else {
             // field trống chưa gõ gì → từ user hay mở đầu nhất
             set.nextWords = SensitiveWords.filter(langModel.topWords(limit: 6),
                                                   enabled: filterSensitive)
-                .prefix(3).map { DisplayCase.apply($0) }
+                .prefix(3).map { caseForContext(DisplayCase.apply($0)) }
         }
         keyboard.showSuggestions(set)
     }

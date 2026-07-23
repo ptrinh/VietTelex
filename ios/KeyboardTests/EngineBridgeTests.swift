@@ -220,3 +220,12 @@ final class SensitiveWordsTests: XCTestCase {
         XCTAssertEqual(SensitiveWords.filter(["cướp", "giết"], enabled: true), ["cướp", "giết"])
     }
 }
+
+final class SeedOrderTests: XCTestCase {
+    func testEmptyFieldTop3() {
+        let m = UserLangModel(appGroup: nil)
+        m.isKnownWord = { _ in true }
+        m.seedIfEmpty(unigrams: SeedData.unigrams, bigrams: SeedData.bigrams)
+        XCTAssertEqual(m.topWords(limit: 3), ["em", "anh", "tôi"])
+    }
+}
