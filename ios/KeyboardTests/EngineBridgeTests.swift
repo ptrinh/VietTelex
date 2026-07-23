@@ -147,3 +147,21 @@ final class UserLangModelTests: XCTestCase {
         XCTAssertFalse(EmojiSuggest.emojis(for: "meo").isEmpty)
     }
 }
+
+final class SeedDataTests: XCTestCase {
+    func testSeedInjection() {
+        let m = UserLangModel(appGroup: nil)
+        m.seedIfEmpty(unigrams: SeedData.unigrams, bigrams: SeedData.bigrams)
+        // seed nạp được và có mặt trong gợi ý
+        XCTAssertFalse(m.topWords(limit: 3).isEmpty)
+        XCTAssertTrue(m.nextWords(after: "cảm", limit: 2).contains("ơn"))
+        XCTAssertTrue(m.nextWords(after: "hôm", limit: 2).contains("nay"))
+        // đã có dữ liệu → seed lần hai là no-op
+        let before = m.count(of: "không")
+        m.seedIfEmpty(unigrams: ["xxx": 99], bigrams: [])
+        XCTAssertEqual(m.count(of: "không"), before)
+        XCTAssertEqual(m.count(of: "xxx"), 0)
+        // weight hợp đồng: max seed ≤ 50
+        XCTAssertLessThanOrEqual(SeedData.unigrams.values.max() ?? 0, 50)
+    }
+}

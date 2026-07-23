@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		03737E5339AC43A75D973144 /* EmojiSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA79BB7903D0F4A2BC56B5 /* EmojiSuggest.swift */; };
+		0FC30ADCCD6DA0E278D59DD3 /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738732B955CD39C76B2484C7 /* SeedData.swift */; };
 		18EB5C9002EAD3991F709FD5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
 		1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */; };
 		1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F316CA910C58A9377DC754A0 /* UserLangModel.swift */; };
@@ -19,6 +20,7 @@
 		5CA3CB101E504E9B3DF8B3A9 /* VietTelexApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B539001F2CE763F663710B /* VietTelexApp.swift */; };
 		654F63A4AB91892BA093F56B /* VNLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E668817CF39902B99094C7 /* VNLexicon.swift */; };
 		6689B752583E4AE424F48573 /* EngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD709650C25830CA926EBCF /* EngineBridge.swift */; };
+		AC2407E83BA2FC77C45DE3FF /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738732B955CD39C76B2484C7 /* SeedData.swift */; };
 		CF7F1ABF1498FE511CA6CA87 /* VietTelexKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 09561C431C2FC4B6BAFD5DB7 /* VietTelexKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D4DEA988483DB59F683B8407 /* EngineBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AE58D76A8127D641A2AF62 /* EngineBridgeTests.swift */; };
 		D902A388BD011F37220F5C53 /* SpaceLogo@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */; };
@@ -59,6 +61,7 @@
 		142CFBEA43046FC96EBF437F /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		23D9F4828FBAE93DCCEB2271 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3CCA79BB7903D0F4A2BC56B5 /* EmojiSuggest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSuggest.swift; sourceTree = "<group>"; };
+		738732B955CD39C76B2484C7 /* SeedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedData.swift; sourceTree = "<group>"; };
 		853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
 		8AD709650C25830CA926EBCF /* EngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBridge.swift; sourceTree = "<group>"; };
 		941319FB73DCEB18DDE2E232 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
@@ -140,6 +143,7 @@
 				CAD72939A03B2CDB528A0C4A /* Keyboard.entitlements */,
 				941319FB73DCEB18DDE2E232 /* KeyboardView.swift */,
 				853A101B912DF1524B01E1A2 /* KeyboardViewController.swift */,
+				738732B955CD39C76B2484C7 /* SeedData.swift */,
 				B913AFA01B930811B2848696 /* SpaceLogo@2x.png */,
 				DBA09810793F0754E1A9C3F7 /* SpaceLogo@3x.png */,
 				F316CA910C58A9377DC754A0 /* UserLangModel.swift */,
@@ -291,6 +295,7 @@
 				593AA8DEA7AFB11D6005F173 /* EngineBridge.swift in Sources */,
 				54B0665D29CB3187CEBF5157 /* KeyboardView.swift in Sources */,
 				1D3501D761DFD4F1BED9ED72 /* KeyboardViewController.swift in Sources */,
+				AC2407E83BA2FC77C45DE3FF /* SeedData.swift in Sources */,
 				1FE0301F7BA4765FA3C922D5 /* UserLangModel.swift in Sources */,
 				F97D2586E581143732FFBE09 /* VNLexicon.swift in Sources */,
 			);
@@ -311,6 +316,7 @@
 				E295B1FEA8D18A42FF77BD3A /* EmojiSuggest.swift in Sources */,
 				6689B752583E4AE424F48573 /* EngineBridge.swift in Sources */,
 				D4DEA988483DB59F683B8407 /* EngineBridgeTests.swift in Sources */,
+				0FC30ADCCD6DA0E278D59DD3 /* SeedData.swift in Sources */,
 				18EB5C9002EAD3991F709FD5 /* UserLangModel.swift in Sources */,
 				654F63A4AB91892BA093F56B /* VNLexicon.swift in Sources */,
 			);

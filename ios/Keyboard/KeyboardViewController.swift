@@ -24,6 +24,10 @@ final class KeyboardViewController: UIInputViewController {
         )
         let lexicon = Set(VNLexicon.words)
         langModel.isKnownWord = { lexicon.contains($0) }
+        // Datastore trống (lần đầu / vừa reset) → mồi bằng seed corpus để
+        // ngày đầu tiên đã có gợi ý hợp lý; dữ liệu học thật vượt seed sau
+        // vài ngày (weight seed ≤50, gõ thật +1/lần, decay tuần).
+        langModel.seedIfEmpty(unigrams: SeedData.unigrams, bigrams: SeedData.bigrams)
         keyboard.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(keyboard)
         NSLayoutConstraint.activate([
