@@ -696,6 +696,17 @@ public struct TelexEngine {
                     pCancelled = true
                     appendLetter(base: lower, mark: .none, upper: upper)
                     rawLetter[at] = pCount - 1
+                    // The canceled tone's ORIGINAL key(s) are orphaned now: with no
+                    // tone, render mapped them to the LAST letter of the word — so
+                    // a later ⌫ on an unrelated trailing letter dragged them out of
+                    // raw too, and the re-parse RESURRECTED the tone ("airrw" ⌫
+                    // gave ải instead of air — tester bug 2026-07-23). Pair them
+                    // with this literal letter instead: ⌫ on the displayed 'r'
+                    // removes both r keys, ⌫ on anything else leaves them alone.
+                    for j in 0..<pToneKeyCount where rawLetter[toneKeys[j]] == -1 {
+                        rawLetter[toneKeys[j]] = pCount - 1
+                    }
+                    pToneKeyCount = 0
                 } else {
                     pTone = t
                     // English/code signal ONLY when a lowercase letter came BEFORE
