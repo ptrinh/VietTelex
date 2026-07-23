@@ -85,6 +85,32 @@ enum SeedData {
         "stt": 3, "top": 3, "trip": 3, "vip": 3, "voucher": 3, "web": 3, "welcome": 3, "care": 2,
         "combo": 2, "date": 2, "flex": 2, "kb": 2, "max": 2, "old": 2, "oops": 2, "part": 2,
         "relax": 2, "stop": 2, "store": 2, "story": 2, "vibe": 2, "view": 2,
+        // — bổ sung 2026-07-24: địa danh VN/quốc tế, thương hiệu, tech —
+        "gòn": 12, "hà": 12, "mỹ": 12, "nội": 12, "sài": 12, "việt": 12, "bàn": 10, "nam": 10,
+        "nẵng": 10, "quốc": 10, "trung": 10, "đà": 10, "an": 8, "bình": 8, "bản": 8, "dương": 8,
+        "facebook": 8, "google": 8, "huế": 8, "hàn": 8, "hóa": 8, "hải": 8, "hồ": 8, "hội": 8,
+        "long": 8, "lạt": 8, "minh": 8, "màn": 8, "nga": 8, "pháp": 8, "phím": 8, "phú": 8,
+        "thái": 8, "trang": 8, "youtube": 8, "internet": 7, "iphone": 7, "lan": 7, "laptop": 7, "online": 7,
+        "tiktok": 7, "đức": 7, "apple": 6, "chuột": 6, "chí": 6, "code": 6, "hạ": 6, "london": 6,
+        "samsung": 6, "shopee": 6, "singapore": 6, "sạc": 6, "viettel": 6, "vũng": 6, "úc": 6, "độ": 6,
+        "admin": 5, "arsenal": 5, "biên": 5, "bug": 5, "canada": 5, "chatgpt": 5, "comment": 5, "download": 5,
+        "dubai": 5, "fpt": 5, "gmail": 5, "honda": 5, "ipad": 5, "lazada": 5, "livestream": 5, "loan": 5,
+        "macbook": 5, "manchester": 5, "momo": 5, "netflix": 5, "nhơn": 5, "offline": 5, "quy": 5, "server": 5,
+        "sydney": 5, "sĩ": 5, "thụy": 5, "tokyo": 5, "united": 5, "vinfast": 5, "vingroup": 5, "york": 5,
+        "zoom": 5, "ấn": 5, "agribank": 4, "avatar": 4, "backup": 4, "barca": 4, "bidv": 4, "blog": 4,
+        "california": 4, "campuchia": 4, "chelsea": 4, "francisco": 4, "liverpool": 4, "login": 4, "louis": 4, "lào": 4,
+        "page": 4, "password": 4, "ping": 4, "san": 4, "spotify": 4, "sub": 4, "techcombank": 4, "texas": 4,
+        "upload": 4, "vietcombank": 4, "vietjet": 4, "vlog": 4, "vnpay": 4, "vuitton": 4, "washington": 4, "austin": 3,
+        "dallas": 3, "houston": 3, "miami": 3, "seattle": 3,
+        // — bổ sung 2026-07-24 (2): crypto + họ/tên phổ biến VN —
+        "nguyễn": 12, "linh": 10, "lê": 10, "phương": 10, "trần": 10, "hoàng": 9, "hương": 9, "ngọc": 9,
+        "phạm": 9, "thảo": 9, "tuấn": 9, "dũng": 8, "hiếu": 8, "hiền": 8, "hùng": 8, "hạnh": 8,
+        "khánh": 8, "mai": 8, "mã": 8, "quang": 8, "quỳnh": 8, "sơn": 8, "thu": 8, "tâm": 8,
+        "vân": 8, "ví": 8, "vũ": 8, "bùi": 7, "công": 7, "huỳnh": 7, "lâm": 7, "ngô": 7,
+        "nhi": 7, "phan": 7, "phong": 7, "phúc": 7, "thúy": 7, "trịnh": 7, "tú": 7, "võ": 7,
+        "đặng": 7, "đỗ": 7, "bitcoin": 6, "khoa": 6, "kiên": 6, "lý": 6, "my": 6, "sàn": 6,
+        "trâm": 6, "yến": 6, "đinh": 6, "đào": 6, "coin": 5, "crypto": 5, "lệnh": 5, "binance": 4,
+        "blockchain": 4, "eth": 4, "ethereum": 4, "token": 4, "usdt": 4,
     ]
 
     static let bigrams: [(String, String, Int)] = [
@@ -167,5 +193,18 @@ enum SeedData {
         ("thú", "vị", 4), ("trách", "nhiệm", 4), ("trở", "nên", 4), ("tập", "trung", 4), ("đúng", "thế", 4),
         ("đặt", "đồ", 4), ("bất", "kỳ", 3), ("deadline", "rồi", 3), ("hoàn", "hảo", 3), ("ngạc", "nhiên", 3),
         ("nếu", "như", 3), ("tin", "tưởng", 3), ("tưởng", "tượng", 3), ("tồn", "tại", 3),
+        // — bổ sung 2026-07-24: tên đa âm tiết (địa danh, thương hiệu, cụm tech) —
+        ("việt", "nam", 15), ("hà", "nội", 14), ("sài", "gòn", 14), ("hồ", "chí", 10), ("chí", "minh", 10),
+        ("đà", "nẵng", 12), ("đà", "lạt", 11), ("nha", "trang", 10), ("thanh", "hóa", 8), ("hội", "an", 8),
+        ("phú", "quốc", 9), ("cần", "thơ", 8), ("vũng", "tàu", 8), ("hải", "phòng", 8), ("hạ", "long", 7),
+        ("quy", "nhơn", 6), ("biên", "hòa", 5), ("bình", "dương", 6), ("trung", "quốc", 10), ("hàn", "quốc", 9),
+        ("thái", "lan", 9), ("nhật", "bản", 8), ("đài", "loan", 5), ("ấn", "độ", 6), ("thụy", "sĩ", 6),
+        ("new", "york", 8), ("san", "francisco", 6), ("manchester", "united", 8), ("louis", "vuitton", 6), ("bàn", "phím", 8),
+        ("màn", "hình", 8), ("tai", "nghe", 6),
+        // — bổ sung 2026-07-24 (2): tên ghép + cụm crypto —
+        ("tuấn", "anh", 9), ("quốc", "anh", 5), ("minh", "anh", 6), ("ngọc", "anh", 6), ("phương", "anh", 6),
+        ("lan", "anh", 5), ("hải", "anh", 4), ("mai", "anh", 5), ("thanh", "tùng", 5), ("minh", "tuấn", 5),
+        ("văn", "nam", 4), ("thị", "hoa", 3), ("tiền", "mã", 5), ("mã", "hóa", 6), ("đồng", "coin", 4),
+        ("ví", "điện", 4), ("điện", "tử", 6), ("sàn", "binance", 3), ("giá", "bitcoin", 4), ("chơi", "coin", 4),
     ]
 }
