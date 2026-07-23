@@ -17,6 +17,11 @@ Triết lý: **tối giản, nhanh, ổn định, mã nguồn mở** — cài xo
 
 > Dự án của **Phil Trịnh**, viết lại từ đầu sau gần 20 năm dùng macOS mà chưa thấy bộ gõ tiếng Việt nào thật sự *ngon, chuẩn, mượt*.
 
+<p align="center">
+  <img src="assets/demo.gif" width="820" alt="Demo VietTelex — gõ ~380 WPM, dấu bung tức thì, từ tiếng Anh tự khôi phục">
+</p>
+<p align="center"><sub>Demo gõ máy ở tốc độ ~380 WPM — dấu bung tức thì, không gạch chân, từ tiếng Anh tự khôi phục.</sub></p>
+
 ## Điểm nổi bật
 
 - **Chuẩn IMKit** — là input method thật của hệ thống (không phải app chặn phím), nên thừa hưởng miễn phí: tự đổi kiểu gõ theo từng app, chính tả/dự đoán/viết hoa của macOS, con trỏ/undo/VoiceOver đều đúng.
