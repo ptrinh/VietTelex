@@ -182,7 +182,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             self.plane = .letters
             self.rebuild()
         }]
-        let space = baseButton(title: "space", special: true)
+        let space = baseButton(title: "", special: true)
         space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
         space.addAction(UIAction { [weak self] _ in self?.tapped(.space) }, for: .touchUpInside)
         space.setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -221,12 +221,15 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             self.rebuild()
         }
         views.append(planeBtn)
-        // nút emoji bên trái space (user 2026-07-23)
-        let emojiBtn = controlButton(title: "😀") { [weak self] in
+        // nút emoji bên trái space — icon đơn sắc như stock (user 2026-07-23)
+        let emojiBtn = controlButton(title: "") { [weak self] in
             guard let self else { return }
             self.plane = .emoji
             self.rebuild()
         }
+        emojiBtn.setImage(UIImage(systemName: "face.smiling",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)), for: .normal)
+        emojiBtn.tintColor = dark ? .white : .black
         views.append(emojiBtn)
         if needsGlobe {
             let globe = baseButton(title: "", special: true)
@@ -237,7 +240,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             }, for: .touchUpInside)
             views.append(globe)
         }
-        let space = baseButton(title: "space", special: true)
+        let space = baseButton(title: "", special: true)
         space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
         // logo Vᴛ mờ ở mép phải nút space (thay "VI EN" — user 2026-07-23);
         // PNG 2x/3x render từ MenuIcon.pdf nên sắc nét, tint theo appearance.
@@ -271,7 +274,14 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let comma = baseButton(title: ",", special: false)
         comma.addAction(UIAction { [weak self] _ in self?.tapped(.text(",")) }, for: .touchUpInside)
         views.append(comma)
-        let ret = controlButton(title: returnTitle) { [weak self] in self?.tapped(.newline) }
+        let ret = controlButton(title: returnTitle == "return" ? "" : returnTitle) { [weak self] in
+            self?.tapped(.newline)
+        }
+        if returnTitle == "return" {
+            ret.setImage(UIImage(systemName: "return.left",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular)), for: .normal)
+            ret.tintColor = dark ? .white : .black
+        }
         views.append(ret)
 
         let stack = UIStackView(arrangedSubviews: views)
@@ -282,7 +292,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         stack.layoutMargins = UIEdgeInsets(top: 5, left: 3, bottom: 5, right: 3)
         planeBtn.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.12).isActive = true
         emojiBtn.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.10).isActive = true
-        comma.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.10).isActive = true
+        comma.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.075).isActive = true
         ret.widthAnchor.constraint(equalTo: stack.widthAnchor, multiplier: 0.20).isActive = true
         return stack
     }
