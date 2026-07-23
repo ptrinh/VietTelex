@@ -404,14 +404,9 @@ function setPaused(on) {
 
 // lv1=50%, +20%/level, TRẦN 200% (từ level 9 đi ngang) — số level KHÔNG giới
 // hạn; trần tốc độ giữ cho mọi level đều có thể đạt sao (endless mode).
-function speedMul(l) {
-  // 50% + 20%/level tới 200% (đụng trần ở level 9). Trần cũ dừng hẳn ở đó nên
-  // level 18 và 23 bay Y HỆT nhau — giờ sau 200% vẫn tăng tiếp +5%/level,
-  // trần cứng 350% (level 39): 16s → ~4.6s một lượt bay.
-  var m = 0.50 + 0.20 * (l - 1);
-  if (m > 2.0) m = 2.0 + 0.05 * (l - 9);
-  return Math.min(3.5, m);
-}
+// 50% + 20%/level, không trần (user 2026-07-23): level 9 = 200%, 18 = 390%,
+// 23 = 490%… Trần 200% cũ làm mọi level từ 9 trở lên bay y hệt nhau.
+function speedMul(l) { return 0.50 + 0.20 * (l - 1); }
 function cloudDur() { return 16 / speedMul(level); }
 function spawnGap() { return Math.min(9, Math.max(3, cloudDur() / 6)); }
 
