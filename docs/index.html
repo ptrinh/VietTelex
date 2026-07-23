@@ -81,7 +81,14 @@
   .brew { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: .84rem; color: #d8dce8; cursor: pointer; }
   .brew:hover { border-color: rgba(255,255,255,.3); }
   .brew .copied { color: var(--gold); font-family: var(--sans); font-size: .78rem; }
-  .demo-video { display: block; width: min(760px, 100%); margin: 44px auto 0; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+  .demo-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 36px auto 0; background: none; border: none; cursor: pointer; color: #e8ebf4; font-family: inherit; font-size: .95rem; font-weight: 700; letter-spacing: .04em; }
+  .demo-btn .demo-play { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgba(212,169,74,.16); border: 2px solid var(--gold); color: var(--gold); font-size: 1.5rem; padding-left: 5px; transition: transform .15s ease, background .15s ease; }
+  .demo-btn:hover .demo-play { transform: scale(1.08); background: rgba(212,169,74,.3); }
+  .demo-modal { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(10,16,32,.86); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 24px; }
+  .demo-modal.open { display: flex; }
+  .demo-modal-inner { position: relative; width: min(900px, 100%); }
+  .demo-modal video { display: block; width: 100%; border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+  .demo-close { position: absolute; top: -40px; right: 0; background: none; border: none; color: #c6ccdb; font-size: 1.3rem; cursor: pointer; }
   .demo-caption { margin: 12px auto 0; font-size: .84rem; color: #9aa3b8; text-align: center; }
   .hero .meta { margin-top: 20px; font-size: .82rem; color: #7f889f; }
   .hero .philosophy { margin-top: 14px; font-size: .9rem; color: #9aa3b8; letter-spacing: .02em; }
@@ -167,9 +174,18 @@
       <a class="btn btn-learn" href="learn/">🎓 Học gõ Telex — miễn phí, có trò chơi</a>
     </div>
 
-    <video class="demo-video" src="assets/demo.mp4" autoplay muted loop playsinline
-           aria-label="Video demo VietTelex: gõ ~380 WPM, dấu bung tức thì, từ tiếng Anh tự khôi phục"></video>
-    <p class="demo-caption">Demo gõ máy ở tốc độ ~380 WPM — dấu bung tức thì, không gạch chân, từ tiếng Anh tự khôi phục.</p>
+    <button class="demo-btn" id="demoBtn" type="button" aria-haspopup="dialog">
+      <span class="demo-play">▶</span>
+      <span>Demo</span>
+    </button>
+
+    <div class="demo-modal" id="demoModal" role="dialog" aria-modal="true" aria-label="Video demo VietTelex">
+      <div class="demo-modal-inner">
+        <button class="demo-close" id="demoClose" type="button" aria-label="Đóng">✕</button>
+        <video id="demoVideo" src="assets/demo.mp4" controls playsinline preload="none"></video>
+        <p class="demo-caption">Gõ máy ở tốc độ ~380 WPM — dấu bung tức thì, không gạch chân, từ tiếng Anh tự khôi phục.</p>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -320,6 +336,18 @@ fetch('stable.json').then(function (r) { return r.json(); }).then(function (d) {
     a.textContent = 'VietTelex-' + d.version + '.pkg';
   });
 }).catch(function () {});
+</script>
+<script>
+(function () {
+  var modal = document.getElementById('demoModal');
+  var video = document.getElementById('demoVideo');
+  function openDemo() { modal.classList.add('open'); video.play(); }
+  function closeDemo() { modal.classList.remove('open'); video.pause(); }
+  document.getElementById('demoBtn').addEventListener('click', openDemo);
+  document.getElementById('demoClose').addEventListener('click', closeDemo);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeDemo(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDemo(); });
+})();
 </script>
 </body>
 </html>
