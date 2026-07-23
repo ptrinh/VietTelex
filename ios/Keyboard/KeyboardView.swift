@@ -46,7 +46,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         // empty in M1 but reserving it (a) matches Apple's height so the keys
         // are the same size as stock, (b) gives top-row balloons room to render
         // (they were clipped to our bounds — the 'cutoff' bug).
-        heightAnchor.constraint(equalToConstant: 260).isActive = true
+        // Priority 999, NOT required: during extension load the host briefly
+        // imposes its own (much taller) frame — a required constant fought it
+        // and Auto Layout broke OUR constraint for those frames.
+        let height = heightAnchor.constraint(equalToConstant: 260)
+        height.priority = UILayoutPriority(999)
+        height.isActive = true
         // Fast typists ROLL fingers: the next key is pressed before the previous
         // lifts. Default isMultipleTouchEnabled=false made iOS reject that second
         // touch outright — the missed-keypress bug.
@@ -57,10 +62,14 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         rowsContainer.isMultipleTouchEnabled = true
         rowsContainer.translatesAutoresizingMaskIntoConstraints = false
         addSubview(rowsContainer)
+        // Pin the KEYS to the BOTTOM with a FIXED height instead of stretching
+        // from the top: while the host settles on the final height (~100ms at
+        // keyboard switch), any excess shows as empty strip ABOVE the keys —
+        // invisible — instead of stretching every key tall (the 'flash' bug).
         NSLayoutConstraint.activate([
             rowsContainer.leftAnchor.constraint(equalTo: leftAnchor),
             rowsContainer.rightAnchor.constraint(equalTo: rightAnchor),
-            rowsContainer.topAnchor.constraint(equalTo: topAnchor, constant: 44),
+            rowsContainer.heightAnchor.constraint(equalToConstant: 212),
             rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
         rebuild()
