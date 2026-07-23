@@ -884,20 +884,35 @@ final class TelexInputController: IMKInputController {
         // No URL deep-links into the "All Input Sources" Edit… sheet, so with
         // Accessibility we press the button ourselves: in the Keyboard pane the
         // Input-Sources summary line mentions our own name ("… and ViệtTelex") —
-        // a locale-independent anchor; the next AXButton after it is Edit…
-        // (verified via UI-tree dump on macOS 26). Best-effort: without AX or if
-        // the tree changed, the pane is simply left open.
-        guard Accessibility.isTrusted else { return }
+        // a locale-independent anchor; the FIRST AXButton after it inside the
+        // same row group is Edit… (verified via UI-tree dump on macOS 26; the
+        // second is Text Replacements…, and Dictation's own Edit… lives in a
+        // different group so it can never match). Without AX, or if the tree
+        // changed, fall back to a how-to popup over the open pane.
+        guard Accessibility.isTrusted else { showInputSourcesHowTo(); return }
         DispatchQueue.global(qos: .userInitiated).async {
             for attempt in 0..<6 {
                 Thread.sleep(forTimeInterval: attempt == 0 ? 1.2 : 0.5)
                 if pressInputSourcesEdit() { return }
             }
+            DispatchQueue.main.async { showInputSourcesHowTo() }
         }
     }
 
-    /// Walk System Settings' AX tree in reading order; press the first button
-    /// after the Input-Sources anchor text. Returns true when pressed.
+    /// AX couldn't (or isn't allowed to) press Edit… — tell the user where it is.
+    private static func showInputSourcesHowTo() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = VTLocalized("Input sources howto title")
+        alert.informativeText = VTLocalized("Input sources howto body")
+        alert.addButton(withTitle: VTLocalized("OK"))
+        alert.runModal()
+    }
+
+    /// Find the Input-Sources row in System Settings' AX tree (anchored on our
+    /// own source name, which is locale-independent) and press the single
+    /// button inside that row — the Edit… sheet opener. Returns true when
+    /// pressed or when the sheet is already up.
     private static func pressInputSourcesEdit() -> Bool {
         guard let settings = NSRunningApplication
                 .runningApplications(withBundleIdentifier: "com.apple.systempreferences").first
@@ -916,34 +931,58 @@ final class TelexInputController: IMKInputController {
             return true
         }
 
-        var anchorSeen = false
-        var pressed = false
-        func walk(_ el: AXUIElement, depth: Int) {
-            if pressed || depth > 12 { return }
+        // Real tree (dumped on macOS 26, English + Vietnamese OS):
+        //   AXGroup                       ← the Input-Sources row
+        //     AXStaticText "Input Sources"
+        //     AXStaticText "U.S. and ViệtTelex"   ← locale-independent anchor
+        //     AXButton  desc="Edit…"              ← what we want
+        //     AXButton  desc="Text Replacements…"
+        // Rule: inside the anchor's OWN parent group only (never climb — the
+        // Dictation row has its own Edit…), press the first button that comes
+        // AFTER the anchor in child order. Anything unexpected → press nothing;
+        // the caller then shows the how-to popup.
+        guard let anchor = findAnchorText(window as! AXUIElement, depth: 0) else { return false }
+        var parentRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(anchor, kAXParentAttribute as CFString, &parentRef) == .success,
+              let parent = parentRef else { return false }
+        let row = parent as! AXUIElement
+        var kidsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(row, kAXChildrenAttribute as CFString, &kidsRef) == .success,
+              let kids = kidsRef as? [AXUIElement] else { return false }
+        guard let anchorIdx = kids.firstIndex(where: { CFEqual($0, anchor) }) else { return false }
+        for el in kids.dropFirst(anchorIdx + 1) {
             var roleRef: CFTypeRef?
             AXUIElementCopyAttributeValue(el, kAXRoleAttribute as CFString, &roleRef)
-            let role = roleRef as? String ?? ""
-            if role == kAXStaticTextRole as String {
-                var valRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(el, kAXValueAttribute as CFString, &valRef)
-                if let v = valRef as? String,
-                   v.contains("Telex") || v.contains("Input Sources") || v.contains("Nguồn nhập") {
-                    anchorSeen = true
-                }
-            } else if role == kAXButtonRole as String, anchorSeen {
-                pressed = AXUIElementPerformAction(el, kAXPressAction as CFString) == .success
-                return
-            }
-            var kidsRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &kidsRef) == .success,
-                  let kids = kidsRef as? [AXUIElement] else { return }
-            for k in kids {
-                walk(k, depth: depth + 1)
-                if pressed { return }
+            if roleRef as? String == kAXButtonRole as String {
+                return AXUIElementPerformAction(el, kAXPressAction as CFString) == .success
             }
         }
-        walk(window as! AXUIElement, depth: 0)
-        return pressed
+        return false
+    }
+
+    /// First static text (reading order) whose value mentions our input source
+    /// or the Input-Sources label. "Telex" comes from the enabled-sources
+    /// summary ("U.S. and ViệtTelex"), which shows our name in every OS
+    /// language; the label strings only help on English/Vietnamese systems.
+    private static func findAnchorText(_ el: AXUIElement, depth: Int) -> AXUIElement? {
+        if depth > 12 { return nil }
+        var roleRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(el, kAXRoleAttribute as CFString, &roleRef)
+        if roleRef as? String == kAXStaticTextRole as String {
+            var valRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(el, kAXValueAttribute as CFString, &valRef)
+            if let v = valRef as? String,
+               v.contains("Telex") || v.contains("Input Sources") || v.contains("Nguồn nhập") {
+                return el
+            }
+        }
+        var kidsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &kidsRef) == .success,
+              let kids = kidsRef as? [AXUIElement] else { return nil }
+        for k in kids {
+            if let found = findAnchorText(k, depth: depth + 1) { return found }
+        }
+        return nil
     }
 
 

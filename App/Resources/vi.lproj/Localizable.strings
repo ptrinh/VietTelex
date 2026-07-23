@@ -170,3 +170,8 @@
 "Open releases page" = "Mở trang releases";
 \n"Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…)." = "Định dạng hỗ trợ: plist/XML, JSON, YAML, hoặc mỗi dòng một cặp key:value (Gõ Nhanh, EVKey…).";\n
 "Export to YAML…" = "Xuất ra YAML…";
+
+/* System Settings → Input Sources how-to (AX press failed or not allowed) */
+"Input sources howto title" = "Còn một bước nữa trong Cài đặt hệ thống";
+"Input sources howto body" = "Trong bảng Bàn phím (Keyboard) vừa mở, tìm mục “Input Sources” (Nguồn nhập) dưới phần “Text Input” rồi bấm nút “Edit…” (Sửa…) bên cạnh.";
+"OK" = "OK";

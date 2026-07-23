@@ -28,3 +28,8 @@
 "Open releases page" = "Open releases page";
 \n"Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…)." = "Supported formats: plist/XML, JSON, YAML, or one key:value per line (GõNhanh, EVKey…).";\n
 "Export to YAML…" = "Export to YAML…";
+
+/* System Settings → Input Sources how-to (AX press failed or not allowed) */
+"Input sources howto title" = "One more step in System Settings";
+"Input sources howto body" = "In the Keyboard pane that just opened, find “Input Sources” under “Text Input” and press the “Edit…” button next to it.";
+"OK" = "OK";
