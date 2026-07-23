@@ -84,7 +84,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         suggestionBar.distribution = .fillProportionally
         suggestionBar.spacing = 6
         suggestionBar.isLayoutMarginsRelativeArrangement = true
-        suggestionBar.layoutMargins = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
+        suggestionBar.layoutMargins = UIEdgeInsets(top: 2, left: 6, bottom: 0, right: 6)
         suggestionBar.translatesAutoresizingMaskIntoConstraints = false
         suggestionBar.isHidden = true
         addSubview(suggestionBar)
@@ -103,7 +103,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     func setSuggestionsEnabled(_ on: Bool) {
         suggestionsEnabled = on
         suggestionBar.isHidden = !on
-        heightConstraint?.constant = on ? 260 : 216
+        // strip 32pt sát nút (user 2026-07-24: A/B/C về zero) — phần C dưới
+        // hàng phím cuối là vùng globe/mic hệ thống, không thuộc view mình.
+        heightConstraint?.constant = on ? 248 : 216
     }
 
     /// Cập nhật gợi ý theo layout stock: ["nguyên văn"] | từ gợi ý | emoji(≤3),
@@ -148,8 +150,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             NSLayoutConstraint.activate([
                 line.centerXAnchor.constraint(equalTo: v.centerXAnchor),
                 line.widthAnchor.constraint(equalToConstant: 1),
-                line.topAnchor.constraint(equalTo: v.topAnchor, constant: 10),
-                line.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -10),
+                line.topAnchor.constraint(equalTo: v.topAnchor, constant: 7),
+                line.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -7),
             ])
             v.tag = 77   // line lookup
             return v
