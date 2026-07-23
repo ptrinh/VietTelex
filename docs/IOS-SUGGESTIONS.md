@@ -8,8 +8,8 @@ kinh nghiệm pinyin IME.
 
 ## Tổng quan
 
-Thanh gợi ý (44pt, chỉ hiện khi bật toggle **Thanh gợi ý** trong app; bàn phím
-cao 260pt khi bật, 216pt khi tắt) có **ba trạng thái** theo ngữ cảnh gõ:
+Thanh gợi ý (30pt — quyết định giữ 30pt thay vì 44pt như stock, 2026-07-24, chỉ hiện khi bật toggle **Thanh gợi ý** trong app; bàn phím
+cao 246pt khi bật, 216pt khi tắt) có **ba trạng thái** theo ngữ cảnh gõ:
 
 | Trạng thái | Hiển thị | Nguồn dữ liệu |
 |---|---|---|
@@ -121,7 +121,7 @@ lấy top-3 nên slot luôn được lấp.
 
 | Key | Mặc định | Ý nghĩa |
 |---|---|---|
-| `showSuggestions` | true | Bật thanh gợi ý (bàn phím 260pt ↔ 216pt) |
+| `showSuggestions` | true | Bật thanh gợi ý (bàn phím 246pt ↔ 216pt) |
 | `learnWords` | true | Cho phép học từ hay dùng |
 | `filterSensitive` | true | Lọc từ tục khỏi gợi ý |
 | nút **Xóa từ đã học** | — | Xóa `userlm.plist`; lần mở sau seed lại |

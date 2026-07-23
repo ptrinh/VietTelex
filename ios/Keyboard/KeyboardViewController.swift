@@ -28,6 +28,7 @@ final class KeyboardViewController: UIInputViewController {
         langModel.seedIfEmpty(unigrams: SeedData.unigrams, bigrams: SeedData.bigrams)
         // Load plist chạy nền — bar mở-đầu refresh khi dữ liệu sẵn sàng.
         langModel.onReady = { [weak self] in self?.updateSuggestions() }
+        keyboard.onDeleteWord = { [weak self] in self?.deleteWordBackward() }
         keyboard.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(keyboard)
         NSLayoutConstraint.activate([
@@ -205,6 +206,25 @@ final class KeyboardViewController: UIInputViewController {
     /// iOS defer touch gần mép ~1s để phân xử system gesture — nguồn số 1 của
     /// "ấn phím hàng dưới không ăn". Xin quyền nhận touch trước ở mép dưới.
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { [.bottom] }
+
+    /// Xoá theo TỪ khi giữ backspace lâu (>3s) — gesture giữ, không phải hot
+    /// path nên đọc proxy (XPC) mỗi từ là chấp nhận được.
+    private func deleteWordBackward() {
+        applyingEdit = true
+        defer { applyingEdit = false }
+        bridge.reset()
+        lastWord = nil; lastWord2 = nil
+        restoreUndo = nil; undoOfferActive = false
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        guard !before.isEmpty else { return }
+        var chars = Array(before)
+        var count = 0
+        while let c = chars.last, c == " " || c == "\n" { chars.removeLast(); count += 1 }
+        while let c = chars.last, !(c == " " || c == "\n") { chars.removeLast(); count += 1 }
+        for _ in 0..<max(count, 1) { textDocumentProxy.deleteBackward() }
+        updateAutoShift()
+        updateSuggestions()
+    }
 
     /// Từ vừa chốt: nạp vào model cá nhân + trượt cửa sổ context (prev2, prev1).
     /// `accepted` = user bấm nhận suggestion → weight 2 (tín hiệu mạnh hơn).

@@ -43,6 +43,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var rowsContainer = UIStackView()
     private var rowsHeightConstraint: NSLayoutConstraint?
     private var repeatTimer: Timer?
+    private var lastSuggestionSig = ""
+    private var wordDeleteTick = 0
+    /// Giữ backspace >3s → xoá theo TỪ (controller đọc proxy, off hot path).
+    var onDeleteWord: (() -> Void)?
     private var lastSpaceTap: TimeInterval = 0
     private var spaceHoldX: CGFloat = 0
     private var backspaceHoldStart: TimeInterval = 0
@@ -119,6 +123,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// Bật/tắt thanh gợi ý: mở rộng khoảng trống phía trên vừa đủ (44pt).
     func setSuggestionsEnabled(_ on: Bool) {
         suggestionsEnabled = on
+        lastSuggestionSig = ""        // chrome đổi → lượt show kế phải ghi lại UI
         updateSuggestionChrome()
     }
 
@@ -228,10 +233,6 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     func showSuggestions(_ set: SuggestionSet) {
         guard suggestionsEnabled else { return }
         buildSuggestionPoolIfNeeded()
-        let ink: UIColor = dark ? .white : .black
-        for d in slotDividers {
-            d.viewWithTag(77)?.backgroundColor = ink.withAlphaComponent(0.18)
-        }
 
         // gom nội dung 3 slot chính: nextWords HOẶC literal/word/word2
         var texts: [(display: String, insert: String)?] = [nil, nil, nil]
@@ -241,6 +242,19 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             if let l = set.literal { texts[0] = ("\u{201C}\(l)\u{201D}", l) }
             if let w = set.word { texts[1] = (w, w) }
             if set.emojis.isEmpty, let w2 = set.word2 { texts[2] = (w2, w2) }
+        }
+        // Nội dung không đổi (nextWords thường ổn định giữa các phím) → bỏ qua
+        // toàn bộ ghi UI: setTitle trên bar fillProportionally kéo theo một
+        // lượt đo text/Auto Layout mỗi keystroke.
+        let sig = (dark ? "D" : "L")
+            + texts.map { $0.map { $0.display + "\u{1}" + $0.insert } ?? "\u{2}" }.joined(separator: "\u{3}")
+            + "\u{4}" + (set.nextWords.isEmpty ? set.emojis.prefix(3).joined() : "")
+        if sig == lastSuggestionSig { return }
+        lastSuggestionSig = sig
+
+        let ink: UIColor = dark ? .white : .black
+        for d in slotDividers {
+            d.viewWithTag(77)?.backgroundColor = ink.withAlphaComponent(0.18)
         }
         for (i, b) in slotButtons.enumerated() {
             if let t = texts[i] {
@@ -341,16 +355,51 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var builtDark = false
     private var builtWidth: CGFloat = -1
 
+    // Cache view theo plane: bấm 123/#+=/ABC chỉ tráo arrangedSubviews thay vì
+    // xé/dựng lại ~40 button + constraints mỗi lần. Emoji KHÔNG cache (recents
+    // phải tươi mỗi lần mở). Đổi return/dark/width → mọi plane cache đều sai
+    // nhãn/màu/inset nên vứt hết.
+    private struct CachedPlane {
+        let rows: [UIView]
+        let letterKeys: [(button: UIButton, base: String)]
+        let shiftKey: KeyButton?
+        let spaceBar: UIButton?
+        let spaceLogo: UIImageView?
+        let indentedRow: UIStackView?
+        let indentedRowInset: CGFloat
+    }
+    private var planeCache: [Plane: CachedPlane] = [:]
+
     private func rebuild() {
         updateSuggestionChrome()
         if builtPlane == plane, builtReturn == returnTitle,
            builtDark == dark, builtWidth == bounds.width { return }
+        if builtReturn != returnTitle || builtDark != dark || builtWidth != bounds.width {
+            planeCache.removeAll()
+        } else if let old = builtPlane, old != .emoji {
+            planeCache[old] = CachedPlane(
+                rows: rowsContainer.arrangedSubviews, letterKeys: letterKeys,
+                shiftKey: shiftKey, spaceBar: spaceBar, spaceLogo: spaceLogo,
+                indentedRow: indentedRow, indentedRowInset: indentedRowInset)
+        }
         builtPlane = plane; builtReturn = returnTitle
         builtDark = dark; builtWidth = bounds.width
         letterKeys.removeAll()
         shiftKey = nil
         rowsContainer.distribution = .fillEqually
         rowsContainer.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        if let cached = planeCache[plane] {
+            cached.rows.forEach { rowsContainer.addArrangedSubview($0) }
+            letterKeys = cached.letterKeys
+            shiftKey = cached.shiftKey
+            spaceBar = cached.spaceBar
+            spaceLogo = cached.spaceLogo
+            indentedRow = cached.indentedRow
+            indentedRowInset = cached.indentedRowInset
+            // shift có thể đã đổi trong lúc plane này nằm ngoài màn hình
+            if plane == .letters { applyShiftAppearance() }
+            return
+        }
         switch plane {
         case .letters: buildLetters()
         case .numbers: buildPlane(rows: [
@@ -739,14 +788,19 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         switch g.state {
         case .began:
             backspaceHoldStart = CACurrentMediaTime()
+            wordDeleteTick = 0
             repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.09, repeats: true) { [weak self] _ in
                 guard let self else { return }
-                // Apple accelerates a sustained hold: after ~1.6s the cadence
-                // doubles (word-wise deletion comes later if ever needed).
-                self.tapped(.backspace)
-                if CACurrentMediaTime() - self.backspaceHoldStart > 1.6 {
-                    self.tapped(.backspace)
+                // Apple accelerates a sustained hold: ~1.6s cadence doubles,
+                // ~3s chuyển sang xoá theo từ (~2.8 từ/s).
+                let held = CACurrentMediaTime() - self.backspaceHoldStart
+                if held > 3.0, let deleteWord = self.onDeleteWord {
+                    self.wordDeleteTick += 1
+                    if self.wordDeleteTick % 4 == 1 { deleteWord() }
+                    return
                 }
+                self.tapped(.backspace)
+                if held > 1.6 { self.tapped(.backspace) }
             }
         case .ended, .cancelled, .failed:
             repeatTimer?.invalidate()
