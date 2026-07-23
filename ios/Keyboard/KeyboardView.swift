@@ -3,6 +3,7 @@
 // globe/space/return. Metrics follow Apple's stock layout; the pixel-perfect
 // fidelity pass (balloons, exact colors per appearance, iPad) is M2.
 import UIKit
+import AudioToolbox
 
 final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
@@ -412,6 +413,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 hint.heightAnchor.constraint(equalToConstant: 22),
             ])
         }
+        space.addAction(UIAction { _ in Self.clickModifier() }, for: .touchDown)
         space.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             let now = CACurrentMediaTime()
@@ -508,20 +510,46 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         return b
     }
 
+    // Âm click phát ở TOUCH-DOWN như stock (nguồn cảm giác "nhanh"), qua
+    // AudioServices — không cần Full Access: 1123 chữ, 1155 backspace, 1156 phím
+    // chức năng (kinh nghiệm IME cộng đồng).
+    static func clickLetter() { AudioServicesPlaySystemSound(1123) }
+    static func clickDelete() { AudioServicesPlaySystemSound(1155) }
+    static func clickModifier() { AudioServicesPlaySystemSound(1156) }
+
+    // ROLLOVER: gõ nhanh thì ngón sau chạm xuống khi phím trước còn đè —
+    // stock chốt phím trước ngay lúc đó. Thiếu rollover là ca "chữ ra chậm /
+    // lộn thứ tự" khi gõ nhanh.
+    private weak var pendingLetterButton: UIButton?
+    private var pendingLetterCommit: (() -> Void)?
+    private func commitPendingLetter() {
+        let commit = pendingLetterCommit
+        pendingLetterCommit = nil
+        pendingLetterButton = nil
+        commit?()
+    }
+
     private func letterButton(_ s: String) -> UIView {
         let title = (shift == .off) ? s : s.uppercased()
         let b = baseButton(title: title, special: false)
         letterKeys.append((b, s))
         b.addAction(UIAction { [weak self, weak b] _ in
             guard let self, let b else { return }
+            self.commitPendingLetter()               // rollover phím trước
+            Self.clickLetter()                       // feedback tức thì
             self.showBalloon(over: b, text: b.currentTitle ?? title)
+            self.pendingLetterButton = b
+            self.pendingLetterCommit = { [weak self] in
+                guard let self else { return }
+                let cased: Character = (self.shift == .off) ? Character(s) : Character(s.uppercased())
+                self.tapped(.letter(cased))
+                if self.shift == .on { self.shift = .off; self.applyShiftAppearance() }
+            }
         }, for: .touchDown)
-        b.addAction(UIAction { [weak self] _ in
+        b.addAction(UIAction { [weak self, weak b] _ in
             guard let self else { return }
             self.hideBalloon()
-            let cased: Character = (self.shift == .off) ? Character(s) : Character(s.uppercased())
-            self.tapped(.letter(cased))
-            if self.shift == .on { self.shift = .off; self.applyShiftAppearance() }
+            if self.pendingLetterButton === b { self.commitPendingLetter() }
         }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
         return b
     }
@@ -548,12 +576,14 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private func textButton(_ s: String) -> UIView {
         let b = baseButton(title: s, special: false)
+        b.addAction(UIAction { _ in Self.clickLetter() }, for: .touchDown)
         b.addAction(UIAction { [weak self] _ in self?.tapped(.text(s)) }, for: .touchUpInside)
         return b
     }
 
     private func controlButton(title: String, action: @escaping () -> Void) -> KeyButton {
         let b = baseButton(title: title, special: true)
+        b.addAction(UIAction { _ in Self.clickModifier() }, for: .touchDown)
         b.addAction(UIAction { _ in action() }, for: .touchUpInside)
         return b
     }
@@ -581,7 +611,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let b = baseButton(title: "", special: true)
         b.setImage(UIImage(systemName: "delete.left"), for: .normal)
         b.tintColor = dark ? .white : .black
-        b.addAction(UIAction { [weak self] _ in self?.tapped(.backspace) }, for: .touchDown)
+        b.addAction(UIAction { [weak self] _ in
+            Self.clickDelete()
+            self?.tapped(.backspace)
+        }, for: .touchDown)
         // press & hold repeats (starts after 0.5s, ~11 Hz — Apple cadence)
         let long = UILongPressGestureRecognizer(target: self, action: #selector(backspaceHold(_:)))
         long.minimumPressDuration = 0.5

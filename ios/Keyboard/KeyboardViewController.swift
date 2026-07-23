@@ -103,8 +103,10 @@ final class KeyboardViewController: UIInputViewController {
         case .space:
             commitAndLearn(bridge.boundary(" ", proxy: proxy))
         case .doubleSpacePeriod:
-            // Apple: double-space converts the just-typed space into ". "
-            if textDocumentProxy.documentContextBeforeInput?.hasSuffix(" ") == true {
+            // Apple: double-space converts the just-typed space into ". ".
+            // Track bằng state thay vì documentContextBeforeInput — đọc proxy
+            // là XPC round-trip, không được nằm trên hot path.
+            if lastInsertWasSpace {
                 textDocumentProxy.deleteBackward()
                 textDocumentProxy.insertText(". ")
                 lastWord = nil; lastWord2 = nil
@@ -122,23 +124,33 @@ final class KeyboardViewController: UIInputViewController {
             bridge.backspace(proxy: proxy)
             if !bridge.isComposing { lastWord = nil; lastWord2 = nil }  // xoá lấn vào chữ cũ → context mờ
         }
-        UIDevice.current.playInputClick()
         switch key {
-        case .space, .newline, .doubleSpacePeriod, .backspace, .moveCursor:
-            updateAutoShift()
-        default: break
+        case .space, .doubleSpacePeriod: lastInsertWasSpace = true
+        default: lastInsertWasSpace = false
         }
-        // Gợi ý tính SAU khi ký tự đã lên màn hình (async main) và coalesce
-        // theo generation — gõ nhanh chỉ tính cho phím cuối, không chặn render.
+        // updateAutoShift đọc documentContextBeforeInput (XPC) → cùng khối
+        // async với suggestions, coalesce theo generation: gõ nhanh chỉ tính
+        // cho phím cuối, ký tự không bao giờ chờ. Sound đã phát ở touch-down.
+        let needsAutoShift: Bool
+        switch key {
+        case .space, .newline, .doubleSpacePeriod, .backspace, .moveCursor: needsAutoShift = true
+        default: needsAutoShift = false
+        }
         suggestionGen += 1
         let gen = suggestionGen
         DispatchQueue.main.async { [weak self] in
             guard let self, gen == self.suggestionGen else { return }
+            if needsAutoShift { self.updateAutoShift() }
             self.updateSuggestions()
         }
     }
 
     private var suggestionGen = 0
+    private var lastInsertWasSpace = false
+
+    /// iOS defer touch gần mép ~1s để phân xử system gesture — nguồn số 1 của
+    /// "ấn phím hàng dưới không ăn". Xin quyền nhận touch trước ở mép dưới.
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { [.bottom] }
 
     /// Từ vừa chốt: nạp vào model cá nhân + trượt cửa sổ context (prev2, prev1).
     /// `accepted` = user bấm nhận suggestion → weight 2 (tín hiệu mạnh hơn).
@@ -235,7 +247,7 @@ final class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(isWord ? item + " " : item)
         bridge.reset()
         if isWord { commitAndLearn(item, accepted: true) } else { lastWord = nil; lastWord2 = nil }
-        UIDevice.current.playInputClick()
+        KeyboardView.clickModifier()
         updateAutoShift()
         updateSuggestions()
     }
