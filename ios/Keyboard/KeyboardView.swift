@@ -25,6 +25,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private let onGlobe: (UIButton) -> Void
     private let needsGlobe: Bool
 
+    /// M2 suggestion bar: gate qua toggle showSuggestions trong app.
+    var onSuggestion: ((String) -> Void)?
+    private var heightConstraint: NSLayoutConstraint?
+    private let suggestionBar = UIStackView()
+    private var suggestionsEnabled = false
+
     private var plane: Plane = .letters
     private var shift: ShiftState = .on          // Apple: sentence start = shifted
     private var returnTitle = "return"
@@ -52,6 +58,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let height = heightAnchor.constraint(equalToConstant: 216)
         height.priority = UILayoutPriority(999)
         height.isActive = true
+        heightConstraint = height
         // Fast typists ROLL fingers: the next key is pressed before the previous
         // lifts. Default isMultipleTouchEnabled=false made iOS reject that second
         // touch outright — the missed-keypress bug.
@@ -72,10 +79,46 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             rowsContainer.heightAnchor.constraint(equalToConstant: 212),
             rowsContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
         ])
+        // Suggestion bar sống trong "khoảng trống 2" — chỉ hiện khi bật.
+        suggestionBar.axis = .horizontal
+        suggestionBar.distribution = .fillEqually
+        suggestionBar.spacing = 6
+        suggestionBar.isLayoutMarginsRelativeArrangement = true
+        suggestionBar.layoutMargins = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
+        suggestionBar.translatesAutoresizingMaskIntoConstraints = false
+        suggestionBar.isHidden = true
+        addSubview(suggestionBar)
+        NSLayoutConstraint.activate([
+            suggestionBar.leftAnchor.constraint(equalTo: leftAnchor),
+            suggestionBar.rightAnchor.constraint(equalTo: rightAnchor),
+            suggestionBar.topAnchor.constraint(equalTo: topAnchor),
+            suggestionBar.bottomAnchor.constraint(equalTo: rowsContainer.topAnchor),
+        ])
         rebuild()
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Bật/tắt thanh gợi ý: mở rộng khoảng trống phía trên vừa đủ (44pt).
+    func setSuggestionsEnabled(_ on: Bool) {
+        suggestionsEnabled = on
+        suggestionBar.isHidden = !on
+        heightConstraint?.constant = on ? 260 : 216
+    }
+
+    /// Cập nhật gợi ý (hiện tại: emoji cho từ đang gõ). Chuỗi rỗng → ẩn nút.
+    func showSuggestions(_ items: [String]) {
+        guard suggestionsEnabled else { return }
+        suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for item in items.prefix(3) where !item.isEmpty {
+            let b = KeyButton(type: .custom)
+            b.setTitle(item, for: .normal)
+            b.titleLabel?.font = .systemFont(ofSize: 24)
+            b.backgroundColor = .clear
+            b.addAction(UIAction { [weak self] _ in self?.onSuggestion?(item) }, for: .touchUpInside)
+            suggestionBar.addArrangedSubview(b)
+        }
+    }
 
     func configureReturnKey(type: UIReturnKeyType) {
         switch type {

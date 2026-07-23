@@ -18,6 +18,7 @@ struct KeyboardSettings {
     var simpleTelex = false
     var liveSpellCheck = true
     var autoRestore = true
+    var showSuggestions = true
 
     static func load() -> KeyboardSettings {
         var s = KeyboardSettings()
@@ -26,6 +27,7 @@ struct KeyboardSettings {
         if d.object(forKey: "simpleTelex") != nil { s.simpleTelex = d.bool(forKey: "simpleTelex") }
         if d.object(forKey: "liveSpellCheck") != nil { s.liveSpellCheck = d.bool(forKey: "liveSpellCheck") }
         if d.object(forKey: "autoRestore") != nil { s.autoRestore = d.bool(forKey: "autoRestore") }
+        if d.object(forKey: "showSuggestions") != nil { s.showSuggestions = d.bool(forKey: "showSuggestions") }
         return s
     }
 }
@@ -77,6 +79,10 @@ final class EngineBridge {
     func reset() { engine.reset() }
 
     var isComposing: Bool { !engine.isEmpty }
+
+    /// Current word for the suggestion bar: on-screen composed form + raw keys.
+    var composedWord: String { engine.composed }
+    var rawWord: String { engine.rawKeystrokes }
 
     private func apply(_ action: TelexAction, literal: String, proxy: TextProxyLike) {
         switch action {

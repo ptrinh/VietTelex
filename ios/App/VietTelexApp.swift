@@ -78,6 +78,8 @@ struct SettingsSection: View {
     private var autoRestore = true
     @AppStorage("showSpaceLogo", store: UserDefaults(suiteName: "group.com.viettelex"))
     private var showSpaceLogo = true
+    @AppStorage("showSuggestions", store: UserDefaults(suiteName: "group.com.viettelex"))
+    private var showSuggestions = true
 
     var body: some View {
         Section {
@@ -86,6 +88,7 @@ struct SettingsSection: View {
             Toggle("Kiểm tra chính tả khi gõ", isOn: $liveSpellCheck)
             Toggle("Tự khôi phục từ tiếng Anh", isOn: $autoRestore)
             Toggle("Hiện logo Vᴛ trên phím space", isOn: $showSpaceLogo)
+            Toggle("Thanh gợi ý (emoji)", isOn: $showSuggestions)
         } header: { Text("Cách gõ") } footer: {
             Text("Cài đặt áp dụng ngay lần mở bàn phím kế tiếp. Ví dụ: vieetj → việt, dd → đ, w → ư.")
         }

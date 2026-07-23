@@ -33,6 +33,12 @@ final class KeyboardViewController: UIInputViewController {
         bridge = EngineBridge()                       // fresh settings + buffer
         keyboard.configureReturnKey(type: textDocumentProxy.returnKeyType ?? .default)
         keyboard.applyAppearance(textDocumentProxy.keyboardAppearance ?? .default)
+        // Thanh gợi ý: gate qua toggle trong app; tự tắt ở field từ chối
+        // gợi ý (mật khẩu, autocorrection = .no) — đúng hành vi stock.
+        let traitsAllow = textDocumentProxy.autocorrectionType != .no
+            && (textDocumentProxy as UITextInputTraits).isSecureTextEntry != true
+        keyboard.setSuggestionsEnabled(KeyboardSettings.load().showSuggestions && traitsAllow)
+        keyboard.onSuggestion = { [weak self] emoji in self?.acceptEmoji(emoji) }
         updateAutoShift()
         keyboard.showLanguageBadge()   // "ViệtTelex" thoáng trên spacebar như stock
     }
@@ -98,6 +104,31 @@ final class KeyboardViewController: UIInputViewController {
             updateAutoShift()
         default: break
         }
+        updateSuggestions()
+    }
+
+    /// Emoji cho từ đang gõ: khớp cả dạng có dấu ("yêu") lẫn phím thô tiếng
+    /// Anh ("love") — hai đường cùng trỏ về một emoji (bảng EmojiSuggest).
+    private func updateSuggestions() {
+        let composed = bridge.composedWord.lowercased()
+        let raw = bridge.rawWord.lowercased()
+        var items: [String] = []
+        if let e = EmojiSuggest.emoji(for: composed) ?? EmojiSuggest.emoji(for: raw) {
+            items.append(e)
+        }
+        keyboard.showSuggestions(items)
+    }
+
+    /// Tap gợi ý: thay từ đang gõ bằng emoji (hành vi QuickType của stock).
+    private func acceptEmoji(_ emoji: String) {
+        applyingEdit = true
+        defer { applyingEdit = false }
+        let n = bridge.composedWord.count
+        for _ in 0..<n { textDocumentProxy.deleteBackward() }
+        textDocumentProxy.insertText(emoji)
+        bridge.reset()
+        keyboard.showSuggestions([])
+        UIDevice.current.playInputClick()
     }
 }
 
