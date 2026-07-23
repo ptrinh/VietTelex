@@ -111,6 +111,8 @@ enum SeedData {
         "đặng": 7, "đỗ": 7, "bitcoin": 6, "khoa": 6, "kiên": 6, "lý": 6, "my": 6, "sàn": 6,
         "trâm": 6, "yến": 6, "đinh": 6, "đào": 6, "coin": 5, "crypto": 5, "lệnh": 5, "binance": 4,
         "blockchain": 4, "eth": 4, "ethereum": 4, "token": 4, "usdt": 4,
+        // — bổ sung 2026-07-24 (3): thương hiệu nội bộ —
+        "printik": 6, "senprints": 6,
     ]
 
     static let bigrams: [(String, String, Int)] = [
