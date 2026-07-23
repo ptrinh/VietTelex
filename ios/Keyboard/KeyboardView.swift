@@ -106,6 +106,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     // deallocates the key already under the user's finger, so its touch-up
     // never fires (the missed-keypress bug). Retitle in place instead.
     private var letterKeys: [(button: UIButton, base: String)] = []
+    private weak var spaceBar: UIButton?
     private var shiftKey: UIButton?
     private func applyShiftAppearance() {
         for (b, s) in letterKeys {
@@ -242,6 +243,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         let space = baseButton(title: "", special: true)
         space.backgroundColor = dark ? UIColor(white: 1, alpha: 0.30) : .white
+        spaceBar = space
         // logo Vᴛ mờ ở mép phải nút space (thay "VI EN" — user 2026-07-23);
         // PNG 2x/3x render từ MenuIcon.pdf nên sắc nét, tint theo appearance.
         let hint = UIImageView(image: UIImage(named: "SpaceLogo")?.withRenderingMode(.alwaysTemplate))
@@ -458,6 +460,27 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 spaceHoldX = x
             }
         default: break
+        }
+    }
+
+    /// Stock iOS flashes the layout name ("English (US)") on the spacebar when
+    /// the keyboard appears. Same here: "ViệtTelex" for ~700ms, then fade.
+    func showLanguageBadge() {
+        guard let space = spaceBar else { return }
+        let l = UILabel()
+        l.text = "ViệtTelex"
+        l.font = .systemFont(ofSize: 16, weight: .regular)
+        l.textColor = dark ? .white : .black
+        l.translatesAutoresizingMaskIntoConstraints = false
+        space.addSubview(l)
+        NSLayoutConstraint.activate([
+            l.centerXAnchor.constraint(equalTo: space.centerXAnchor),
+            l.centerYAnchor.constraint(equalTo: space.centerYAnchor),
+        ])
+        UIView.animate(withDuration: 0.3, delay: 0.7, options: [.curveEaseOut]) {
+            l.alpha = 0
+        } completion: { _ in
+            l.removeFromSuperview()
         }
     }
 

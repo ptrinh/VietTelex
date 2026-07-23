@@ -34,6 +34,7 @@ final class KeyboardViewController: UIInputViewController {
         keyboard.configureReturnKey(type: textDocumentProxy.returnKeyType ?? .default)
         keyboard.applyAppearance(textDocumentProxy.keyboardAppearance ?? .default)
         updateAutoShift()
+        keyboard.showLanguageBadge()   // "ViệtTelex" thoáng trên spacebar như stock
     }
 
     /// Apple behavior: shift turns on at sentence start when the field asks for
