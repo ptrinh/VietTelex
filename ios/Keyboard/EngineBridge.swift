@@ -106,11 +106,11 @@ final class EngineBridge {
     var composedWord: String { engine.composed }
     var rawWord: String { engine.rawKeystrokes }
 
-    /// Từ mà boundary SẼ chốt (auto-restore tính sẵn) — engine là struct nên
-    /// peek trên bản copy, không đụng state thật.
+    /// Từ mà boundary SẼ chốt (auto-restore tính sẵn) — peek non-mutating trực
+    /// tiếp trên engine. KHÔNG copy struct: bản copy cũ kích hoạt COW copy ~10
+    /// buffer cố định mỗi phím khi commitText mutate (reset + scratch).
     var predictedCommit: String {
-        var e = engine
-        return e.commitText(autoRestore: settings.autoRestore)
+        engine.peekCommitText(autoRestore: settings.autoRestore)
     }
 
     private func apply(_ action: TelexAction, literal: String, proxy: TextProxyLike) {

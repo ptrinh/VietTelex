@@ -323,7 +323,8 @@ public struct TelexEngine {
     /// diacritic and may keep typing ("Deffault" keys → Default, field report
     /// 2026-07-22 — an earlier validity-based rule here restored the raw double-f).
     /// Only then do the standard validity/exception rules decide.
-    private mutating func shouldRestoreRaw() -> Bool {
+    /// NON-mutating (scratch-free) so `peekCommitText` can share it verbatim.
+    private func shouldRestoreRaw() -> Bool {
         if rawIsEnglishCollision() { return true }
         if markCancelled { return false }
         return forceRestoreUpperTone || rawIsEnglishException() || !composedIsValidSyllable()
@@ -336,6 +337,20 @@ public struct TelexEngine {
         defer { reset() }
         // Overflowed: never restore to `rawKeystrokes` (only the first 32 keys) —
         // return the composed prefix unchanged; the caller keeps the rest on screen.
+        if overflowed { return composed }
+        if autoRestore, outCount > 0, shouldRestoreRaw() {
+            return rawKeystrokes
+        }
+        return composed
+    }
+
+    /// Non-mutating twin of `commitText(autoRestore:)`: điều boundary SẼ chốt,
+    /// không reset, không đụng state — caller (suggestion bar iOS) peek mỗi phím
+    /// trực tiếp trên engine, khỏi COW-copy cả struct (~10 buffer cố định mỗi
+    /// lần copy khi `commitText` mutate). Phải trả về byte-identical với
+    /// `{ var e = self; return e.commitText(autoRestore:) }`.
+    public func peekCommitText(autoRestore: Bool) -> String {
+        // Overflowed: mirror commitText — composed prefix, không bao giờ restore.
         if overflowed { return composed }
         if autoRestore, outCount > 0, shouldRestoreRaw() {
             return rawKeystrokes
@@ -357,7 +372,7 @@ public struct TelexEngine {
     /// Vietnamese syllable, so validity-based restore can't catch them
     /// ("his"→hí, "this"→thí, "see"→sê). Boundary-only; the String is built only
     /// after cheap byte pre-filters, never on the per-key hot path.
-    private mutating func rawIsEnglishCollision() -> Bool {
+    private func rawIsEnglishCollision() -> Bool {
         guard englishWordRestore else { return false }
         guard rawCount >= 2, rawCount <= 12 else { return false }
         guard compositionDiffersFromRaw() else { return false }   // untouched words can't collide
@@ -419,7 +434,10 @@ public struct TelexEngine {
         }
     }
 
-    private mutating func composedIsValidSyllable() -> Bool {
+    /// NON-mutating: letter classes go into a small STACK buffer
+    /// (`withUnsafeTemporaryAllocation`, ≤33 bytes — no heap), not `basesScratch`,
+    /// so the boundary decision is shareable by `peekCommitText` per keystroke.
+    private func composedIsValidSyllable() -> Bool {
         // Đ-initial ABBREVIATIONS (chat shorthand), not real syllables: đ, đc, đm,
         // đk, đkm… survive auto-restore — typing "ddm" keeps đm instead of
         // reverting to raw (generalized from the đc whitelist, user decision
@@ -458,23 +476,26 @@ public struct TelexEngine {
             }
         }
         // Teencode onset: validate as if spelled canonically ("wá" checks as quá).
-        if pCount < Self.capacity - 1, let (canon, skip) = teencodeOnset() {
-            var n = 0
-            for c in canon { basesScratch[n] = Tables.letterClass(base: c, mark: .none); n += 1 }
-            for k in skip..<pCount {
-                basesScratch[n] = Tables.letterClass(base: renderLetters[k].base,
-                                                     mark: renderLetters[k].mark)
-                n += 1
+        // n ≤ pCount + 1 (canon ≤ 2, skip ≥ 1) nên capacity + 1 luôn đủ.
+        return withUnsafeTemporaryAllocation(of: UInt8.self, capacity: Self.capacity + 1) { buf in
+            if pCount < Self.capacity - 1, let (canon, skip) = teencodeOnset() {
+                var n = 0
+                for c in canon { buf[n] = Tables.letterClass(base: c, mark: .none); n += 1 }
+                for k in skip..<pCount {
+                    buf[n] = Tables.letterClass(base: renderLetters[k].base,
+                                                mark: renderLetters[k].mark)
+                    n += 1
+                }
+                if SyllableValidator.isValidSyllable(classes: buf, count: n,
+                                                     tone: lastEffTone) { return true }
             }
-            if SyllableValidator.isValidSyllable(classes: basesScratch, count: n,
-                                                 tone: lastEffTone) { return true }
+            for k in 0..<pCount {
+                buf[k] = Tables.letterClass(base: renderLetters[k].base,
+                                            mark: renderLetters[k].mark)
+            }
+            return SyllableValidator.isValidSyllable(classes: buf, count: pCount,
+                                                     tone: lastEffTone)
         }
-        for k in 0..<pCount {
-            basesScratch[k] = Tables.letterClass(base: renderLetters[k].base,
-                                                 mark: renderLetters[k].mark)
-        }
-        return SyllableValidator.isValidSyllable(classes: basesScratch, count: pCount,
-                                                 tone: lastEffTone)
     }
 
     /// True when the composed scalars differ from the raw keystrokes (i.e. some
@@ -1094,6 +1115,50 @@ public struct TelexEngine {
         guard pCount < Self.capacity else { return }
         letters[pCount] = LetterUnit(base: base, mark: mark, upper: upper)
         pCount += 1
+    }
+}
+
+// MARK: - Validator buffer twin (peek path)
+
+private extension SyllableValidator {
+    /// Buffer-pointer twin of `isValidSyllable(classes:count:tone:)` — the exact
+    /// same deterministic onset split + trie walk, but over a caller-provided
+    /// STACK buffer so `composedIsValidSyllable` stays non-mutating and
+    /// heap-free (dùng cho cả commit lẫn `peekCommitText` mỗi phím).
+    /// Keep in lockstep with the Array version in SyllableValidator.swift.
+    static func isValidSyllable(classes: UnsafeMutableBufferPointer<UInt8>,
+                                count n: Int, tone: Tone) -> Bool {
+        if n == 0 { return false }
+        let q = UInt8(ascii: "q") - UInt8(ascii: "a")
+        let u = UInt8(ascii: "u") - UInt8(ascii: "a")
+        let g = UInt8(ascii: "g") - UInt8(ascii: "a")
+        let i = UInt8(ascii: "i") - UInt8(ascii: "a")
+
+        var pos = 0
+        while pos < n && !Tables.isVowelClass(classes[pos]) { pos += 1 }
+        var onsetEnd = pos
+        // qu / gi glide handling ("qu" + vowel: the unmarked u joins the onset).
+        if pos >= 1, classes[0] == q, pos < n, classes[pos] == u,
+           pos + 1 < n, Tables.isVowelClass(classes[pos + 1]) {
+            onsetEnd = pos + 1
+        } else if n >= 3, classes[0] == g, classes[1] == i, Tables.isVowelClass(classes[2]) {
+            onsetEnd = 2
+        }
+
+        var node: Int32 = 0
+        for k in 0..<onsetEnd {
+            node = onsetExact.step(node, classes[k])
+            if node < 0 { return false }
+        }
+        guard onsetExact.mask(node) != 0 else { return false }
+
+        var rnode: Int32 = 0
+        for k in onsetEnd..<n {
+            rnode = rimeExact.step(rnode, classes[k])
+            if rnode < 0 { return false }
+        }
+        let m = rimeExact.mask(rnode)
+        return (m >> tone.rawValue) & 1 == 1
     }
 }
 
