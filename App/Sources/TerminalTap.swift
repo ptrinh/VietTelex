@@ -1321,7 +1321,8 @@ final class TerminalTapController {
         event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &len, unicodeString: &buf)
         guard len >= 1, let scalar = Unicode.Scalar(buf[0]) else {
             // Dead/function key: flush the word, let the odd key through.
-            emitBoundary(suppressAutoRestore: false)
+            // (no shortcut expansion — not an explicit text boundary)
+            emitBoundary(suppressAutoRestore: false, allowShortcuts: false)
             return pass
         }
         // Navigation / function keys (←↑→↓, Home/End/PageUp/PageDown, forward-delete,
@@ -1332,7 +1333,7 @@ final class TerminalTapController {
         // REAL KEY THROUGH so cursor/history work — never re-emit it as inserted text
         // (re-emitting arrows as 0x1C killed arrow-key navigation).
         if buf[0] < 0x20 || (buf[0] >= 0xF700 && buf[0] <= 0xF8FF) {
-            emitBoundary(suppressAutoRestore: false)
+            emitBoundary(suppressAutoRestore: false, allowShortcuts: false)
             return pass
         }
         let ch = Character(scalar)
@@ -1416,7 +1417,7 @@ final class TerminalTapController {
     /// Emit a shortcut expansion / auto-restore rewrite for the composed word. Returns
     /// true if anything was rewritten (caller then re-emits the boundary key after it).
     @discardableResult
-    private func emitBoundary(suppressAutoRestore: Bool) -> Bool {
+    private func emitBoundary(suppressAutoRestore: Bool, allowShortcuts: Bool = true) -> Bool {
         guard !engine.isEmpty else { engine.reset(); return false }
         // Capture BOTH forms before reset() wipes them. The composed word is what's on
         // screen (drives the backspace count); the raw keystrokes are what the user
@@ -1429,7 +1430,8 @@ final class TerminalTapController {
         // vowels) is transformed by composition and so can NEVER match on `composed`
         // ("ddc" composes to "đc"); the raw form recovers it. Backspaces are always the
         // on-screen composed scalar count regardless of which form matched.
-        if let expansion = (word.isEmpty ? nil : AppState.shared.shortcuts[word])
+        if allowShortcuts,
+           let expansion = (word.isEmpty ? nil : AppState.shared.shortcuts[word])
                         ?? AppState.shared.shortcuts[rawWord] {
             engine.reset()
             SyntheticKeyboard.apply(backspaces: onScreen, insert: expansion, mode: emitMode)

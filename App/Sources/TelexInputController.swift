@@ -722,7 +722,8 @@ final class TelexInputController: IMKInputController {
     }
 
     @discardableResult
-    private func boundary(_ client: IMKTextInput, suppressAutoRestore: Bool = false) -> Bool {
+    private func boundary(_ client: IMKTextInput, suppressAutoRestore: Bool = false,
+                          allowShortcuts: Bool = true) -> Bool {
         defer { tracking = false; onLen = 0 }
         guard !engine.isEmpty else { engine.reset(); return false }
         let marked = AppState.shared.usesMarkedText(AppState.shared.currentBundleID)
@@ -738,7 +739,7 @@ final class TelexInputController: IMKInputController {
         // Try the composed word first, then fall back to the raw keystrokes so a
         // shortcut key containing trigger letters still matches. On-screen backspace
         // count stays `onScreen` (the composed scalar count) either way.
-        if !word.isEmpty,
+        if allowShortcuts, !word.isEmpty,
            let expansion = AppState.shared.shortcuts[word] ?? AppState.shared.shortcuts[rawWord] {
             engine.reset()
             if marked { client.insertText(expansion, replacementRange: kNoRange) }
@@ -799,7 +800,12 @@ final class TelexInputController: IMKInputController {
 
     override func commitComposition(_ sender: Any!) {
         if let client = sender as? IMKTextInput {
-            boundary(client)
+            // NO shortcut expansion here (tester bug 2026-07-23): some apps
+            // (omnibox/Spotlight-style fields) force-commit after every
+            // keystroke, which expanded a single-letter shortcut ("r"→"rồi")
+            // mid-word — "t","r" became "trồi". Expansion belongs to EXPLICIT
+            // boundaries only (space/punctuation/Return/Tab).
+            boundary(client, allowShortcuts: false)
         } else {
             engine.reset()
             tracking = false

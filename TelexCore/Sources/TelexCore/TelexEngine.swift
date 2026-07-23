@@ -848,6 +848,17 @@ public struct TelexEngine {
                     if letters[k].base == lower, letters[k].mark == .none {
                         letters[k].mark = .circumflex; rawLetter[at] = k; return
                     }
+                    // Cancel mirror of the reach-back (tester bug 2026-07-23):
+                    // "theme"→thêm, then a third e must UNDO the mark and go
+                    // literal — "theme" — exactly like the adjacent "ee" cancel.
+                    // Without this the e appended ("thême") and boundary
+                    // auto-restore emitted the raw keys: "themee".
+                    if letters[k].base == lower, letters[k].mark == .circumflex {
+                        letters[k].mark = .none
+                        pCancelled = true
+                        appendLetter(base: lower, mark: .none, upper: upper)
+                        rawLetter[at] = pCount - 1; return
+                    }
                     k -= 1
                 }
             }
@@ -878,6 +889,16 @@ public struct TelexEngine {
             if freeMarking, pCount > 1,
                letters[0].base == UInt8(ascii: "d"), letters[0].mark == .none {
                 letters[0].mark = .bar; rawLetter[at] = 0; return
+            }
+            // Cancel mirror: "did"→đi, then a third d undoes the bar and goes
+            // literal ("did"), same family as the circumflex reach-back cancel.
+            if freeMarking, pCount > 1,
+               letters[0].base == UInt8(ascii: "d"), letters[0].mark == .bar,
+               letters[pCount - 1].base != UInt8(ascii: "d") {
+                letters[0].mark = .none
+                pCancelled = true
+                appendLetter(base: UInt8(ascii: "d"), mark: .none, upper: upper)
+                rawLetter[at] = pCount - 1; return
             }
             appendLetter(base: UInt8(ascii: "d"), mark: .none, upper: upper)
             rawLetter[at] = pCount - 1

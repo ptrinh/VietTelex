@@ -167,6 +167,13 @@ final class EngineGoldenTests: XCTestCase {
         // 2026-07-22: composed đi, committed "did").
         XCTAssertEqual(commitFree("did"), "đi")
         XCTAssertEqual(commitFree("theme"), "thêm")
+        // Cancel mirror of the reach-back (tester bug 2026-07-23): one MORE of
+        // the marking key undoes it and goes literal — like the adjacent "ee"
+        // cancel. Without this, "themee" showed "thême" then auto-restored to
+        // the raw keys ("themee" on screen).
+        XCTAssertEqual(commitFree("themee"), "theme")
+        XCTAssertEqual(commitFree("didd"), "did")
+        XCTAssertEqual(commitFree("dauaa"), "daua")
         // audit 2026-07-23: English spellings that ARE the canonical telex keys
         // of common Vietnamese words — Vietnamese wins (protect list).
         XCTAssertEqual(commitFree("thus"), "thú")
