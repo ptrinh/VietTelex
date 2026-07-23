@@ -9,7 +9,7 @@
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:'Baloo 2',system-ui,sans-serif}
 a{color:#2c7a4b}a:hover{color:#1d5c37}
-@keyframes driftLeft{from{transform:translateX(0)}to{transform:translateX(-135vw)}}
+@keyframes driftLeft{0%{transform:translateX(0)}4%{transform:translateX(-14vw)}100%{transform:translateX(-135vw)}}
 @keyframes cloudPop{0%{transform:scale(1);opacity:1}100%{transform:scale(1.9);opacity:0}}
 @keyframes bgDrift{from{transform:translateX(20vw)}to{transform:translateX(-150vw)}}
 @keyframes sway{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-10px)}}
@@ -171,6 +171,7 @@ button{font-family:inherit}
       <button id="pauseBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">⏸</button>
       <button id="voiceBtn" title="Đọc từ khi đổi mây" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🗣️</button>
       <button id="hardBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🅰️</button>
+      <button id="langBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">V</button>
       <button id="soundBtn" style="background:rgba(255,255,255,.85);border:none;border-radius:14px;padding:8px 14px;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(70,120,180,.15)">🔊</button>
     </div>
     <div style="background:rgba(255,255,255,.85);border-radius:14px;padding:7px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 16px rgba(70,120,180,.15)">
@@ -429,7 +430,7 @@ function makeCloud(w) {
     '<span style="font-size:27px;position:relative;z-index:1">' + w.a + '</span>' +
     '<span class="word"></span>';
   cloudsEl.appendChild(el);
-  var c = { id: ++cid, el: el, w: w, eng: new Telex.TelexEngine({ freeMarking: true }), popped: false, skipped: false, dead: false };
+  var c = { id: ++cid, el: el, w: w, typed: '', eng: new Telex.TelexEngine({ freeMarking: true }), popped: false, skipped: false, dead: false };
   el.addEventListener('animationend', function (e) {
     if (e.animationName !== 'driftLeft') return;
     removeCloud(c);
@@ -444,7 +445,7 @@ function renderWord(c) {
   // against the target — green when the char is final, amber while a
   // transform is still pending (mid free-marking states). The black cursor
   // sits UNDER the next character (overlaying the orange active line).
-  var comp = Array.from(c.eng.composed);
+  var comp = Array.from(gameLang === 'en' ? c.typed : c.eng.composed);
   var target = Array.from(c.w.d);
   var doneDone = comp.join('') === c.w.d;
   var html = '';
@@ -484,6 +485,7 @@ var DEBUG = location.hash === '#debug';
 // ── i18n: theo ngôn ngữ đã chọn ở Lessons (vtlearn.lang) ────────────────────
 var GSTR = {
 "vi": {
+"langTitle": "Đổi ngôn ngữ từ trên mây: V = tiếng Việt, E = English (chơi lại level)",
 "hardTitle": "Chế độ khó: ẩn chữ — chỉ emoji + giọng đọc",
 "mobileNotice": "📱 Trò chơi này được thiết kế để luyện gõ trên máy tính với bàn phím vật lý. Trên điện thoại/máy tính bảng vẫn chơi được nhưng trải nghiệm sẽ không tối ưu.",
 "altitude": "ĐỘ CAO CỦA DIỀU",
@@ -511,6 +513,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "en": {
+"langTitle": "Cloud word language: V = Vietnamese, E = English (restarts the level)",
 "hardTitle": "Hard mode: letters hidden — emoji + voice only",
 "mobileNotice": "📱 This game is designed for typing practice on a computer with a physical keyboard. It works on phones/tablets, but the experience won't be optimal.",
 "altitude": "KITE ALTITUDE",
@@ -538,6 +541,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "fr": {
+"langTitle": "Langue des mots : V = vietnamien, E = anglais (relance le niveau)",
 "hardTitle": "Mode difficile : lettres cachées — émoji + voix uniquement",
 "mobileNotice": "📱 Ce jeu est conçu pour s'entraîner à taper sur un ordinateur avec un clavier physique. Il fonctionne sur téléphone/tablette, mais l'expérience ne sera pas optimale.",
 "altitude": "ALTITUDE DU CERF-VOLANT",
@@ -565,6 +569,7 @@ var GSTR = {
 "levelN": "Niveau {n}"
 },
 "de": {
+"langTitle": "Wortsprache: V = Vietnamesisch, E = Englisch (Level startet neu)",
 "hardTitle": "Schwerer Modus: Buchstaben versteckt — nur Emoji + Stimme",
 "mobileNotice": "📱 Dieses Spiel ist zum Tippen am Computer mit einer physischen Tastatur gedacht. Es funktioniert auch auf Handy/Tablet, aber das Erlebnis ist dort nicht optimal.",
 "altitude": "FLUGHÖHE DES DRACHENS",
@@ -592,6 +597,7 @@ var GSTR = {
 "levelN": "Level {n}"
 },
 "ko": {
+"langTitle": "구름 단어 언어: V = 베트남어, E = 영어 (레벨 다시 시작)",
 "hardTitle": "어려움 모드: 글자 숨김 — 이모지와 목소리만",
 "mobileNotice": "📱 이 게임은 실제 키보드가 있는 컴퓨터에서 타자 연습을 하도록 만들어졌어요. 휴대폰/태블릿에서도 되지만 최적의 경험은 아니에요.",
 "altitude": "연 높이",
@@ -619,6 +625,7 @@ var GSTR = {
 "levelN": "레벨 {n}"
 },
 "ja": {
+"langTitle": "ことばの言語：V＝ベトナム語、E＝英語（レベルさいスタート）",
 "hardTitle": "ハードモード：もじをかくして、えもじと声だけ",
 "mobileNotice": "📱 このゲームは、じつぶつのキーボードがあるパソコンでのタイピングれんしゅうのために作られています。スマホ／タブレットでもあそべますが、さいてきなたいけんではありません。",
 "altitude": "たこの たかさ",
@@ -646,6 +653,7 @@ var GSTR = {
 "levelN": "レベル {n}"
 },
 "zh": {
+"langTitle": "云朵单词语言：V＝越南语，E＝英语（重新开始本关）",
 "hardTitle": "困难模式：隐藏文字——只有表情和语音",
 "mobileNotice": "📱 这个游戏是为使用实体键盘的电脑打字练习设计的。手机/平板也能玩，但体验不是最佳。",
 "altitude": "风筝高度",
@@ -673,6 +681,7 @@ var GSTR = {
 "levelN": "第{n}关"
 },
 "km": {
+"langTitle": "ភាសាពាក្យលើពពក៖ V = វៀតណាម, E = អង់គ្លេស (ចាប់ផ្តើមកម្រិតឡើងវិញ)",
 "hardTitle": "របៀបពិបាក៖ លាក់អក្សរ — មានតែសញ្ញាអារម្មណ៍ និងសំឡេង",
 "mobileNotice": "📱 ល្បែងនេះត្រូវបានរចនាសម្រាប់ហាត់វាយអក្សរនៅលើកុំព្យូទ័រដែលមានក្ដារចុចពិត។ នៅលើទូរស័ព្ទ/ថេប្លេតក៏លេងបានដែរ ប៉ុន្តែបទពិសោធន៍មិនល្អបំផុតទេ។",
 "altitude": "កម្ពស់ខ្លែង",
@@ -723,6 +732,10 @@ document.addEventListener('DOMContentLoaded', function () { applyStrings(); rend
 // ── Đọc từ bằng speechSynthesis của browser ────────────────────────────────
 var voiceOn = store.kiteVoice !== false;      // default BẬT
 var hardOn = store.kiteHard === true;         // Hard mode: chỉ emoji + giọng đọc
+var gameLang = store.kiteLang === 'en' ? 'en' : 'vi';   // E/V: chơi bằng từ tiếng Anh
+// Bản dịch tiếng Anh theo từ tiếng Việt (cùng emoji). Từ không có trong bảng
+// bị loại khỏi pool khi chơi EN.
+var EN_WORDS = {"mèo":"cat","chó":"dog","gà":"chicken","vịt":"duck","cá":"fish","bò":"cow","voi":"elephant","hổ":"tiger","gấu":"bear","thỏ":"rabbit","khỉ":"monkey","ếch":"frog","rùa":"turtle","ong":"bee","bướm":"butterfly","chim":"bird","hoa":"flower","cây":"tree","lá":"leaf","nhà":"house","xe":"car","thuyền":"boat","sách":"book","bóng":"ball","mũ":"hat","táo":"apple","chuối":"banana","dưa":"melon","sao":"star","trăng":"moon","mưa":"rain","nắng":"sunny","bé":"baby","mẹ":"mom","ba":"dad","ông":"grandpa","bà":"grandma","em":"kid","tay":"hand","mắt":"eye","tai":"ear","mũi":"nose","heo":"pig","dê":"goat","nai":"deer","cua":"crab","tôm":"shrimp","ốc":"snail","cáo":"fox","vẹt":"parrot","sói":"wolf","bút":"pencil","vở":"notebook","ghế":"chair","cửa":"door","đèn":"lamp","nồi":"pot","bát":"bowl","kéo":"scissors","ô":"umbrella","dao":"knife","thìa":"spoon","quạt":"fan","diều":"kite","sáo":"flute","cờ":"flag","gió":"wind","núi":"mountain","sông":"river","biển":"sea","đảo":"island","sen":"lotus","kẹo":"candy","sữa":"milk","phở":"pho","cơm":"rice","dừa":"coconut","đào":"peach","mít":"jackfruit","ổi":"guava","khế":"starfruit","chanh":"lemon","trà":"tea","bánh":"cake","xoài":"mango","cún":"puppy","trâu":"buffalo","cừu":"sheep","ngựa":"horse","mực":"squid","sò":"shell","rắn":"snake","quạ":"crow","kiến":"ant","ruồi":"fly","muỗi":"mosquito","nhện":"spider","sâu":"caterpillar","giun":"worm","dế":"cricket","bọ":"beetle","chuột":"mouse","báo":"leopard","cú":"owl","công":"peacock","ngỗng":"goose","dơi":"bat","nhím":"hedgehog","sóc":"squirrel","rồng":"dragon","tổ":"nest","lông":"feather","cánh":"wing","cam":"orange","lê":"pear","nho":"grape","dứa":"pineapple","dâu":"strawberry","bơ":"avocado","bí":"pumpkin","ngô":"corn","khoai":"potato","ớt":"chili","nấm":"mushroom","hành":"onion","tỏi":"garlic","gừng":"ginger","cải":"cabbage","rau":"salad","đậu":"bean","lạc":"peanut","lúa":"wheat","mì":"pasta","bún":"noodle","canh":"soup","cháo":"porridge","chè":"dessert","trứng":"egg","thịt":"meat","muối":"salt","mật":"honey","nước":"water","bố":"father","anh":"boy","chị":"girl","cô":"teacher","thầy":"tutor","bạn":"friend","vua":"king","lính":"guard","người":"person","ma":"ghost","tiên":"fairy","râu":"beard","miệng":"mouth","răng":"tooth","lưỡi":"tongue","chân":"leg","tim":"heart","não":"brain","xương":"bone","máu":"blood","móng":"nail","đỏ":"red","vàng":"yellow","xanh":"green","tím":"purple","hồng":"pink","nâu":"brown","đen":"black","trắng":"white","mây":"cloud","trời":"sky","sấm":"thunder","chớp":"lightning","tuyết":"snow","băng":"ice","bão":"storm","lốc":"tornado","rừng":"forest","cỏ":"grass","tre":"bamboo","lửa":"fire","đá":"rock","gỗ":"wood","mầm":"sprout","ngọc":"gem","tàu":"ship","phà":"ferry","ga":"station","vé":"ticket","giường":"bed","nến":"candle","khóa":"lock","tủ":"cabinet","gương":"mirror","thang":"ladder","chổi":"broom","xô":"bucket","giỏ":"basket","đũa":"chopsticks","đĩa":"plate","cốc":"cup","ấm":"teapot","chảo":"pan","sổ":"diary","truyện":"story","thơ":"poem","thước":"ruler","cặp":"backpack","giấy":"paper","ghim":"pin","kẹp":"clip","kính":"glasses","túi":"bag","ví":"wallet","tiền":"money","quà":"gift","thư":"letter","hộp":"box","khăn":"scarf","lược":"comb","búa":"hammer","kim":"needle","chỉ":"thread","cưa":"saw","pin":"battery","điện":"plug","chuông":"bell","trống":"drum","đàn":"guitar","kèn":"trumpet","dây":"rope","len":"yarn","loa":"speaker","đài":"radio","cân":"scale","thuốc":"pill","bình":"vase","gạch":"brick","lịch":"calendar","chữ":"alphabet","tên":"name","áo":"shirt","quần":"pants","váy":"dress","nón":"cap","giày":"shoe","dép":"sandal","ủng":"boot","tất":"sock","găng":"glove","nơ":"ribbon","nhẫn":"ring","vòng":"necklace","bài":"card","nhạc":"music","phim":"movie","ảnh":"photo","tranh":"painting","xiếc":"circus","bơi":"swim","chạy":"run","leo":"climb","võ":"karate","cúp":"trophy","thi":"race","đua":"racing","thắng":"win","ăn":"eat","uống":"drink","ngủ":"sleep","khóc":"cry","cười":"smile","nói":"talk","nghe":"listen","nhìn":"look","đọc":"read","viết":"write","vẽ":"draw","hát":"sing","nhảy":"dance","múa":"ballet","đi":"walk","bay":"jet","tắm":"bath","rửa":"wash","học":"study","gõ":"type","chơi":"play","ôm":"hug","hôn":"kiss","yêu":"love","thích":"like","chào":"hello","đứng":"stand","nằm":"rest","mua":"shop","nghĩ":"think","hỏi":"ask","đếm":"count","mở":"open","tìm":"find","chụp":"snap","gọi":"call","nhắn":"chat","lau":"wipe","đợi":"wait","dừng":"stop","lên":"up","xuống":"down","ho":"cough","ngáp":"yawn","thở":"breathe","hét":"scream","im":"hush","cúi":"bow","trồng":"plant","trốn":"hide","đùa":"joke","mơ":"dream","sơn":"paint","rót":"pour","vui":"happy","buồn":"sad","giận":"angry","sợ":"scared","mệt":"tired","chán":"bored","ốm":"sick","đau":"hurt","khỏe":"strong","nóng":"hot","lạnh":"cold","ngon":"yummy","đẹp":"pretty","ngoan":"good","giỏi":"great","đúng":"right","sai":"wrong","nhanh":"fast","chậm":"slow","nhỏ":"small","cao":"tall","mới":"new","ướt":"wet","tròn":"round","vuông":"square","trường":"school","chợ":"market","cầu":"bridge","đường":"road","phố":"city","lều":"tent","tháp":"tower","vườn":"garden","đêm":"night","sáng":"morning","tối":"evening","ngày":"day","giờ":"time","tết":"festival","tiệc":"party","một":"one","hai":"two","mười":"ten"};
 // PIN giọng NỮ tiếng Việt. getVoices() trả rỗng lúc mới load (voices nạp
 // async) — nếu đọc ngay khi chưa có giọng vi, browser rơi về giọng mặc định
 // (nam, đọc kiểu tiếng Anh). Vì vậy: chưa có giọng vi thì XẾP HÀNG chờ
@@ -738,6 +751,14 @@ function pickVoice() {
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function speakWord(text) {
   if ((!voiceOn && !hardOn) || !window.speechSynthesis) return;
+  if (gameLang === 'en') {
+    speechSynthesis.cancel();
+    var ue = new SpeechSynthesisUtterance(text);
+    ue.lang = 'en-US';
+    ue.rate = 0.9;
+    speechSynthesis.speak(ue);
+    return;
+  }
   if (!viVoice) { pickVoice(); }
   if (!viVoice) { pendingSpeak = text; return; }   // chờ giọng vi, không đọc giọng sai
   speechSynthesis.cancel();
@@ -748,9 +769,18 @@ function speakWord(text) {
   speechSynthesis.speak(u);
 }
 var lastSpokenId = 0;
+var fastSpawnT = 0;
 function markActive() {
   var a = activeCloud();
   clouds.forEach(function (c) { c.el.classList.toggle('active', a === c); });
+  // Tua nhanh: gõ xong / skip hết mây trên màn thì đừng bắt đợi nhịp spawn
+  // thường — cho mây kế xuất hiện gần như ngay.
+  if (!a && !over && !paused && WORDS.length && startedAt && !fastSpawnT) {
+    fastSpawnT = setTimeout(function () {
+      fastSpawnT = 0;
+      if (!activeCloud() && !over && !paused) spawnCloud();
+    }, 300);
+  }
   if (a && a.id !== lastSpokenId) { lastSpokenId = a.id; speakWord(a.w.d); }
   if (DEBUG) document.title = 'K s=' + score + ' kite=' + Math.round(kiteTarget) +
     ' wpm=' + document.getElementById('wpm').textContent +
@@ -762,11 +792,21 @@ function removeCloud(c) {
   clouds = clouds.filter(function (x) { return x !== c; });
   markActive();
 }
+function langWords() {
+  if (gameLang !== 'en') return WORDS;
+  var out = [];
+  WORDS.forEach(function (w) {
+    var en = EN_WORDS[w.d];
+    if (en) out.push({ a: w.a, d: en });
+  });
+  return out.length ? out : WORDS;
+}
 function levelPool() {
   // lv1 ≤2 chữ, lv2 ≤3, lv3 ≤4, lv4 ≤5, lv5+ không giới hạn
   var maxLen = level <= 4 ? level + 1 : Infinity;
-  var pool = WORDS.filter(function (w) { return Array.from(w.d).length <= maxLen; });
-  return pool.length ? pool : WORDS;
+  var all = langWords();
+  var pool = all.filter(function (w) { return Array.from(w.d).length <= maxLen; });
+  return pool.length ? pool : all;
 }
 // Bag draw: shuffle the level pool and deal without repeats; when the bag
 // runs out just reshuffle ("xoay lại") — game state (kite!) is untouched.
@@ -907,8 +947,39 @@ function gameKey(key, prevent) {
     skipActive();
     return;
   }
+  if (key === 'ArrowLeft') {                 // ← quay lại mây đã skip gần nhất
+    prevent();
+    for (var si = clouds.length - 1; si >= 0; si--) {
+      var sc = clouds[si];
+      if (sc.skipped && !sc.dead && !sc.popped) { sc.skipped = false; markActive(); return; }
+    }
+    return;
+  }
   var c = activeCloud();
   if (!c) return;
+  if (gameLang === 'en') {
+    // Chế độ EN: so khớp ký tự thô, không qua telex engine (see/was/door…
+    // mà qua engine sẽ thành sê/ưa — sai đề).
+    if (key === 'Backspace') { prevent(); c.typed = c.typed.slice(0, -1); renderWord(c); return; }
+    if (key.length !== 1 || !/[a-zA-Z]/.test(key)) return;
+    prevent();
+    if (!startedAt) startedAt = Date.now();
+    var t = c.typed + key;
+    if (c.w.d.slice(0, t.length) !== t) {
+      wrongKeys++;
+      sBuzz();
+      c.el.classList.remove('shake'); void c.el.offsetWidth; c.el.classList.add('shake');
+      renderWord(c);
+      return;
+    }
+    c.typed = t;
+    correctKeys++;
+    sTick();
+    renderWord(c);
+    if (DEBUG) markActive();
+    if (c.typed === c.w.d) popCloud(c);
+    return;
+  }
   if (key === 'Backspace') {
     prevent();
     c.eng.backspace();
@@ -1156,6 +1227,21 @@ voiceBtn.addEventListener('click', function () {
   if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel();
   else { var a = activeCloud(); if (a) speakWord(a.w.d); }
 });
+var langBtn = document.getElementById('langBtn');
+function renderLangBtn() {
+  langBtn.textContent = gameLang === 'en' ? 'E' : 'V';
+  langBtn.title = gt('langTitle');
+}
+renderLangBtn();
+langBtn.addEventListener('click', function () {
+  gameLang = gameLang === 'en' ? 'vi' : 'en';
+  store.kiteLang = gameLang;
+  saveStore(store);
+  renderLangBtn();
+  // Đổi ngôn ngữ = đổi độ dài từ theo level → chơi lại level hiện tại.
+  startLevel(level);
+});
+
 var hardBtn = document.getElementById('hardBtn');
 function renderHardBtn() {
   hardBtn.textContent = hardOn ? '🙈' : '🅰️';
