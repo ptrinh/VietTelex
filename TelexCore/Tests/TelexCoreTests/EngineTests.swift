@@ -287,6 +287,25 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(e.composed, "install")
     }
 
+    // ⌫ on a word whose tone was CANCELLED (double tone key) must not resurrect
+    // the cancelled key as a literal: "resse" shows "rese"; ⌫ gives "res" (what
+    // the screen showed before the last key), NOT "ress" — the frozen-word
+    // rebuild used to fold the cancelled ss pair back to two literal s's,
+    // desyncing every subsequent ⌫ ("rese"⌫→"ress"⌫→"ré"; tester 2026-07-24).
+    func testBackspaceAfterCancelledToneKeepsCancelRendering() {
+        var e = TelexEngine()
+        e.liveSpellCheck = true
+        e.freeMarking = true
+        for ch in "resse" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "rese")
+        _ = e.backspace()
+        XCTAssertEqual(e.composed, "res")
+        _ = e.backspace()
+        XCTAssertEqual(e.composed, "re")
+        _ = e.backspace()
+        XCTAssertEqual(e.composed, "r")
+    }
+
     // Abbreviation whitelist: "đc" (= được) survives auto-restore.
     /// ALL-CAPS abbreviations with đ survive auto-restore: ĐSQ stays ĐSQ
     /// (not restored to DDSQ). Lowercase/mixed and marked words keep restoring.

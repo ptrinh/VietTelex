@@ -136,6 +136,14 @@ public struct TelexEngine {
     // Vietnamese syllable: "iss"→is (not restored to "iss"), "ass"→as.
     private var markCancelled = false
 
+    // Rebuild directive: fold every tone key back to its literal letter. Set ONLY
+    // for the second pass of a frozen-word rebuild when a tone is still PENDING
+    // ("installer": the early s floated as sắc onto the post-freeze a). A CANCELLED
+    // tone (ss/ff/…) must NOT fold — forward typing rendered the cancel ("ress" →
+    // res), and a rebuild that resurrects both keys as literals ("ress") desyncs
+    // the screen: ⌫ on "rese" showed "ress" (tester report 2026-07-24).
+    private var pFoldTones = false
+
     // Effective tone of the last render (after the stop-coda drop) — the composed
     // word's tone, used by the zero-alloc boundary validation.
     private var lastEffTone: Tone = .none
@@ -182,7 +190,7 @@ public struct TelexEngine {
         if pProcessed != rawCount - 1
             || pFreeMarking != freeMarking || pSimpleTelex != simpleTelex
             || pQuickTelex != quickTelex {
-            rebuildParseState()
+            rebuildFrozenAware()
         } else {
             parseStep(rawCount - 1)
             pProcessed = rawCount
@@ -213,10 +221,12 @@ public struct TelexEngine {
         if liveSpellCheck, disabledAtCount == Int.max, !prefixIsValid(newCount) {
             disabledAtCount = rawCount
             if pTone != .none {
-                // Rebuild: with the freeze set, parseStep folds every TONE key back
+                // Rebuild with pFoldTones: parseStep folds every TONE key back
                 // to its literal letter (see the tone branch), so the s in
                 // "installer" comes back as 's' instead of floating as sắc.
+                pFoldTones = true
                 rebuildParseState()
+                pFoldTones = false
                 newCount = render()
             }
         }
@@ -251,7 +261,7 @@ public struct TelexEngine {
         // deleted on frozen words: unfrozen "installer" consumes the trailing r as
         // a hỏi tone, so "last displayed letter" pointed at the e and ⌫ produced
         // "installr".)
-        rebuildParseState()
+        rebuildFrozenAware()
         _ = render()                             // maps tone-key provenance
 
         if pCount == 0 {
@@ -289,7 +299,7 @@ public struct TelexEngine {
             }
             rawCount = full
         }
-        rebuildParseState()
+        rebuildFrozenAware()
         let newCount = render()
         markCancelled = pCancelled
         let action = diff(newCount)
@@ -660,6 +670,20 @@ public struct TelexEngine {
     /// Rebuild the whole parse state by replaying every raw key. Used by backspace
     /// (raw changed non-append) and mid-word parse-setting flips; identical to the
     /// incremental path because the parse is a pure left-to-right fold.
+    /// Rebuild reproducing what forward typing PUT ON SCREEN for the current raw
+    /// keys + freeze state: keys replay faithfully (a cancelled tone stays a
+    /// cancel), then — only if the frozen word still carries a pending tone — a
+    /// second pass folds the tone keys to literals, exactly like feed() did at the
+    /// freeze site. One-pass for the common cases; the second pass is ⌫-only cost.
+    private mutating func rebuildFrozenAware() {
+        rebuildParseState()
+        if disabledAtCount != Int.max, pTone != .none {
+            pFoldTones = true
+            rebuildParseState()
+            pFoldTones = false
+        }
+    }
+
     private mutating func rebuildParseState() {
         pCount = 0
         pTone = .none
@@ -700,13 +724,15 @@ public struct TelexEngine {
 
         // Tone keys: s f r x j
         if let t = toneForKey(lower) {
-            // FROZEN word (live spell-check said it can't be Vietnamese): every
+            // Second pass of a frozen-word rebuild with a PENDING tone: every
             // tone key folds back to its literal letter, even those typed BEFORE
             // the freeze point — a tone has no meaning on a non-Vietnamese word,
             // and keeping it made "installer" render "intáller" (the early s
-            // floated as sắc onto the post-freeze a). The freeze site triggers a
-            // rebuild so this applies retroactively within the word.
-            if disabledAtCount != Int.max {
+            // floated as sắc onto the post-freeze a). Gated on pFoldTones (not the
+            // freeze itself): a rebuild of a frozen word must otherwise replay
+            // history faithfully — in particular a CANCELLED tone stays cancelled,
+            // see pFoldTones.
+            if pFoldTones {
                 appendLetter(base: lower, mark: .none, upper: upper)
                 rawLetter[at] = pCount - 1
                 return
