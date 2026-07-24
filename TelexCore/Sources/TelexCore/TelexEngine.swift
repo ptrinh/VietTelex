@@ -320,7 +320,19 @@ public struct TelexEngine {
         // Validation runs on letter classes + tone (no String); Strings are built
         // only when a restore actually happens.
         if autoRestore, outCount > 0, shouldRestoreRaw(), compositionDiffersFromRaw() {
-            return .replace(backspaces: outCount, insert: rawKeystrokes)
+            // Strip the shared leading run, exactly like diff() does per keystroke:
+            // an unchanged prefix (the "g" in "gôgle"→"google") must NOT be
+            // deleted+retyped. Re-typing a still-correct leading char surfaces as a
+            // duplicate ("ggoogle") when the editor offsets our deletion — Chrome's
+            // omnibox inline-autocomplete absorbs one Shift+Left in .selection mode.
+            let limit = min(rawCount, outCount)
+            var lcp = 0
+            while lcp < limit, UInt32(raw[lcp]) == out[lcp] { lcp += 1 }
+            let backspaces = outCount - lcp
+            var s = String.UnicodeScalarView()
+            s.reserveCapacity(rawCount - lcp)
+            for i in lcp..<rawCount { s.append(Unicode.Scalar(raw[i])) }
+            return .replace(backspaces: backspaces, insert: String(s))
         }
         return .none
     }

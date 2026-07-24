@@ -166,7 +166,10 @@ enum SelfUpdater {
                 }
 
                 let dest = ("~/Library/Input Methods/VietTelex.app" as NSString).expandingTildeInPath
-                try runTool("/usr/bin/ditto", [newApp.path, dest])
+                try installBundle(from: newApp, to: URL(fileURLWithPath: dest))
+                // Refresh the LaunchServices registration so the Text Input system relaunches
+                // from the new bundle (mirrors notarize-install.sh).
+                try? runTool("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", ["-f", dest])
                 try? FileManager.default.removeItem(at: work)
 
                 await MainActor.run {
@@ -196,6 +199,24 @@ enum SelfUpdater {
                     }
                 }
             }
+        }
+    }
+
+    /// Install `newApp` over `dest`, ATOMICALLY and WHOLESALE — never `ditto newApp dest`
+    /// into an existing bundle. `ditto` MERGES: it overwrites same-named files but leaves
+    /// behind any resource a new version dropped or renamed. Those orphans break the code
+    /// seal, so tccd refuses the event tap even though the Accessibility row still shows
+    /// "allowed" (the "permission stuck after update" bug). `replaceItemAt` swaps in exactly
+    /// the signed/notarized artifact — no merge residue — so the seal stays intact and the
+    /// identity-based grant re-validates cleanly. On a fresh install (no `dest`) it's a move.
+    static func installBundle(from newApp: URL, to dest: URL) throws {
+        if FileManager.default.fileExists(atPath: dest.path) {
+            _ = try FileManager.default.replaceItemAt(dest, withItemAt: newApp,
+                                                      backupItemName: "VietTelex.app.bak")
+        } else {
+            try FileManager.default.createDirectory(at: dest.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try FileManager.default.moveItem(at: newApp, to: dest)
         }
     }
 

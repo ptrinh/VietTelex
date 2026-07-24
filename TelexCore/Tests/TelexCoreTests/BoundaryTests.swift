@@ -48,22 +48,29 @@ final class BoundaryTests: XCTestCase {
         }
     }
 
-    // When a restore fires, it must back out the WHOLE composition (outCount chars)
-    // and type the raw keystrokes — verified against composed.count and rawKeystrokes.
-    func testRestoreBackspaceCountEqualsComposedLength() {
+    // When a restore fires it emits a MINIMAL edit: the shared leading run with the
+    // raw keystrokes is left untouched (never deleted+retyped — that duplicated the
+    // first char in Chrome's omnibox), so bs deletes only the changed suffix and
+    // insert is the raw tail. Applying it to `composed` must still reconstruct raw.
+    func testRestoreEmitsMinimalPrefixStrippedEdit() {
         // Words whose composition actually TRANSFORMS (composed != raw) so a restore
         // fires. (w-words / no-transform words compose == raw and correctly yield
         // .none — nothing to back out; that path is covered in testValidWordsAreNotRestored.)
-        for keys in ["retore", "user", "paper", "after", "strongs", "codej"] {
+        for keys in ["retore", "user", "paper", "after", "strongs", "codej", "google"] {
             var e = feed(keys)
-            let composedLen = e.composed.count
+            let composed = Array(e.composed)
             let raw = e.rawKeystrokes
             let action = e.commitBoundary(autoRestore: true)
             guard case .replace(let bs, let insert) = action else {
                 return XCTFail("expected restore for \(keys), got \(action)")
             }
-            XCTAssertEqual(bs, composedLen, "must delete the whole composition for \(keys)")
-            XCTAssertEqual(insert, raw, "must retype the raw keystrokes for \(keys)")
+            // Minimal: the deleted suffix + insert must never re-type the shared prefix.
+            let lcp = zip(composed, Array(raw)).prefix { $0 == $1 }.count
+            XCTAssertEqual(bs, composed.count - lcp, "must delete only the changed suffix for \(keys)")
+            XCTAssertEqual(insert, String(raw.dropFirst(lcp)), "must retype only the raw tail for \(keys)")
+            // Applying the edit to the on-screen composition reconstructs the raw word.
+            var screen = composed; screen.removeLast(bs); screen.append(contentsOf: insert)
+            XCTAssertEqual(String(screen), raw, "edit must reconstruct raw for \(keys)")
         }
     }
 
@@ -97,8 +104,11 @@ final class BoundaryTests: XCTestCase {
         // real English words → raw restore in BOTH paths
         for keys in ["ass", "off", "class"] {
             var b = feed(keys)
-            if case .replace(_, let insert) = b.commitBoundary(autoRestore: true) {
-                XCTAssertEqual(insert, keys, "\(keys) should restore to raw")
+            let composed = Array(b.composed)
+            if case .replace(let bs, let insert) = b.commitBoundary(autoRestore: true) {
+                // Minimal edit (prefix-stripped): applying it must reconstruct raw.
+                var screen = composed; screen.removeLast(bs); screen.append(contentsOf: insert)
+                XCTAssertEqual(String(screen), keys, "\(keys) should restore to raw")
             } else { XCTFail("\(keys) should restore") }
             XCTAssertEqual(commitText(keys, restore: true), keys)
         }

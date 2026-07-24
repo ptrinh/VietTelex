@@ -106,6 +106,88 @@ final class AppSupportTests: XCTestCase {
         XCTAssertEqual(s.lastAutoUpdateCheckAt, now)
     }
 
+    // MARK: Updater — bundle install (the "permission stuck after update" fix)
+
+    // installBundle must swap in the new bundle WHOLESALE. The old `ditto newApp dest`
+    // merged — it overwrote same-named files but left orphans from resources a new
+    // version dropped/renamed, breaking the code seal so tccd refused the event tap.
+    // These build throwaway directory trees (not real .app bundles) and assert the
+    // on-disk result is byte-identical to the source, with no merge residue.
+    private func writeTree(_ files: [String: String], at root: URL) throws {
+        for (rel, body) in files {
+            let f = root.appendingPathComponent(rel)
+            try FileManager.default.createDirectory(at: f.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try body.write(to: f, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private func readTree(at root: URL) -> [String: String] {
+        var out: [String: String] = [:]
+        let base = root.standardizedFileURL.path
+        guard let en = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+        else { return out }
+        for case let url as URL in en {
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+            guard !isDir.boolValue else { continue }
+            let rel = String(url.standardizedFileURL.path.dropFirst(base.count + 1))
+            out[rel] = (try? String(contentsOf: url, encoding: .utf8)) ?? "<binary>"
+        }
+        return out
+    }
+
+    func testInstallBundleFreshInstall() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vt-install-fresh-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let src = tmp.appendingPathComponent("staging/VietTelex.app")
+        let dest = tmp.appendingPathComponent("Input Methods/VietTelex.app")
+        let payload = ["Contents/MacOS/VietTelex": "v2-binary",
+                       "Contents/Info.plist": "v2-plist"]
+        try writeTree(payload, at: src)
+
+        try SelfUpdater.installBundle(from: src, to: dest)   // no existing dest → move
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dest.path))
+        XCTAssertEqual(readTree(at: dest), payload)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: src.path), "source should be consumed")
+    }
+
+    func testInstallBundleReplacesWholesaleAndDropsOrphans() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vt-install-replace-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let src = tmp.appendingPathComponent("staging/VietTelex.app")
+        let dest = tmp.appendingPathComponent("Input Methods/VietTelex.app")
+
+        // Old installed bundle: has a resource the new version renames away.
+        try writeTree(["Contents/MacOS/VietTelex": "v1-binary",
+                       "Contents/Info.plist": "v1-plist",
+                       "Contents/Resources/old-lexicon.dat": "STALE",       // orphan-to-be
+                       "Contents/CodeResources": "v1-seal"], at: dest)
+        // New bundle: binary changed, lexicon renamed, no old-lexicon.dat.
+        let payload = ["Contents/MacOS/VietTelex": "v2-binary",
+                       "Contents/Info.plist": "v2-plist",
+                       "Contents/Resources/lexicon-v2.dat": "FRESH",
+                       "Contents/CodeResources": "v2-seal"]
+        try writeTree(payload, at: src)
+
+        try SelfUpdater.installBundle(from: src, to: dest)
+
+        // Wholesale: dest is byte-identical to the new artifact — the orphan is GONE
+        // (a merge would have kept old-lexicon.dat and broken the seal).
+        XCTAssertEqual(readTree(at: dest), payload)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: dest.appendingPathComponent("Contents/Resources/old-lexicon.dat").path),
+            "orphaned file from the old version must be removed (no merge)")
+        // No leftover backup dir beside the installed bundle.
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: dest.deletingLastPathComponent().appendingPathComponent("VietTelex.app.bak").path),
+            "backup must not linger after a successful replace")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: src.path), "source should be consumed")
+    }
+
     // MARK: Accessibility trust cache
 
     func testTrustOverrideAndCache() {
