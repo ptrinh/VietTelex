@@ -33,6 +33,7 @@ final class AppState: @unchecked Sendable {
         static let liveSpellCheck = "liveSpellCheck"
         static let simpleTelex = "simpleTelex"
         static let quickTelex = "quickTelex"
+        static let vniMode = "vniMode"
         static let shortcuts = "shortcuts"
         static let fallbackApps = "fallbackApps"      // learned: ignore replacementRange
         static let probedApps = "probedApps"          // learned: verified good
@@ -151,6 +152,13 @@ final class AppState: @unchecked Sendable {
     var quickTelex: Bool {
         get { defaults.object(forKey: Key.quickTelex) as? Bool ?? false }
         set { defaults.set(newValue, forKey: Key.quickTelex) }
+    }
+
+    /// VNI input method (EXPERIMENTAL, default OFF). Digits carry the diacritics
+    /// instead of Telex letters. See `TelexEngine.vniMode`.
+    var vniMode: Bool {
+        get { defaults.object(forKey: Key.vniMode) as? Bool ?? false }
+        set { defaults.set(newValue, forKey: Key.vniMode) }
     }
 
     /// UI language override for the Settings window + menu, independent of the

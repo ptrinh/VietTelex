@@ -73,6 +73,15 @@ public struct TelexEngine {
     /// Default OFF. Preserved across `reset()`; the caller sets it from settings.
     public var quickTelex = false
 
+    /// VNI input method. When true the engine parses VNI, not Telex: LETTERS are
+    /// always literal, and DIGITS carry the diacritics — 1-5 = sắc/huyền/hỏi/ngã/nặng,
+    /// 6 = â/ê/ô (circumflex), 7 = ơ/ư (horn), 8 = ă (breve), 9 = đ, 0 = clear tone.
+    /// A digit is a diacritic only when it can apply (a tone needs a vowel; a mark needs
+    /// its target letter; 0 needs a tone) — otherwise it types literally ("mp3", "a4"
+    /// paper size stays…"a4" only via spell-check freeze; a lone "a4" → "ã", the same
+    /// inherent VNI ambiguity every VNI IME has). Preserved across `reset()`.
+    public var vniMode = false
+
     /// Force-restore top-frequency English words that collide with valid
     /// Vietnamese syllables ("his"→hí) at the word boundary. Default ON.
     /// gen-english turns this OFF to regenerate the table against the
@@ -122,6 +131,7 @@ public struct TelexEngine {
     private var pFreeMarking = false    // settings snapshot the state was built with
     private var pSimpleTelex = false
     private var pQuickTelex = false
+    private var pVniMode = false
 
     // Raw index from which keys are emitted literally because live spell-check found
     // the word can no longer be valid Vietnamese. Int.max = not disabled. Unlike
@@ -176,7 +186,7 @@ public struct TelexEngine {
     /// Feed one typed character. Only ascii letters compose; other characters
     /// should be routed through `commitBoundary` by the caller.
     public mutating func feed(_ ch: Character) -> TelexAction {
-        guard let ascii = ch.asciiValue, isLetter(ascii) else {
+        guard let ascii = ch.asciiValue, isLetter(ascii) || (vniMode && isDigit(ascii)) else {
             return .passthrough
         }
         guard rawCount < Self.capacity else { overflowed = true; return .passthrough }
@@ -189,7 +199,7 @@ public struct TelexEngine {
         // re-applies settings every key, they just normally don't change mid-word).
         if pProcessed != rawCount - 1
             || pFreeMarking != freeMarking || pSimpleTelex != simpleTelex
-            || pQuickTelex != quickTelex {
+            || pQuickTelex != quickTelex || pVniMode != vniMode {
             rebuildFrozenAware()
         } else {
             parseStep(rawCount - 1)
@@ -705,6 +715,7 @@ public struct TelexEngine {
         pFreeMarking = freeMarking
         pSimpleTelex = simpleTelex
         pQuickTelex = quickTelex
+        pVniMode = vniMode
         for i in 0..<rawCount { rawLetter[i] = -1 }
         for i in 0..<rawCount { parseStep(i) }
         pProcessed = rawCount
@@ -731,6 +742,13 @@ public struct TelexEngine {
         if pCancelled || at >= disabledAtCount {
             appendLetter(base: lower, mark: .none, upper: upper)
             rawLetter[at] = pCount - 1
+            return
+        }
+
+        // VNI: letters literal, digits carry the diacritics. Separate fold entirely —
+        // none of the Telex letter transforms (tone letters, w, doublers, dd) apply.
+        if pVniMode {
+            parseStepVNI(at, key: key, lower: lower, upper: upper)
             return
         }
 
@@ -994,6 +1012,137 @@ public struct TelexEngine {
         rawLetter[at] = pCount - 1
     }
 
+    /// VNI fold step. LETTERS are always literal (case preserved); DIGITS carry the
+    /// diacritics. A digit only transforms when it can apply — otherwise it's a literal
+    /// digit, so numbers ("mp3", years, "A4") survive. Reuses the SAME tone-deferral
+    /// (`pTone`/`toneKeys`), mark-on-letter, cancel and `rawLetter` machinery as Telex,
+    /// so tone placement, ươ propagation, boundary restore and backspace all just work.
+    private mutating func parseStepVNI(_ at: Int, key: UInt8, lower: UInt8, upper: Bool) {
+        // Non-digit → literal letter. (No Telex transforms in VNI.)
+        guard isDigit(key) else {
+            appendLetter(base: lower, mark: .none, upper: upper)
+            rawLetter[at] = pCount - 1
+            return
+        }
+
+        // Frozen-rebuild with a pending tone: fold the tone digit back to a literal
+        // digit (mirrors the Telex tone branch's pFoldTones path).
+        if pFoldTones, Self.vniTone(key) != nil {
+            appendLetter(base: key, mark: .none, upper: false)
+            rawLetter[at] = pCount - 1
+            return
+        }
+
+        // Tone digits 1-5. Deferred onto the toned vowel at render (rawLetter = -1),
+        // exactly like a Telex s/f/r/x/j. Same digit again cancels (→ literal digit).
+        if let t = Self.vniTone(key) {
+            if hasVowel(pCount) {
+                if pTone == t {
+                    pTone = .none
+                    pCancelled = true
+                    appendLetter(base: key, mark: .none, upper: false)
+                    rawLetter[at] = pCount - 1
+                    for j in 0..<pToneKeyCount where rawLetter[toneKeys[j]] == -1 {
+                        rawLetter[toneKeys[j]] = pCount - 1
+                    }
+                    pToneKeyCount = 0
+                } else {
+                    pTone = t
+                    rawLetter[at] = -1
+                    toneKeys[pToneKeyCount] = at; pToneKeyCount += 1
+                }
+            } else {                                    // no vowel to tone → literal digit
+                appendLetter(base: key, mark: .none, upper: false)
+                rawLetter[at] = pCount - 1
+            }
+            return
+        }
+
+        // 0 → clear tone (like Telex z): consume only when there's a tone to remove.
+        if key == UInt8(ascii: "0") {
+            if pTone != .none {
+                pCancelled = true
+                pTone = .none
+                rawLetter[at] = -1
+                toneKeys[pToneKeyCount] = at; pToneKeyCount += 1
+            } else {
+                appendLetter(base: key, mark: .none, upper: false)
+                rawLetter[at] = pCount - 1
+            }
+            return
+        }
+
+        // Mark digits 6/7/8/9. Scan back to the nearest applicable letter (VNI types
+        // the digit right after its target; reach-back over a coda handles "viet6"→việt
+        // and onset-d "d…9"→đ). Same digit again on an already-marked target cancels.
+        if let mark = Self.vniMark(key) {
+            var k = pCount - 1
+            while k >= 0 {
+                if Self.vniMarkAccepts(base: letters[k].base, mark: mark) {
+                    if letters[k].mark == .none {
+                        letters[k].mark = mark
+                        rawLetter[at] = k
+                        return
+                    }
+                    if letters[k].mark == mark {        // re-applied → cancel, literal digit
+                        letters[k].mark = .none
+                        pCancelled = true
+                        appendLetter(base: key, mark: .none, upper: false)
+                        rawLetter[at] = pCount - 1
+                        return
+                    }
+                    break                                // conflicting mark → literal digit
+                }
+                k -= 1
+            }
+            appendLetter(base: key, mark: .none, upper: false)
+            rawLetter[at] = pCount - 1
+            return
+        }
+
+        // Any other digit → literal.
+        appendLetter(base: key, mark: .none, upper: false)
+        rawLetter[at] = pCount - 1
+    }
+
+    /// VNI tone digit → Tone (1 sắc, 2 huyền, 3 hỏi, 4 ngã, 5 nặng). nil otherwise.
+    @inline(__always)
+    private static func vniTone(_ d: UInt8) -> Tone? {
+        switch d {
+        case UInt8(ascii: "1"): return .acute
+        case UInt8(ascii: "2"): return .grave
+        case UInt8(ascii: "3"): return .hook
+        case UInt8(ascii: "4"): return .tilde
+        case UInt8(ascii: "5"): return .dot
+        default:                return nil
+        }
+    }
+
+    /// VNI mark digit → Mark (6 circumflex, 7 horn, 8 breve, 9 bar/đ). nil otherwise.
+    @inline(__always)
+    private static func vniMark(_ d: UInt8) -> Mark? {
+        switch d {
+        case UInt8(ascii: "6"): return .circumflex
+        case UInt8(ascii: "7"): return .horn
+        case UInt8(ascii: "8"): return .breve
+        case UInt8(ascii: "9"): return .bar
+        default:                return nil
+        }
+    }
+
+    /// Which base letters a VNI mark can attach to: circumflex→a/e/o, horn→o/u,
+    /// breve→a, bar→d.
+    @inline(__always)
+    private static func vniMarkAccepts(base: UInt8, mark: Mark) -> Bool {
+        switch mark {
+        case .circumflex: return base == UInt8(ascii: "a") || base == UInt8(ascii: "e") || base == UInt8(ascii: "o")
+        case .horn:       return base == UInt8(ascii: "o") || base == UInt8(ascii: "u")
+        case .breve:      return base == UInt8(ascii: "a")
+        case .bar:        return base == UInt8(ascii: "d")
+        case .none:       return false
+        }
+    }
+
     /// Quick-Telex digraph table: the letter the SECOND key of a doubled onset
     /// consonant becomes (cc→c+h, gg→g+i, …). nil = not a Quick-Telex consonant.
     @inline(__always)
@@ -1206,6 +1355,11 @@ private extension SyllableValidator {
 func isLetter(_ c: UInt8) -> Bool {
     (c >= UInt8(ascii: "a") && c <= UInt8(ascii: "z")) ||
     (c >= UInt8(ascii: "A") && c <= UInt8(ascii: "Z"))
+}
+
+@inline(__always)
+func isDigit(_ c: UInt8) -> Bool {
+    c >= UInt8(ascii: "0") && c <= UInt8(ascii: "9")
 }
 
 @inline(__always)

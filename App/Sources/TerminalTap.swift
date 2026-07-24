@@ -1331,6 +1331,7 @@ final class TerminalTapController {
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
         engine.quickTelex = AppState.shared.quickTelex
+        engine.vniMode = AppState.shared.vniMode
 
         // Signpost the tap-handled keystroke; message = emit mode (see Instrumentation).
         let spState = Signposts.poster.beginInterval("tap.handle",

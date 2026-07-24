@@ -309,6 +309,7 @@ final class TelexInputController: IMKInputController {
         engine.liveSpellCheck = AppState.shared.liveSpellCheck
         engine.simpleTelex = AppState.shared.simpleTelex
         engine.quickTelex = AppState.shared.quickTelex
+        engine.vniMode = AppState.shared.vniMode
 
         switch event.keyCode {
         case kDelete:

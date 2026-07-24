@@ -81,6 +81,9 @@
 
 /* Experimental tab (Thử Nghiệm) */
 "Experimental" = "Thử nghiệm";
+"Input method" = "Kiểu gõ";
+"VNI typing (experimental)" = "Gõ kiểu VNI (thử nghiệm)";
+"Type diacritics with digits instead of Telex letters: 1-5 = sắc/huyền/hỏi/ngã/nặng, 6 = â/ê/ô, 7 = ơ/ư, 8 = ă, 9 = đ, 0 = clear tone. Letters stay literal. Keep Live spell-check on so numbers like “mp3” aren’t turned into tones." = "Gõ dấu bằng chữ số thay cho chữ cái Telex: 1-5 = sắc/huyền/hỏi/ngã/nặng, 6 = â/ê/ô, 7 = ơ/ư, 8 = ă, 9 = đ, 0 = bỏ dấu. Chữ cái giữ nguyên. Nên bật “Kiểm tra chính tả khi gõ” để số như “mp3” không bị biến thành dấu.";
 "Terminal typing latency" = "Độ trễ gõ trong terminal";
 "Safety" = "An toàn";
 "Cascade circuit breaker" = "Bộ ngắt chống tràn sự kiện";
