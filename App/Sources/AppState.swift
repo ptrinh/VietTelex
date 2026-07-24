@@ -500,6 +500,20 @@ final class AppState: @unchecked Sendable {
         return wants && Accessibility.isTrusted
     }
 
+    /// Which emit strategy a `.selection`-eligible tap keystroke actually uses.
+    /// Called ONLY when `usesSelectionReplace` is already true, so the app is either
+    /// a per-field browser (omnibox) or a manual/built-in `.selection` app:
+    /// - Per-field browsers (`axDetect`: Chrome/Safari/Edge/Firefox…) have INLINE
+    ///   autocomplete — the suggestion sits SELECTED to the right of the caret, so a
+    ///   Shift+Left select-overtype is offset exactly like Backspace ("google" →
+    ///   screen "goôgle" while the engine holds "gôgle", boundary restore "gooogle").
+    ///   They need the U+202F autocomplete-cancel dance (`.emptyReset`).
+    /// - Manual `.selection` pins (JetBrains IDEs etc.) have a separate autocomplete
+    ///   POPUP, not an inline selection, so plain Shift+Left is correct — `.selection`.
+    func selectionEmitMode(_ bundleID: String?) -> TapEmit {
+        usesAxDetect(bundleID) ? .emptyReset : .selection
+    }
+
     /// What Auto WANTS for this app — the IDEAL mode, independent of the current
     /// Accessibility state. Shown in the mode table's "Detected" column; the UI adds
     /// a "missing permission" suffix when the mode needs AX and it isn't granted

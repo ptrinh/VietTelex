@@ -96,6 +96,34 @@ final class AppStateRoutingTests: XCTestCase {
         XCTAssertFalse(s.usesMarkedText("com.apple.Notes"))
     }
 
+    // MARK: Chromium omnibox emit mode (.emptyReset autocomplete-cancel dance)
+
+    // The fix for "google"→"gooogle" in Chrome's omnibox: per-field browsers emit tone
+    // edits via .emptyReset (type U+202F to dismiss the INLINE autocomplete suggestion,
+    // then delete + retype) instead of .selection (Shift+Left select-overtype, which the
+    // suggestion's own selection offsets). Apps pinned to plain .selection (IDE popups,
+    // not inline) must keep .selection.
+    func testSelectionEmitModeBrowserVsSelectionPin() {
+        Accessibility.testTrustOverride = true
+        // Built-in per-field browsers → the U+202F dance.
+        for browser in ["com.google.Chrome", "com.apple.Safari",
+                        "com.microsoft.edgemac", "org.mozilla.firefox"] {
+            XCTAssertTrue(s.usesAxDetect(browser), "\(browser) should be per-field (axDetect)")
+            XCTAssertEqual(s.selectionEmitMode(browser), .emptyReset,
+                           "\(browser) omnibox must emit via .emptyReset")
+        }
+        // A manual .selection pin (autocomplete popup, not inline) keeps plain Shift+Left.
+        s.setManualMode(.selection, for: pinnedApp)
+        XCTAssertTrue(s.usesSelectionReplace(pinnedApp))
+        XCTAssertFalse(s.usesAxDetect(pinnedApp))
+        XCTAssertEqual(s.selectionEmitMode(pinnedApp), .selection,
+                       "manual .selection pin must stay .selection")
+        // A manual .axDetect pin is treated as a per-field browser → .emptyReset.
+        s.setManualMode(.axDetect, for: pinnedApp)
+        XCTAssertEqual(s.selectionEmitMode(pinnedApp), .emptyReset,
+                       "manual .axDetect pin must emit via .emptyReset")
+    }
+
     // MARK: Learned classification
 
     func testLearnedRouting() {

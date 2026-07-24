@@ -1304,7 +1304,17 @@ final class TerminalTapController {
             default: engine.reset(); return pass
             }
         } else if AppState.shared.usesSelectionReplace(id) {
-            emitMode = .selection
+            // Chromium omnibox: inline autocomplete keeps the suggestion SELECTED to the
+            // right of the caret, so a Shift+Left select-overtype (.selection) is offset
+            // just like a plain Backspace — the first Shift+Left shrinks the suggestion
+            // selection instead of grabbing the typed char, desyncing the screen from the
+            // engine model ("google"→ screen "goôgle" while engine holds "gôgle", then the
+            // boundary restore lands "gooogle"). Route per-field BROWSERS through the
+            // U+202F autocomplete-cancel dance Office uses (.emptyReset): type U+202F to
+            // dismiss the suggestion, delete it + the stale chars, then retype. Spotlight
+            // and manual .selection pins (no such inline-autocomplete selection) stay on
+            // .selection. Field-verified in a live omnibox 2026-07-24.
+            emitMode = AppState.shared.selectionEmitMode(id)
         } else if AppState.shared.usesEmptyReset(id) {
             emitMode = .emptyReset
         } else if AppState.shared.usesTapMode(id) {
