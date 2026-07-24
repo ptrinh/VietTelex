@@ -456,6 +456,18 @@ final class AppState: @unchecked Sendable {
         }
     }
 
+    /// App resolves per-FIELD (axDetect) — default browsers or a manual pin. These
+    /// are the apps whose AX tree the field detector must be able to READ, so the
+    /// tap pokes Chromium's AXManualAccessibility switch for them (see
+    /// FocusedFieldDetector.pokeChromiumAX).
+    func usesAxDetect(_ bundleID: String?) -> Bool {
+        guard let id = bundleID else { return false }
+        return lock.withLock {
+            if let m = _manualMode(id) { return m == .axDetect }
+            return Self.isPerFieldByDefault(id)
+        }
+    }
+
     /// Browsers resolve per field BY DEFAULT (no manual pin needed): omnibox/smart
     /// search → selection-replace, page content → in-place. Shipped after the
     /// Safari per-field pilot (2026-07-21) proved the AX field walk in the field.

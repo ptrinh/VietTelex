@@ -180,7 +180,16 @@ enum SpotlightDetector {
             // would silently break detection (Spotlight edits fall back to Backspace
             // mode) with no error. Revisit if Spotlight support regresses on a new OS.
             if let owner = w[kCGWindowOwnerName as String] as? String, owner == "Spotlight" {
-                return true
+                // Owner name alone is NOT enough: on macOS 15 the menu-bar Spotlight
+                // icon is itself an on-screen window owned by "Spotlight" (~40×24,
+                // present permanently), so the detector read "Spotlight open" on
+                // every keystroke (issue #26 debug log: spotlightVisible=true
+                // throughout). Require panel-sized bounds — the real search panel
+                // measures ~640pt wide even collapsed; the icon never comes close.
+                if let dict = w[kCGWindowBounds as String] as? [String: Any],
+                   let width = dict["Width"] as? CGFloat, width >= 300 {
+                    return true
+                }
             }
         }
         return false
@@ -219,6 +228,7 @@ enum FocusedFieldDetector {
         }
         if stale {
             scanQueue.async {
+                pokeChromiumAX()
                 let wants = scan()
                 lock.withLock {
                     cached = wants
@@ -228,6 +238,29 @@ enum FocusedFieldDetector {
             }
         }
         return value
+    }
+
+    /// Chromium builds its web-content AX tree only when an assistive client
+    /// announces itself — on a machine where nothing ever has, the focused-element
+    /// read fails, scan() falls back to "unknown → selection", and a YouTube/
+    /// Facebook field gets the selection-replace path whose overtype the web
+    /// editor swallows (issue #26: 1.4.11's AXWebArea fix never got to run;
+    /// dev machines passed because test tooling had already poked Chrome).
+    /// Setting AXManualAccessibility=true on the app element flips the tree on
+    /// without VoiceOver side effects (the standard EVKey/Electron switch; apps
+    /// that don't know the attribute just return an error). Once per pid, on the
+    /// scan queue — never the keystroke path. The tree takes a beat to build, so
+    /// the first refresh after the poke may still default to selection; the next
+    /// 200ms tick sees the real roles.
+    private static var pokedPids = Set<pid_t>()   // guarded by `lock`
+    private static func pokeChromiumAX() {
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              AppState.shared.usesAxDetect(app.bundleIdentifier) else { return }
+        let pid = app.processIdentifier
+        guard lock.withLock({ pokedPids.insert(pid).inserted }) else { return }
+        let el = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(el, 0.05)
+        AXUIElementSetAttributeValue(el, "AXManualAccessibility" as CFString, kCFBooleanTrue)
     }
 
     // MARK: is the focused element a REAL text input? (remote-desktop per-field)
