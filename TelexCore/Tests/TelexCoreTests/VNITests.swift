@@ -91,6 +91,34 @@ final class VNITests: XCTestCase {
         }
     }
 
+    // MARK: Authoritative reference examples
+
+    // Anchored to external references so the VNI rules can't silently drift:
+    //  - ibus-bamboo `bamboo-core/input_method_def.go` "VNI" table
+    //    (6=ÂÊÔ, 7=ƯƠ, 8=Ă, 9=Đ, 0=XoaDauThanh, 1-5=Sắc/Huyền/Hỏi/Ngã/Nặng), and
+    //  - the Wikipedia VNI article's own worked example: truong + 7 + 2 → trường.
+    func testAuthoritativeReferenceExamples() {
+        XCTAssertEqual(vni("truong72"), "trường")   // Wikipedia canonical example
+        XCTAssertEqual(vni("Vie65t"), "Việt")
+        XCTAssertEqual(vni("d9uo7c5"), "được")
+        XCTAssertEqual(vni("nguoi72"), "người")
+        XCTAssertEqual(vni("tie61ng"), "tiếng")
+        XCTAssertEqual(vni("hoc5"), "học")
+        XCTAssertEqual(vni("toa2n"), "toàn")
+        XCTAssertEqual(vni("thu7o7ng2"), "thường")
+        XCTAssertEqual(vni("d9a5i"), "đại")
+        XCTAssertEqual(vni("ho7n"), "hơn")
+        XCTAssertEqual(vni("ba8ng2"), "bằng")
+    }
+
+    // Marks and tones combine in EITHER order (a defining VNI property).
+    func testMarkToneOrderIndependence() {
+        XCTAssertEqual(vni("a61"), vni("a16"))       // both → ấ
+        XCTAssertEqual(vni("a61"), "ấ")
+        XCTAssertEqual(vni("o71"), vni("o17"))       // both → ớ
+        XCTAssertEqual(vni("a85"), vni("a58"))       // both → ặ
+    }
+
     // MARK: Cancel / clear semantics
 
     func testCancelAndClear() {
