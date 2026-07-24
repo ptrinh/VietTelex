@@ -316,6 +316,17 @@ final class SettingsModel: ObservableObject {
     }
 }
 
+extension View {
+    /// Nút hành động chính theo Liquid Glass (macOS 26) — fallback borderedProminent.
+    @ViewBuilder func prominentGlass() -> some View {
+        if #available(macOS 26.0, *) {
+            self.buttonStyle(.glassProminent)
+        } else {
+            self.buttonStyle(.borderedProminent)
+        }
+    }
+}
+
 // id = key: selection survives reloads, and a row can be looked up by its key.
 struct ShortcutRow: Identifiable { var id: String { key }; let key: String; let value: String }
 
@@ -336,18 +347,35 @@ struct AppModeRow: Identifiable {
 struct SettingsView: View {
     @EnvironmentObject var model: SettingsModel
 
-    var body: some View {
+    // Icon sidebar (macOS 15+) — tab cổ điển chỉ hiện Text nên Label vẫn ổn cho cả hai.
+    private var tabs: some View {
         TabView(selection: $model.selectedTab) {
-            GeneralTab().tabItem { Text(model.loc("Settings")) }.tag(SettingsTab.general)
-            ShortcutsTab().tabItem { Text(model.loc("Shortcuts")) }.tag(SettingsTab.shortcuts)
+            GeneralTab()
+                .tabItem { Label(model.loc("Settings"), systemImage: "slider.horizontal.3") }
+                .tag(SettingsTab.general)
+            ShortcutsTab()
+                .tabItem { Label(model.loc("Shortcuts"), systemImage: "keyboard") }
+                .tag(SettingsTab.shortcuts)
             if model.advancedFeatures {
-                ModeTableTab().tabItem { Text(model.loc("Typing modes")) }.tag(SettingsTab.modeTable)
-                ExperimentalTab().tabItem { Text(model.loc("Experimental")) }.tag(SettingsTab.experimental)
+                ModeTableTab()
+                    .tabItem { Label(model.loc("Typing modes"), systemImage: "list.bullet.rectangle") }
+                    .tag(SettingsTab.modeTable)
+                ExperimentalTab()
+                    .tabItem { Label(model.loc("Experimental"), systemImage: "testtube.2") }
+                    .tag(SettingsTab.experimental)
             }
-            AboutTab().tabItem { Text(model.loc("About")) }.tag(SettingsTab.about)
+            AboutTab()
+                .tabItem { Label(model.loc("About"), systemImage: "info.circle") }
+                .tag(SettingsTab.about)
         }
-        .padding(16)
-        .frame(minWidth: 640, minHeight: 500)
+    }
+
+    var body: some View {
+        // Tab ngang phía trên như bản cũ (user 2026-07-24 — thử sidebar rồi
+        // quay lại); standard TabView vẫn tự nhận diện mạo mới trên Tahoe.
+        tabs
+            .padding(16)
+            .frame(minWidth: 640, minHeight: 500)
     }
 }
 
@@ -713,8 +741,10 @@ struct AboutTab: View {
                     ProgressView().controlSize(.small)
                 } else if let updateURL {
                     Button(model.loc("Download update…")) { NSWorkspace.shared.open(updateURL) }
+                        .prominentGlass()
                 } else {
                     Button(model.loc("Check for updates")) { runCheck() }
+                        .prominentGlass()
                 }
                 if let status {
                     Text(status).font(.caption).foregroundStyle(.secondary)

@@ -49,6 +49,15 @@ private func composeSimpleFree(_ keys: String) -> String {
     return e.composed
 }
 
+/// Type keys with free marking then press Backspace once; returns the composition.
+private func backspaceFree(_ keys: String) -> String {
+    var e = TelexEngine()
+    e.freeMarking = true
+    for ch in keys { _ = e.feed(ch) }
+    _ = e.backspace()
+    return e.composed
+}
+
 /// Free marking + boundary commit with auto-restore (the shipped defaults).
 private func commitFree(_ keys: String) -> String {
     var e = TelexEngine()
@@ -174,6 +183,14 @@ final class EngineGoldenTests: XCTestCase {
         XCTAssertEqual(commitFree("themee"), "theme")
         XCTAssertEqual(commitFree("didd"), "did")
         XCTAssertEqual(commitFree("dauaa"), "daua")
+
+        // Canceled-tone provenance (tester bug 2026-07-23, Google Docs):
+        // "airrw" then ⌫ must give "air" — the orphaned first r used to be
+        // dragged out with the w and the re-parse resurrected the tone ("ải").
+        XCTAssertEqual(backspaceFree("airrw"), "air")
+        XCTAssertEqual(backspaceFree("bessw"), "bes")
+        XCTAssertEqual(backspaceFree("beffw"), "bef")
+        XCTAssertEqual(backspaceFree("lass"), "la")   // ⌫ on the displayed s removes the pair
         // audit 2026-07-23: English spellings that ARE the canonical telex keys
         // of common Vietnamese words — Vietnamese wins (protect list).
         XCTAssertEqual(commitFree("thus"), "thú")
