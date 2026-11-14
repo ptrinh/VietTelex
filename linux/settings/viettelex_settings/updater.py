@@ -361,10 +361,10 @@ def run_update(lin, progress=lambda _t: None, allowed_prefix=None, helper=None):
                     return False, _("Không tải được %s — kiểm tra mạng rồi thử lại.") % name, False
                 if not verify_sha256(dest, sha):
                     return False, _("Sai mã SHA256 của %s — đã huỷ, không cài.") % name, True
-            # mkdtemp tạo 0700; apt cài .deb bằng user sandbox "_apt" nên thư mục phải đọc được
-            # (không thì apt cài "unsandboxed as root"). Chỉ mở ĐỌC, không ai khác ghi được; gói đã
-            # qua kiểm SHA256 ở trên và vốn công khai trên GitHub Releases.
-            os.chmod(tmp, 0o755)  # lgtm[py/overly-permissive-file]
+            # mkdtemp tạo 0700; apt cài .deb bằng user sandbox "_apt" (không thì "unsandboxed as
+            # root") ⇒ _apt cần ĐI QUA thư mục (x) để mở file theo đường dẫn; file .deb vốn 0644.
+            # 0711: không ai khác liệt kê / ghi được thư mục (CodeQL py/overly-permissive-file).
+            os.chmod(tmp, 0o711)
         progress(_("Đang cài (cần mật khẩu quản trị)…"))
         argv = helper_argv(p, tmp)
         argv[1] = helper
