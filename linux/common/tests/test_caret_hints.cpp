@@ -98,7 +98,7 @@ bool press(Session &s, Mock &m, uint32_t keysym, uint32_t unicode, uint32_t mods
     if (keysym == ks::BackSpace) popChars(m.doc, 1);
     else if (keysym == ks::Return) m.doc += "\n";
     else if (keysym == ks::Tab) m.doc += "\t";
-    else if (unicode >= 0x20 && unicode != 0x7f && unicode != 0x1b) {
+    else if (unicode >= 0x20 && unicode != 0x7f) {
         std::string u;
         if (unicode < 0x80) u = char(unicode);
         m.doc += u;

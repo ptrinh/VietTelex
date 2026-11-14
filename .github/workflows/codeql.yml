@@ -36,7 +36,9 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: none
-          queries: security-and-quality
+          # Chỉ truy vấn bảo mật (rộng hơn bộ mặc định); bộ "quality" trước đây đổ ~140 note kiểu code
+          # (biến static không dùng, tên ngắn…) che mất cảnh báo thật — 15/11/2026.
+          queries: security-extended
           config: |
             paths:
               - linux/common
@@ -44,6 +46,8 @@ jobs:
               - linux/ibus
               - linux/settings
             paths-ignore:
+              # Test tạo script/file giả trong mkdtemp với chmod 0755/0640 ⇒ báo nhầm "world-writable".
+              - linux/**/tests
               - linux/dist
               - linux/packaging/out
       - name: Analyze
