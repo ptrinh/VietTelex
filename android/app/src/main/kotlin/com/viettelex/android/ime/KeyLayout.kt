@@ -578,14 +578,14 @@ object KeyLayout {
     private val PHONE_HINTS = arrayOf("", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ")
 
     /**
-     * Bàn số kiểu Gboard — lưới 3×4 số ở giữa, cột phụ 0.17 W hai bên, KHÔNG có ô trống:
+     * Bàn số kiểu Gboard (feedback tester 15/11/2026: "làm như Gboard", Dán lên thanh trên):
      *  PHONE : trái  + · − · ( ) · ?123 | lưới 1…9, * 0 # (chữ ABC… dưới số) |
-     *          phải  ⌫ · , ; (pause/wait) · [space | 📋] · enter
-     *  NUMPAD: trái  (chỉ khi có) − nếu SIGNED; DATETIME: / : − — chia đều cả cột
-     *          lưới 1…9, [, 0 .] — dấu thập phân chỉ khi DECIMAL, không có thì 0 nở rộng
-     *          phải  ⌫ · [space | 📋] · ?123 · enter
-     * 📋 Dán (báo lỗi 13/11/2026: ô số điện thoại không có cách dán số vừa copy) chia đôi khe space
-     * — trước đây cả khe là space không nhãn, người dùng tưởng ô trống.
+     *          phải  ⌫ · , ; (pause/wait) · ␣ · enter
+     *  NUMPAD: KHÔNG cột trái (trừ DATETIME: / : − chia đều cả cột) | lưới 1…9, [, 0 .] — "," "."
+     *          chỉ khi DECIMAL, không có thì 0 nở rộng |
+     *          phải  − (chỉ khi SIGNED) · ␣ (cao 2 hàng nếu không có −) · ⌫ · enter
+     * KHÔNG ?123 ở NUMPAD: ô số chỉ nhận số + dấu theo cờ — bàn ký hiệu gõ gì ô cũng từ chối.
+     * KHÔNG phím 📋: Dán nằm trên thanh trên cùng (StripMode.TOOLS, dán số đã lọc — NumericPaste).
      * Phím không hợp cờ của ô thì không có (không gõ được ký tự ô từ chối).
      */
     private fun numberPad(out: MutableList<LaidKey>, c: LayoutConfig, rowH: Float) {
@@ -594,15 +594,7 @@ object KeyLayout {
         val m = ROW_MARGIN_H * d
         val gap = KEY_SPACING * d
         val phone = c.plane == Plane.PHONE
-        val sides = ArrayList<String>(3)
-        if (!phone) {
-            if (c.kind == InputKind.DATETIME) { sides += "/"; sides += ":"; sides += "-" }
-            else {
-                // Cột trái kiểu Gboard: − . , xếp dọc (không một phím "−" cao cả 4 hàng).
-                if (c.numberSigned) sides += "-"
-                if (c.numberDecimal) { sides += "."; sides += "," }
-            }
-        }
+        val sides = if (!phone && c.kind == InputKind.DATETIME) listOf("/", ":", "-") else emptyList()
         val hasLeft = phone || sides.isNotEmpty()
         val sideW = 0.17f * W
         val leftX = m
@@ -620,8 +612,9 @@ object KeyLayout {
             val r = i / 3; val x0 = cellX(i % 3)
             pad((i + 1).toString(), x0, x0 + gridW, top(r), bot(r), if (phone) PHONE_HINTS[i] else "")
         }
-        val bl = if (phone) "*" else null
-        val br = if (phone) "#" else null
+        val decimal = !phone && c.kind != InputKind.DATETIME && c.numberDecimal
+        val bl = if (phone) "*" else if (decimal) "," else null
+        val br = if (phone) "#" else if (decimal) "." else null
         bl?.let { pad(it, cellX(0), cellX(0) + gridW, top(3), bot(3)) }
         br?.let { pad(it, cellX(2), cellX(2) + gridW, top(3), bot(3)) }
         pad("0", if (bl != null) cellX(1) else cellX(0), if (br != null) cellX(1) + gridW else cellX(2) + gridW,
@@ -642,22 +635,21 @@ object KeyLayout {
                 pad(sym, leftX, leftX + sideW, t, t + h, side = true)
             }
         }
-        // Khe space cột phải chia đôi: [space | 📋 Dán].
-        fun spacePaste(r: Int) {
-            val hw = (sideW - gap) / 2
-            out += LaidKey(KeyKind.SPACE, "", "", " ", rightX, top(r), rightX + hw, bot(r))
-            out += LaidKey(KeyKind.PASTE, "", "", "", rightX + hw + gap, top(r), rightX + sideW, bot(r))
-        }
+        fun space(r0: Int, r1: Int) { out += LaidKey(KeyKind.SPACE, "", "", " ", rightX, top(r0), rightX + sideW, bot(r1)) }
         // cột phải
-        out += LaidKey(KeyKind.BACKSPACE, "", "", "", rightX, top(0), rightX + sideW, bot(0))
         if (phone) {
+            out += LaidKey(KeyKind.BACKSPACE, "", "", "", rightX, top(0), rightX + sideW, bot(0))
             val hw = (sideW - gap) / 2
             pad(",", rightX, rightX + hw, top(1), bot(1), side = true)
             pad(";", rightX + hw + gap, rightX + sideW, top(1), bot(1), side = true)
-            spacePaste(2)
+            space(2, 2)
         } else {
-            spacePaste(1)
-            out += LaidKey(KeyKind.MORE, "?123", "?123", "?123", rightX, top(2), rightX + sideW, bot(2))
+            // Như Gboard: − · ␣ · ⌫ · enter (⌫ và enter luôn ở hàng 3, 4).
+            if (c.numberSigned && c.kind != InputKind.DATETIME) {
+                pad("-", rightX, rightX + sideW, top(0), bot(0), side = true)
+                space(1, 1)
+            } else space(0, 1)
+            out += LaidKey(KeyKind.BACKSPACE, "", "", "", rightX, top(2), rightX + sideW, bot(2))
         }
         out += LaidKey(KeyKind.RETURN, c.returnLabel, c.returnLabel, "\n", rightX, top(3), rightX + sideW, bot(3))
     }

@@ -86,6 +86,8 @@ data class FieldTraits(
      * clipboard loại đó lên đầu ([ClipDetect.prioritize]). Song sinh iOS preferredClipKind.
      */
     val clipPreference: ClipChip.Kind? = null,
+    /** Bàn số (ô điện thoại / số / ngày giờ): không chip địa chỉ (ô không nhận chữ). */
+    val numericPad: Boolean = false,
 ) {
     /** Cách ghi chữ vào ô theo app (bảng [WriteMode.forPackage]). */
     val writeMode: WriteMode get() = WriteMode.forPackage(packageName)
@@ -530,6 +532,7 @@ class KeyboardSession(
         recentEnglish.clear(); langRecent.clear()
         emailBar = settings.showSuggestions && field.emailField && !field.isSecure
         clipPreference = field.clipPreference
+        numericPad = field.numericPad
         suggestionsActive = StripMode.wordsActive(settings.showSuggestions, field,
             StripMode.overridesAppNoSuggest(settings.suggestInNoSuggestFields, field, incognito))
         stripMode = StripMode.of(settings.showSuggestions, field, incognito, settings.suggestInNoSuggestFields)
@@ -1631,6 +1634,7 @@ class KeyboardSession(
     // MARK: chip số + lịch sử clipboard
 
     private var clipPreference: ClipChip.Kind? = null
+    private var numericPad = false
     /** Gemini Nano trích địa chỉ (app đặt; null = không có). */
     var clipAddressAI: ClipAddressAI? = null
     /** AI vừa trả địa chỉ ⇒ IME vẽ lại thanh. */
@@ -1651,7 +1655,7 @@ class KeyboardSession(
             chipsText = if (cb.isSensitive()) null else cb.readText()
             chipsCached = chipsText?.let { ClipDetect.detect(it) } ?: emptyList()
         }
-        var chips = chipsCached
+        var chips = if (numericPad) chipsCached.filter { it.kind != ClipChip.Kind.ADDRESS } else chipsCached
         if (clipPreference == ClipChip.Kind.ADDRESS && chips.none { it.kind == ClipChip.Kind.ADDRESS }) {
             aiAddress(cc)?.let { chips = chips + ClipChip(ClipChip.Kind.ADDRESS, it, ClipDetect.label(ClipChip.Kind.ADDRESS, it)) }
         }

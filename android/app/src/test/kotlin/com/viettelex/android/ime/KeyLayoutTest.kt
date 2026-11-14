@@ -420,28 +420,36 @@ class KeyLayoutTest {
         val p = pad(Plane.NUMPAD, InputKind.NUMBER)
         val z = p.first { it.label == "0" }
         near(z.left, p.first { it.label == "7" }.left); near(z.right, p.first { it.label == "9" }.right)
-        // không cột trái khi không có phím phụ ⇒ lưới rộng hơn
-        assertTrue(p.first { it.label == "1" }.width > both.first { it.label == "1" }.width)
-        // toggle ?123 + space + ⌫ + enter luôn có
-        assertTrue(both.any { it.kind == KeyKind.SPACE } && both.any { it.kind == KeyKind.BACKSPACE }
-            && both.any { it.kind == KeyKind.RETURN })
-        assertEquals("?123", both.first { it.kind == KeyKind.MORE }.label)
+        // Như Gboard (15/11/2026): KHÔNG cột trái ở ô số; "−" ở cột phải, ", ." kẹp hai bên 0.
+        near(p.first { it.label == "1" }.width, both.first { it.label == "1" }.width)
+        val minus = both.first { it.label == "-" }
+        assertTrue(minus.left > both.first { it.label == "3" }.right)
+        near(minus.top, both.first { it.label == "3" }.top)
+        assertTrue(both.first { it.label == "," }.right <= zero.left && both.first { it.label == "." }.left >= zero.right)
+        // ␣ ⌫ enter luôn có; ⌫ hàng 3, enter hàng 4 dù có "−" hay không; KHÔNG ?123 (ô số từ chối ký hiệu).
+        for (k in listOf(p, both)) {
+            assertTrue(k.any { it.kind == KeyKind.SPACE } && k.any { it.kind == KeyKind.RETURN })
+            near(k.first { it.kind == KeyKind.BACKSPACE }.top, k.first { it.label == "7" }.top)
+            near(k.first { it.kind == KeyKind.RETURN }.top, k.first { it.label == "0" }.top)
+            assertTrue(k.none { it.kind == KeyKind.MORE })
+        }
+        // không "−" ⇒ ␣ cao 2 hàng (không ô trống)
+        val sp = p.first { it.kind == KeyKind.SPACE }
+        near(sp.top, p.first { it.label == "1" }.top); near(sp.bottom, p.first { it.label == "4" }.bottom)
     }
 
-    /** Báo lỗi 13/11/2026: bàn số không có cách dán số điện thoại vừa copy ⇒ 📋 chia đôi khe space. */
-    @Test fun everyPadHasPasteKeyBesideSpace() {
+    /** 15/11/2026: Dán lên thanh trên (StripMode.TOOLS) ⇒ bàn số không còn phím 📋; phím cách chiếm trọn khe. */
+    @Test fun numberPadsHaveNoPasteKey() {
         for (k in listOf(pad(Plane.PHONE, InputKind.PHONE), pad(Plane.NUMPAD, InputKind.NUMBER),
                          pad(Plane.NUMPAD, InputKind.DATETIME), pad(Plane.NUMPAD, InputKind.NUMBER, signed = true, decimal = true))) {
-            val paste = k.single { it.kind == KeyKind.PASTE }
+            assertTrue(k.none { it.kind == KeyKind.PASTE })
             val space = k.single { it.kind == KeyKind.SPACE }
-            val bs = k.first { it.kind == KeyKind.BACKSPACE }
-            near(paste.top, space.top); near(paste.bottom, space.bottom)
-            assertTrue(space.right < paste.left)
-            near(space.left, bs.left); near(paste.right, bs.right)
-            near(paste.width, space.width)
-            assertEquals(KeyKind.PASTE, KeyLayout.hit(k, Plane.NUMPAD, paste.centerX, paste.centerY, 4f, d)?.kind)
-            assertTrue(KeyKind.isSpecial(KeyKind.PASTE))
+            val ret = k.single { it.kind == KeyKind.RETURN }
+            near(space.left, ret.left); near(space.right, ret.right)
         }
+        // Ô điện thoại giữ ?123 (cần + * # , ;); ô ngày giờ không.
+        assertTrue(pad(Plane.PHONE, InputKind.PHONE).any { it.kind == KeyKind.MORE })
+        assertTrue(pad(Plane.NUMPAD, InputKind.DATETIME).none { it.kind == KeyKind.MORE })
     }
 
     @Test fun datetimePadHasSeparators() {
@@ -727,6 +735,6 @@ class KeyLayoutTest {
             .resolve("com/viettelex/android/ime/KeyboardView.kt").readText()
         assertTrue("!KeyLayout.isNumberPad(plane)" in src)
         assertEquals(2, Regex("&& languageOnSpace\\)").findAll(src).count())   // moveFlick + endFlick
-        assertTrue("|| !languageOnSpace) return" in src)                              // drawSpaceContent
+        assertTrue("if (!languageOnSpace) { drawLabel(c, \"\\u2423\"" in src)          // drawSpaceContent: ␣ thay nhãn VI/EN
     }
 }

@@ -247,8 +247,9 @@ class FieldMappingTest {
         for (v in listOf(TYPE_TEXT_VARIATION_PASSWORD, TYPE_TEXT_VARIATION_WEB_PASSWORD, TYPE_TEXT_VARIATION_VISIBLE_PASSWORD))
             assertEquals(StripMode.BLANK, strip(TYPE_CLASS_TEXT or v))
         assertEquals(StripMode.BLANK, strip(TYPE_CLASS_NUMBER or TYPE_NUMBER_VARIATION_PASSWORD))
-        assertEquals(StripMode.BLANK, strip(TYPE_CLASS_NUMBER))             // bàn số: ☰ về bàn chữ ⇒ không
-        assertEquals(StripMode.BLANK, strip(TYPE_CLASS_PHONE))
+        // Bàn số (15/11/2026, như Gboard): thanh công cụ có Dán (số đã lọc) — không còn dải trống.
+        assertEquals(StripMode.TOOLS, strip(TYPE_CLASS_NUMBER))
+        assertEquals(StripMode.TOOLS, strip(TYPE_CLASS_PHONE))
         assertEquals(StripMode.BLANK, strip(TYPE_NULL))                      // terminal
         assertEquals(StripMode.BLANK, strip(TYPE_CLASS_TEXT or TYPE_TEXT_FLAG_NO_SUGGESTIONS,
             EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING))                   // ẩn danh (Chrome…)

@@ -957,6 +957,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
             emailField = field.kind == InputKind.EMAIL, stripTools = field.stripTools,
             lowercaseSuggestions = field.lowercaseSuggestions, appNoSuggestions = field.appNoSuggestions,
             emailCompose = field.emailCompose,
+            numericPad = field.kind == InputKind.PHONE || field.kind == InputKind.NUMBER || field.kind == InputKind.DATETIME,
             clipPreference = FieldMapping.clipPreference(info.inputType, info.hintText)))
         // Bảng gõ tắt đổi ⇒ từ vựng vuốt mới: dựng lại template ở nền (cú vuốt kế khỏi chờ).
         if (session.takeSwipeVocabChanged()) swipeDecoder?.let { dec ->
@@ -1833,6 +1834,8 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
     // MARK: strip
 
     override fun onSuggestion(item: String) {
+        // Bàn số: "Dán" trên thanh = dán số đã lọc như phím 📋 cũ (1.456.464 VND → 1456464).
+        if (item == com.viettelex.keyboard.SuggestionSet.PASTE_TOKEN && field.isNumberPad) { onPadPaste(); return }
         clearSwipeUndo()
         if (!proxy.begin()) return
         syncShift()

@@ -59,7 +59,10 @@ data class FieldConfig(
      * mật khẩu / TYPE_NULL. Song sinh iOS FieldPolicy.emailCompose.
      */
     val emailCompose: Boolean = false,
-)
+) {
+    /** Ô hiện bàn số (điện thoại / số / ngày giờ) — Dán trên thanh lọc số ([NumericPaste]). */
+    val isNumberPad: Boolean get() = kind == InputKind.PHONE || kind == InputKind.NUMBER || kind == InputKind.DATETIME
+}
 
 object FieldMapping {
     /**
@@ -171,7 +174,9 @@ object FieldMapping {
             noLearning = (imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0,
             multiLine = multiLine,
             holdNewline = allowsHoldNewline(multiLine, secure, rawKeys),
-            stripTools = text && !secure,
+            // Bàn số (điện thoại / số / ngày giờ, không mật khẩu số): thanh công cụ có Dán — tester
+            // 15/11/2026 "đưa Dán lên thanh trên như Gboard"; IME dán số đã lọc (NumericPaste).
+            stripTools = (text || numeric) && !secure,
             lowercaseSuggestions = isAddressOrSearch(inputType, imeOptions, multiLine, secure),
             appNoSuggestions = noSuggest && !secure && !passthrough,
             emailCompose = email && !forceAscii && !secure && !rawKeys)

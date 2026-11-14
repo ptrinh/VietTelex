@@ -1407,9 +1407,11 @@ class KeyboardView(
     /** Badge "ViệtTelex" / nhãn vuốt đổi ngôn ngữ / logo trên phím cách — vẽ SAU lưới phím, mỗi khung. */
     private fun drawSpaceContent(c: Canvas) {
         val k = spaceKey ?: return
-        if (plane == Plane.EMOJI || !languageOnSpace) return
+        if (plane == Plane.EMOJI) return
         val contentAlpha = ((if (trackpad) 51 else 255) * theme.labelAlpha).toInt()
         val cx = k.centerX; val cy = k.centerY
+        // Bàn số: phím cách mang ký hiệu ␣ như Gboard (trước đây không nhãn — người dùng tưởng ô trống).
+        if (!languageOnSpace) { drawLabel(c, "\u2423", cx, cy, controlPaint, controlOff, contentAlpha); return }
         // Badge "ViệtTelex" lúc hiện rồi mờ dần về logo Vᴛ (như iOS). Kẹp trong phím (vẽ sau phím kề).
         if (badgeAlpha > 0f) {
             badgePaint.alpha = (badgeAlpha * contentAlpha).toInt()
