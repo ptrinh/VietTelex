@@ -403,31 +403,39 @@ class KeyLayoutTest {
         assertTrue(!k.first { it.label == "5" }.side)
     }
 
-    /** Như Gboard: − , . LUÔN có ở ô số — ô số tiền MoMo / MB Bank khai báo số trơn (tester 15/11/2026). */
-    @Test fun numpadAlwaysHasMinusCommaDot() {
-        val all = setOf("0","1","2","3","4","5","6","7","8","9","-",",",".")
-        for (k in listOf(pad(Plane.NUMPAD, InputKind.NUMBER), pad(Plane.NUMPAD, InputKind.NUMBER, signed = true),
-                         pad(Plane.NUMPAD, InputKind.NUMBER, decimal = true),
-                         pad(Plane.NUMPAD, InputKind.NUMBER, signed = true, decimal = true))) {
-            assertEquals(all, padLabels(k))
-            val zero = k.first { it.label == "0" }
-            near(zero.centerX, k.first { it.label == "8" }.centerX)
-            assertTrue(zero.top > k.first { it.label == "8" }.bottom)
-            assertTrue(k.first { it.label == "," }.right <= zero.left && k.first { it.label == "." }.left >= zero.right)
-            // cột phải: − (hàng 1) · ␣ · ⌫ (hàng 3) · enter (hàng 4); KHÔNG ?123
-            val minus = k.first { it.label == "-" }
-            assertTrue(minus.left > k.first { it.label == "3" }.right)
-            near(minus.top, k.first { it.label == "3" }.top)
-            near(k.first { it.kind == KeyKind.SPACE }.top, k.first { it.label == "4" }.top)
+    @Test fun numpadFlagsControlSideKeys() {
+        val plain = padLabels(pad(Plane.NUMPAD, InputKind.NUMBER))
+        assertEquals(setOf("0","1","2","3","4","5","6","7","8","9"), plain)
+        val signed = padLabels(pad(Plane.NUMPAD, InputKind.NUMBER, signed = true))
+        assertTrue("-" in signed && "." !in signed && "," !in signed)
+        val dec = padLabels(pad(Plane.NUMPAD, InputKind.NUMBER, decimal = true))
+        assertTrue("." in dec && "," in dec && "-" !in dec)
+        val both = pad(Plane.NUMPAD, InputKind.NUMBER, signed = true, decimal = true)
+        assertTrue(padLabels(both).containsAll(listOf("-", ".", ",")))
+        // 0 ở hàng dưới, giữa cột
+        val zero = both.first { it.label == "0" }
+        near(zero.centerX, both.first { it.label == "8" }.centerX)
+        assertTrue(zero.top > both.first { it.label == "8" }.bottom)
+        // không DECIMAL ⇒ 0 nở phủ cả hàng lưới dưới (không ô trống)
+        val p = pad(Plane.NUMPAD, InputKind.NUMBER)
+        val z = p.first { it.label == "0" }
+        near(z.left, p.first { it.label == "7" }.left); near(z.right, p.first { it.label == "9" }.right)
+        // Như Gboard (15/11/2026): KHÔNG cột trái ở ô số; "−" ở cột phải, ", ." kẹp hai bên 0.
+        near(p.first { it.label == "1" }.width, both.first { it.label == "1" }.width)
+        val minus = both.first { it.label == "-" }
+        assertTrue(minus.left > both.first { it.label == "3" }.right)
+        near(minus.top, both.first { it.label == "3" }.top)
+        assertTrue(both.first { it.label == "," }.right <= zero.left && both.first { it.label == "." }.left >= zero.right)
+        // ␣ ⌫ enter luôn có; ⌫ hàng 3, enter hàng 4 dù có "−" hay không; KHÔNG ?123 (ô số từ chối ký hiệu).
+        for (k in listOf(p, both)) {
+            assertTrue(k.any { it.kind == KeyKind.SPACE } && k.any { it.kind == KeyKind.RETURN })
             near(k.first { it.kind == KeyKind.BACKSPACE }.top, k.first { it.label == "7" }.top)
-            near(k.first { it.kind == KeyKind.RETURN }.top, zero.top)
+            near(k.first { it.kind == KeyKind.RETURN }.top, k.first { it.label == "0" }.top)
             assertTrue(k.none { it.kind == KeyKind.MORE })
         }
-        // Ô ngày giờ: / : − ở cột trái, không "," "."; ␣ cao 2 hàng.
-        val dt = pad(Plane.NUMPAD, InputKind.DATETIME)
-        assertTrue("," !in padLabels(dt) && "." !in padLabels(dt))
-        val sp = dt.first { it.kind == KeyKind.SPACE }
-        near(sp.top, dt.first { it.label == "1" }.top); near(sp.bottom, dt.first { it.label == "4" }.bottom)
+        // không "−" ⇒ ␣ cao 2 hàng (không ô trống)
+        val sp = p.first { it.kind == KeyKind.SPACE }
+        near(sp.top, p.first { it.label == "1" }.top); near(sp.bottom, p.first { it.label == "4" }.bottom)
     }
 
     /** 15/11/2026: Dán lên thanh trên (StripMode.TOOLS) ⇒ bàn số không còn phím 📋; phím cách chiếm trọn khe. */
