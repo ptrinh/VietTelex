@@ -65,21 +65,6 @@ data class FieldConfig(
 }
 
 object FieldMapping {
-    private val MONEY_HINT = Regex("\\b(so tien|tien|amount|vnd|usd|dong|money|price|gia|total|tong|balance|so du)\\b")
-
-    /**
-     * Ô số TRƠN (TYPE_CLASS_NUMBER, không SIGNED/DECIMAL) mà hint là ô tiền ("Số tiền chuyển", "Nhập
-     * số tiền", "Amount"…) ⇒ bàn số hiện đủ − , . như Gboard. App tiền Việt hay khai báo số trơn rồi tự
-     * định dạng (MoMo, MB Bank — tester 15/11/2026); ô số trơn khác (OTP, PIN, số tài khoản) giữ chỉ số.
-     * Không dùng cho bộ lọc Dán (NumericPaste theo cờ thật).
-     */
-    fun looksLikeMoney(inputType: Int, hint: CharSequence?): Boolean {
-        if ((inputType and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_NUMBER) return false
-        if ((inputType and InputType.TYPE_MASK_VARIATION) == InputType.TYPE_NUMBER_VARIATION_PASSWORD) return false
-        val h = hint?.toString()?.takeIf { it.isNotBlank() } ?: return false
-        return MONEY_HINT.containsMatchIn(com.viettelex.keyboard.ClipDetect.fold(h))
-    }
-
     /**
      * Loại chip clipboard ưu tiên ở ô này: TYPE_CLASS_PHONE / hint "SĐT…" ⇒ SĐT; variation
      * POSTAL_ADDRESS / hint "Địa chỉ…" ⇒ địa chỉ. Không rõ ⇒ null (thứ tự mặc định).

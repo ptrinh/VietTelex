@@ -322,15 +322,4 @@ class FieldMappingTest {
         assertEquals(StripMode.TOOLS, StripMode.of(true, t, incognito = false, suggestAnyway = false))
         assertTrue(t.lowercaseSuggestions)
     }
-
-    /** Ô số trơn có hint tiền (MoMo / MB Bank) ⇒ đủ − , .; số trơn khác (OTP, PIN, STK) ⇒ chỉ số. */
-    @Test fun moneyHintOnPlainNumberField() {
-        val n = TYPE_CLASS_NUMBER
-        for (h in listOf("Số tiền chuyển", "Nhập số tiền", "Amount", "Số tiền (VND)", "Giá", "Tổng tiền"))
-            assertTrue(h, FieldMapping.looksLikeMoney(n, h))
-        for (h in listOf(null, "", "Mã OTP", "Nhập mã PIN", "Số tài khoản", "Số điện thoại", "Số lượng"))
-            assertFalse(h.toString(), FieldMapping.looksLikeMoney(n, h))
-        assertFalse(FieldMapping.looksLikeMoney(TYPE_CLASS_TEXT, "Số tiền"))                       // ô chữ: không bàn số
-        assertFalse(FieldMapping.looksLikeMoney(n or TYPE_NUMBER_VARIATION_PASSWORD, "Số tiền"))   // mật khẩu số
-    }
 }

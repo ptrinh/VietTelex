@@ -403,28 +403,31 @@ class KeyLayoutTest {
         assertTrue(!k.first { it.label == "5" }.side)
     }
 
-    /** − , . theo cờ của ô (ô tiền số trơn: IME bật cả hai cờ — FieldMappingTest.moneyHint…). */
-    @Test fun numpadFlagsControlSideKeys() {
-        val plain = pad(Plane.NUMPAD, InputKind.NUMBER)
-        assertEquals(setOf("0","1","2","3","4","5","6","7","8","9"), padLabels(plain))
-        val both = pad(Plane.NUMPAD, InputKind.NUMBER, signed = true, decimal = true)
-        assertEquals(setOf("0","1","2","3","4","5","6","7","8","9","-",",","."), padLabels(both))
-        assertTrue("-" in padLabels(pad(Plane.NUMPAD, InputKind.NUMBER, signed = true)))
-        assertTrue("," in padLabels(pad(Plane.NUMPAD, InputKind.NUMBER, decimal = true)))
-        val zero = both.first { it.label == "0" }
-        assertTrue(both.first { it.label == "," }.right <= zero.left && both.first { it.label == "." }.left >= zero.right)
-        val minus = both.first { it.label == "-" }
-        assertTrue(minus.left > both.first { it.label == "3" }.right)
-        // không DECIMAL ⇒ 0 nở cả hàng; không SIGNED ⇒ ␣ cao 2 hàng; ⌫ hàng 3, enter hàng 4; KHÔNG ?123
-        val z = plain.first { it.label == "0" }
-        near(z.left, plain.first { it.label == "7" }.left); near(z.right, plain.first { it.label == "9" }.right)
-        val sp = plain.first { it.kind == KeyKind.SPACE }
-        near(sp.top, plain.first { it.label == "1" }.top); near(sp.bottom, plain.first { it.label == "4" }.bottom)
-        for (k in listOf(plain, both)) {
+    /** Như Gboard: − , . LUÔN có ở ô số — ô số tiền MoMo / MB Bank khai báo số trơn (tester 15/11/2026). */
+    @Test fun numpadAlwaysHasMinusCommaDot() {
+        val all = setOf("0","1","2","3","4","5","6","7","8","9","-",",",".")
+        for (k in listOf(pad(Plane.NUMPAD, InputKind.NUMBER), pad(Plane.NUMPAD, InputKind.NUMBER, signed = true),
+                         pad(Plane.NUMPAD, InputKind.NUMBER, decimal = true),
+                         pad(Plane.NUMPAD, InputKind.NUMBER, signed = true, decimal = true))) {
+            assertEquals(all, padLabels(k))
+            val zero = k.first { it.label == "0" }
+            near(zero.centerX, k.first { it.label == "8" }.centerX)
+            assertTrue(zero.top > k.first { it.label == "8" }.bottom)
+            assertTrue(k.first { it.label == "," }.right <= zero.left && k.first { it.label == "." }.left >= zero.right)
+            // cột phải: − (hàng 1) · ␣ · ⌫ (hàng 3) · enter (hàng 4); KHÔNG ?123
+            val minus = k.first { it.label == "-" }
+            assertTrue(minus.left > k.first { it.label == "3" }.right)
+            near(minus.top, k.first { it.label == "3" }.top)
+            near(k.first { it.kind == KeyKind.SPACE }.top, k.first { it.label == "4" }.top)
             near(k.first { it.kind == KeyKind.BACKSPACE }.top, k.first { it.label == "7" }.top)
-            near(k.first { it.kind == KeyKind.RETURN }.top, k.first { it.label == "0" }.top)
+            near(k.first { it.kind == KeyKind.RETURN }.top, zero.top)
             assertTrue(k.none { it.kind == KeyKind.MORE })
         }
+        // Ô ngày giờ: / : − ở cột trái, không "," "."; ␣ cao 2 hàng.
+        val dt = pad(Plane.NUMPAD, InputKind.DATETIME)
+        assertTrue("," !in padLabels(dt) && "." !in padLabels(dt))
+        val sp = dt.first { it.kind == KeyKind.SPACE }
+        near(sp.top, dt.first { it.label == "1" }.top); near(sp.bottom, dt.first { it.label == "4" }.bottom)
     }
 
     /** 15/11/2026: Dán lên thanh trên (StripMode.TOOLS) ⇒ bàn số không còn phím 📋; phím cách chiếm trọn khe. */

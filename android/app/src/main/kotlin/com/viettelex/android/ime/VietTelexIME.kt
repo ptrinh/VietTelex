@@ -133,8 +133,6 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
     private var theme: ImeTheme? = null
 
     private var field = FieldMapping.map(0, 0)
-    /** Ô số trơn có hint tiền ⇒ bàn số đủ − , . ([FieldMapping.looksLikeMoney]). */
-    private var moneyField = false
     private var pendingGen = 0
 
     private val autoShiftRun = Runnable { if (pendingGen == session.generation) applyAutoShift() }
@@ -886,7 +884,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
             settings.templatesEnabled, templatesSource,
             th.dp(KeyLayout.keyAreaDp(th.tablet, th.landscape, settings.rowHeightAdjust, settings.numberRow,
                 settings.numberRowFullHeight, resources.configuration.screenHeightDp.toFloat())),
-            field.numberSigned || moneyField, field.numberDecimal || moneyField, settings.numberRow, settings.numberRowFullHeight,
+            field.numberSigned, field.numberDecimal, settings.numberRow, settings.numberRowFullHeight,
             settings.spaceSideKey, emojiInStrip, settings.keyLabelSize, settings.splitKeyboard, settings.largeKeys)
         } finally { configuringKb = false }
         ImeTrace.end()
@@ -939,7 +937,6 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
     private fun configureField(info: EditorInfo, settings: KeyboardSettings) {
         field = FieldMapping.map(info.inputType, info.imeOptions, info.packageName,
             hasActionLabel = info.actionLabel != null, customActionId = info.actionId)
-        moneyField = FieldMapping.looksLikeMoney(info.inputType, info.hintText)
         proxy.secure = field.isSecure
         proxy.rawKeys = field.rawKeys
         proxy.multiLine = field.multiLine
