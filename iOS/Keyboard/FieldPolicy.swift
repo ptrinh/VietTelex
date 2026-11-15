@@ -149,6 +149,14 @@ extension FieldPolicy {
         guard enabled else { return nil }
         return autoShift(autocap: autocap, before: before())
     }
+
+    /// Host báo đổi (textDidChange) nhưng chữ trước con trỏ `before` y như lần quyết định auto-shift
+    /// gần nhất `decidedOn`, và người dùng đã chạm ⇧ từ lần đó ⇒ đây là tiếng vọng tới trễ của
+    /// chính phím mình: giữ lựa chọn tay, không đặt lại shift ("Hello" ␣ ⇧ h phải ra "H").
+    static func hostEchoKeepsHandShift(byHand: Bool, before: String?, decidedOn: String?) -> Bool {
+        guard byHand, let before, let decidedOn else { return false }
+        return before == decidedOn
+    }
 }
 
 /// Ảnh chụp trait của ô nhập — phần THUẦN của refreshFieldTraits(). Host đổi ô trong

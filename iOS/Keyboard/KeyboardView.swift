@@ -747,8 +747,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func shiftDown(now: TimeInterval) {
         shift = Self.fromCase(shiftHold.down(Self.toCase(shift), now: now))
         shiftByHand = shift == .on
+        shiftTouchedByHand = true
         applyShiftAppearance()
     }
+    /// Người dùng đã chạm ⇧ (bật HOẶC tắt) kể từ lần auto-shift gần nhất — controller dùng để
+    /// không cho tiếng vọng host tới trễ đè lựa chọn tay (FieldPolicy.hostEchoKeepsHandShift).
+    private(set) var shiftTouchedByHand = false
     /// Shift một-lần đang bật DO NGƯỜI DÙNG chạm ⇧ (không phải viết hoa đầu câu tự động —
     /// tự động thì Return phải gửi như cũ, kẻo "Chào. ⏎" thành xuống dòng).
     private var shiftByHand = false
@@ -2691,6 +2695,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     /// Sentence-start auto-shift (only upgrades OFF→ON; never downgrades CAPS).
     func setAutoShift(_ on: Bool) {
+        shiftTouchedByHand = false
         guard shift != .caps, plane != .emojiSearch else { return }
         let want: ShiftState = on ? .on : .off
         if shift != want { shift = want; applyShiftAppearance() }

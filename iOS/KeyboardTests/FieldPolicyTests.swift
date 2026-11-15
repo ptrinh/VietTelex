@@ -188,6 +188,16 @@ final class AutoShiftTests: XCTestCase {
         XCTAssertEqual(reads, 2)
     }
 
+    /// "Hello" ␣ ⇧ h: tiếng vọng textDidChange của dấu cách tới SAU khi chạm ⇧ không được hạ ⇧.
+    func testLateHostEchoKeepsHandShift() {
+        XCTAssertTrue(FieldPolicy.hostEchoKeepsHandShift(byHand: true, before: "Hello ", decidedOn: "Hello "))
+        // Chưa chạm ⇧ / chữ đã đổi thật (host xoá ô, dời con trỏ) / chưa có lần quyết định ⇒ tính lại.
+        XCTAssertFalse(FieldPolicy.hostEchoKeepsHandShift(byHand: false, before: "Hello ", decidedOn: "Hello "))
+        XCTAssertFalse(FieldPolicy.hostEchoKeepsHandShift(byHand: true, before: "", decidedOn: "Hello "))
+        XCTAssertFalse(FieldPolicy.hostEchoKeepsHandShift(byHand: true, before: "Hello ", decidedOn: nil))
+        XCTAssertFalse(FieldPolicy.hostEchoKeepsHandShift(byHand: true, before: nil, decidedOn: nil))
+    }
+
     /// Thanh địa chỉ (.webSearch): phím "," đổi thành "." như stock, nhưng vẫn là ô chữ tự do
     /// (gõ Telex / vuốt) và vẫn không tự thêm dấu cách / tự sửa.
     func testWebSearchFieldGetsDotKey() {

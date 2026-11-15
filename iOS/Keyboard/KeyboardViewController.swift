@@ -799,16 +799,27 @@ final class KeyboardViewController: UIInputViewController {
 
     /// Apple behavior: shift turns on at sentence start when the field asks for
     /// .sentences autocapitalization (empty context, or after ".!?" + space).
-    private func updateAutoShift() {
+    private func updateAutoShift(fromHost: Bool = false) {
         // Tắt viết hoa đầu câu: chỉ hạ shift do chính mình bật trước đó (shift tay giữ nguyên).
         if !autoCapitalizeSetting, autoShiftOn { autoShiftOn = false; keyboard.setAutoShift(false) }
+        var ctx: String?
         guard let auto = FieldPolicy.autoShift(
             enabled: autoCapitalizeSetting,
             autocap: vtSafe(nil) { self.textProxy.autocapitalizationType ?? nil },
-            before: { textProxy.documentContextBeforeInput ?? "" }) else { return }
+            before: { let b = textProxy.documentContextBeforeInput ?? ""; ctx = b; return b }) else {
+            autoShiftContext = nil
+            return
+        }
+        // Tiếng vọng host của chính phím mình (textDidChange sau dấu cách tới trễ) mà người dùng đã
+        // kịp chạm ⇧: context y như lần quyết định trước ⇒ không đè lựa chọn tay.
+        if fromHost, FieldPolicy.hostEchoKeepsHandShift(byHand: keyboard.shiftTouchedByHand,
+                                                        before: ctx, decidedOn: autoShiftContext) { return }
+        autoShiftContext = ctx
         autoShiftOn = auto
         keyboard.setAutoShift(auto)
     }
+    /// Chữ trước con trỏ ở lần quyết định auto-shift gần nhất (nil = đã gõ phím khác từ đó).
+    private var autoShiftContext: String?
 
     /// Trait ô hiện tại (nil = chưa đọc lần nào trong phiên).
     private var fieldTraits: FieldTraits?
@@ -1010,7 +1021,7 @@ final class KeyboardViewController: UIInputViewController {
         let gen = suggestionGen
         DispatchQueue.main.async { [weak self] in
             guard let self, gen == self.suggestionGen else { return }
-            self.updateAutoShift()
+            self.updateAutoShift(fromHost: true)
         }
         guard suggestionsActive else { return }
         suggestDebounceGen = gen
@@ -1432,6 +1443,7 @@ final class KeyboardViewController: UIInputViewController {
         case .space, .newline, .lineBreak, .doubleSpacePeriod, .backspace, .moveCursor, .moveLine, .clearField: needsAutoShift = true
         default: needsAutoShift = autoSpacePunct != nil      // ". " tự thêm ⇒ viết hoa chữ kế
         }
+        if !needsAutoShift { autoShiftContext = nil }       // chữ đã đổi mà không quyết định lại
         suggestionGen += 1
         let gen = suggestionGen
         // Trackpad đang kéo: auto-shift + gợi ý tính một lần lúc nhả tay (trackpadChanged).

@@ -230,6 +230,18 @@ final class KeyHitBiasTests: XCTestCase {
         XCTAssertTrue(kb.debugShiftCaps)
     }
 
+    @MainActor func testShiftTouchedByHandFlag() throws {
+        let (kb, host) = makeKeyboard()
+        _ = host
+        kb.setAutoShift(false)
+        XCTAssertFalse(kb.shiftTouchedByHand)
+        try XCTUnwrap(kb.debugControl("Shift")).sendActions(for: .touchDown)
+        XCTAssertTrue(kb.shiftTouchedByHand, "chạm ⇧ ⇒ controller biết để không đè bằng tiếng vọng host")
+        kb.setAutoShift(false)                                        // quyết định mới của chính phím mình
+        XCTAssertFalse(kb.shiftTouchedByHand)
+        XCTAssertFalse(kb.debugShiftOn)
+    }
+
     @MainActor func testCapsLockOffAfter123RoundTrip() throws {
         let (kb, host) = makeKeyboard()
         _ = host
