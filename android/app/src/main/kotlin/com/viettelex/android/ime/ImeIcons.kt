@@ -57,7 +57,10 @@ object ImeIcons {
     const val FLOAT = 34
     /** Thả nổi: gắn bàn phím xuống đáy (mũi tên xuống chạm vạch đáy) — menu + nút trên thanh kéo. */
     const val DOCK = 35
-    private const val COUNT = 36
+    /** Ghim mục clipboard: viền (chưa ghim) / tô đầy (đã ghim) — như SF Symbol pin / pin.fill của iOS. */
+    const val PIN = 36
+    const val PIN_FILL = 37
+    private const val COUNT = 38
 
     /** Thứ tự icon category của plane emoji (clock → flag). */
     val CATEGORY = intArrayOf(CLOCK, FACE, HARE, FORK_KNIFE, SOCCER, CAR, BULB, HEART, FLAG)
@@ -257,6 +260,12 @@ object ImeIcons {
             moveTo(9f, 12f); lineTo(15f, 12f)
             moveTo(9.5f, 19.5f); lineTo(14.5f, 19.5f)
         }
+        val pin: Path.() -> Unit = {
+            moveTo(9f, 3.5f); lineTo(15f, 3.5f); lineTo(14.3f, 9.2f); lineTo(17.5f, 12.6f); lineTo(17.5f, 14.5f)
+            lineTo(6.5f, 14.5f); lineTo(6.5f, 12.6f); lineTo(9.7f, 9.2f); close()
+        }
+        p(PIN, 1.5f) { pin(); moveTo(12f, 14.5f); lineTo(12f, 21f) }
+        p(PIN_FILL, 0f) { pin(); addRect(11.3f, 14f, 12.7f, 21f, Path.Direction.CW) }
         p(DOCK, 1.8f) {
             moveTo(12f, 3.5f); lineTo(12f, 15f)
             moveTo(7.5f, 10.5f); lineTo(12f, 15f); lineTo(16.5f, 10.5f)

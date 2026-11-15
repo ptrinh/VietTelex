@@ -97,10 +97,12 @@ class ClipboardPane(context: Context, private val theme: ImeTheme) : FrameLayout
         }
         r.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
         r.setOnClickListener { listener?.onClipPick(item.text) }
-        r.addView(button(if (item.pinned) "📌" else "Ghim", alpha = if (item.pinned) 1f else 0.6f) {
+        // Icon thay chữ "Ghim" (tester 15/11/2026: gọn hơn, nhường chỗ cho nội dung) — như iOS pin / pin.fill.
+        r.addView(iconButton(if (item.pinned) ImeIcons.PIN_FILL else ImeIcons.PIN, alpha = if (item.pinned) 1f else 0.6f) {
             listener?.onClipTogglePin(item.text)
         }.apply { contentDescription = if (item.pinned) tr("Bỏ ghim") else tr("Ghim") })
-        r.addView(button("✕", alpha = 0.6f) { listener?.onClipRemove(item.text) }.apply { contentDescription = tr("Xoá mục") })
+        r.addView(iconButton(ImeIcons.DELETE_X, alpha = 0.6f, size = 22f) { listener?.onClipRemove(item.text) }
+            .apply { contentDescription = tr("Xoá mục") })
         val lp = LinearLayout.LayoutParams(-1, -2).apply { setMargins(dp(8f), dp(3f), dp(8f), dp(3f)) }
         r.layoutParams = lp
         return r
@@ -111,6 +113,20 @@ class ClipboardPane(context: Context, private val theme: ImeTheme) : FrameLayout
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
         setTextColor(theme.withAlpha(theme.ink, alpha))
         if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
+    }
+
+    /** Nút icon vuông 40 dp (vùng chạm ≥ 40 dp) — vẽ [ImeIcons] màu chữ của theme. */
+    private fun iconButton(id: Int, alpha: Float, size: Float = 20f, onClick: () -> Unit) = object : View(context) {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = theme.withAlpha(theme.ink, alpha)
+        }
+        override fun onDraw(c: android.graphics.Canvas) {
+            ImeIcons.draw(c, id, width / 2f, height / 2f, dp(size).toFloat(), paint)
+        }
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(dp(40f), dp(40f))
+        isClickable = true
+        setOnClickListener { onClick() }
     }
 
     private fun button(s: String, alpha: Float = 0.85f, onClick: () -> Unit) = label(s, 14f, alpha = alpha).apply {
