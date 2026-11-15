@@ -581,11 +581,12 @@ object KeyLayout {
      * Bàn số kiểu Gboard (feedback tester 15/11/2026: "làm như Gboard", Dán lên thanh trên):
      *  PHONE : trái  + · − · ( ) · ?123 | lưới 1…9, * 0 # (chữ ABC… dưới số) |
      *          phải  ⌫ · , ; (pause/wait) · ␣ · enter
-     *  NUMPAD: KHÔNG cột trái (trừ DATETIME: / : − chia đều cả cột) | lưới 1…9, [, 0 .] |
-     *          phải  − · ␣ · ⌫ · enter
-     *  − , . LUÔN có (như Gboard), không theo cờ SIGNED/DECIMAL: ô số tiền MoMo / MB Bank khai báo
-     *  số "trơn" ⇒ trước đây mất cả ba phím (tester 15/11/2026, "bị ẩn nhiều nút"); ô không nhận
-     *  ký tự nào thì chính ô bỏ qua (DigitsKeyListener) — y như Gboard. DATETIME: / : − ở cột trái.
+     *  NUMPAD: KHÔNG cột trái (trừ DATETIME: / : − chia đều cả cột) | lưới 1…9, [, 0 .] — "," "."
+     *          chỉ khi DECIMAL, không có thì 0 nở rộng |
+     *          phải  − (chỉ khi SIGNED) · ␣ (cao 2 hàng nếu không có −) · ⌫ · enter
+     *  Ô số trơn mà hint là ô tiền (MoMo "Số tiền chuyển", MB "Nhập số tiền") được IME coi như
+     *  SIGNED + DECIMAL ([FieldMapping.looksLikeMoney]) ⇒ đủ − , . — ô số trơn khác (OTP, PIN, số
+     *  tài khoản) vẫn chỉ có số (Phil 15/11/2026).
      * KHÔNG ?123 ở NUMPAD: ô số chỉ nhận số + dấu theo cờ — bàn ký hiệu gõ gì ô cũng từ chối.
      * KHÔNG phím 📋: Dán nằm trên thanh trên cùng (StripMode.TOOLS, dán số đã lọc — NumericPaste).
      */
@@ -613,7 +614,7 @@ object KeyLayout {
             val r = i / 3; val x0 = cellX(i % 3)
             pad((i + 1).toString(), x0, x0 + gridW, top(r), bot(r), if (phone) PHONE_HINTS[i] else "")
         }
-        val decimal = !phone && c.kind != InputKind.DATETIME
+        val decimal = !phone && c.kind != InputKind.DATETIME && c.numberDecimal
         val bl = if (phone) "*" else if (decimal) "," else null
         val br = if (phone) "#" else if (decimal) "." else null
         bl?.let { pad(it, cellX(0), cellX(0) + gridW, top(3), bot(3)) }
@@ -646,7 +647,7 @@ object KeyLayout {
             space(2, 2)
         } else {
             // Như Gboard: − · ␣ · ⌫ · enter (⌫ và enter luôn ở hàng 3, 4).
-            if (c.kind != InputKind.DATETIME) {
+            if (c.numberSigned && c.kind != InputKind.DATETIME) {
                 pad("-", rightX, rightX + sideW, top(0), bot(0), side = true)
                 space(1, 1)
             } else space(0, 1)
