@@ -8,7 +8,7 @@ import kotlin.math.hypot
  * sửa y hệt bên kia (bảng khớp fixture chung iOS/KeyboardTests/Fixtures/key-alternates.txt).
  *
  * Bảng ký hiệu gốc Gboard tiếng Anh (a@ s# … m?), đổi 3 phím cho tiếng Việt: d → $, c → %,
- * b → / (tiếng Việt ít dùng ' và ;, hay dùng % và / — ngày tháng, link; ₫ vẫn ở bàn ký hiệu).
+ * b → / (tiếng Việt ít dùng ' và ;, hay dùng % và / — ngày tháng, link; ₫ nằm ở giữ "$" trên bàn 123).
  * Không trùng ký tự nào giữa các phím.
  *
  * Giữ phím "," hàng đáy (bàn chữ) ra "." như Gboard — bật khi có ÍT NHẤT một công tắc giữ phím

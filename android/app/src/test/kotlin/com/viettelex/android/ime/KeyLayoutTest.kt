@@ -223,7 +223,7 @@ class KeyLayoutTest {
         val n = build(Plane.NUMBERS)
         val (r1, r2, r3, bottom) = rows(n)
         assertEquals("1 2 3 4 5 6 7 8 9 0".split(" "), r1.map { it.label })
-        assertEquals("@ # ₫ _ & - + ( ) /".split(" "), r2.map { it.label })
+        assertEquals("@ # \$ _ & - + ( ) /".split(" "), r2.map { it.label })
         assertEquals(listOf("=\\<", "*", "\"", "'", ":", ";", "!", "?", ""), r3.map { it.label })
         assertEquals(KeyKind.MORE, r3.first().kind); assertEquals(KeyKind.BACKSPACE, r3.last().kind)
         assertEquals(listOf(KeyKind.PLANE, KeyKind.PUNCT, KeyKind.EMOJI, KeyKind.SPACE, KeyKind.PUNCT, KeyKind.RETURN),
@@ -231,8 +231,8 @@ class KeyLayoutTest {
         assertEquals(listOf("ABC", ",", "", "", ".", "return"), bottom.map { it.label })
         val t = typed(n)
         assertEquals("trùng: ${t.groupBy { it }.filter { it.value.size > 1 }.keys}", t.size, t.toSet().size)
-        assertTrue(t.containsAll(listOf("#", "*", "+", "@", "₫", ",", ".")))
-        assertTrue("\$ chỉ còn ở giữ ₫", "\$" !in t)
+        assertTrue(t.containsAll(listOf("#", "*", "+", "@", "\$", ",", ".")))
+        assertTrue("₫ chỉ còn ở giữ \$ (#165)", "₫" !in t)
         // hàng 3 khít hai mép, ⇧-cỡ 1.5 phím như plane chữ
         near(r3.first().left, 3f); near(r3.last().right, W - 3f)
         near(r3.first().width, r3.last().width)
@@ -287,7 +287,7 @@ class KeyLayoutTest {
         val onPlanes = (typed(build(Plane.NUMBERS)) + typed(build(Plane.SYMBOLS))).toSet()
         for (key in com.viettelex.keyboard.KeyVariants.table.keys) assertTrue("$key không có trên plane", key in onPlanes)
         val v = { s: String -> com.viettelex.keyboard.KeyVariants.variants(s, symbolPlane = true) }
-        assertEquals(listOf("\$", "₫", "€", "£", "¥", "₩", "₹", "¢"), v("₫"))   // giữ ₫ chọn sẵn $ (#113)
+        assertEquals(listOf("\$", "₫", "€", "£", "¥", "₩", "₹", "₽", "¢"), v("\$"))   // giữ $ ⇒ ₫ ngay ô kế (#165)
         assertEquals(listOf("-", "–", "—", "•"), v("-"))
         assertEquals(listOf("\"", "”", "“", "„", "»", "«"), v("\""))
         assertEquals(listOf("'", "‘", "’", "`"), v("'"))

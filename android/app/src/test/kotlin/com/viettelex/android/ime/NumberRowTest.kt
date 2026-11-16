@@ -175,7 +175,7 @@ class NumberRowTest {
 
     /**
      * #142 (cùng iOS): bật hàng số, plane ?123 giữ thứ tự hàng như khi tắt / bàn phím gốc — hàng
-     * @ # ₫ _ & - + ( ) / nằm NGAY TRÊN hàng 3 (thứ 3 từ dưới lên, sát trên hàng ". , ? !" của plane),
+     * @ # $ _ & - + ( ) / nằm NGAY TRÊN hàng 3 (thứ 3 từ dưới lên, sát trên hàng ". , ? !" của plane),
      * hàng ký hiệu mượn thêm (~ ` | …) nằm ngay dưới hàng số. Cả bàn tách đôi.
      */
     @Test fun numbersPlaneKeepsStockRowOrder() {

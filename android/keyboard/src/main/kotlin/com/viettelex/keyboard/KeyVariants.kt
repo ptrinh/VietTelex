@@ -7,8 +7,8 @@ package com.viettelex.keyboard
  *
  * Từ issue #113 bàn 123 / ký hiệu Android theo Gboard (khác bàn stock iOS), nên hai bảng chỉ
  * trùng ở các phím có trên CẢ HAI nền tảng — sửa biến thể của phím chung thì sửa y hệt bên kia.
- * Lệch có chủ đích (pinned bởi KeyVariantsTests.matchesSwiftTable): [ANDROID_ONLY] (₫ là phím
- * gốc trên bàn 123 Android, giữ ⇒ $ € £ …) và [IOS_ONLY] ($ không còn là phím trên Android).
+ * Lệch có chủ đích phải khai ở [ANDROID_ONLY] / [IOS_ONLY] (pinned bởi
+ * KeyVariantsTests.matchesSwiftTable) — hiện không còn lệch nào: "$" là phím gốc ở cả hai (#165).
  *
  * Thứ tự = từ phím ra ngoài: ô 0 là ký tự GỐC (mặc định được chọn khi popup mở, như stock) —
  * trừ [HOLD_PRESELECT]: ô 0 là ký tự hay muốn khi đã GIỮ phím, gốc đứng ô 1 (như giữ "," chọn
@@ -31,9 +31,9 @@ object KeyVariants {
         "-" to listOf("-", "–", "—", "•"),
         // "=" ngay cạnh "/" — bàn 123 không có phím "=" (song sinh iOS, field report 18/10/2026).
         "/" to listOf("/", "=", "\\"),
-        // Android: ₫ là phím gốc (Gboard đặt $ ở đây) — giữ ra các tiền tệ khác; "$" ô 0 = chọn
-        // sẵn (#113: giữ rồi nhả tại chỗ ⇒ "$", chạm vẫn "₫").
-        "₫" to listOf("\$", "₫", "€", "£", "¥", "₩", "₹", "¢"),
+        // "$" là phím gốc như iOS (#165: người dùng không tìm ra "$" khi nó nằm dưới "₫");
+        // giữ ⇒ ₫ ngay ô kế, rồi các tiền tệ khác — y hệt bảng Swift.
+        "\$" to listOf("\$", "₫", "€", "£", "¥", "₩", "₹", "₽", "¢"),
         "&" to listOf("&", "§"),
         "." to listOf(".", "…"),
         "?" to listOf("?", "¿"),
@@ -53,11 +53,11 @@ object KeyVariants {
     )
 
     /** Khoá chỉ Android có (không có trong bảng Swift). */
-    val ANDROID_ONLY: Set<String> = setOf("₫")
+    val ANDROID_ONLY: Set<String> = emptySet()
     /** Khoá có ô 0 ≠ ký tự gốc (gốc ở ô 1): giữ rồi nhả tại chỗ ra ô 0, chạm vẫn ra gốc. */
-    val HOLD_PRESELECT: Set<String> = setOf("₫")
+    val HOLD_PRESELECT: Set<String> = emptySet()
     /** Khoá chỉ iOS có (bảng Swift) — phím đó không còn trên bàn số / ký hiệu Android. */
-    val IOS_ONLY: Set<String> = setOf("\$")
+    val IOS_ONLY: Set<String> = emptySet()
 
     /** Hàng biến thể của phím [key] ở bàn số/ký hiệu; rỗng = không có. Bàn chữ / ô số luôn rỗng. */
     fun variants(key: String, symbolPlane: Boolean, numericField: Boolean = false): List<String> {

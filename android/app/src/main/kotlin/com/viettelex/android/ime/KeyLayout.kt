@@ -269,10 +269,10 @@ object KeyLayout {
     internal val NUM1 = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
     /*
      * Plane 123 / ký hiệu kiểu Gboard (issue #113): KHÔNG ký tự nào lặp trong một plane — "," "."
-     * chỉ ở hàng đáy, # % * + = lên plane 123 (bớt một lần chuyển). ₫ thay $ (giữ ₫ ⇒ $ € £ …,
-     * KeyVariants). Riêng Android; iOS giữ bàn stock.
+     * chỉ ở hàng đáy, # % * + = lên plane 123 (bớt một lần chuyển). "$" là phím gốc như iOS (#165;
+     * giữ $ ⇒ ₫ € £ …, KeyVariants). Bố cục riêng Android; iOS giữ bàn stock.
      */
-    internal val NUM2 = listOf("@", "#", "₫", "_", "&", "-", "+", "(", ")", "/")
+    internal val NUM2 = listOf("@", "#", "\$", "_", "&", "-", "+", "(", ")", "/")
     internal val NUM3 = listOf("*", "\"", "'", ":", ";", "!", "?")
     internal val SYM1 = listOf("~", "`", "|", "•", "√", "π", "÷", "×", "¶", "∆")
     internal val SYM2 = listOf("/", "£", "€", "¥", "^", "°", "=", "{", "}", "\\")
@@ -282,7 +282,7 @@ object KeyLayout {
      * Hàng ký tự (10 phím) TRÊN hàng 3 của plane ?123 / =\<. Tắt hàng số: [NUM1, NUM2] / [SYM1, SYM2]
      * như cũ. Bật hàng số: hàng đầu là ĐÚNG hàng số plane chữ (1…0) + 2 hàng ký hiệu ⇒ 5 hàng cùng khung
      * plane chữ; plane ?123 mượn hàng đầu plane =\< (SYM1) — không ký tự nào lặp trong một plane.
-     * Hàng mượn nằm NGAY DƯỚI hàng số (#142, cùng iOS): hàng @ # ₫ _ & - + ( ) / giữ đúng vị trí thứ 3
+     * Hàng mượn nằm NGAY DƯỚI hàng số (#142, cùng iOS): hàng @ # $ _ & - + ( ) / giữ đúng vị trí thứ 3
      * từ dưới lên như khi tắt hàng số (và như plane 123 bàn phím gốc).
      */
     fun symbolicRows(numbers: Boolean, numberRow: Boolean): List<List<String>> = when {
