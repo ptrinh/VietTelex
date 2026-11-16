@@ -16,7 +16,7 @@ object PlanePolicy {
     fun reevaluatesShift(to: Plane): Boolean = to == Plane.LETTERS
 
     /**
-     * Rời plane chữ: tắt Caps Lock (và shift một-lần) khi sang ?123 / =\< / emoji / tìm emoji
+     * Rời plane chữ: tắt Caps Lock (và shift một-lần) khi sang 123 / #+= / emoji / tìm emoji
      * — Caps Lock → ?123 → ABC về chữ thường như iOS stock (Phil 06/10/2026; song sinh iOS
      * PlanePolicy.clearsShiftLeavingLetters). Mẫu câu / bảng sửa (phủ lên, không đổi bàn
      * chữ) giữ shift. Về ABC thì [reevaluatesShift] áp lại viết hoa đầu câu.
@@ -36,7 +36,7 @@ object PlanePolicy {
         if (armedOn == Plane.LETTERS && shift == KeyboardView.Shift.ON) KeyboardView.Shift.OFF else shift
 
     /**
-     * Space ở plane ?123 / =\< sau khi đã gõ ít nhất một ký tự ở plane đó ⇒ về chữ, như iOS
+     * Space ở plane 123 / #+= sau khi đã gõ ít nhất một ký tự ở plane đó ⇒ về chữ, như iOS
      * PlanePolicy.returnToLettersOnSpace (stock iOS; Android trước đây ở lại). Mọi chế độ "Về bàn
      * chữ sau ký hiệu". Ô số (bàn số riêng) ở lại.
      */
@@ -44,7 +44,7 @@ object PlanePolicy {
         (on == Plane.NUMBERS || on == Plane.SYMBOLS) && typedInPlane && !numericField
 
     /**
-     * Dấu KẾT VẾ: chạm ở plane ?123 / =\< ⇒ về plane chữ NGAY, không cần dấu cách (Phil
+     * Dấu KẾT VẾ: chạm ở plane 123 / #+= ⇒ về plane chữ NGAY, không cần dấu cách (Phil
      * 06/11/2026; chế độ "Tự động" của [SymbolReturn]). Gồm dạng in ấn trong hàng biến thể (… ” ’ »). Ngoặc / nháy
      * MỞ (( “ ‘ «), @ / # $ % & * - _ + = [ { < > \ |, số, tiền tệ, toán: giữ plane.
      */

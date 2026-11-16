@@ -2,7 +2,7 @@ package com.viettelex.keyboard
 
 /**
  * "Về bàn chữ sau ký hiệu" (setting [Keys.SYMBOL_RETURN]; cùng chuỗi với iOS App Group
- * "symbolReturn"; 06/11/2026). Chạm một ký tự ở plane ?123 / =\< rồi:
+ * "symbolReturn"; 06/11/2026). Chạm một ký tự ở plane 123 / #+= rồi:
  *  - [AUTO] ("Tự động"): , ? ! ) " ' : ; & $ @ (… ” ’ ») về chữ ngay; "." và ký hiệu khác ở lại
  *    (gõ "..." liền tay — 15/11/2026).
  *  - [ALWAYS] ("Luôn"): MỌI ký hiệu về chữ ngay; chữ số ở lại.

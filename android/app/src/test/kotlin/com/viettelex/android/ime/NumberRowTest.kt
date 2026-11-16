@@ -129,7 +129,7 @@ class NumberRowTest {
 
     /**
      * Field report 18/10/2026 ("hàng phím số khi bấm shift lại bị mất dẫn đến hụt hàng… khoảng cách
-     * các phím ko cân đối khi chuyển dễ bị bấm nhầm"): bật hàng số, chuyển ABC ↔ ?123 ↔ =\< phải giữ
+     * các phím ko cân đối khi chuyển dễ bị bấm nhầm"): bật hàng số, chuyển ABC ↔ 123 ↔ #+= phải giữ
      * ĐÚNG 5 hàng cùng dải dọc, hàng 1…0 đứng yên (cùng khung), phím hàng 3 / hàng đáy không nhảy dọc.
      * Trước đây ?123 = 4 hàng giãn cả vùng ⇒ "1" cao ~1,2×, mọi hàng dời.
      */
@@ -158,9 +158,9 @@ class NumberRowTest {
                     val a = letters.first { it.kind == kind }; val o = keys.first { it.kind == kind }
                     near(o.top, a.top, 0.05f); near(o.bottom, a.bottom, 0.05f)
                 }
-                // Không ký tự nào lặp trong một plane.
-                val typed = keys.filter { it.kind == KeyKind.CHAR || it.kind == KeyKind.PUNCT }.map { it.insert }
-                assertEquals("$tag $p dup", typed.size, typed.toSet().size)
+                // Phím ký tự đúng bộ iOS: 3 hàng [KeyLayout.symbolicRows] + hàng 3 ". , ? ! '" (#165).
+                val chars = keys.filter { it.kind == KeyKind.CHAR }.map { it.insert }
+                assertEquals("$tag $p", KeyLayout.symbolicRows(p == Plane.NUMBERS, true).flatten() + KeyLayout.THIRD, chars)
             }
         }
     }
@@ -174,9 +174,9 @@ class NumberRowTest {
     }
 
     /**
-     * #142 (cùng iOS): bật hàng số, plane ?123 giữ thứ tự hàng như khi tắt / bàn phím gốc — hàng
-     * @ # $ _ & - + ( ) / nằm NGAY TRÊN hàng 3 (thứ 3 từ dưới lên, sát trên hàng ". , ? !" của plane),
-     * hàng ký hiệu mượn thêm (~ ` | …) nằm ngay dưới hàng số. Cả bàn tách đôi.
+     * #142 (cùng iOS): bật hàng số, plane 123 giữ thứ tự hàng như khi tắt / bàn phím gốc — hàng
+     * - / : ; ( ) $ & @ " nằm NGAY TRÊN hàng 3 (thứ 3 từ dưới lên, sát trên hàng ". , ? ! '"),
+     * hàng ký hiệu mượn thêm ([ ] { } …) nằm ngay dưới hàng số. Cả bàn tách đôi.
      */
     @Test fun numbersPlaneKeepsStockRowOrder() {
         assertEquals(listOf(KeyLayout.NUM1, KeyLayout.SYM1, KeyLayout.NUM2), KeyLayout.symbolicRows(true, true))
@@ -189,7 +189,7 @@ class NumberRowTest {
             assertEquals("split=$split", KeyLayout.NUM1, rows[0])
             assertEquals("split=$split", KeyLayout.SYM1, rows[1])
             assertEquals("split=$split thứ 3 từ dưới", KeyLayout.NUM2, rows[2])
-            assertEquals("split=$split", KeyLayout.NUM3, rows[3])
+            assertEquals("split=$split", KeyLayout.THIRD, rows[3])
             // Tắt hàng số: NUM2 cũng là hàng thứ 3 từ dưới.
             val off = KeyLayout.build(LayoutConfig(Plane.NUMBERS, w, KeyLayout.keyAreaDp(false, split, 0), d, split = split))
             val offRows = off.groupBy { Math.round(it.top * 100) }.toSortedMap().values.toList()
@@ -198,16 +198,30 @@ class NumberRowTest {
     }
 
     @Test fun symbolicRowsWithNumberRow() {
-        val all = (KeyLayout.NUM1 + KeyLayout.NUM2 + KeyLayout.NUM3 + KeyLayout.SYM1 + KeyLayout.SYM2 + KeyLayout.SYM3).toSet()
+        val all = (KeyLayout.NUM1 + KeyLayout.NUM2 + KeyLayout.SYM1 + KeyLayout.SYM2 + KeyLayout.THIRD).toSet()
         val on = mutableSetOf<String>()
         for (num in listOf(true, false)) {
             val rows = KeyLayout.symbolicRows(num, true)
             assertEquals(3, rows.size)
             assertEquals(KeyLayout.NUM1, rows[0])
             rows.forEach { assertEquals(10, it.size) }
-            on += rows.flatten() + (if (num) KeyLayout.NUM3 else KeyLayout.SYM3)
+            on += rows.flatten() + KeyLayout.THIRD
         }
         assertEquals("không mất ký tự nào so với 4 hàng", all, on)
+    }
+
+    /** #165: luật bật hàng số = iOS phoneSymbolicRows (đọc thẳng file Swift), cả 4 tổ hợp. */
+    @Test fun symbolicRowsMatchIosRule() {
+        val named = mapOf("digits" to KeyLayout.NUM1,
+            "phoneNumberRows[0]" to IosPlanes.numberRows[0], "phoneNumberRows[1]" to IosPlanes.numberRows[1],
+            "phoneSymbolRows[0]" to IosPlanes.symbolRows[0], "phoneSymbolRows[1]" to IosPlanes.symbolRows[1])
+        val (numOn, symOn) = IosPlanes.numberRowRuleSource
+        assertEquals(numOn.map { named.getValue(it) }, KeyLayout.symbolicRows(true, true))
+        assertEquals(symOn.map { named.getValue(it) }, KeyLayout.symbolicRows(false, true))
+        assertEquals(IosPlanes.numberRows, KeyLayout.symbolicRows(true, false))
+        assertEquals(IosPlanes.symbolRows, KeyLayout.symbolicRows(false, false))
+        // Bật hàng số: plane 123 có cả "=" lẫn "$" là phím gốc như iOS.
+        assertTrue(KeyLayout.symbolicRows(true, true).flatten().containsAll(listOf("=", "\$")))
     }
 
     @Test fun templatesBottomRowIsOneStandardRow() {

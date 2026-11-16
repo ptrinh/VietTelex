@@ -137,6 +137,14 @@ class RollingTouchTest {
         assertEquals(comma.insert + "n", p.text.toString())
     }
 
+    /** #165: chạm "$" (phím gốc bàn 123 như iOS) ra "$" — "Tự động": "$" là dấu kết vế ⇒ về ABC. */
+    @Test fun tapDollarOn123TypesDollar() {
+        val p = Planes()
+        p.down(0, p.numbers.single { it.insert == "\$" && it.kind == KeyKind.CHAR }); p.up(0)
+        assertEquals("\$", p.text.toString())
+        assertEquals(Plane.LETTERS, p.plane)
+    }
+
     @Test fun samePlaneFlushKeepsFirstHitAndSkipsSameKey() {
         val p = Planes()
         val two = p.numbers.first { it.insert == "2" }

@@ -3,6 +3,7 @@ package com.viettelex.android.ime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.viettelex.keyboard.SpaceSideKey
@@ -218,66 +219,105 @@ class KeyLayoutTest {
     private fun typed(keys: List<LaidKey>) =
         keys.filter { it.kind == KeyKind.CHAR || it.kind == KeyKind.PUNCT }.map { it.insert }
 
-    /** #113: bàn 123 kiểu Gboard — đúng hàng, đúng thứ tự, không ký tự nào lặp (kể cả hàng đáy). */
-    @Test fun numbersPlaneGboardNoDuplicates() {
+    /**
+     * #165: bàn 123 GIỐNG HỆT iOS — hàng ký tự = iOS phoneNumberRows (đọc thẳng file Swift, lệch là
+     * đỏ), hàng 3 = [#+=] . , ? ! ' [⌫] như iOS buildPlane. "," "." có cả hàng 3 lẫn hàng đáy.
+     */
+    @Test fun numbersPlaneMatchesIos() {
         val n = build(Plane.NUMBERS)
         val (r1, r2, r3, bottom) = rows(n)
+        assertEquals(IosPlanes.numberRows[0], r1.map { it.label })
+        assertEquals(IosPlanes.numberRows[1], r2.map { it.label })
         assertEquals("1 2 3 4 5 6 7 8 9 0".split(" "), r1.map { it.label })
-        assertEquals("@ # \$ _ & - + ( ) /".split(" "), r2.map { it.label })
-        assertEquals(listOf("=\\<", "*", "\"", "'", ":", ";", "!", "?", ""), r3.map { it.label })
+        assertEquals(listOf("-", "/", ":", ";", "(", ")", "\$", "&", "@", "\""), r2.map { it.label })
+        assertEquals(listOf(IosPlanes.moreOnNumbers) + IosPlanes.thirdRow + "", r3.map { it.label })
+        assertEquals(listOf("#+=", ".", ",", "?", "!", "'", ""), r3.map { it.label })
         assertEquals(KeyKind.MORE, r3.first().kind); assertEquals(KeyKind.BACKSPACE, r3.last().kind)
+        assertTrue(r3.subList(1, r3.size - 1).all { it.kind == KeyKind.CHAR })
+        assertTrue((r1 + r2).all { it.kind == KeyKind.CHAR })
         assertEquals(listOf(KeyKind.PLANE, KeyKind.PUNCT, KeyKind.EMOJI, KeyKind.SPACE, KeyKind.PUNCT, KeyKind.RETURN),
             bottom.map { it.kind })
         assertEquals(listOf("ABC", ",", "", "", ".", "return"), bottom.map { it.label })
-        val t = typed(n)
-        assertEquals("trùng: ${t.groupBy { it }.filter { it.value.size > 1 }.keys}", t.size, t.toSet().size)
-        assertTrue(t.containsAll(listOf("#", "*", "+", "@", "\$", ",", ".")))
-        assertTrue("₫ chỉ còn ở giữ \$ (#165)", "₫" !in t)
-        // hàng 3 khít hai mép, ⇧-cỡ 1.5 phím như plane chữ
+        // hàng 3 khít hai mép, phím đổi plane / ⌫ cỡ 1.5 phím như ⇧ / ⌫ plane chữ
         near(r3.first().left, 3f); near(r3.last().right, W - 3f)
         near(r3.first().width, r3.last().width)
         for (k in r3.subList(1, r3.size - 1)) near(k.width, r3[1].width)
     }
 
-    @Test fun symbolsPlaneComplete() {
+    /** #165: bàn #+= GIỐNG HỆT iOS phoneSymbolRows; hàng 3 = [123] . , ? ! ' [⌫]; ₫ là phím gốc. */
+    @Test fun symbolsPlaneMatchesIos() {
         val s = build(Plane.SYMBOLS)
         val (r1, r2, r3, bottom) = rows(s)
-        assertEquals("~ ` | • √ π ÷ × ¶ ∆".split(" "), r1.map { it.label })
-        assertEquals("/ £ € ¥ ^ ° = { } \\".split(" "), r2.map { it.label })
-        assertEquals(listOf("?123", "%", "©", "®", "™", "✓", "[", "]", "<", ">", ""), r3.map { it.label })
+        assertEquals(IosPlanes.symbolRows[0], r1.map { it.label })
+        assertEquals(IosPlanes.symbolRows[1], r2.map { it.label })
+        assertEquals("[ ] { } # % ^ * + =".split(" "), r1.map { it.label })
+        assertEquals("_ \\ | ~ < > € ¥ ₫ •".split(" "), r2.map { it.label })
+        assertEquals(listOf(IosPlanes.moreOnSymbols) + IosPlanes.thirdRow + "", r3.map { it.label })
+        assertEquals(listOf("123", ".", ",", "?", "!", "'", ""), r3.map { it.label })
         assertEquals(KeyKind.MORE, r3.first().kind); assertEquals(KeyKind.BACKSPACE, r3.last().kind)
         assertEquals(listOf("ABC", ",", "", "", ".", "return"), bottom.map { it.label })
-        val t = typed(s)
-        assertEquals(t.size, t.toSet().size)
-        assertEquals(29 + 2, t.size)
         near(r3.last().right, W - 3f)
         assertTrue(r3[1].width > 20f)
+        val dong = s.single { it.insert == "₫" }
+        assertEquals(KeyKind.CHAR, dong.kind)
+        assertSame(dong, KeyLayout.hit(s, Plane.SYMBOLS, dong.centerX, dong.centerY, 4f, d))
     }
 
-    /** Tablet: giữ phím phụ (🌐, ẩn bàn phím) nhưng vẫn không lặp ký tự. */
-    @Test fun numbersPlaneTabletNoDuplicates() {
+    /** Hàng 3 của cả hai plane đúng iOS buildPlane (đọc KeyboardView.swift). */
+    @Test fun thirdRowMatchesIosSource() {
+        assertEquals(listOf(".", ",", "?", "!", "'"), IosPlanes.thirdRow)
+        assertEquals(IosPlanes.thirdRow, KeyLayout.THIRD)
+        assertEquals("#+=", IosPlanes.moreOnNumbers); assertEquals("123", IosPlanes.moreOnSymbols)
+        assertEquals(IosPlanes.moreOnNumbers, KeyLayout.moreKeyLabel(Plane.NUMBERS))
+        assertEquals(IosPlanes.moreOnSymbols, KeyLayout.moreKeyLabel(Plane.SYMBOLS))
+        // Bàn tách đôi iOS: [more] . , | ? ! ' [⌫].
+        assertEquals(IosPlanes.splitThirdLeft, KeyLayout.THIRD.subList(0, KeyLayout.THIRD_SPLIT_LEFT))
+        assertEquals(IosPlanes.splitThirdRight, KeyLayout.THIRD.subList(KeyLayout.THIRD_SPLIT_LEFT, KeyLayout.THIRD.size))
+        // TalkBack đọc phím đổi plane như iOS: #+= "Ký hiệu", 123 "Số".
+        for (p in listOf(Plane.NUMBERS, Plane.SYMBOLS)) {
+            val more = build(p).single { it.kind == KeyKind.MORE }
+            val want = if (p == Plane.NUMBERS) "Ký hiệu" else "Số"
+            assertEquals(want, KeyA11y.describe(more.kind, more.label, more.upper, more.insert, false, "return"))
+        }
+    }
+
+    /** #165: chạm "$" trên bàn 123 (phím gốc, không cần giữ) ra "$"; giữ "$" ⇒ "₫" ngay ô kế. */
+    @Test fun dollarIsABaseKeyOnNumbersPlane() {
+        for (numberRow in listOf(false, true)) for (tablet in listOf(false, true)) {
+            val keys = KeyLayout.build(LayoutConfig(Plane.NUMBERS, W, H, d, tablet = tablet, numberRow = numberRow))
+            val dollar = keys.single { it.insert == "\$" }
+            assertEquals(KeyKind.CHAR, dollar.kind)
+            assertSame(dollar, KeyLayout.hit(keys, Plane.NUMBERS, dollar.centerX, dollar.centerY, 4f, d))
+            assertEquals("₫", com.viettelex.keyboard.KeyVariants.variants("\$", symbolPlane = true)[1])
+        }
+    }
+
+    /** Tablet: rows như điện thoại (bộ phím iOS), giữ phím phụ (🌐, ẩn bàn phím) ở hàng đáy. */
+    @Test fun numbersPlaneTabletUsesIosRows() {
         for (plane in listOf(Plane.NUMBERS, Plane.SYMBOLS)) {
             val k = build(plane, globe = true, tablet = true)
-            val bottom = rows(k)[3]
+            val r = rows(k)
+            val phone = rows(build(plane))
+            for (i in 0..2) assertEquals("$plane hàng $i", phone[i].map { it.label }, r[i].map { it.label })
+            val bottom = r[3]
             assertEquals(listOf(KeyKind.PLANE, KeyKind.PUNCT, KeyKind.GLOBE, KeyKind.EMOJI, KeyKind.SPACE,
                 KeyKind.PUNCT, KeyKind.RETURN, KeyKind.DISMISS), bottom.map { it.kind })
-            val t = typed(k)
-            assertEquals(t.size, t.toSet().size)
             near(bottom.last().right, W - 3f, 0.05f)
         }
-        // một tay / hàng số bật / ô email: cùng bộ phím
-        val base = typed(build(Plane.NUMBERS)).toSet()
-        assertEquals(base, typed(KeyLayout.build(LayoutConfig(Plane.NUMBERS, W, H, d, oneHand = OneHandSide.LEFT))).toSet())
-        assertEquals(base, typed(build(Plane.NUMBERS, InputKind.EMAIL)).toSet())
+        // một tay / ô email: cùng bộ phím
+        val base = typed(build(Plane.NUMBERS))
+        assertEquals(base, typed(KeyLayout.build(LayoutConfig(Plane.NUMBERS, W, H, d, oneHand = OneHandSide.LEFT))))
+        assertEquals(base, typed(build(Plane.NUMBERS, InputKind.EMAIL)))
     }
 
-    /** ABC về plane chữ; MORE đổi qua lại; "." (hàng đáy) chèn "." ⇒ auto-space ". " / auto-shift như cũ. */
+    /** ABC về plane chữ; MORE đổi qua lại; "." hàng đáy vẫn là PUNCT (auto-space ". " / auto-shift như cũ). */
     @Test fun planeKeysAndPeriod() {
         val n = build(Plane.NUMBERS)
         assertEquals("ABC", n.first { it.kind == KeyKind.PLANE }.insert)
-        assertEquals("=\\<", n.first { it.kind == KeyKind.MORE }.insert)
-        assertEquals("?123", build(Plane.SYMBOLS).first { it.kind == KeyKind.MORE }.insert)
-        assertEquals(1, n.count { it.insert == "." }); assertEquals(KeyKind.PUNCT, n.first { it.insert == "." }.kind)
+        assertEquals("#+=", n.first { it.kind == KeyKind.MORE }.insert)
+        assertEquals("123", build(Plane.SYMBOLS).first { it.kind == KeyKind.MORE }.insert)
+        // "." hai chỗ như iOS: hàng 3 (CHAR) + hàng đáy (PUNCT).
+        assertEquals(listOf(KeyKind.CHAR, KeyKind.PUNCT), n.filter { it.insert == "." }.sortedBy { it.top }.map { it.kind })
         assertTrue(PlanePolicy.reevaluatesShift(Plane.LETTERS))
         assertTrue(!PlanePolicy.reevaluatesShift(Plane.NUMBERS) && !PlanePolicy.reevaluatesShift(Plane.SYMBOLS))
     }
@@ -300,16 +340,15 @@ class KeyLayoutTest {
     }
 
     /**
-     * Field report 18/10/2026 ("dấu bằng để rất sâu" — "Hiện kết quả phép tính" bất tiện): bàn ?123
-     * không có phím "=" (nó ở bàn =\<) ⇒ giữ "/" rồi trượt một ô ra "=", cả khi bật hàng số.
+     * Field report 18/10/2026 ("dấu bằng để rất sâu" — "Hiện kết quả phép tính" bất tiện): bàn 123
+     * tắt hàng số không có phím "=" (nó ở bàn #+=) ⇒ giữ "/" rồi trượt một ô ra "=". Bật hàng số:
+     * như iOS, plane 123 mượn hàng đầu bàn #+= nên "=" là phím gốc; giữ "/" vẫn ra "=".
      */
     @Test fun equalsReachableFromNumbersPlane() {
         for (numberRow in listOf(false, true)) {
             val keys = typed(KeyLayout.build(LayoutConfig(Plane.NUMBERS, W, H, d, numberRow = numberRow)))
-            assertTrue("plane ?123 chưa có phím = (numberRow=$numberRow)", "=" !in keys)
+            assertEquals("numberRow=$numberRow", numberRow, "=" in keys)
             assertTrue("/" in keys)
-            val holders = keys.filter { "=" in com.viettelex.keyboard.KeyVariants.variants(it, symbolPlane = true) }
-            assertEquals(listOf("/"), holders)
             assertEquals("=", com.viettelex.keyboard.KeyVariants.variants("/", symbolPlane = true)[1])
         }
     }
@@ -737,4 +776,47 @@ class KeyLayoutTest {
         assertEquals(2, Regex("&& languageOnSpace\\)").findAll(src).count())   // moveFlick + endFlick
         assertTrue("if (!languageOnSpace) { drawLabel(c, \"\\u2423\"" in src)          // drawSpaceContent: ␣ thay nhãn VI/EN
     }
+}
+
+/**
+ * Đọc thẳng nguồn iOS (iOS/Keyboard/KeyLayout.swift + KeyboardView.swift) để test bàn 123 / #+=
+ * Android = iOS (#165) — sửa bố cục một bên mà quên bên kia ⇒ đỏ.
+ */
+internal object IosPlanes {
+    private fun file(name: String): java.io.File =
+        listOf("../../iOS", "../iOS", "iOS").map { java.io.File(it, "Keyboard/$name") }
+            .firstOrNull { it.exists() } ?: error("không thấy iOS/Keyboard/$name")
+    private val item = Regex(""""((?:\\.|[^"\\])*)"""")
+    private fun unesc(x: String) = x.replace("\\\"", "\"").replace("\\\\", "\\")
+    private fun strings(line: String) = item.findAll(line).map { unesc(it.groupValues[1]) }.toList()
+    private val layout by lazy { file("KeyLayout.swift").readText() }
+    private val view by lazy { file("KeyboardView.swift").readText() }
+
+    /** Các hàng của `static let <name>: [[String]] = [ … ]` ("digits" = 1…0). */
+    private fun rowsOf(name: String): List<List<String>> {
+        val start = layout.indexOf("static let $name: [[String]] = [")
+        check(start >= 0) { "không thấy $name" }
+        val out = ArrayList<List<String>>()
+        for (raw in layout.substring(start).lines().drop(1)) {
+            val l = raw.trim()
+            if (l == "]") break
+            if (l.startsWith("//") || l.isEmpty()) continue
+            out += if (l.startsWith("digits")) "1234567890".map { it.toString() } else strings(l)
+        }
+        return out
+    }
+    val numberRows by lazy { rowsOf("phoneNumberRows") }
+    val symbolRows by lazy { rowsOf("phoneSymbolRows") }
+    /** Luật bật hàng số của iOS phoneSymbolicRows (chuỗi nguyên văn — đổi luật thì sửa cả hai bên). */
+    val numberRowRuleSource by lazy {
+        Regex("""return numbers \? \[(.+)]\s*:\s*\[(.+)]""").find(layout)!!
+            .groupValues.drop(1).map { it.split(",").map(String::trim) }
+    }
+    val thirdRow by lazy { strings(Regex("""third \+= \[(.*?)]""").find(view)!!.groupValues[1]) }
+    val splitThirdLeft by lazy { strings(Regex("""splitHalf\(\[more] \+ keys\(\[(.*?)]\)""").find(view)!!.groupValues[1]) }
+    val splitThirdRight by lazy { strings(Regex("""splitHalf\(keys\(\[(.*?)]\) \+ \[back]""").find(view)!!.groupValues[1]) }
+    private fun more(plane: String) =
+        Regex("""case \.$plane: buildPlane\(rows: \w+, moreKey: "([^"]+)"""").find(view)!!.groupValues[1]
+    val moreOnNumbers by lazy { more("numbers") }
+    val moreOnSymbols by lazy { more("symbols") }
 }

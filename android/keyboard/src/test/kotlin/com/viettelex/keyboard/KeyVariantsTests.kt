@@ -8,14 +8,15 @@ import java.io.File
 /** Giữ phím bàn số / ký hiệu ra hàng biến thể như stock iOS. Song sinh iOS KeyVariantsTests. */
 class KeyVariantsTests {
     /**
-     * Phím trên bàn 123 / ký hiệu Android (android/app KeyLayout NUM1/NUM2/NUM3/SYM1/SYM2/SYM3 +
-     * "," "." hàng đáy) — KeyLayoutTest kiểm lại từ layout thật.
+     * Phím trên bàn 123 / #+= Android = bàn iOS (#165; android/app KeyLayout NUM1/NUM2/SYM1/SYM2 +
+     * hàng 3 ". , ? ! '" + "," "." hàng đáy) — KeyLayoutTest kiểm lại từ layout thật và file Swift.
      */
     private val numbersKeys = listOf("1","2","3","4","5","6","7","8","9","0",
-        "@","#","\$","_","&","-","+","(",")","/", "*","\"","'",":",";","!","?", ",",".")
-    private val symbolsKeys = listOf("~","`","|","•","√","π","÷","×","¶","∆",
-        "/","£","€","¥","^","°","=","{","}","\\", "%","©","®","™","✓","[","]","<",">", ",",".")
+        "-","/",":",";","(",")","\$","&","@","\"", ".",",","?","!","'")
+    private val symbolsKeys = listOf("[","]","{","}","#","%","^","*","+","=",
+        "_","\\","|","~","<",">","€","¥","₫","•", ".",",","?","!","'")
 
+    /** Mọi phím có biến thể phải có trên bàn; phím trên bàn không bắt buộc có biến thể. */
     @Test fun everyEntryStartsWithItsBaseAndIsOnAPlane() {
         val onPlanes = (numbersKeys + symbolsKeys).toSet()
         for ((key, list) in KeyVariants.table) {
@@ -44,7 +45,7 @@ class KeyVariantsTests {
         assertEquals(listOf("=", "≠", "≈"), t["="])
         assertEquals(listOf("+", "±"), t["+"])
         assertEquals(listOf("*", "×"), t["*"])
-        assertEquals("₫ không còn là phím gốc Android (#165)", null, t["₫"])
+        assertEquals("₫ (phím gốc bàn #+=) không có hàng biến thể — như iOS", null, t["₫"])
     }
 
     @Test fun gating() {
@@ -84,9 +85,9 @@ class KeyVariantsTests {
     }
 
     /**
-     * Hai bảng (Kotlin / Swift) trùng ở mọi phím có trên CẢ HAI nền tảng — đọc thẳng file Swift.
-     * Bàn 123 Android theo Gboard (#113) nên được lệch đúng ở [KeyVariants.ANDROID_ONLY] /
-     * [KeyVariants.IOS_ONLY]; lệch thêm phím nào phải khai báo ở đó.
+     * Hai bảng (Kotlin / Swift) trùng ở mọi phím — đọc thẳng file Swift. Từ #165 bàn 123 / #+=
+     * Android có đúng bộ phím iOS nên [KeyVariants.ANDROID_ONLY] / [KeyVariants.IOS_ONLY] rỗng;
+     * lệch thêm phím nào phải khai báo ở đó.
      */
     @Test fun matchesSwiftTable() {
         val f = listOf("../../iOS", "../iOS", "iOS").map { File(it, "Keyboard/KeyVariants.swift") }
@@ -100,6 +101,7 @@ class KeyVariantsTests {
         val android = KeyVariants.table
         assertEquals("chỉ Android", KeyVariants.ANDROID_ONLY, android.keys - swift.keys)
         assertEquals("chỉ iOS", KeyVariants.IOS_ONLY, swift.keys - android.keys)
+        assertEquals("#165: không lệch", emptySet<String>(), KeyVariants.ANDROID_ONLY + KeyVariants.IOS_ONLY)
         val shared = android.keys intersect swift.keys
         assertTrue(shared.size >= 20)
         for (k in shared) assertEquals("biến thể \"$k\" lệch iOS", swift[k], android[k])

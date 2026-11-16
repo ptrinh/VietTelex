@@ -70,7 +70,7 @@ class KeyboardView(
 
     interface Listener {
         fun onKey(key: Key)
-        /** Ký tự ngay trước con trỏ — chỉ hỏi khi chạm "." "," ":" ở plane ?123 / =\< (PlanePolicy). */
+        /** Ký tự ngay trước con trỏ — chỉ hỏi khi chạm "." "," ":" ở plane 123 / #+= (PlanePolicy). */
         fun charBeforeCursor(): Char? = null
         /** Điểm chạm của phím chữ sắp [onKey] (lệch so với tâm phím, theo cỡ phím) — cho tự sửa. */
         fun onLetterTouch(dx: Float, dy: Float) {}
@@ -720,7 +720,7 @@ class KeyboardView(
     /** Mọi phím đi qua đây: plane tìm emoji giữ phím cho ô tìm, còn lại tới IME. */
     private fun emit(k: Key) {
         if (plane != Plane.EMOJI_SEARCH) {
-            // Plane ?123 / =\<: "." "," ":" cần ký tự TRƯỚC khi chèn ("2.5" ở lại) — chỉ đọc cho ba phím đó.
+            // Plane 123 / #+=: "." "," ":" cần ký tự TRƯỚC khi chèn ("2.5" ở lại) — chỉ đọc cho ba phím đó.
             val sym = k is Key.Text && (plane == Plane.NUMBERS || plane == Plane.SYMBOLS)
             val before = if (sym && PlanePolicy.needsBefore((k as Key.Text).text, symbolReturn)) listener?.charBeforeCursor() else null
             listener?.onKey(k); fxAfter(k); rainbow?.poke()
@@ -731,7 +731,7 @@ class KeyboardView(
             // Ký hiệu ⇒ về chữ ngay theo "Về bàn chữ sau ký hiệu" (IME đánh giá lại viết hoa ở onPlaneChanged, như chạm ABC).
             if (sym && PlanePolicy.returnToLettersAfterSymbol((k as Key.Text).text, plane,
                     numericField = inputKind.padPlane != null, before = before, mode = symbolReturn)) setPlane(Plane.LETTERS)
-            // Space sau khi đã gõ ở ?123 / =\< ⇒ về chữ như iOS (mọi chế độ; ô số ở lại).
+            // Space sau khi đã gõ ở 123 / #+= ⇒ về chữ như iOS (mọi chế độ; ô số ở lại).
             else if ((k == Key.Space || k == Key.DoubleSpacePeriod) && PlanePolicy.returnToLettersOnSpace(plane,
                     typedInSymbolPlane, numericField = inputKind.padPlane != null)) setPlane(Plane.LETTERS)
             return
@@ -883,9 +883,9 @@ class KeyboardView(
     }
 
     private fun switchPlane(p: Plane) {
-        // Vào ?123 / =\< từ plane khác: chưa gõ gì ở đó (space chưa về chữ) — như iOS typedInSymbolPlane.
+        // Vào 123 / #+= từ plane khác: chưa gõ gì ở đó (space chưa về chữ) — như iOS typedInSymbolPlane.
         if (plane != Plane.NUMBERS && plane != Plane.SYMBOLS) typedInSymbolPlane = false
-        // Rời plane chữ sang ?123 / =\< / emoji: tắt Caps Lock + shift một-lần (như iOS stock;
+        // Rời plane chữ sang 123 / #+= / emoji: tắt Caps Lock + shift một-lần (như iOS stock;
         // Phil 06/10/2026). Về chữ IME đánh giá lại viết hoa đầu câu (onPlaneChanged).
         if (plane == Plane.LETTERS && PlanePolicy.clearsShiftLeavingLetters(p)) shift = Shift.OFF
         plane = p
@@ -945,7 +945,7 @@ class KeyboardView(
     private var spaceSideKey = SpaceSideKey.DEFAULT
     /** "Về bàn chữ sau ký hiệu" (IME đặt lúc hiện, như [trackpadSpeed]) — không đổi bố cục. */
     var symbolReturn: SymbolReturn = SymbolReturn.DEFAULT
-    /** Đã gõ ít nhất một ký tự ở ?123 / =\< kể từ lúc vào plane đó — space mới về chữ. */
+    /** Đã gõ ít nhất một ký tự ở 123 / #+= kể từ lúc vào plane đó — space mới về chữ. */
     private var typedInSymbolPlane = false
     /** Layout đang hiện có phím "." cạnh space thay "," (Dấu chấm) ⇒ giữ "." ra popup dấu câu. */
     private var periodSideKey = false

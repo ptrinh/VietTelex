@@ -114,7 +114,7 @@ data class LayoutConfig(
     val emojiInStrip: Boolean = false,
     /**
      * Công tắc "Bàn phím tách đôi" (Settings, mặc định TẮT). Chỉ có hiệu lực khi đủ rộng
-     * ([KeyLayout.splitActive]) và ở plane chữ / ?123 / =\< ([KeyLayout.splitPlane]).
+     * ([KeyLayout.splitActive]) và ở plane chữ / 123 / #+= ([KeyLayout.splitPlane]).
      */
     val split: Boolean = false,
     /**
@@ -268,22 +268,29 @@ object KeyLayout {
     private val ROW3 = "zxcvbnm"
     internal val NUM1 = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
     /*
-     * Plane 123 / ký hiệu kiểu Gboard (issue #113): KHÔNG ký tự nào lặp trong một plane — "," "."
-     * chỉ ở hàng đáy, # % * + = lên plane 123 (bớt một lần chuyển). "$" là phím gốc như iOS (#165;
-     * giữ $ ⇒ ₫ € £ …, KeyVariants). Bố cục riêng Android; iOS giữ bàn stock.
+     * Plane 123 / #+= GIỐNG HỆT bàn iOS (#165 — người dùng không tìm ra "$"): hàng ký tự = iOS
+     * KeyLayout.phoneNumberRows / phoneSymbolRows, hàng 3 = [#+= | 123] . , ? ! ' ⌫ như iOS
+     * buildPlane. "," "." có cả ở hàng 3 lẫn hàng đáy (hàng 3 như iOS). Pinned bởi KeyLayoutTest
+     * (đọc thẳng file Swift) — sửa bên này thì sửa y hệt bên kia.
      */
-    internal val NUM2 = listOf("@", "#", "\$", "_", "&", "-", "+", "(", ")", "/")
-    internal val NUM3 = listOf("*", "\"", "'", ":", ";", "!", "?")
-    internal val SYM1 = listOf("~", "`", "|", "•", "√", "π", "÷", "×", "¶", "∆")
-    internal val SYM2 = listOf("/", "£", "€", "¥", "^", "°", "=", "{", "}", "\\")
-    internal val SYM3 = listOf("%", "©", "®", "™", "✓", "[", "]", "<", ">")
+    internal val NUM2 = listOf("-", "/", ":", ";", "(", ")", "\$", "&", "@", "\"")
+    internal val SYM1 = listOf("[", "]", "{", "}", "#", "%", "^", "*", "+", "=")
+    // 3 tiền tệ như iOS: €, ¥, ₫ (₫ còn ở giữ "$" plane 123).
+    internal val SYM2 = listOf("_", "\\", "|", "~", "<", ">", "€", "¥", "₫", "•")
+    /** Ký tự hàng 3 (giữa phím #+= / 123 và ⌫) — chung hai plane, như iOS. */
+    internal val THIRD = listOf(".", ",", "?", "!", "'")
+    /** Bàn tách đôi: hàng 3 chia [more] . , | ? ! ' [⌫] như iOS buildSplitPlane. */
+    internal const val THIRD_SPLIT_LEFT = 2
+
+    /** Nhãn phím đầu hàng 3 (đổi 123 ⇄ #+=) như iOS: plane 123 ⇒ "#+=", plane ký hiệu ⇒ "123". */
+    fun moreKeyLabel(p: Plane): String = if (p == Plane.NUMBERS) "#+=" else "123"
 
     /**
-     * Hàng ký tự (10 phím) TRÊN hàng 3 của plane ?123 / =\<. Tắt hàng số: [NUM1, NUM2] / [SYM1, SYM2]
-     * như cũ. Bật hàng số: hàng đầu là ĐÚNG hàng số plane chữ (1…0) + 2 hàng ký hiệu ⇒ 5 hàng cùng khung
-     * plane chữ; plane ?123 mượn hàng đầu plane =\< (SYM1) — không ký tự nào lặp trong một plane.
-     * Hàng mượn nằm NGAY DƯỚI hàng số (#142, cùng iOS): hàng @ # $ _ & - + ( ) / giữ đúng vị trí thứ 3
-     * từ dưới lên như khi tắt hàng số (và như plane 123 bàn phím gốc).
+     * Hàng ký tự (10 phím) TRÊN hàng 3 của plane 123 / #+= — song sinh iOS phoneSymbolicRows.
+     * Tắt hàng số: [NUM1, NUM2] / [SYM1, SYM2]. Bật hàng số: hàng đầu là ĐÚNG hàng số plane chữ
+     * (1…0) + 2 hàng ký hiệu ⇒ 5 hàng cùng khung plane chữ; plane 123 mượn hàng đầu plane #+=
+     * (SYM1). Hàng mượn nằm NGAY DƯỚI hàng số (#142, cùng iOS): hàng - / : ; ( ) $ & @ " giữ đúng
+     * vị trí thứ 3 từ dưới lên như khi tắt hàng số.
      */
     fun symbolicRows(numbers: Boolean, numberRow: Boolean): List<List<String>> = when {
         !numberRow && numbers -> listOf(NUM1, NUM2)
@@ -293,7 +300,7 @@ object KeyLayout {
     }
 
     fun build(c: LayoutConfig): List<LaidKey> {
-        // Tách đôi (công tắc bật + đủ rộng): plane chữ / ?123 / =\< dựng hai nửa; một tay bỏ qua.
+        // Tách đôi (công tắc bật + đủ rộng): plane chữ / 123 / #+= dựng hai nửa; một tay bỏ qua.
         if (c.split && splitPlane(c.plane) && splitActive(c)) {
             val out = ArrayList<LaidKey>(44)
             buildSplit(out, c)
@@ -342,7 +349,7 @@ object KeyLayout {
                 equalRow(out, if (num) NUM1 else SYM1, KeyKind.CHAR, c, 0, rowH, 0f)
                 equalRow(out, if (num) NUM2 else SYM2, KeyKind.CHAR, c, 1, rowH, 0f)
                 thirdRow(out, c, rowH, letters = false)
-                // Hàng đáy: [ABC][,][😊][space][.][↵] (+ 🌐 / ẩn tablet) — "," "." không lặp ở hàng trên.
+                // Hàng đáy: [ABC][,][😊][space][.][↵] (+ 🌐 / ẩn tablet).
                 bottomRow(out, c, 3 * rowH, rowH, planeKey = if (c.kind.padPlane != null) "123" else "ABC",
                     clearInsteadOfEmoji = false)
             }
@@ -393,9 +400,8 @@ object KeyLayout {
     }
 
     /**
-     * Hàng 3: plane chữ = ⇧(1.5) z…m ⌫(1.5) trên lưới 10 cột; plane số =
-     * [=\\<](1.5) * " ' : ; ! ? ⌫(1.5), plane ký hiệu = [?123](1.5) % © ® ™ ✓ [ ] < > ⌫(1.5)
-     * — các dấu chia đều phần còn lại (kiểu Gboard).
+     * Hàng 3: plane chữ = ⇧(1.5) z…m ⌫(1.5) trên lưới 10 cột; plane số / ký hiệu như iOS =
+     * [#+= | 123](1.5) . , ? ! ' ⌫(1.5) — 5 dấu chia đều phần còn lại.
      */
     private fun thirdRow(out: MutableList<LaidKey>, c: LayoutConfig, rowH: Float, letters: Boolean, y0: Float = 0f) {
         val d = c.density
@@ -413,9 +419,9 @@ object KeyLayout {
                 out += LaidKey(KeyKind.LETTER, s, s.uppercase(), s, x, t, x + k, b); x += k + gap
             }
         } else {
-            val more = if (c.plane == Plane.NUMBERS) "=\\<" else "?123"
+            val more = moreKeyLabel(c.plane)
             out += LaidKey(KeyKind.MORE, more, more, more, x, t, x + side, b); x += side + gap
-            val row = if (c.plane == Plane.NUMBERS) NUM3 else SYM3
+            val row = THIRD
             val p = (inner - 2 * side - (row.size + 1) * gap) / row.size
             for (s in row) { out += LaidKey(KeyKind.CHAR, s, s, s, x, t, x + p, b); x += p + gap }
         }
@@ -656,7 +662,7 @@ object KeyLayout {
 
     // MARK: bàn phím tách đôi (SplitLayout — Settings → Giao diện, mặc định TẮT)
     // Công tắc tắt ⇒ build() không vào nhánh này (một phép AND), không phím / vòng lặp nào thêm.
-    // Bật + đủ rộng ⇒ plane chữ / ?123 / =\< thành hai nửa: [nửa trái][khe chết][nửa phải]; emoji,
+    // Bật + đủ rộng ⇒ plane chữ / 123 / #+= thành hai nửa: [nửa trái][khe chết][nửa phải]; emoji,
     // mẫu câu, tìm emoji, bảng sửa, bàn số giữ đầy bề ngang. Router [hit] giữ nguyên: khe giữa
     // cách mọi phím > 21 dp ⇒ không phím nào (vùng chết như Apple), mép phím vẫn nhận phím gần nhất.
 
@@ -733,21 +739,17 @@ object KeyLayout {
                 tenRow(rows[0], keyTop(0, u, d), keyBottom(0, u, d))
                 tenRow(rows[1], keyTop(1, u, d), keyBottom(1, u, d))
             }
-            // Hàng 3: [=\< | ?123] ký tự… | …ký tự [⌫]; ký tự = phím chuẩn, co lại nếu phím mép < 1.5 bước.
-            val (l3, r3) = SplitLayout.halves(if (c.plane == Plane.NUMBERS) NUM3 else SYM3)
+            // Hàng 3 như iOS buildSplitPlane: [#+= | 123] . , | ? ! ' [⌫] — ký tự = phím chuẩn đúng
+            // cột hai hàng trên (trái: cột 4–5, phải: cột 1–3); phím đổi plane / ⌫ ăn phần còn lại.
+            val l3 = THIRD.subList(0, THIRD_SPLIT_LEFT)
+            val r3 = THIRD.subList(THIRD_SPLIT_LEFT, THIRD.size)
             val t = keyTop(2, u, d, y0); val b = keyBottom(2, u, d, y0)
-            val gap = KEY_SPACING * d
-            fun charW(n: Int) = if (n == 0) 0f else minOf(m.keyWidth, (m.half - sideW - n * gap) / n)
-            val more = if (c.plane == Plane.NUMBERS) "=\\<" else "?123"
-            val wl = charW(l3.size)
-            val moreR = xl + m.half - l3.size * (wl + gap)
-            out += LaidKey(KeyKind.MORE, more, more, more, xl, t, moreR, b)
-            var x = moreR + gap
-            for (s in l3) { out += LaidKey(KeyKind.CHAR, s, s, s, x, t, x + wl, b); x += wl + gap }
-            val wr = charW(r3.size)
-            x = xr
-            for (s in r3) { out += LaidKey(KeyKind.CHAR, s, s, s, x, t, x + wr, b); x += wr + gap }
-            out += LaidKey(KeyKind.BACKSPACE, "", "", "", x, t, xr + m.half, b)
+            val more = moreKeyLabel(c.plane)
+            val leftX = xl + (5 - l3.size) * p
+            out += LaidKey(KeyKind.MORE, more, more, more, xl, t, leftX - KEY_SPACING * d, b)
+            keys(l3, KeyKind.CHAR, leftX, t, b)
+            keys(r3, KeyKind.CHAR, xr + 0.5f * p, t, b)
+            out += LaidKey(KeyKind.BACKSPACE, "", "", "", xr + (0.5f + r3.size) * p, t, xr + m.half, b)
             splitBottomRow(out, c, m, y0 + 3 * u, u, planeKey = if (c.kind.padPlane != null) "123" else "ABC")
         }
     }
@@ -756,7 +758,7 @@ object KeyLayout {
      * Hàng đáy tách: [?123|ABC][🌐?][😊?][space] | [space][dấu câu…][↵][ẩn? (tablet)]. Hai phím cách
      * cùng gõ dấu cách; phím PHẢI (sau cùng trong danh sách) mang logo / badge / trackpad như iOS.
      * Dấu câu nửa phải: bàn chữ ô thường theo "Phím cạnh dấu cách" ([sideKey]); ô email "@ .",
-     * ô URL "/ ."; plane ?123 / =\< ", ." (hai dấu này chỉ ở hàng đáy — xem [symbolicRows]).
+     * ô URL "/ ."; plane 123 / #+= ", ." (như bản không tách; hàng 3 cũng có . , như iOS).
      */
     private fun splitBottomRow(out: MutableList<LaidKey>, c: LayoutConfig, m: SplitLayout.Metrics,
                                rowTop: Float, rowH: Float, planeKey: String) {

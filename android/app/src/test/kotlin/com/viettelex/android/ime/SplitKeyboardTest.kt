@@ -125,11 +125,19 @@ class SplitKeyboardTest {
             val keys = KeyLayout.build(c)
             val five = keys.single { it.label == "5" }; val six = keys.single { it.label == "6" }
             assertTrue(six.left - five.right > 100f)
-            assertNotNull(keys.singleOrNull { it.kind == KeyKind.MORE && it.label == "=\\<" })
+            assertNotNull(keys.singleOrNull { it.kind == KeyKind.MORE && it.label == "#+=" })
             assertNotNull(keys.singleOrNull { it.kind == KeyKind.BACKSPACE })
             assertNotNull(keys.singleOrNull { it.kind == KeyKind.PLANE && it.label == "ABC" })
-            // "," "." chỉ ở hàng đáy (không mất khi tách).
-            assertEquals(1, keys.count { it.label == "," }); assertEquals(1, keys.count { it.label == "." })
+            // "," "." ở hàng 3 (như iOS) + hàng đáy — không mất khi tách.
+            assertEquals(2, keys.count { it.label == "," }); assertEquals(2, keys.count { it.label == "." })
+            // Hàng 3 như iOS buildSplitPlane: [#+=] . , | ? ! ' [⌫]; ký tự đúng cột hai hàng trên.
+            val r3 = keys.filter { it.top == keys.single { k -> k.kind == KeyKind.MORE }.top }.sortedBy { it.left }
+            assertEquals(listOf("#+=", ".", ",", "?", "!", "'", ""), r3.map { it.label })
+            val above = keys.filter { it.kind == KeyKind.CHAR && it.top < r3[0].top }
+            for (k in r3.subList(1, 6)) assertTrue(k.label, above.any { Math.abs(it.left - k.left) < 0.01f && Math.abs(it.right - k.right) < 0.01f })
+            val half = KeyLayout.splitMetrics(c).half
+            assertTrue(r3[2].right < KeyLayout.ROW_MARGIN_H + half + 0.01f)
+            assertTrue(r3[3].left > W - KeyLayout.ROW_MARGIN_H - half - 0.01f)
             // Không mất / lặp ký tự nào so với bản không tách.
             val plain = KeyLayout.build(c.copy(split = false))
             assertEquals(plain.filter { it.kind == KeyKind.CHAR }.map { it.label }.sorted(),
@@ -138,7 +146,7 @@ class SplitKeyboardTest {
             assertEquals(plain.map { it.top }.toSet(), keys.map { it.top }.toSet())
             assertNoOverlapOrGapIntrusion(keys, c)
             val sym = KeyLayout.build(c.copy(plane = Plane.SYMBOLS))
-            assertNotNull(sym.singleOrNull { it.kind == KeyKind.MORE && it.label == "?123" })
+            assertNotNull(sym.singleOrNull { it.kind == KeyKind.MORE && it.label == "123" })
             assertNoOverlapOrGapIntrusion(sym, c.copy(plane = Plane.SYMBOLS))
         }
     }

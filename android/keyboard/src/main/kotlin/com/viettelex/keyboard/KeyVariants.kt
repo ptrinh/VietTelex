@@ -5,10 +5,10 @@ package com.viettelex.keyboard
  * ⇒ $ ₫ € … Bản THUẦN song sinh iOS/Keyboard/KeyVariants.swift. View dùng chung popup trượt-chọn
  * của [DomainPopup].
  *
- * Từ issue #113 bàn 123 / ký hiệu Android theo Gboard (khác bàn stock iOS), nên hai bảng chỉ
- * trùng ở các phím có trên CẢ HAI nền tảng — sửa biến thể của phím chung thì sửa y hệt bên kia.
- * Lệch có chủ đích phải khai ở [ANDROID_ONLY] / [IOS_ONLY] (pinned bởi
- * KeyVariantsTests.matchesSwiftTable) — hiện không còn lệch nào: "$" là phím gốc ở cả hai (#165).
+ * Từ #165 bàn 123 / #+= Android có ĐÚNG bộ phím của iOS (KeyLayout NUM2 / SYM1 / SYM2 / THIRD), nên
+ * hai bảng phải trùng hoàn toàn — sửa biến thể bên này thì sửa y hệt bên kia. Lệch có chủ đích
+ * (nếu sau này có) phải khai ở [ANDROID_ONLY] / [IOS_ONLY] (pinned bởi
+ * KeyVariantsTests.matchesSwiftTable) — hiện rỗng.
  *
  * Thứ tự = từ phím ra ngoài: ô 0 là ký tự GỐC (mặc định được chọn khi popup mở, như stock) —
  * trừ [HOLD_PRESELECT]: ô 0 là ký tự hay muốn khi đã GIỮ phím, gốc đứng ô 1 (như giữ "," chọn
@@ -29,7 +29,7 @@ object KeyVariants {
         "7" to listOf("7", "⅞"),
         "0" to listOf("0", "°"),
         "-" to listOf("-", "–", "—", "•"),
-        // "=" ngay cạnh "/" — bàn 123 không có phím "=" (song sinh iOS, field report 18/10/2026).
+        // "=" ngay cạnh "/" — bàn 123 (tắt hàng số) không có phím "=" (song sinh iOS, field report 18/10/2026).
         "/" to listOf("/", "=", "\\"),
         // "$" là phím gốc như iOS (#165: người dùng không tìm ra "$" khi nó nằm dưới "₫");
         // giữ ⇒ ₫ ngay ô kế, rồi các tiền tệ khác — y hệt bảng Swift.
@@ -40,7 +40,7 @@ object KeyVariants {
         "!" to listOf("!", "¡"),
         "'" to listOf("'", "‘", "’", "`"),
         "\"" to listOf("\"", "”", "“", "„", "»", "«"),
-        // bàn ký hiệu (=\<) — "+" "*" nay nằm trên bàn 123 Android
+        // bàn #+=
         "%" to listOf("%", "‰"),
         "=" to listOf("=", "≠", "≈"),
         "+" to listOf("+", "±"),

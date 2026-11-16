@@ -99,7 +99,7 @@ class PlanePolicyTest {
         assertTrue("nhả sau khi chèn", fire.indexOf("emit(k)") < fire.indexOf("shiftAfterCharKey"))
     }
 
-    // Dấu kết vế ở plane ?123 / =\< về chữ ngay, không cần dấu cách (Phil 06/11/2026).
+    // Dấu kết vế ở plane 123 / #+= về chữ ngay, không cần dấu cách (Phil 06/11/2026).
     // Song sinh iOS ClauseEndReturnTests.
 
     /** (văn bản trước con trỏ, ký tự vừa chạm, về chữ?) */
@@ -150,7 +150,7 @@ class PlanePolicyTest {
         }
     }
 
-    /** Biến thể in ấn ĐÓNG có trong bàn ?123 / =\< đều thuộc bảng. */
+    /** Biến thể in ấn ĐÓNG có trong bàn 123 / #+= đều thuộc bảng. */
     @Test fun clauseEnderTypographicVariantsCovered() {
         val all = listOf(".", "'", "\"", ">", "?", "!").flatMap {
             com.viettelex.keyboard.KeyVariants.variants(it, symbolPlane = true)
@@ -162,7 +162,7 @@ class PlanePolicyTest {
     }
 
     /**
-     * Nối dây: mọi Key.Text của plane ?123 / =\< (chạm CHAR / PUNCT, chọn biến thể) đi qua emit ⇒
+     * Nối dây: mọi Key.Text của plane 123 / #+= (chạm CHAR / PUNCT, chọn biến thể) đi qua emit ⇒
      * luật đặt ở emit; ký tự trước con trỏ đọc TRƯỚC onKey và chỉ cho "." "," ":".
      */
     @Test fun clauseEnderWiredInEmit() {
@@ -240,7 +240,7 @@ class PlanePolicyTest {
         assertFalse(PlanePolicy.needsBefore("@", SymbolReturn.ALWAYS))
     }
 
-    /** Space ở ?123 / =\< sau khi đã gõ ở đó ⇒ về chữ, như iOS (port PlanePolicyTests iOS). */
+    /** Space ở 123 / #+= sau khi đã gõ ở đó ⇒ về chữ, như iOS (port PlanePolicyTests iOS). */
     @Test fun spaceAfterTypingInSymbolPlaneReturns() {
         for (p in listOf(Plane.NUMBERS, Plane.SYMBOLS)) {
             assertTrue(p.name, PlanePolicy.returnToLettersOnSpace(p, typedInPlane = true, numericField = false))
