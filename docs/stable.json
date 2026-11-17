@@ -3,12 +3,12 @@
   "url": "https://github.com/ptrinh/viettelex/releases/tag/v1.9.11",
   "build": 159,
   "windows": {
-    "version": "1.3.27",
-    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.27/VietTelex-1.3.27-x64.msi",
-    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.27/VietTelex-1.3.27-arm64.msi",
-    "notes": "Phím tắt một phím trên web (# xoá thư, j/k trong Gmail) chạy được khi đang gõ tiếng Việt.",
-    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.27/VietTelex-1.3.27-portable-x64.zip",
-    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.27/VietTelex-1.3.27-portable-arm64.zip"
+    "version": "1.3.28",
+    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.28/VietTelex-1.3.28-x64.msi",
+    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.28/VietTelex-1.3.28-arm64.msi",
+    "notes": "Gõ kéo dài chữ có ư/ơ (vd. \"ừaaa\") giữ nguyên a/e lặp, không còn thành â/ê.",
+    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.28/VietTelex-1.3.28-portable-x64.zip",
+    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.28/VietTelex-1.3.28-portable-arm64.zip"
   },
   "linux": {
     "version": "1.0.27",
