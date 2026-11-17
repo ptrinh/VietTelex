@@ -112,8 +112,10 @@ class PlanePolicyTest {
         Triple("hi", "!", true),
         Triple("hi", "?", true),
         Triple("", "(", false),           // ( mở giữ plane
-        Triple("(a", ")", true),          // ) về chữ
-        Triple("(1", ")", true),          // ) sau số vẫn về chữ
+        Triple("(a", ")", false),         // ) ở lại (17/11/2026)
+        Triple("(1", ")", false),         // ) sau số ở lại
+        Triple(":", ")", false),          // :) — ) ở lại, gõ tiếp :)))
+        Triple(")", ")", false),          // :)) — ) ở lại
         Triple("say", "\"", true),
         Triple("it", "'", true),
         Triple("note", ":", true),

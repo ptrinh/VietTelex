@@ -48,8 +48,9 @@ object PlanePolicy {
      * 06/11/2026; chế độ "Tự động" của [SymbolReturn]). Gồm dạng in ấn trong hàng biến thể (… ” ’ »). Ngoặc / nháy
      * MỞ (( “ ‘ «), @ / # $ % & * - _ + = [ { < > \ |, số, tiền tệ, toán: giữ plane.
      */
-    // "." không về (người dùng hay gõ "..."), & $ @ về (Phil 15/11/2026) — song sinh iOS clauseEnders.
-    val CLAUSE_ENDERS: Set<String> = setOf(",", "?", "!", ")", "\"", "'", ":", ";", "&", "$", "@",
+    // "." không về (người dùng hay gõ "..."), & $ @ về (Phil 15/11/2026); ")" không về (Phil 17/11/2026:
+    // hay gõ ":)))") — song sinh iOS clauseEnders.
+    val CLAUSE_ENDERS: Set<String> = setOf(",", "?", "!", "\"", "'", ":", ";", "&", "$", "@",
         "…", "”", "’", "»")
     /** Dấu nằm GIỮA số: ngay sau chữ số thì ở lại plane số ("2.5", "1,000", "10:30"). */
     val DIGIT_SEPARATORS: Set<String> = setOf(".", ",", ":")
