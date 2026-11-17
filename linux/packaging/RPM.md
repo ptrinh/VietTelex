@@ -136,7 +136,7 @@ container; chuyển socket gpg-agent vào container không chạy với OrbStack
 ```sh
 # CI linux-release.yml đã build + attest .rpm; artifact viettelex-linux-$V có linux/dist/rpm/<target>/
 for f in linux/dist/rpm/*/*.rpm; do
-  gh attestation verify "$f" --repo ptrinh/viettelex --signer-workflow ptrinh/viettelex/.github/workflows/linux-release.yml >/dev/null \
+  gh attestation verify "$f" --repo ptrinh/VietTelex --signer-workflow ptrinh/VietTelex/.github/workflows/linux-release.yml >/dev/null \
     && echo "ok  $f" || { echo "FAIL $f"; break; }
 done
 gh release upload "linux-v$V" linux/dist/rpm/*/*.rpm          # nếu release không tạo từ draft CI

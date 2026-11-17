@@ -132,7 +132,7 @@ rm -rf linux/dist && gh run download "$RUN" -n "viettelex-linux-$V" -D linux/dis
 
 # 2. Kiểm attestation: mỗi .deb phải được build bởi workflow này của repo này.
 for f in linux/dist/*/*.deb; do
-  gh attestation verify "$f" --repo ptrinh/viettelex     --signer-workflow ptrinh/viettelex/.github/workflows/linux-release.yml >/dev/null     && echo "ok  $f" || { echo "FAIL $f"; break; }
+  gh attestation verify "$f" --repo ptrinh/VietTelex     --signer-workflow ptrinh/VietTelex/.github/workflows/linux-release.yml >/dev/null     && echo "ok  $f" || { echo "FAIL $f"; break; }
 done
 
 # 3. stable.json + SHA256SUMS sinh lại trên máy này — phải trùng bản CI
@@ -155,7 +155,7 @@ VT_PACMAN_KEY=<fingerprint> linux/packaging/pacman-repo.sh --out ../viettelex-ap
 # 6. Sau cùng: commit + push docs/stable.json; AUR: linux/packaging/aur/README.md
 ```
 
-Người dùng tự kiểm được một .deb tải về: `gh attestation verify <file>.deb --repo ptrinh/viettelex`.
+Người dùng tự kiểm được một .deb tải về: `gh attestation verify <file>.deb --repo ptrinh/VietTelex`.
 
 ### Checklist phát hành Linux (build local)
 
