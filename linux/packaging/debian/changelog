@@ -1,3 +1,18 @@
+viettelex (1.0.28) UNRELEASED; urgency=medium
+
+  * Gõ kéo dài sau ư/ơ giữ nguyên chữ a/e: uwfaaa ra ừaaa, vuwfaaa ra vừaaa,
+    muwaaaa ra mưaaaa. Trước đây chữ a/e lặp bị đổi thành â/ê.
+  * "Sửa dấu từ đã gõ": trong terminal, ⌫ ngay sau dấu cách/dấu câu mở lại
+    được từ vừa gõ để sửa dấu.
+  * ---
+  * Elongated words after ư/ơ keep a/e as typed: uwfaaa gives ừaaa, vuwfaaa
+    gives vừaaa, muwaaaa gives mưaaaa. Previously the repeated a/e turned into
+    â/ê.
+  * "Fix marks on a typed word": in terminals, Backspace right after a space or
+    punctuation now reopens the word you just typed so you can fix its marks.
+
+ -- VietTelex Maintainers <maintainers@viettelex.invalid>  Tue, 17 Nov 2026 11:30:00 +0700
+
 viettelex (1.0.27) UNRELEASED; urgency=medium
 
   * Bàn phím có phím ghép dấu (US International, Đức, Pháp…) và phím Compose
