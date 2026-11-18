@@ -557,7 +557,7 @@ void testPredictionSession() {
     both.typoHints = true;
     Rig o(both);
     type(o.s, o.m, "anh tpoi ");
-    CHECK_EQ(o.last(), req({"typo", "anh tpoi ", "tpoi", " ", "tpoi", "1010000110"}));
+    CHECK_EQ(o.last(), req({"typo", "anh tpoi ", "tpoi", " ", "tpoi", "10100001100"}));
     CHECK_EQ(o.reqs.back().fallback, req({"predict", "anh tpoi ", "", "", "0"}));
     CHECK_EQ(o.reqs.back().fallbackDelayMs, kPredictIdleMs);
     CaretSuggestion typo;

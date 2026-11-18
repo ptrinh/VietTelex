@@ -375,7 +375,7 @@ void testNumberChip() {
 void testTypoFix() {
     Rig r;
     type(r.s, r.m, "anh tpoi ");
-    CHECK_EQ(r.last(), req({"typo", "anh tpoi ", "tpoi", " ", "tpoi", "1010000110"}));
+    CHECK_EQ(r.last(), req({"typo", "anh tpoi ", "tpoi", " ", "tpoi", "10100001100"}));
     r.answer(S(Kind::Typo, "tôi", "tpoi ", "tôi "));
     CHECK_EQ(r.m.shown, std::string("tôi   Tab"));
     CHECK(tab(r.s, r.m));
@@ -384,7 +384,7 @@ void testTypoFix() {
     // Giữ ký tự ranh giới; Esc = không gợi ý lại từ đó (trong phiên).
     Rig e;
     type(e.s, e.m, "tpoi,");
-    CHECK_EQ(e.last(), req({"typo", "tpoi,", "tpoi", ",", "tpoi", "1010000110"}));
+    CHECK_EQ(e.last(), req({"typo", "tpoi,", "tpoi", ",", "tpoi", "10100001100"}));
     e.answer(S(Kind::Typo, "tôi", "tpoi,", "tôi,"));
     type(e.s, e.m, "~");
     CHECK(!e.s.hint());
