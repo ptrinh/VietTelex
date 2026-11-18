@@ -220,6 +220,7 @@ TEST(settings_defaults_match_macos) {
     CHECK(!s.quickTelex);
     CHECK(!s.modernOrthography);
     CHECK(!s.bracketVowels);
+    CHECK(!s.autoCircumflex);   // Tự thêm dấu mũ (#166): opt-in
     CHECK(!s.teencode);
     CHECK(!s.autoUpdateCheck);
     CHECK(!s.debugLogging);
@@ -595,7 +596,7 @@ TEST(text_tools_settings_defaults) {
 TEST(settings_underline_misspelled_snapshot_bit) {
     size_t n = 0;
     const BoolKey* keys = boolKeys(&n);
-    CHECK(n <= 32);                      // snapshot bits fit the u32
+    CHECK(n <= 64);                      // snapshot bits fit the two u32 words
     // Appended, never reordered: bit 21, then the game bits (game_ipc.h) after it.
     CHECK(n >= 24);
     CHECK_EQ(std::string(keys[21].name), std::string("underlineMisspelled"));
@@ -770,4 +771,47 @@ TEST(no_editable_context_suspects_until_caret_or_focus) {
     n.clear();                       // focus change / the store reported an edit
     CHECK(!n.suspects(&a));
     CHECK(!n.suspects(nullptr));
+}
+
+// Tự thêm dấu mũ (#166): bit 32, the first bool of the snapshot's extension word (after the
+// appModes block). Older parsers stop at bit 31 and ignore it; a 32-bool snapshot (from an
+// older VietTelex.exe) leaves it at its default.
+TEST(settings_auto_circumflex_extension_bit) {
+    size_t n = 0;
+    const BoolKey* keys = boolKeys(&n);
+    CHECK(n >= 33);
+    CHECK_EQ(std::string(keys[31].name), std::string("switchSound"));
+    CHECK_EQ(std::string(keys[32].name), std::string("autoCircumflex"));
+    Settings d;
+    CHECK(!d.autoCircumflex);
+    CHECK(!(d.engineFlags() & VTX_AUTO_CIRCUMFLEX));
+    Settings s;
+    s.autoCircumflex = true;
+    s.switchSound = true;
+    s.appModes["notepad.exe"] = AppMode::Composition;
+    CHECK(s.engineFlags() & VTX_AUTO_CIRCUMFLEX);
+    std::vector<uint8_t> b = serialize(s);
+    Settings r;
+    CHECK(deserialize(b.data(), b.size(), r));
+    CHECK(r.autoCircumflex && r.switchSound);
+    CHECK(r == s);
+    // Off round-trips too (and differs from on).
+    Settings off = s;
+    off.autoCircumflex = false;
+    b = serialize(off);
+    CHECK(deserialize(b.data(), b.size(), r));
+    CHECK(!r.autoCircumflex && r.switchSound);
+    CHECK(!(r == s));
+    // A 32-bool snapshot (older writer): no extension word, the bit keeps its default.
+    b = serialize(s);
+    CHECK(b.size() > 12);
+    b[6] = 32;
+    b[7] = 0;
+    b.resize(b.size() - 4);
+    CHECK(deserialize(b.data(), b.size(), r));
+    CHECK(!r.autoCircumflex && r.switchSound);
+    CHECK_EQ(r.appModes.size(), size_t(1));
+    // Claims 33 bools but the extension word is cut off: malformed.
+    b[6] = 33;
+    CHECK(!deserialize(b.data(), b.size(), r));
 }

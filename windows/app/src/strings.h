@@ -167,6 +167,8 @@ enum class S {
     StartHidden, StartHiddenDesc,
     // A tone when the user switches Việt/Anh
     SwitchSound, SwitchSoundDesc,
+    // Tự thêm dấu mũ (#166): vietj -> việt when the plain rime is not a syllable
+    AutoCircumflex, AutoCircumflexDesc,
     Count
 };
 

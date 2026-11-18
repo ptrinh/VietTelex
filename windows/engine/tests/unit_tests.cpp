@@ -689,6 +689,98 @@ void acronymTypoGlueUndo() {
     }
 }
 
+// ---- Tự thêm dấu mũ (Swift AutoCircumflexTests.swift, issue #166) ---------------------
+vtx::TelexEngine acEngine(bool on, bool live = true, bool teencode = false) {
+    vtx::TelexEngine e; e.liveSpellCheck = live; e.teencode = teencode; e.autoCircumflex = on;
+    return e;
+}
+std::string acCommit(const std::string& keys, bool on = true, bool live = true, bool teencode = false) {
+    vtx::TelexEngine e = acEngine(on, live, teencode);
+    feedStr(e, keys);
+    return commitText(e, true);
+}
+std::string acComposed(const std::string& keys, bool on = true) {
+    vtx::TelexEngine e = acEngine(on);
+    feedStr(e, keys);
+    return composed(e);
+}
+
+void autoCircumflex() {
+    static const char* const kRows[][2] = {
+        // iê, yê, uyê
+        {"vietj", "việt"}, {"viejt", "việt"}, {"viecj", "việc"}, {"nguyenx", "nguyễn"},
+        {"biets", "biết"}, {"tienf", "tiền"}, {"dieuf", "diều"}, {"ddieemr", "điểm"},
+        {"thiengs", "thiếng"}, {"tiepj", "tiệp"}, {"yeus", "yếu"}, {"yenr", "yển"},
+        {"yeets", "yết"}, {"chuyenj", "chuyện"}, {"quyets", "quyết"},
+        {"ddienj", "điện"}, {"VIETJ", "VIỆT"}, {"Vietj", "Việt"},
+        // ê trước nh, ch, u
+        {"benhj", "bệnh"}, {"lechj", "lệch"}, {"keuf", "kều"}, {"ddeuf", "đều"},
+        // uê
+        {"hues", "huế"}, {"thuee", "thuê"}, {"tuechj", "tuệch"},
+        // uâ
+        {"luanj", "luận"}, {"xuats", "xuất"}, {"khuays", "khuấy"}, {"tuanf", "tuần"},
+    };
+    // testAddsTheHat
+    for (const auto& r : kRows) {
+        const std::string keys = r[0], want = r[1];
+        if (keys == "hues" || keys == "thuee") continue;
+        CHECK_EQ(acCommit(keys), want);
+        CHECK_EQ(acCommit(keys, true, false), want);          // no live check
+        CHECK_EQ(acCommit(keys, true, true, true), want);     // teencode
+    }
+    CHECK_EQ(acComposed("hues"), std::string("huế"));
+
+    // testOffChangesNothing
+    CHECK(!vtx::TelexEngine().autoCircumflex);
+    for (const char* keys : {"vietj", "viejt", "benhj", "luanj", "keuf", "nguyenx"}) {
+        vtx::TelexEngine a; a.liveSpellCheck = true;
+        vtx::TelexEngine b; b.liveSpellCheck = true; b.autoCircumflex = false;
+        feedStr(a, keys); feedStr(b, keys);
+        const std::string ca = composed(a);
+        CHECK_EQ(ca, composed(b));
+        CHECK(ca.find("ệ") == std::string::npos && ca.find("ậ") == std::string::npos &&
+              ca.find("ề") == std::string::npos && ca.find("ễ") == std::string::npos);
+    }
+
+    // testRealPlainRimesStay: the plain rime is a real one => untouched.
+    static const char* const kStay[][2] = {
+        {"quanr", "quản"}, {"quats", "quát"}, {"quays", "quáy"}, {"quef", "què"},
+        {"xengr", "xẻng"}, {"secs", "séc"}, {"tenf", "tèn"}, {"mets", "mét"},
+        {"hoanf", "hoàn"}, {"muaf", "mùa"}, {"kias", "kía"}, {"theer", "thể"},
+        {"meof", "mèo"}, {"khoer", "khỏe"}, {"giengs", "giéng"},
+    };
+    for (const auto& r : kStay) CHECK_EQ(acCommit(r[0]), std::string(r[1]));
+
+    // testNeedsALiveTone: no tone (or a tone the stop coda drops) => no hat.
+    CHECK_EQ(acComposed("viet"), std::string("viet"));
+    CHECK_EQ(acComposed("benh"), std::string("benh"));
+    CHECK_EQ(acComposed("vietf"), acComposed("vietf", false));
+    CHECK_EQ(acComposed("vietjj"), acComposed("vietjj", false));   // tone cancelled
+
+    // testParseStateUntouched: render-only — typing on / deleting behave as without it.
+    {
+        vtx::TelexEngine e = acEngine(true);
+        vtx::Action a;
+        feedStr(e, "vietj");
+        CHECK_EQ(composed(e), std::string("việt"));
+        e.backspace(a);   // ⌫ deletes t, tone stays => open rime "ie" gets no hat
+        CHECK_EQ(composed(e), std::string("vịe"));
+        e.feed(U'c', a);
+        CHECK_EQ(composed(e), std::string("việc"));
+        // Typing the full "ee" still works as before.
+        CHECK_EQ(acCommit("vieetj"), std::string("việt"));
+        CHECK_EQ(acCommit("vieejt"), std::string("việt"));
+        CHECK_EQ(acCommit("luaanj"), std::string("luận"));
+        // Early tone: the hat appears once the rime is complete.
+        CHECK_EQ(acComposed("viej"), acComposed("viej", false));
+        CHECK_EQ(acComposed("viejt"), std::string("việt"));
+    }
+
+    // testEnglishStillRestores: keys that are an English word still restore as before.
+    for (const char* w : {"clients", "guest", "reuse", "quest", "use"})
+        CHECK_EQ(acCommit(w), acCommit(w, false));
+}
+
 } // namespace
 
 int runUnit() {
@@ -709,6 +801,7 @@ int runUnit() {
     hotPathDoesNotAllocate();
     spellingErrorCases();
     backspaceEqualsRetypeWithoutLastKey();
+    autoCircumflex();
     std::printf("unit invariants: %d/%d pass\n", gPass, gPass + gFail);
     return gFail == 0 ? 0 : 1;
 }

@@ -32,6 +32,7 @@ const Field kAllToggles[] = {
     &Settings::autoOffFullscreen, &Settings::gameMode,          &Settings::filterSensitive,
     &Settings::learnWords,       &Settings::retroactiveEnglish, &Settings::englishByFrequency,
     &Settings::startEnglish,     &Settings::startHidden,        &Settings::switchSound,
+    &Settings::autoCircumflex,
 };
 
 PageContext allOpen() {
@@ -93,7 +94,7 @@ TEST(settings_pages_every_switch_once) {
 TEST(settings_pages_structure) {
     // Kiểu gõ → Nâng cao, teencode included (it was on the Chính tả page).
     for (Field f : {&Settings::simpleTelex, &Settings::freeMarking, &Settings::quickTelex, &Settings::modernOrthography,
-                    &Settings::teencode, &Settings::bracketVowels, &Settings::reEditWord})
+                    &Settings::teencode, &Settings::bracketVowels, &Settings::autoCircumflex, &Settings::reEditWord})
         CHECK(placed(f, SettingsPage::Typing, ex(Expander::TypingAdvanced)));
     // Gõ lẫn tiếng Anh → Nâng cao: English detection.
     for (Field f : {&Settings::autoRestore, &Settings::collisionPrefersVietnamese, &Settings::contextualEnglish,
@@ -479,7 +480,7 @@ TEST(settings_captions_are_short) {
         S::FilterSensitiveDesc, S::UnderlineMisspelledDesc, S::AutoOffFullscreenDesc, S::GameModeDesc,
         S::GameModeHotkeyDesc, S::SwitchIndicatorDesc, S::ConflictDesc, S::WinHotkeyDesc,
         S::DefaultInputDesc, S::TextToolsNoTray, S::LearnWordsDesc, S::ClearLearnedDesc, S::TrayStyleDesc,
-        S::RetroEnglishDesc, S::EnglishByFrequencyDesc, S::StartEnglishDesc, S::StartHiddenDesc, S::SwitchSoundDesc, S::MixedCardDesc,
+        S::RetroEnglishDesc, S::EnglishByFrequencyDesc, S::StartEnglishDesc, S::StartHiddenDesc, S::SwitchSoundDesc, S::AutoCircumflexDesc, S::MixedCardDesc,
         S::ProfilePickerIntro, S::ProfileCustomDesc, S::ProfileViEx, S::ProfileMixedEx, S::ProfileEnEx,
         S::TypingAdvancedSummary, S::MixedAdvancedSummary, S::SwitchAdvancedSummary, S::GamesSummary,
         S::AppearanceSummary, S::MixedVniNote, S::PortableHintsNote, S::ReEditWordPortableDesc,

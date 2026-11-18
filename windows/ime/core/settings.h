@@ -26,6 +26,11 @@ struct Settings {
     bool quickTelex = false;
     bool modernOrthography = false;
     bool bracketVowels = false;
+    // "Tự thêm dấu mũ" (issue #166, default OFF; engine autoCircumflex): once the word has a
+    // tone key and the plain rime is not a Vietnamese syllable while the circumflexed one is,
+    // the circumflex shows ("vietj" -> việt, "benhj" -> bệnh). Off = one bool test per render.
+    // Snapshot bit 32: the first bool in the extension word (serialize()).
+    bool autoCircumflex = false;
     // Chính tả
     bool autoRestore = true;
     bool liveSpellCheck = true;
@@ -58,7 +63,7 @@ struct Settings {
     bool startHidden = false;
     // "Phát tiếng khi đổi Việt/Anh" (default OFF; VietTelex.exe only): a short rising tone
     // for Việt, a falling one for Anh, only when the USER switches (hotkey, tray click) —
-    // never for a per-app change on focus. The last free bit of the 32-bit snapshot word.
+    // never for a per-app change on focus. The last bit of the first 32-bit snapshot word.
     bool switchSound = false;
     // "Gạch đỏ âm tiết sai chính tả khi gõ" (Windows/Linux only, default OFF): the word in
     // a composition gets a red squiggle when it cannot become a Vietnamese syllable.
@@ -126,7 +131,9 @@ struct Settings {
 };
 
 // Registry value names for the bool settings, in snapshot bit order. Never reorder:
-// the bit index is the on-disk format.
+// the bit index is the on-disk format. Bits 0..31 sit in the header word; bits 32..63 in an
+// extension word AFTER the appModes block (only written when there are more than 32), which
+// an older parser never reads — it stops at bit 31 and ignores trailing bytes.
 struct BoolKey {
     const char* name;
     bool Settings::*field;

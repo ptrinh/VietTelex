@@ -89,6 +89,7 @@ std::vector<PageRow> settingsPageRows(SettingsPage page, const Settings& s, cons
             b.toggle(&Settings::modernOrthography);
             b.toggle(&Settings::teencode);
             b.toggle(&Settings::bracketVowels);
+            b.toggle(&Settings::autoCircumflex);
             b.toggle(&Settings::reEditWord);
             b.endExpander();
             // Gõ lẫn tiếng Anh (ONBOARDING-SPEC §4): the profile rows, English detection in

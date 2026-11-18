@@ -42,11 +42,14 @@ const BoolKey kBoolKeys[] = {
     {"startEnglish", &Settings::startEnglish},
     {"startHidden", &Settings::startHidden},
     {"switchSound", &Settings::switchSound},
+    // ---- extension word (bit 32 on): see serialize() ----
+    {"autoCircumflex", &Settings::autoCircumflex},
 };
 constexpr size_t kBoolCount = sizeof(kBoolKeys) / sizeof(kBoolKeys[0]);
 constexpr uint32_t kMagic = 0x53585456;  // "VTXS"
 constexpr uint16_t kVersion = 1;
 constexpr size_t kMaxEntries = 20000;
+static_assert(kBoolCount <= 64, "two snapshot words");
 
 struct Writer {
     std::vector<uint8_t> b;
@@ -94,6 +97,7 @@ uint32_t Settings::engineFlags() const {
     if (teencode) f |= VTX_TEENCODE;
     if (quickTelex) f |= VTX_QUICK_TELEX;
     if (bracketVowels) f |= VTX_BRACKET_VOWELS;
+    if (autoCircumflex) f |= VTX_AUTO_CIRCUMFLEX;
     if (vniMode) f |= VTX_VNI;
     if (contextualEnglish) f |= VTX_CONTEXTUAL_ENGLISH;
     if (collisionPrefersVietnamese) f |= VTX_COLLISION_PREFERS_VI;
@@ -118,9 +122,12 @@ std::vector<uint8_t> serialize(const Settings& s) {
     w.u32(kMagic);
     w.u16(kVersion);
     w.u16(static_cast<uint16_t>(kBoolCount));
-    uint32_t bits = 0;
+    uint32_t bits = 0, ext = 0;
     for (size_t i = 0; i < kBoolCount; ++i)
-        if (s.*kBoolKeys[i].field) bits |= 1u << i;
+        if (s.*kBoolKeys[i].field) {
+            if (i < 32) bits |= 1u << i;
+            else ext |= 1u << (i - 32);
+        }
     w.u32(bits);
     w.str(s.switchHotkey);
     w.str(s.menuIcon);
@@ -135,6 +142,8 @@ std::vector<uint8_t> serialize(const Settings& s) {
         w.str(kv.first);
         w.u8(static_cast<uint8_t>(kv.second));
     }
+    // Bools 32..63: appended so a parser that knows only 32 bools reads the rest unchanged.
+    if constexpr (kBoolCount > 32) w.u32(ext);
     return w.b;
 }
 
@@ -169,6 +178,13 @@ bool deserialize(const uint8_t* data, size_t len, Settings& out) {
             s.appModes[exe] = static_cast<AppMode>(mode);
     }
     if (!r.ok) return false;
+    // Extension word (bools 32..63), present when the writer had more than 32 bools.
+    if (boolCount > 32) {
+        uint32_t ext = r.u32();
+        if (!r.ok) return false;
+        for (size_t i = 32; i < kBoolCount && i < boolCount && i < 64; ++i)
+            s.*kBoolKeys[i].field = (ext >> (i - 32)) & 1u;
+    }
     out = std::move(s);
     return true;
 }

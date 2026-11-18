@@ -539,6 +539,9 @@ bool TelexEngine::shouldRestoreRawBase() const {
     if (englishByFrequency && frequencyKeepsVietnamese()) return false;
     // Glued to a code separator / number ("my_var", "100W") — see Swift glueRestores.
     if (wordGlue_ != 0 && glueRestores()) return true;
+    // Tự thêm dấu mũ turned an INVALID syllable (always restored before) into a valid one;
+    // keys with an English reading ("diets", "hues") still restore — see Swift.
+    if (inferredCircumflex_ && rawHasEnglishReading()) return true;
     // Đuôi -k (ták/ák/rík) không thắng bảng collision (issue #127) — song sinh Swift.
     if (rawIsEnglishCollision() && !(collisionPrefersVietnamese && composedIsValidSyllable() && !composedEndsWithK())) return true;
     // Vietnamese typo ("lanwm" -> "lănm") keeps the screen — Swift isVietnameseTypoKeep.
@@ -1704,6 +1707,13 @@ int TelexEngine::render() {
         effTone = Tone::None;
         toneIdx = -1;
     }
+    // Tự thêm dấu mũ (issue #166): after the effective tone is known. The added circumflex is
+    // the rime's only marked vowel, so the tone moves onto it.
+    inferredCircumflex_ = false;
+    if (autoCircumflex && effTone != Tone::None && toneScope == count && inferCircumflex(count, effTone)) {
+        inferredCircumflex_ = true;
+        toneIdx = toneVowelIndex(toneScope);
+    }
     int target = toneIdx >= 0 ? toneIdx : (count - 1 > 0 ? count - 1 : 0);
     for (int j = 0; j < pToneKeyCount_; ++j) rawLetter_[toneKeys_[j]] = target;
     lastEffTone_ = effTone;
@@ -1715,6 +1725,42 @@ int TelexEngine::render() {
         scratch_[k] = scalar;
     }
     return count;
+}
+
+// Tự thêm dấu mũ — see autoCircumflex / Swift inferCircumflex. Reads/writes
+// renderLetters_[0..count). Exactly ONE vowel cluster, none of it marked, in the listed
+// shapes; the plain syllable must be INVALID for this tone and the circumflexed one VALID
+// (the validator decides, so "quan", "què", "xẻng", "séc" are untouched).
+bool TelexEngine::inferCircumflex(int count, Tone tone) {
+    if (count < 2 || count >= kCapacity) return false;
+    int first = -1, last = -1;
+    for (int k = 0; k < count; ++k) {
+        if (!isVowelAscii(renderLetters_[k].base)) continue;
+        if (renderLetters_[k].mark != Mark::None) return false;
+        if (first < 0) first = k;
+        else if (k != last + 1) return false;
+        last = k;
+    }
+    if (first < 0) return false;
+    const int n = last - first + 1;
+    auto v = [&](int i) { return renderLetters_[first + i].base; };
+    int target = -1;
+    if (n == 1 && v(0) == 'e') target = first;                                              // ênh, êch
+    else if (n == 2 && v(1) == 'e' && (v(0) == 'i' || v(0) == 'y') && last < count - 1) target = first + 1;  // iên, yêt
+    else if (n == 2 && v(0) == 'u' && v(1) == 'e') target = first + 1;                      // uê, uênh, uêch
+    else if (n == 2 && v(0) == 'e' && v(1) == 'u') target = first;                          // êu
+    else if (n == 2 && v(0) == 'u' && v(1) == 'a' && last < count - 1) target = first + 1;  // uân, uât, uâng
+    else if (n == 3 && v(0) == 'u' && v(1) == 'y' && v(2) == 'e' && last < count - 1) target = first + 2;  // uyên, uyêt
+    else if (n == 3 && (v(0) == 'i' || v(0) == 'y') && v(1) == 'e' && v(2) == 'u') target = first + 1;     // iêu, yêu
+    else if (n == 3 && v(0) == 'u' && v(1) == 'a' && v(2) == 'y') target = first + 1;      // uây
+    else return false;
+    uint8_t buf[kCapacity];
+    for (int k = 0; k < count; ++k) buf[k] = letterClass(renderLetters_[k].base, renderLetters_[k].mark);
+    if (SyllableValidator::isValidSyllable(buf, count, tone, teencode)) return false;
+    buf[target] = letterClass(renderLetters_[target].base, Mark::Circumflex);
+    if (!SyllableValidator::isValidSyllable(buf, count, tone, teencode)) return false;
+    renderLetters_[target].mark = Mark::Circumflex;
+    return true;
 }
 
 // MARK: - Incremental parse

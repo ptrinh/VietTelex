@@ -54,7 +54,8 @@ enum {
     VTX_COLLISION_PREFERS_VI= 1u << 10,  /* collisionPrefersVietnamese (app default ON) */
     VTX_EAGER_ENGLISH_RESTORE=1u << 11,  /* eagerEnglishRestore (app: = autoRestore)    */
     VTX_RETRO_ENGLISH       = 1u << 12,  /* retroactiveEnglish (EXPERIMENTAL, OFF)          */
-    VTX_ENGLISH_BY_FREQUENCY= 1u << 13   /* englishByFrequency (EXPERIMENTAL, OFF)          */
+    VTX_ENGLISH_BY_FREQUENCY= 1u << 13,  /* englishByFrequency (EXPERIMENTAL, OFF)          */
+    VTX_AUTO_CIRCUMFLEX     = 1u << 14   /* autoCircumflex (OFF)                            */
 };
 /* Engine defaults (== Swift TelexEngine()): TEENCODE | ENGLISH_WORD_RESTORE. */
 #define VTX_ENGINE_DEFAULT_FLAGS (VTX_TEENCODE | VTX_ENGLISH_WORD_RESTORE)
@@ -164,6 +165,7 @@ Notes for the TIP:
 | eagerEnglishRestore | = autoRestore | `VTX_EAGER_ENGLISH_RESTORE` ("goog" not "gôg" mid-word; needs liveSpellCheck) |
 | retroactiveEnglish | OFF (experimental; shown only when contextualEnglish is ON) | `VTX_RETRO_ENGLISH` (inert without `VTX_CONTEXTUAL_ENGLISH`; needs `vtx_note_boundary` after every boundary char + `vtx_take_retro_correction` after every commit — see docs/DESIGN.md "Sửa ngược tiếng Anh") |
 | englishByFrequency | OFF (experimental; needs retroactiveEnglish in effect) | `VTX_ENGLISH_BY_FREQUENCY` (inert unless `VTX_RETRO_ENGLISH` is in effect). A sentence-initial word that is both a common English word and a rare Vietnamese syllable commits as English ("His car…"); when the next word shows the phrase is Vietnamese ("hí hửng", "hí hí") the engine hands back a retro edit with `flip_back = 1` that puts the Vietnamese word back. Integrators apply `flip_back` edits AUTOMATICALLY — even when retro edits are only offered (chip mode) and also when the boundary is Enter (apply before the Enter goes through) — after the same `expected` check |
+| autoCircumflex | OFF ("Tự thêm dấu mũ") | `VTX_AUTO_CIRCUMFLEX`. Render-only: once the word has a live tone and the plain rime is not a Vietnamese syllable while the circumflexed one is, the circumflex is shown ("vietj" -> việt, "nguyenx" -> nguyễn, "benhj" -> bệnh, "hues" -> huế, "luanj" -> luận; "quanr" -> quản stays). Parse state is untouched; keys with an English reading still restore at the boundary |
 | englishWordRestore | ON (not user-facing) | `VTX_ENGLISH_WORD_RESTORE` |
 
 App defaults as one mask:

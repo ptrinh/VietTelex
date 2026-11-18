@@ -144,6 +144,24 @@ int main(void) {
         EXPECT(vtx_is_empty(e));
         vtx_destroy(e);
     }
+    /* autoCircumflex (off by default): "vietj" -> "việt" only with VTX_AUTO_CIRCUMFLEX */
+    {
+        const uint16_t viet[] = {'v', 'i', 0x1EC7, 't'};
+        uint16_t buf[VTX_MAX_TEXT];
+        int on;
+        for (on = 0; on < 2; ++on) {
+            e = vtx_create();
+            EXPECT((vtx_get_flags(e) & VTX_AUTO_CIRCUMFLEX) == 0);
+            vtx_set_flags(e, VTX_FREE_MARKING | VTX_LIVE_SPELL_CHECK | VTX_ENGLISH_WORD_RESTORE |
+                             (on ? VTX_AUTO_CIRCUMFLEX : 0));
+            EXPECT(((vtx_get_flags(e) & VTX_AUTO_CIRCUMFLEX) != 0) == on);
+            for (i = 0; i < 5; ++i) vtx_feed(e, (uint32_t)"vietj"[i], &a);
+            n = vtx_composed(e, buf, VTX_MAX_TEXT);
+            if (on) EXPECT(eq16(buf, n, NULL, viet, 4));
+            else EXPECT(!eq16(buf, n, NULL, viet, 4));
+            vtx_destroy(e);
+        }
+    }
     printf("c abi smoke: %s\n", fails ? "FAIL" : "ok");
     return fails != 0;
 }

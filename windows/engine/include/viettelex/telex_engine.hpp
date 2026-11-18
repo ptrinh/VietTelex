@@ -91,6 +91,12 @@ public:
     /// flips it back through a RetroCorrection with flipBack = true. Inert unless
     /// retroactiveEnglishActive(). Off = one bool test per commit.
     bool englishByFrequency = false;
+    /// Swift `autoCircumflex` (issue #166, default OFF) — "Tự thêm dấu mũ": when the word
+    /// already has a live tone and the plain rime is not a Vietnamese syllable while the
+    /// circumflexed one is, render the circumflex ("vietj"/"viejt" -> việt, "nguyenx" ->
+    /// nguyễn, "benhj" -> bệnh, "keuf" -> kều, "hues" -> huế, "luanj" -> luận). Render-only:
+    /// parse state is untouched. Off = one bool test per render.
+    bool autoCircumflex = false;
 
     TelexEngine();
 
@@ -221,6 +227,7 @@ private:
     bool freezeKeepsTone_ = false;
     int pFreezeLetters_ = -1;    // letter count when the parse reached disabledAtCount_
     Tone lastEffTone_ = Tone::None;
+    bool inferredCircumflex_ = false;   // last render added a circumflex (autoCircumflex)
     bool upperToneKey_ = false;
     bool upperToneFrozen_ = false;   // word frozen by feed()'s upper-case tone rule — see Swift
     int initialsSplitAt_ = -1;       // initials suffix start ("PhuwowngTH", issue #138) — see Swift
@@ -360,6 +367,7 @@ private:
     bool eagerRestoreApplies(int n) const;
     void copyOut(int n);
     int render();
+    bool inferCircumflex(int count, Tone tone);
     void rebuildFrozenAware();
     void setCircumflex(int k);
     bool nucleusHasHornVowel(int end) const;

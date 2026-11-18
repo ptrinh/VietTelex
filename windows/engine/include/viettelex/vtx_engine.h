@@ -42,8 +42,10 @@ enum {
     VTX_EAGER_ENGLISH_RESTORE=1u << 11,  /* eagerEnglishRestore (app: = autoRestore)    */
     VTX_RETRO_ENGLISH       = 1u << 12,  /* retroactiveEnglish (EXPERIMENTAL, OFF; needs
                                             CONTEXTUAL_ENGLISH, inert without it)        */
-    VTX_ENGLISH_BY_FREQUENCY= 1u << 13   /* englishByFrequency (EXPERIMENTAL, OFF; inert
+    VTX_ENGLISH_BY_FREQUENCY= 1u << 13,  /* englishByFrequency (EXPERIMENTAL, OFF; inert
                                             unless RETRO_ENGLISH is in effect)           */
+    VTX_AUTO_CIRCUMFLEX     = 1u << 14   /* autoCircumflex (OFF): vietj -> việt, benhj ->
+                                            bệnh when the plain rime is not a syllable   */
 };
 /* Engine defaults (== Swift TelexEngine()): TEENCODE | ENGLISH_WORD_RESTORE. */
 #define VTX_ENGINE_DEFAULT_FLAGS (VTX_TEENCODE | VTX_ENGLISH_WORD_RESTORE)

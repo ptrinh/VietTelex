@@ -917,7 +917,7 @@ TEST(predict_ipc_payload) {
 TEST(predict_snapshot_mirror_bit) {
     size_t n = 0;
     const BoolKey* keys = boolKeys(&n);
-    CHECK(n >= 25 && n <= 32);
+    CHECK(n >= 25 && n <= 64);   // two snapshot words
     CHECK_EQ(std::string(keys[24].name), std::string("systemTextPrediction"));  // appended, never reordered
     CHECK(isSystemMirror(keys[24]));
     for (size_t i = 0; i < 24; ++i) CHECK(!isSystemMirror(keys[i]));

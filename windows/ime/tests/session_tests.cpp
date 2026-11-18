@@ -2950,3 +2950,19 @@ TEST(issue163_reopen_refused_in_console_is_logged) {
     CHECK(log.find("⌫ re-open: skipped (composition-only context") != std::string::npos);
     g163Log = nullptr;
 }
+
+// ---------------------------------------------------------------- Tự thêm dấu mũ (#166)
+// Settings::autoCircumflex reaches the engine: "vietj" types việt, "benhj" bệnh; off (the
+// default) leaves the old behaviour.
+TEST(session_auto_circumflex) {
+    for (OutputMode m : {OutputMode::Composition, OutputMode::InPlace}) {
+        Rig on(m);
+        on.settings.autoCircumflex = true;
+        on.apply();
+        on.type("vietj benhj luanj quanr ");
+        CHECK_EQ(on.text(), std::string("việt bệnh luận quản "));
+        Rig off(m);
+        off.type("vietj ");
+        CHECK(off.text() != std::string("việt "));
+    }
+}

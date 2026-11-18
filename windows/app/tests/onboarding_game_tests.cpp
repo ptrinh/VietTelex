@@ -227,11 +227,12 @@ TEST(onboarding_decisions) {
 TEST(onboarding_start_english_snapshot_bit) {
     size_t n = 0;
     const BoolKey* keys = boolKeys(&n);
-    CHECK(n <= 32);
-    CHECK_EQ(std::string(keys[n - 1].name), std::string("switchSound"));  // appended, never reordered
-    CHECK_EQ(std::string(keys[n - 2].name), std::string("startHidden"));
-    CHECK_EQ(std::string(keys[n - 3].name), std::string("startEnglish"));
-    CHECK_EQ(std::string(keys[n - 4].name), std::string("englishByFrequency"));
+    CHECK(n <= 64);
+    CHECK_EQ(std::string(keys[n - 1].name), std::string("autoCircumflex"));  // appended, never reordered
+    CHECK_EQ(std::string(keys[n - 2].name), std::string("switchSound"));
+    CHECK_EQ(std::string(keys[n - 3].name), std::string("startHidden"));
+    CHECK_EQ(std::string(keys[n - 4].name), std::string("startEnglish"));
+    CHECK_EQ(std::string(keys[n - 5].name), std::string("englishByFrequency"));
     Settings d;
     CHECK(!d.startEnglish);
     Settings s;
@@ -243,7 +244,7 @@ TEST(onboarding_start_english_snapshot_bit) {
     // A snapshot from a version before the bit existed (bool count one lower) reads as
     // "start in Vietnamese", whatever the stray high bit says.
     std::vector<uint8_t> ob = serialize(s);
-    ob[6] = static_cast<uint8_t>(n - 3);  // u32 magic, u16 version, u16 bool count (LE)
+    ob[6] = static_cast<uint8_t>(n - 4);  // u32 magic, u16 version, u16 bool count (LE)
     ob[7] = 0;
     Settings ro;
     CHECK(deserialize(ob.data(), ob.size(), ro) && !ro.startEnglish);

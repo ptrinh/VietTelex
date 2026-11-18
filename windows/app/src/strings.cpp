@@ -464,6 +464,9 @@ const Pair kStrings[] = {
     {L"Phát tiếng khi đổi Việt/Anh", L"Play a sound when switching Việt/Anh"},
     {L"Tiếng đi lên là tiếng Việt, đi xuống là tiếng Anh. Chỉ khi bạn tự đổi.",
      L"A rising tone means Vietnamese, a falling one English. Only when you switch."},
+    {L"Tự thêm dấu mũ", L"Auto-add circumflex"},
+    {L"Gõ vietj ra việt, benhj ra bệnh khi vần không mũ không tồn tại.",
+     L"Type vietj for việt when the plain vowel isn't a valid syllable."},
 };
 static_assert(sizeof(kStrings) / sizeof(kStrings[0]) == static_cast<size_t>(S::Count), "string table size");
 }  // namespace
