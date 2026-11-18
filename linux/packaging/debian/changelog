@@ -1,3 +1,16 @@
+viettelex (1.0.29) UNRELEASED; urgency=medium
+
+  * Tuỳ chọn mới "Tự thêm dấu mũ" (mặc định tắt, Kiểu gõ › Nâng cao): khi gõ
+    dấu thanh mà vần không có dấu mũ không tồn tại, bộ gõ tự thêm dấu mũ:
+    vietj ra việt, nguyenx ra nguyễn, benhj ra bệnh, luanj ra luận.
+  * ---
+  * New option "Auto-add circumflex" (off by default, Typing › Advanced): a
+    tone key on a rime that does not exist without the circumflex adds it
+    automatically: vietj gives việt, nguyenx gives nguyễn, benhj gives bệnh,
+    luanj gives luận.
+
+ -- VietTelex Maintainers <maintainers@viettelex.invalid>  Wed, 18 Nov 2026 19:30:00 +0700
+
 viettelex (1.0.28) UNRELEASED; urgency=medium
 
   * Gõ kéo dài sau ư/ơ giữ nguyên chữ a/e: uwfaaa ra ừaaa, vuwfaaa ra vừaaa,
