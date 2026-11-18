@@ -76,8 +76,8 @@
     "notes": "Gõ kéo dài sau ư/ơ giữ nguyên chữ a/e (vừaaa, mưaaaa); trong terminal ⌫ sau dấu cách mở lại từ vừa gõ để sửa dấu."
   },
   "android": {
-    "version": "1.6.13",
-    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.13/VietTelex-android-1.6.13.apk",
+    "version": "1.6.14",
+    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.14/VietTelex-android-1.6.14.apk",
     "play": "https://play.google.com/store/apps/details?id=com.viettelex.android"
   }
 }
