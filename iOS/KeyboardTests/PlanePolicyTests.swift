@@ -35,7 +35,8 @@ final class ClauseEndReturnTests: XCTestCase {
         (")", ")", false, ":)) — ) ở lại"),
         ("say", "\"", true, "nháy kép"),
         ("it", "'", true, "nháy đơn"),
-        ("note", ":", true, "note:"),
+        ("note", ":", false, "note: — : ở lại (18/11/2026, gõ :)) liền tay)"),
+        ("hi ", ":", false, ":)) — : ở lại"),
         ("a", ";", true, "a;"),
         ("2", ";", true, "; sau số vẫn về chữ"),
         ("2", "!", true, "! sau số vẫn về chữ"),
@@ -83,7 +84,7 @@ final class ClauseEndReturnTests: XCTestCase {
     /// Về chữ thì ký tự sau gõ ở plane chữ ("!!!" Tự động: về sau "!" đầu). Song sinh Android modeTable.
     static let modeTable: [(before: String, key: String, auto: Bool, always: Bool, why: String)] = [
         ("wow", "!", true, true, "!!! — ! đầu đã về chữ"),
-        ("hi ", ":", true, true, ":)) — : về chữ (Tự động / Luôn)"),
+        ("hi ", ":", false, true, ":)) — : Tự động ở lại, Luôn về chữ"),
         ("abc", "@", true, true, "@gmail — về chữ ngay"),
         ("a", "&", true, true, "a&b — về chữ ngay"),
         ("", "#", false, true, "#tag — Luôn về chữ ngay"),

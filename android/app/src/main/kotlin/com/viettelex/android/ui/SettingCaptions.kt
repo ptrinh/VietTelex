@@ -60,7 +60,7 @@ internal object SettingCaption {
     const val longPressSymbols = "Giữ a … l, z … m để gõ @ # \$ _ & - + ( ) …" // l10n-key
     const val holdShiftSymbols = "Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3." // l10n-key
     const val autoSpaceAfterPunct = "Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn)." // l10n-key
-    const val symbolReturn = "Tự động: sau , ? ! : ; & $ @ và dấu nháy (dấu chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu." // l10n-key
+    const val symbolReturn = "Tự động: sau , ? ! ; & $ @ và dấu nháy (dấu chấm, hai chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu." // l10n-key
     const val trackpadSpeed = "Giữ phím cách rồi kéo để di con trỏ; mức này chỉnh độ tăng tốc." // l10n-key
     const val swipeKeyCommandsAndroid = "Vuốt C, X, V, A, Z, Y lên: sao chép, cắt, dán, chọn hết, hoàn tác, làm lại." // l10n-key
     const val oneHandAndroid = "Thu bàn phím về một bên; giữ lâu icon con trỏ trên thanh gợi ý để bật/tắt." // l10n-key

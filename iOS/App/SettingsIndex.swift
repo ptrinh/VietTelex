@@ -289,7 +289,7 @@ enum SettingCaption {
     static let longPressSymbols = LK("Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …")
     static let holdShiftSymbols = LK("Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.")
     static let autoSpaceAfterPunct = LK("Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).")
-    static let symbolReturn = LK("Tự động: sau , ? ! : ; & $ @ và dấu nháy (dấu chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu.")
+    static let symbolReturn = LK("Tự động: sau , ? ! ; & $ @ và dấu nháy (dấu chấm, hai chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu.")
     static let trackpadSpeed = LK("Giữ phím cách rồi kéo để di con trỏ; mức này chỉnh độ tăng tốc.")
     static let swipeKeyCommandsIos = LK("Vuốt C, X, V lên quá hàng trên cùng: sao chép, cắt, dán (cần Toàn quyền).")
     static let oneHandIos = LK("Thu bàn phím về một bên; giữ lâu nút ☰ trên thanh gợi ý để bật/tắt nhanh.")

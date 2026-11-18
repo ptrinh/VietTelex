@@ -118,7 +118,8 @@ class PlanePolicyTest {
         Triple(")", ")", false),          // :)) — ) ở lại
         Triple("say", "\"", true),
         Triple("it", "'", true),
-        Triple("note", ":", true),
+        Triple("note", ":", false),       // : ở lại (18/11/2026, gõ :)) liền tay)
+        Triple("hi ", ":", false),
         Triple("a", ";", true),
         Triple("2", ";", true),
         Triple("2", "!", true),
@@ -186,7 +187,7 @@ class PlanePolicyTest {
     private data class ModeCase(val before: String, val key: String, val auto: Boolean, val always: Boolean, val why: String)
     private val modeTable = listOf(
         ModeCase("wow", "!", true, true, "!!! — ! đầu đã về chữ"),
-        ModeCase("hi ", ":", true, true, ":)) — : về chữ (Tự động / Luôn)"),
+        ModeCase("hi ", ":", false, true, ":)) — : Tự động ở lại, Luôn về chữ"),
         ModeCase("abc", "@", true, true, "@gmail — về chữ ngay"),
         ModeCase("a", "&", true, true, "a&b — về chữ ngay"),
         ModeCase("", "#", false, true, "#tag — Luôn về chữ ngay"),

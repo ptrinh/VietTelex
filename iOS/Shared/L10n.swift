@@ -1027,7 +1027,7 @@ enum L10n {
         "Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …": "Hold a … l, z … m for @ # $ _ & - + ( ) …",
         "Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.": "Hold ⇧ and tap a letter for the character in its corner: q w e → 1 2 3.",
         "Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).": "Adds a space after . , ? ! ; : (not in numbers, emails or links).",
-        "Tự động: sau , ? ! : ; & $ @ và dấu nháy (dấu chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu.": "Auto: after , ? ! : ; & $ @ and quotes (period and closing bracket stay). Always: after any symbol.",
+        "Tự động: sau , ? ! ; & $ @ và dấu nháy (dấu chấm, hai chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu.": "Auto: after , ? ! ; & $ @ and quotes (period, colon and closing bracket stay). Always: after any symbol.",
         "Giữ phím cách rồi kéo để di con trỏ; mức này chỉnh độ tăng tốc.": "Hold space and drag to move the cursor; this sets the acceleration.",
         "Vuốt C, X, V lên quá hàng trên cùng: sao chép, cắt, dán (cần Toàn quyền).": "Swipe C, X, V up past the top row: copy, cut, paste (needs Full Access).",
         "Thu bàn phím về một bên; giữ lâu nút ☰ trên thanh gợi ý để bật/tắt nhanh.": "Shrinks the keyboard to one side; long-press ☰ on the suggestion bar to toggle.",
