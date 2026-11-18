@@ -67,6 +67,8 @@ data class KeyboardSettings(
     var englishByFrequency: Boolean = false,
     /** Sửa dấu từ đã gõ xong (⌫ mở lại từ; phím dấu thanh nạp lại từ trước con trỏ) — mặc định BẬT. */
     var reEditWords: Boolean = true,
+    /** "Tự thêm dấu mũ" (issue #166) — engine `autoCircumflex`, mặc định TẮT (tắt ⇒ một phép thử Bool mỗi lần render). */
+    var autoCircumflex: Boolean = false,
     /** Gõ vuốt (thử nghiệm) — mặc định TẮT; tắt ⇒ không dựng template, không ghi checkpoint. */
     var swipeTyping: Boolean = false,
     /**
@@ -212,6 +214,7 @@ data class KeyboardSettings(
             s.retroEnglishAuto = b(Keys.RETRO_ENGLISH_AUTO, s.retroEnglishAuto)
             s.englishByFrequency = b(Keys.ENGLISH_BY_FREQUENCY, s.englishByFrequency)
             s.reEditWords = b(Keys.RE_EDIT_WORDS, s.reEditWords)
+            s.autoCircumflex = b(Keys.AUTO_CIRCUMFLEX, s.autoCircumflex)
             s.swipeTyping = b(Keys.SWIPE_TYPING, s.swipeTyping)
             s.swipeEnglish = b(Keys.SWIPE_ENGLISH, s.swipeEnglish)
             s.swipeFuto = b(Keys.SWIPE_FUTO, s.swipeFuto)

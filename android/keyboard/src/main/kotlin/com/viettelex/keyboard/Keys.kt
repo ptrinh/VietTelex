@@ -31,6 +31,11 @@ object Keys {
      */
     const val ENGLISH_BY_FREQUENCY = "englishByFrequency"
     const val RE_EDIT_WORDS = "reEditWords"
+    /**
+     * "Tự thêm dấu mũ" (Bool, mặc định TẮT, issue #166): engine `autoCircumflex` — vietj → việt,
+     * benhj → bệnh khi vần không mũ không tồn tại. Cùng tên key với iOS/macOS.
+     */
+    const val AUTO_CIRCUMFLEX = "autoCircumflex"
     const val AUTO_FIX_ADJACENT = "autoFixAdjacent"
     const val TEENCODE = "teencode"
     /** Tự động viết hoa đầu câu (Bool, mặc định BẬT) — tắt ⇒ không auto-shift, không đọc context. */
@@ -76,7 +81,7 @@ object Keys {
 
     /** Key ảnh hưởng engine/EngineBridge — đổi lúc bàn phím đang mở thì áp ngay. */
     val ENGINE_KEYS = setOf(SIMPLE_TELEX, FREE_MARKING, QUICK_TELEX, MODERN_TONE, CONTEXTUAL_ENGLISH, RETRO_ENGLISH_AUTO, ENGLISH_BY_FREQUENCY,
-        AUTO_FIX_ADJACENT, TEENCODE, AUTO_RESTORE, LIVE_SPELL_CHECK, SHORTCUTS_ENABLED, SHORTCUTS, VNI_MODE)
+        AUTO_FIX_ADJACENT, TEENCODE, AUTO_RESTORE, LIVE_SPELL_CHECK, AUTO_CIRCUMFLEX, SHORTCUTS_ENABLED, SHORTCUTS, VNI_MODE)
     const val SHOW_SUGGESTIONS = "showSuggestions"
     /**
      * Chip "Thêm dấu" hiện TỰ ĐỘNG trên thanh gợi ý (Bool, mặc định TẮT — ưu tiên gõ trơn):

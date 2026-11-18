@@ -175,7 +175,7 @@ object TouchLogFormat {
             "typing: method=$method free=${b(s.freeMarking)} modern=${b(s.modernTone)} quick=${b(s.quickTelex)}" +
                 " spell=${b(s.liveSpellCheck)} restore=${b(s.autoRestore)} teen=${b(s.teencode)}" +
                 " ctxEn=${b(s.contextualEnglish)} retroEn=${b(s.retroEnglishAuto)} freqEn=${b(s.englishByFrequency)}" +
-                " reEdit=${b(s.reEditWords)} adjFix=${b(s.autoFixAdjacent)} autoCorrect=${b(s.autoCorrect)}" +
+                " reEdit=${b(s.reEditWords)} hat=${b(s.autoCircumflex)} adjFix=${b(s.autoFixAdjacent)} autoCorrect=${b(s.autoCorrect)}" +
                 " caps=${b(s.autoCapitalize)} spaceAfterPunct=${b(s.autoSpaceAfterPunct)} hwTelex=${b(s.hardwareTelex)}",
             "suggest: on=${b(s.showSuggestions)} count=${s.suggestionCount} filter=${b(s.filterSensitive)}" +
                 " learn=${b(s.learnWords)} noSuggestFields=${b(s.suggestInNoSuggestFields)}" +

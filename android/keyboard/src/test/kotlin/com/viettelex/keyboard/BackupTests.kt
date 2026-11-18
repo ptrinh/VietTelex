@@ -72,11 +72,12 @@ class BackupTests {
         val p = BackupCodec.decode(fixture("backup-ios-v1"))
         assertEquals("ios", p.platform)
         assertEquals(Instant.parse("2026-09-27T08:00:00Z"), p.createdAt)
-        assertEquals(49, p.settings!!.size)             // emojiSuggest/pasteButton chỉ iOS, bị bỏ qua; +largeKeys (04/11); +englishByFrequency (05/11); +keyboardDismissButton (08/11); +zodiacSign, prideFlag (11/2026)
+        assertEquals(50, p.settings!!.size)             // emojiSuggest/pasteButton chỉ iOS, bị bỏ qua; +autoCircumflex (18/11/2026); +largeKeys (04/11); +englishByFrequency (05/11); +keyboardDismissButton (08/11); +zodiacSign, prideFlag (11/2026)
         assertEquals("trans", p.settings!![PrideFlag.KEY])   // Tự hào: chỉ id lá cờ, cùng khoá iOS
         assertEquals("leo", p.settings!![ZodiacSign.KEY])   // Cung hoàng đạo: chỉ id cung, cùng khoá iOS
         assertEquals(false, p.settings!![Keys.KEYBOARD_DISMISS_BUTTON])   // "Nút ẩn bàn phím" — cùng khoá iOS
         assertEquals(false, p.settings!![Keys.ENGLISH_BY_FREQUENCY])   // "Đoán từ trùng theo tần suất" — cùng khoá iOS
+        assertEquals(false, p.settings!![Keys.AUTO_CIRCUMFLEX])   // "Tự thêm dấu mũ" — cùng khoá iOS
         assertEquals(false, p.settings!![Keys.LARGE_KEYS])   // "Phím to" — cùng khoá iOS
         assertEquals(true, p.settings!![Keys.HOLD_SHIFT_SYMBOLS])   // "Giữ Shift để gõ số và ký hiệu"
         assertEquals(KeyStyleStoreTests.GOLDEN, p.settings!![Keys.KEY_STYLES])   // chuỗi chuẩn trùng iOS
@@ -147,7 +148,7 @@ class BackupTests {
             "keyboardTransparency" to 250, "keyLabelTransparency" to 35,
             BackupPrefs.SHORTCUTS_KEY to "# VietTelex — bảng gõ tắt\nko: không\n")
         val p = BackupPrefs.snapshot({ prefs[it] }, listOf(TemplateItem("", "a")), null)
-        assertEquals(96, p.settings!!.size)   // +swipeSound (12/11/2026); +zodiacSign, +prideFlag (11/2026); +keyboardDismissButton (08/11); +symbolReturn (06/11); +englishByFrequency (05/11); +largeKeys (04/11); +systemMaterialYou, +suggestionInk (30/10); +trackpadSpeed (29/10); +27 Bạn đồng hành: sinh nhật 2, tên 11, kiểu vẽ 11, vị trí & cỡ 3 (27/10); +retroactiveEnglish (23/10); +splitKeyboard; 6 khoá KeyStyle chung → 1 keyStyles (18/10/2026); +keyEffect, +holdShiftSymbols, +swipeTrail, +keyboardBuddy (19/10)
+        assertEquals(97, p.settings!!.size)   // +autoCircumflex (18/11/2026); +swipeSound (12/11/2026); +zodiacSign, +prideFlag (11/2026); +keyboardDismissButton (08/11); +symbolReturn (06/11); +englishByFrequency (05/11); +largeKeys (04/11); +systemMaterialYou, +suggestionInk (30/10); +trackpadSpeed (29/10); +27 Bạn đồng hành: sinh nhật 2, tên 11, kiểu vẽ 11, vị trí & cỡ 3 (27/10); +retroactiveEnglish (23/10); +splitKeyboard; 6 khoá KeyStyle chung → 1 keyStyles (18/10/2026); +keyEffect, +holdShiftSymbols, +swipeTrail, +keyboardBuddy (19/10)
         assertEquals("simple", p.settings!![Keys.SWIPE_TRAIL])   // hiệu ứng nét vuốt: mặc định Đơn giản
         assertEquals("none", p.settings!![Keys.SWIPE_SOUND])   // âm thanh nét vuốt: mặc định Tắt
         assertEquals("off", p.settings!![Keys.KEYBOARD_BUDDY])   // bạn đồng hành: mặc định Tắt
@@ -168,6 +169,7 @@ class BackupTests {
         assertEquals(false, p.settings!![Keys.NUMBER_ROW_FULL_HEIGHT])   // mặc định tắt
         assertEquals(false, p.settings!![Keys.LARGE_KEYS])   // "Phím to": mặc định tắt
         assertEquals(false, p.settings!![Keys.ENGLISH_BY_FREQUENCY])   // thử nghiệm: mặc định tắt
+        assertEquals(false, p.settings!![Keys.AUTO_CIRCUMFLEX])   // "Tự thêm dấu mũ": mặc định tắt
         assertEquals(true, p.settings!![Keys.TEXT_TOOLS_ENABLED])   // chưa đặt ⇒ BẬT (mặc định)
         assertEquals("vi", p.settings!![Keys.UI_LANGUAGE])   // chưa chọn ⇒ mặc định Tiếng Việt
         assertEquals(100, p.settings!!["keyboardTransparency"])   // kẹp 0…100

@@ -21,6 +21,8 @@ class FeatureSearchL10nTest {
             assertTrue(lang, FeaturePage.Phim in pages("một tay"))
             assertTrue(lang, FeaturePage.Phim in pages("one-handed"))
             assertTrue(lang, FeaturePage.RiengTu in pages("backup"))
+            assertTrue(lang, FeaturePage.SuaLoi in pages("dau mu"))
+            assertTrue(lang, FeaturePage.SuaLoi in pages("circumflex"))
         }
     }
 

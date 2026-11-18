@@ -174,6 +174,21 @@ class EngineBridgeTests {
         assertEquals("thík ", type("thiks ", settings = s))
     }
 
+    /** "Tự thêm dấu mũ" (issue #166): TẮT mặc định; bật ⇒ vietj → việt qua bridge. */
+    @Test fun testAutoCircumflexToggle() {
+        val s = KeyboardSettings()
+        assertFalse(s.autoCircumflex)
+        assertEquals("autoCircumflex", Keys.AUTO_CIRCUMFLEX)            // cùng key macOS/iOS
+        assertTrue(Keys.AUTO_CIRCUMFLEX in Keys.ENGINE_KEYS)
+        assertTrue(BackupSettings.all.any { it.key == Keys.AUTO_CIRCUMFLEX })
+        assertTrue(KeyboardSettings.load { if (it == Keys.AUTO_CIRCUMFLEX) true else null }.autoCircumflex)
+        assertFalse(type("vietj benhj ", settings = s).contains("ệ"))
+        s.autoCircumflex = true
+        assertEquals("việt bệnh nguyễn ", type("vietj benhj nguyenx ", settings = s))
+        assertEquals("quản ", type("quanr ", settings = s))
+        assertEquals("việt", EngineBridge(s).composeTrial("vietj"))
+    }
+
     @Test fun testDefaultsMatchIOS() {
         val s = KeyboardSettings()
         assertTrue(s.simpleTelex && s.freeMarking && s.liveSpellCheck && s.autoRestore)

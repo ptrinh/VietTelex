@@ -43,6 +43,7 @@ object BackupSettings {
         Spec(Keys.RETRO_ENGLISH_AUTO, SettingKind.Bool(false)),
         Spec(Keys.ENGLISH_BY_FREQUENCY, SettingKind.Bool(false)),
         Spec(Keys.RE_EDIT_WORDS, SettingKind.Bool(true)),
+        Spec(Keys.AUTO_CIRCUMFLEX, SettingKind.Bool(false)),
         Spec(Keys.AUTO_FIX_ADJACENT, SettingKind.Bool(true)),
         Spec(Keys.TEENCODE, SettingKind.Bool(false)),
         Spec(Keys.AUTO_RESTORE, SettingKind.Bool(true)),

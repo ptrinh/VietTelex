@@ -28,6 +28,7 @@ internal object SettingCaption {
     // Sửa lỗi & gợi ý
     const val liveSpellCheck = "Ngừng thêm dấu ngay khi từ không thể là tiếng Việt (google, github)." // l10n-key
     const val reEditWord = "Thêm dấu cho từ đã gõ: toan + s → toán." // l10n-key
+    const val autoCircumflex = "Gõ vietj ra việt, benhj ra bệnh khi vần không mũ không tồn tại." // l10n-key
     const val autoFixAdjacent = "Gợi ý từ đúng khi bạn lỡ chạm phím bên cạnh: ohims → phím." // l10n-key
     const val smartTouch = "Chạm sát mép hai phím thì chọn phím hợp với chữ đang gõ." // l10n-key
     const val autoCorrect = "Khi gõ dấu cách, sửa từ chạm nhầm (tpoi → tôi); ⌫ ngay sau để trả lại." // l10n-key
@@ -114,7 +115,7 @@ internal object SettingCaption {
         keySoundStylesAndroid, keySoundVolumeAndroid, customSound,
         vni, autoCapitalize, simpleTelex, freeMarking, quickTelex, modernTone,
         teencode, profileHint, customProfile, spaceSwipeLanguage, userDictionary, autoRestore,
-        contextualEnglish, retroEnglish, englishByFrequency, vniMixedNote, liveSpellCheck, reEditWord, autoFixAdjacent,
+        contextualEnglish, retroEnglish, englishByFrequency, vniMixedNote, liveSpellCheck, reEditWord, autoCircumflex, autoFixAdjacent,
         smartTouch, autoCorrect, adjacentFooter, showSuggestions, suggestionCount, keyboardDismissButton, suggestInNoSuggestFields, numberChips,
         mathResults, addTones, filterSensitive, swipeTyping, swipeEnglish, swipeFuto,
         swipePractice, shortcuts, templates, textTools, numberRow, numberRowFullHeight,

@@ -98,6 +98,17 @@ class TelexEngine {
     val englishByFrequencyActive: Boolean get() = englishByFrequency && retroactiveEnglishActive
 
     /**
+     * Tự thêm dấu mũ (Swift `autoCircumflex`, issue #166): khi từ ĐÃ có phím thanh mà vần không
+     * mũ không tồn tại trong tiếng Việt, còn vần có mũ thì hợp lệ, hiện luôn dấu mũ — "vietj"/
+     * "viejt" → việt, "nguyenx" → nguyễn, "benhj" → bệnh, "keuf" → kều, "hues" → huế, "luanj" →
+     * luận, "xuats" → xuất. Bốn nhóm vần: iê/yê/uyê, ê trước nh/ch/u, uê, uâ (sau "qu" thì vần
+     * không mũ là từ thật — quan, quát, què — nên giữ nguyên). Chỉ là một bước ở khâu HIỂN THỊ
+     * ([render]), trạng thái parse không đổi: gõ tiếp "ee"/"aa", xoá, huỷ thanh vẫn y như cũ.
+     * Tắt (mặc định) = không đổi gì; chi phí khi tắt: một phép thử Boolean mỗi lần render.
+     */
+    var autoCircumflex = false
+
+    /**
      * The last committed word in the current phrase was Vietnamese (read only by the frequency
      * rule: a colliding word right after Vietnamese stays Vietnamese — "sao í", "cho con bú").
      * Sentence punctuation / newline / [resetContext] clear it.
@@ -164,6 +175,9 @@ class TelexEngine {
     // Letter count when the parse reached raw index disabledAtCount (-1 before) — see Swift.
     private var pFreezeLetters = -1
     private var lastEffTone = T.NONE
+    // Lần render gần nhất có tự thêm dấu mũ ([autoCircumflex]). Đọc ở ranh giới từ.
+    private var inferredCircumflex = false
+    private val circBuf = IntArray(CAPACITY)     // inferCircumflex scratch (Swift temporary allocation)
     private var upperToneKey = false
     // Word frozen by feed()'s upper-case tone rule (disabledAtCount = 0) — see Swift.
     private var upperToneFrozen = false
@@ -205,6 +219,7 @@ class TelexEngine {
         e.collisionPrefersVietnamese = collisionPrefersVietnamese
         e.retroactiveEnglish = retroactiveEnglish
         e.englishByFrequency = englishByFrequency; e.previousWordVietnamese = previousWordVietnamese
+        e.autoCircumflex = autoCircumflex; e.inferredCircumflex = inferredCircumflex
         e.retroHistory.clear(); for (w in retroHistory) e.retroHistory.add(w.copy())
         e.retroGap = retroGap; e.retroPending = retroPending; e.retroPendingPicks = retroPendingPicks
         raw.copyInto(e.raw); e.rawCount = rawCount; e.overflowed = overflowed
@@ -532,6 +547,10 @@ class TelexEngine {
         // tiếng Việt (rồi từ trước được lật lại ở retroRecord), trước mọi luật khôi phục Anh.
         if (englishByFrequency && frequencyKeepsVietnamese()) return false
         if (wordGlue != 0 && glueRestores()) return true   // "my_var", "100W" — see Swift
+        // Tự thêm dấu mũ biến một âm tiết SAI (trước đây luôn được trả về phím gốc) thành âm
+        // tiết đúng, nên bảng collision chưa biết các từ này: phím gốc có cách đọc tiếng Anh
+        // ("diets", "hues") thì trả về phím gốc như trước khi có tính năng.
+        if (inferredCircumflex && rawHasEnglishReading()) return true
         // Đuôi -k (ták/ák/rík) không thắng bảng collision (issue #127) — song sinh Swift.
         if (rawIsEnglishCollision() && !(collisionPrefersVietnamese && composedIsValidSyllable() && !composedEndsWithK())) return true
         if (upperToneKey || rawIsEnglishException() ||
@@ -1573,6 +1592,13 @@ class TelexEngine {
             effTone = T.NONE
             toneIdx = -1
         }
+        // Tự thêm dấu mũ (issue #166): sau khi biết thanh nào còn hiệu lực. Mũ vừa thêm là
+        // nguyên âm có dấu duy nhất của vần nên thanh đặt lại lên nó.
+        inferredCircumflex = false
+        if (autoCircumflex && effTone != T.NONE && toneScope == count && inferCircumflex(count, effTone)) {
+            inferredCircumflex = true
+            toneIdx = toneVowelIndex(toneScope)
+        }
         val target = if (toneIdx >= 0) toneIdx else maxOf(0, count - 1)
         for (j in 0 until pToneKeyCount) rawLetter[toneKeys[j]] = target
         lastEffTone = effTone
@@ -1583,6 +1609,48 @@ class TelexEngine {
             scratch[k] = scalar
         }
         return count
+    }
+
+    /**
+     * Tự thêm dấu mũ — xem [autoCircumflex]. Đọc/ghi rBase/rMark[0 until count]. Trả về true khi
+     * đã đặt mũ. Điều kiện: đúng MỘT cụm nguyên âm, chưa chữ nào trong cụm mang dấu, cụm thuộc
+     * danh sách dưới; âm tiết không mũ KHÔNG hợp lệ với thanh này còn âm tiết có mũ thì hợp lệ
+     * (validator quyết định, nên "quan", "què", "xẻng", "séc" không bị đụng tới).
+     */
+    private fun inferCircumflex(count: Int, tone: Int): Boolean {
+        if (count < 2 || count >= CAPACITY) return false
+        var first = -1
+        var last = -1
+        for (k in 0 until count) {
+            if (!isVowelAscii(rBase[k])) continue
+            if (rMark[k] != Mark.NONE) return false
+            if (first < 0) first = k else if (k != last + 1) return false
+            last = k
+        }
+        if (first < 0) return false
+        val n = last - first + 1
+        val a = 'a'.code; val e = 'e'.code; val i = 'i'.code; val u = 'u'.code; val y = 'y'.code
+        val v0 = rBase[first]
+        val v1 = if (n >= 2) rBase[first + 1] else -1
+        val v2 = if (n >= 3) rBase[first + 2] else -1
+        val target = when {
+            n == 1 && v0 == e -> first                                              // ênh, êch
+            n == 2 && v1 == e && (v0 == i || v0 == y) && last < count - 1 -> first + 1  // iên, yêt…
+            n == 2 && v0 == u && v1 == e -> first + 1                               // uê, uênh, uêch
+            n == 2 && v0 == e && v1 == u -> first                                   // êu
+            n == 2 && v0 == u && v1 == a && last < count - 1 -> first + 1           // uân, uât, uâng
+            n == 3 && v0 == u && v1 == y && v2 == e && last < count - 1 -> first + 2   // uyên, uyêt
+            n == 3 && (v0 == i || v0 == y) && v1 == e && v2 == u -> first + 1       // iêu, yêu
+            n == 3 && v0 == u && v1 == a && v2 == y -> first + 1                    // uây
+            else -> return false
+        }
+        val buf = circBuf
+        for (k in 0 until count) buf[k] = Tables.letterClass(rBase[k], rMark[k])
+        if (SyllableValidator.isValidSyllable(buf, count, tone, teencode)) return false
+        buf[target] = Tables.letterClass(rBase[target], Mark.CIRCUMFLEX)
+        if (!SyllableValidator.isValidSyllable(buf, count, tone, teencode)) return false
+        rMark[target] = Mark.CIRCUMFLEX
+        return true
     }
 
     // MARK: - Incremental parse

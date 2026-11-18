@@ -231,6 +231,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         e.modernTone = settings.modernTone
         e.teencode = settings.teencode
         e.vniMode = settings.vniMode
+        e.autoCircumflex = settings.autoCircumflex
         if (contextual) {
             e.contextualEnglish = settings.contextualEnglish
             // Cả hai chế độ (mời / tự áp) cần quyết định của engine; contextualEnglish tắt ⇒ không gì cả.

@@ -272,6 +272,7 @@ class EmojiSearchSession(settings: KeyboardSettings = KeyboardSettings()) {
         quickTelex = settings.quickTelex
         modernTone = settings.modernTone
         teencode = settings.teencode
+        autoCircumflex = settings.autoCircumflex
     }
     private val committed = StringBuilder()
 

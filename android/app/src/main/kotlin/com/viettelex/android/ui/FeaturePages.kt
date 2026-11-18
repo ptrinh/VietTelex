@@ -128,6 +128,7 @@ internal data class FeatureSearchEntry(
         val all = listOf(
             FeatureSearchEntry("Kiểm tra chính tả khi gõ", "spell check", FeaturePage.SuaLoi), // l10n-key
             FeatureSearchEntry("Sửa dấu từ đã gõ", "sửa dấu con trỏ backspace", FeaturePage.SuaLoi), // l10n-key
+            FeatureSearchEntry("Tự thêm dấu mũ", "dấu mũ circumflex viet việt ê â mũ tự động auto hat", FeaturePage.SuaLoi), // l10n-key
             FeatureSearchEntry("Gợi ý sửa lỗi chạm trượt", "chạm trượt phím bên cạnh adjacent typo gợi ý sửa", FeaturePage.SuaLoi), // l10n-key
             FeatureSearchEntry("Chọn phím thông minh", "chạm trượt smart touch thử nghiệm experimental", FeaturePage.SuaLoi), // l10n-key
             FeatureSearchEntry("Tự sửa từ gõ sai", "autocorrect sửa lỗi chạm trượt thử nghiệm experimental", FeaturePage.SuaLoi), // l10n-key
@@ -477,6 +478,8 @@ private fun SuaLoiPage(onBack: () -> Unit) {
         BoolToggle(Keys.LIVE_SPELL_CHECK, Prefs.D.liveSpellCheck, tr("Kiểm tra chính tả khi gõ"), tr(SettingCaption.liveSpellCheck))
         RowDivider()
         BoolToggle(Keys.RE_EDIT_WORDS, Prefs.D.reEditWords, tr("Sửa dấu từ đã gõ"), tr(SettingCaption.reEditWord))
+        RowDivider()
+        BoolToggle(Keys.AUTO_CIRCUMFLEX, Prefs.D.autoCircumflex, tr("Tự thêm dấu mũ"), tr(SettingCaption.autoCircumflex))
     }
     // Phụ thuộc (SETTINGS-CLEANUP-SPEC §6): mục cha ở nhóm/trang khác ⇒ mờ + lý do; cùng nhóm ⇒ ẩn.
     val vni by rememberBoolPref(Keys.VNI_MODE, Prefs.D.vniMode)
