@@ -933,7 +933,7 @@ object L10nTable {
         put("Giữ a … l, z … m để gõ @ # \$ _ & - + ( ) …", "Hold a … l, z … m for @ # \$ _ & - + ( ) …")
         put("Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.", "Hold ⇧ and tap a letter for the character in its corner: q w e → 1 2 3.")
         put("Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).", "Adds a space after . , ? ! ; : (not in numbers, emails or links).")
-        put("Tự động: sau , ? ! ; & $ @ và dấu nháy (dấu chấm, hai chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu.", "Auto: after , ? ! ; & $ @ and quotes (period, colon and closing bracket stay). Always: after any symbol.")
+        put("Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu.", "Auto: after , ? ! ; & $ @ and quotes; . : ) stay. Always: after any symbol.")
         put("Giữ phím cách rồi kéo để di con trỏ; mức này chỉnh độ tăng tốc.", "Hold space and drag to move the cursor; this sets the acceleration.")
         put("Vuốt C, X, V, A, Z, Y lên: sao chép, cắt, dán, chọn hết, hoàn tác, làm lại.", "Swipe C, X, V, A, Z, Y up: copy, cut, paste, select all, undo, redo.")
         put("Thu bàn phím về một bên; giữ lâu icon con trỏ trên thanh gợi ý để bật/tắt.", "Shrinks the keyboard to one side; long-press the cursor icon on the bar to toggle.")
