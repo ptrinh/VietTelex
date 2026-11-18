@@ -198,6 +198,15 @@ public struct TelexEngine {
     /// `englishByFrequency` is actually in effect.
     public var englishByFrequencyActive: Bool { englishByFrequency && retroactiveEnglishActive }
 
+    /// Tự thêm dấu mũ (issue #166): khi từ ĐÃ có phím thanh mà vần không mũ không tồn tại trong
+    /// tiếng Việt, còn vần có mũ thì hợp lệ, hiện luôn dấu mũ — "vietj"/"viejt" → việt,
+    /// "nguyenx" → nguyễn, "benhj" → bệnh, "keuf" → kều, "hues" → huế, "luanj" → luận,
+    /// "xuats" → xuất. Bốn nhóm vần: iê/yê/uyê, ê trước nh/ch/u, uê, uâ (sau "qu" thì vần
+    /// không mũ là từ thật — quan, quát, què — nên giữ nguyên). Chỉ là một bước ở khâu HIỂN THỊ
+    /// (`render`), trạng thái parse không đổi: gõ tiếp "ee"/"aa", xoá, huỷ thanh vẫn y như cũ.
+    /// Tắt (mặc định) = không đổi gì; chi phí khi tắt: một phép thử Bool mỗi lần render.
+    public var autoCircumflex = false
+
     /// Ngưỡng luật tần suất (chỉnh trên mô phỏng gõ câu trộn, tập val — docs/REGRESSION.md).
     static let frequencyVietnameseFloor: UInt8 = 140
     static let frequencyMargin: UInt8 = 45
@@ -331,6 +340,9 @@ public struct TelexEngine {
     // Effective tone of the last render (after the stop-coda drop) — the composed
     // word's tone, used by the zero-alloc boundary validation.
     private var lastEffTone: Tone = .none
+
+    // Lần render gần nhất có tự thêm dấu mũ (`autoCircumflex`). Đọc ở ranh giới từ.
+    private var inferredCircumflex = false
 
     // True when a tone key (s f r x j, or z) was CONSUMED as a tone while typed
     // UPPERCASE. In a mixed-case word that is an English/code signal ("SaaS": the
@@ -1059,6 +1071,10 @@ public struct TelexEngine {
         // Glued to a code separator or a number (see `noteGlue`): "my_var" must not
         // commit "my_vả", "100W" not "100Ư".
         if wordGlue != 0, glueRestores() { return true }
+        // Tự thêm dấu mũ biến một âm tiết SAI (trước đây luôn được trả về phím gốc) thành âm
+        // tiết đúng, nên bảng collision chưa biết các từ này: phím gốc có cách đọc tiếng Anh
+        // ("diets", "hues") thì trả về phím gốc như trước khi có tính năng.
+        if inferredCircumflex, rawHasEnglishReading() { return true }
         if rawIsEnglishCollision(),
            !(collisionPrefersVietnamese && composedIsValidSyllable() && !composedEndsWithK()) { return true }
         // `isTeencodeKeep()` runs AFTER the English table above on purpose: the dictionary
@@ -2573,6 +2589,14 @@ public struct TelexEngine {
             effTone = .none
             toneIdx = -1
         }
+        // Tự thêm dấu mũ (issue #166): sau khi biết thanh nào còn hiệu lực. Mũ vừa thêm là
+        // nguyên âm có dấu duy nhất của vần nên thanh đặt lại lên nó.
+        inferredCircumflex = false
+        if autoCircumflex, effTone != .none, toneScope == count,
+           inferCircumflex(count, tone: effTone) {
+            inferredCircumflex = true
+            toneIdx = toneVowelIndex(toneScope)
+        }
         let target = toneIdx >= 0 ? toneIdx : max(0, count - 1)
         for j in 0..<pToneKeyCount { rawLetter[toneKeys[j]] = target }
         lastEffTone = effTone
@@ -2584,6 +2608,60 @@ public struct TelexEngine {
             scratch[k] = scalar
         }
         return count
+    }
+
+    /// Tự thêm dấu mũ — xem `autoCircumflex`. Đọc/ghi `renderLetters[0..<count]`. Trả về true
+    /// khi đã đặt mũ. Điều kiện: đúng MỘT cụm nguyên âm, chưa chữ nào trong cụm mang dấu, cụm
+    /// thuộc danh sách dưới; âm tiết không mũ KHÔNG hợp lệ với thanh này còn âm tiết có mũ thì
+    /// hợp lệ (validator quyết định, nên "quan", "què", "xẻng", "séc" không bị đụng tới).
+    private mutating func inferCircumflex(_ count: Int, tone: Tone) -> Bool {
+        guard count >= 2, count < Self.capacity else { return false }
+        var first = -1, last = -1
+        for k in 0..<count where isVowelAscii(renderLetters[k].base) {
+            if renderLetters[k].mark != .none { return false }
+            if first < 0 { first = k } else if k != last + 1 { return false }
+            last = k
+        }
+        guard first >= 0 else { return false }
+        let n = last - first + 1
+        @inline(__always) func v(_ i: Int) -> UInt8 { renderLetters[first + i].base }
+        let a = UInt8(ascii: "a"), e = UInt8(ascii: "e"), i = UInt8(ascii: "i")
+        let u = UInt8(ascii: "u"), y = UInt8(ascii: "y")
+        var target = -1
+        switch n {
+        case 1 where v(0) == e:                                    // ênh, êch
+            target = first
+        case 2 where v(1) == e && (v(0) == i || v(0) == y) && last < count - 1:   // iên, yêt…
+            target = first + 1
+        case 2 where v(0) == u && v(1) == e:                       // uê, uênh, uêch
+            target = first + 1
+        case 2 where v(0) == e && v(1) == u:                       // êu
+            target = first
+        case 2 where v(0) == u && v(1) == a && last < count - 1:   // uân, uât, uâng
+            target = first + 1
+        case 3 where v(0) == u && v(1) == y && v(2) == e && last < count - 1:   // uyên, uyêt
+            target = first + 2
+        case 3 where (v(0) == i || v(0) == y) && v(1) == e && v(2) == u:   // iêu, yêu
+            target = first + 1
+        case 3 where v(0) == u && v(1) == a && v(2) == y:          // uây
+            target = first + 1
+        default:
+            return false
+        }
+        let tc = teencode
+        let ok: Bool = withUnsafeTemporaryAllocation(of: UInt8.self, capacity: Self.capacity) { buf in
+            for k in 0..<count {
+                buf[k] = Tables.letterClass(base: renderLetters[k].base, mark: renderLetters[k].mark)
+            }
+            if SyllableValidator.isValidSyllable(classes: buf, count: count, tone: tone, teencode: tc) {
+                return false
+            }
+            buf[target] = Tables.letterClass(base: renderLetters[target].base, mark: .circumflex)
+            return SyllableValidator.isValidSyllable(classes: buf, count: count, tone: tone, teencode: tc)
+        }
+        guard ok else { return false }
+        renderLetters[target].mark = .circumflex
+        return true
     }
 
     // MARK: - Incremental parse (one fold step per key)
