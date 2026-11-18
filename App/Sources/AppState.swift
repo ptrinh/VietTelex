@@ -62,6 +62,7 @@ final class AppState: @unchecked Sendable {
         static let liveSpellCheck = "liveSpellCheck"
         static let simpleTelex = "simpleTelex"
         static let teencode = "teencode"
+        static let autoCircumflex = "autoCircumflex"   // "Tự thêm dấu mũ" (issue #166)
         static let quickTelex = "quickTelex"
         static let vniMode = "vniMode"
         static let contextualEnglish = "contextualEnglish"
@@ -151,6 +152,8 @@ final class AppState: @unchecked Sendable {
         _liveSpellCheck = (defaults.object(forKey: Key.liveSpellCheck) as? Bool) ?? true
         _simpleTelex = (defaults.object(forKey: Key.simpleTelex) as? Bool) ?? false
         _teencode = (defaults.object(forKey: Key.teencode) as? Bool) ?? false
+        // "Tự thêm dấu mũ" (issue #166, 18/11/2026): mặc định TẮT.
+        _autoCircumflex = (defaults.object(forKey: Key.autoCircumflex) as? Bool) ?? false
         _quickTelex = (defaults.object(forKey: Key.quickTelex) as? Bool) ?? false
         _vniMode = (defaults.object(forKey: Key.vniMode) as? Bool) ?? false
         // LỊCH SỬ DEFAULT: OFF từ 03/08/2026 (hành vi đổi cách gõ diện rộng, user
@@ -256,6 +259,8 @@ final class AppState: @unchecked Sendable {
         var englishByFrequency = false
         var collisionPrefersVietnamese = true
         var teencode = false
+        /// Engine `autoCircumflex` ("Tự thêm dấu mũ", issue #166): vietj → việt.
+        var autoCircumflex = false
         /// Auto-restore → engine `eagerEnglishRestore` (18/10/2026): with live spell-check,
         /// "goog" restores to raw at the freeze instead of showing "gôg" until the
         /// boundary. Tied to auto-restore because with it off the boundary KEEPS "gôgle",
@@ -272,13 +277,14 @@ final class AppState: @unchecked Sendable {
                         retroactiveEnglish: RetroApply.engineFlag(contextualEnglish: _contextualEnglish),
                         englishByFrequency: _englishByFrequency,
                         collisionPrefersVietnamese: _collisionPrefersVietnamese,
-                        teencode: _teencode, autoRestore: _autoRestore)
+                        teencode: _teencode, autoCircumflex: _autoCircumflex,
+                        autoRestore: _autoRestore)
         }
     }
 
     /// Sanity net for the snapshot above: every engine toggle must be carried, or a
     /// setting silently stops reaching the engine. Bump when adding a flag.
-    static let engineFlagCount = 13
+    static let engineFlagCount = 14
 
     /// Tone-placement style. false (default) = old style (hòa, thủy); true = modern
     /// (hoà, thuý). See `TelexEngine.modernTone`.
@@ -306,6 +312,16 @@ final class AppState: @unchecked Sendable {
         get { lock.withLock { _teencode } }
         set { lock.withLock { _teencode = newValue }
               defaults.set(newValue, forKey: Key.teencode) }
+    }
+
+    /// "Tự thêm dấu mũ" (issue #166, default OFF): khi từ đã có thanh mà vần không mũ không
+    /// tồn tại, còn vần có mũ hợp lệ, hiện luôn dấu mũ — vietj → việt, benhj → bệnh.
+    /// See `TelexEngine.autoCircumflex`.
+    private var _autoCircumflex: Bool
+    var autoCircumflex: Bool {
+        get { lock.withLock { _autoCircumflex } }
+        set { lock.withLock { _autoCircumflex = newValue }
+              defaults.set(newValue, forKey: Key.autoCircumflex) }
     }
 
     /// Simple Telex: a standalone `w` stays literal (type `uw` for ư). Default OFF
@@ -1423,6 +1439,7 @@ final class AppState: @unchecked Sendable {
         case Key.retroactiveEnglish: return retroactiveEnglish
         case Key.englishByFrequency: return englishByFrequency
         case Key.teencode: return teencode
+        case Key.autoCircumflex: return autoCircumflex
         case Key.autoRestore: return autoRestore
         case Key.liveSpellCheck: return liveSpellCheck
         case Key.reEditWord: return reEditWord
@@ -1450,6 +1467,7 @@ final class AppState: @unchecked Sendable {
         case Key.retroactiveEnglish: retroactiveEnglish = v
         case Key.englishByFrequency: englishByFrequency = v
         case Key.teencode: teencode = v
+        case Key.autoCircumflex: autoCircumflex = v
         case Key.autoRestore: autoRestore = v
         case Key.liveSpellCheck: liveSpellCheck = v
         case Key.reEditWord: reEditWord = v
@@ -1633,6 +1651,7 @@ extension TelexEngine {
         englishByFrequency = f.englishByFrequency
         collisionPrefersVietnamese = f.collisionPrefersVietnamese
         teencode = f.teencode
+        autoCircumflex = f.autoCircumflex
         eagerEnglishRestore = f.autoRestore
     }
 }

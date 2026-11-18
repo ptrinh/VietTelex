@@ -9,12 +9,13 @@ enum SettingsDeps {
     // MARK: Kiểu gõ › Nâng cao (ngay dưới bộ chọn Telex/VNI)
 
     enum StyleRow: CaseIterable, Equatable {
-        case simpleTelex, freeMarking, quickTelex, modern, teencode, bracket, reEdit, layout
+        case simpleTelex, freeMarking, quickTelex, modern, teencode, autoCircumflex, bracket, reEdit, layout
     }
 
     /// VNI ⇒ ẩn Telex đơn giản, Bỏ dấu tự do, Gõ nhanh (chỉ chạy trong parseStep của Telex).
     /// Teencode (bộ kiểm âm tiết không chặn VNI) và Phím ngoặc (kiểm trước nhánh VNI) chạy cả ở
-    /// VNI ⇒ luôn hiện (trước đây làm mờ nhầm "Chỉ áp dụng cho Telex").
+    /// VNI ⇒ luôn hiện (trước đây làm mờ nhầm "Chỉ áp dụng cho Telex"). Tự thêm dấu mũ là bước
+    /// hiển thị (render), không phụ thuộc kiểu gõ ⇒ cũng luôn hiện.
     static let telexOnlyStyleRows: Set<StyleRow> = [.simpleTelex, .freeMarking, .quickTelex]
 
     static func styleRows(vniMode: Bool) -> [StyleRow] {

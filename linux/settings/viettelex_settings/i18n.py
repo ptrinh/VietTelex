@@ -76,6 +76,9 @@ EN = {
     "Chính tả teencode": "Teencode spelling",
     "Nhận kiểu viết chat: wá, zui zẻ, kó. Tắt: was, zoo giữ nguyên.":
         "Accept chat spellings: wá, zui zẻ, kó. Off: was, zoo stay as typed.",
+    "Tự thêm dấu mũ": "Auto-add circumflex",
+    "Gõ vietj ra việt, benhj ra bệnh khi vần không mũ không tồn tại.":
+        "Type vietj for việt when the plain vowel isn’t a valid syllable.",
     "Gõ đúp phụ âm đầu: kk → kh, nn → ng, pp → ph, tt → th…":
         "Double the first consonant: kk → kh, nn → ng, pp → ph, tt → th…",
     "Bỏ dấu tự do": "Free tone placement",

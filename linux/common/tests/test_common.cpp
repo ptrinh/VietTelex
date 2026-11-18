@@ -3640,6 +3640,22 @@ void testFrequencySettingsGate() {
                  run("his huwngr ", mode, frequencySettings(false, false, false)));
 }
 
+// MARK: - Tự thêm dấu mũ (auto_circumflex, engine autoCircumflex, issue #166)
+
+void testAutoCircumflexSetting() {
+    Settings d;
+    CHECK(!d.autoCircumflex);  // default OFF
+    Settings p = parseConfig("[typing]\nauto_circumflex = true\n");
+    CHECK(p.autoCircumflex);
+    CHECK(parseConfig(serializeConfig(p)).autoCircumflex);
+    CHECK(!parseConfig(serializeConfig(d)).autoCircumflex);
+    for (auto mode : {DisplayMode::Preedit, DisplayMode::Surrounding})
+        CHECK(run("vietj ", mode, d) != "việt ");   // off: no circumflex added
+    bothModes("vietj ", "việt ", p);
+    bothModes("benhj ", "bệnh ", p);
+    bothModes("quan ", "quan ", p);             // real plain rime stays
+}
+
 // The flip-back is applied AUTOMATICALLY: in offer mode (retroactive_english off) too.
 void testFrequencyFlipBack() {
     for (bool retroAuto : {false, true}) {
@@ -3743,6 +3759,7 @@ int main() {
     testRetroOfferMode();
     testRetroOfferNeedsVerifiedText();
     testRetroOfferWinsOverOtherSuggestions();
+    testAutoCircumflexSetting();
     testFrequencySettingsGate();
     testFrequencyFlipBack();
     testFrequencyFlipBackBeforeEnter();

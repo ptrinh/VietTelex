@@ -154,6 +154,7 @@ final class SettingsModel: ObservableObject {
     @Published var liveSpellCheck: Bool { didSet { AppState.shared.liveSpellCheck = liveSpellCheck } }
     @Published var simpleTelex: Bool { didSet { AppState.shared.simpleTelex = simpleTelex } }
     @Published var teencode: Bool { didSet { AppState.shared.teencode = teencode } }
+    @Published var autoCircumflex: Bool { didSet { AppState.shared.autoCircumflex = autoCircumflex } }
     @Published var quickTelex: Bool { didSet { AppState.shared.quickTelex = quickTelex } }
     @Published var vniMode: Bool { didSet { AppState.shared.vniMode = vniMode } }
     @Published var contextualEnglish: Bool { didSet { AppState.shared.contextualEnglish = contextualEnglish } }
@@ -263,6 +264,7 @@ final class SettingsModel: ObservableObject {
         liveSpellCheck = AppState.shared.liveSpellCheck
         simpleTelex = AppState.shared.simpleTelex
         teencode = AppState.shared.teencode
+        autoCircumflex = AppState.shared.autoCircumflex
         quickTelex = AppState.shared.quickTelex
         vniMode = AppState.shared.vniMode
         contextualEnglish = AppState.shared.contextualEnglish
@@ -883,6 +885,7 @@ struct TypingTab: View {
         static let quickTelex = "Double the first consonant: kk → kh, nn → ng, pp → ph, tt → th…"
         static let modern = "hoà, thuý, khoẻ instead of hòa, thủy, khỏe."
         static let teencode = "Accept chat spellings: wá, zui zẻ, kó. Off: was, zoo stay as typed."
+        static let autoCircumflex = "Type vietj for việt when the plain vowel isn’t a valid syllable."
         static let bracket = "[ types ơ, ] types ư (th[ → thơ). Leave off if you write code."
         static let reEdit = "Add a tone to a word already typed: toan + s → toán."
         static let layout = "Physical layout Telex reads (Colemak, Dvorak…)."
@@ -899,7 +902,7 @@ struct TypingTab: View {
         static let liveSpell = "Stop adding tones once a word can’t be Vietnamese (google, github)."
         /// Thay cả nhóm "Gõ lẫn tiếng Anh" khi chọn VNI (spec §1) — cùng chữ iOS/Android.
         static let vniMixedNote = "VNI leaves English words as typed, so there is nothing to set here."
-        static let all = [vni, simpleTelex, freeMarking, quickTelex, modern, teencode, bracket, reEdit, layout,
+        static let all = [vni, simpleTelex, freeMarking, quickTelex, modern, teencode, autoCircumflex, bracket, reEdit, layout,
                           autoRestore, collisionVi, collisionEn, context, retro, frequency, hotkey, sticky,
                           osShortcut, liveSpell, vniMixedNote]
     }
@@ -958,6 +961,8 @@ struct TypingTab: View {
             toggleRow("Modern tone placement (oà, uý)", isOn: $model.modernOrthography, caption: C.modern)
         case .teencode:
             toggleRow("Teencode spelling", isOn: $model.teencode, caption: C.teencode)
+        case .autoCircumflex:
+            toggleRow("Auto-add circumflex", isOn: $model.autoCircumflex, caption: C.autoCircumflex)
         case .bracket:
             toggleRow("Bracket vowels: [ types ơ, ] types ư", isOn: $model.bracketVowels, caption: C.bracket)
         case .reEdit:
@@ -1702,7 +1707,7 @@ enum DebugHeader {
             // from every prior debug log meant a tester's own `defaults write` was invisible
             // evidence ("chỉ mỗi em bị" — 2026-08-05).
             "flags: modifyInPlace=\(s.tapModifyEventInPlace) skipKeyUp=\(s.tapSkipSyntheticKeyUp) axReplace=\(s.axSelectionReplace) breaker=\(s.tapCascadeBreaker) nativeFastPath=\(s.tapNativeFastPath)",
-            "settings: simpleTelex=\(s.simpleTelex) freeMarking=\(s.freeMarking) modern=\(s.modernOrthography) liveSpell=\(s.liveSpellCheck) autoRestore=\(s.autoRestore) vni=\(s.vniMode) quick=\(s.quickTelex) ctxEnglish=\(s.contextualEnglish) retroEnglish=\(s.retroactiveEnglish) freqEnglish=\(s.englishByFrequency) teencode=\(s.teencode) collisionVN=\(s.collisionPrefersVietnamese) reEdit=\(s.reEditWord) bracket=\(s.bracketVowels) safeUnknown=\(s.safeUnknownApps) endWord=\(s.endWordSignal)",
+            "settings: simpleTelex=\(s.simpleTelex) freeMarking=\(s.freeMarking) modern=\(s.modernOrthography) liveSpell=\(s.liveSpellCheck) autoRestore=\(s.autoRestore) vni=\(s.vniMode) quick=\(s.quickTelex) ctxEnglish=\(s.contextualEnglish) retroEnglish=\(s.retroactiveEnglish) freqEnglish=\(s.englishByFrequency) teencode=\(s.teencode) autoCircumflex=\(s.autoCircumflex) collisionVN=\(s.collisionPrefersVietnamese) reEdit=\(s.reEditWord) bracket=\(s.bracketVowels) safeUnknown=\(s.safeUnknownApps) endWord=\(s.endWordSignal)",
             // Count only — the trigger/expansion pairs are USER-TYPED content the log
             // must never carry (same rule as everywhere else here), but a nonzero count
             // is itself diagnostic: a custom gõ tắt entry colliding with a Vietnamese

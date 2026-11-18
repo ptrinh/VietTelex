@@ -272,6 +272,7 @@ struct EmojiSearchSession {
         e.liveSpellCheck = s.liveSpellCheck
         e.eagerEnglishRestore = s.autoRestore
         e.teencode = s.teencode
+        e.autoCircumflex = s.autoCircumflex
         engine = e
     }
 

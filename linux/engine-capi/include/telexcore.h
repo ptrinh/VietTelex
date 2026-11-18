@@ -58,8 +58,11 @@ enum {
     VT_FLAG_EAGER_ENGLISH_RESTORE = 11,       /* default false; frontends pass auto-restore */
     VT_FLAG_RETRO_ENGLISH = 12,               /* default false; EXPERIMENTAL retroactiveEnglish,
                                                  inert unless CONTEXTUAL_ENGLISH is on      */
-    VT_FLAG_ENGLISH_BY_FREQUENCY = 13         /* default false; EXPERIMENTAL englishByFrequency,
+    VT_FLAG_ENGLISH_BY_FREQUENCY = 13,        /* default false; EXPERIMENTAL englishByFrequency,
                                                  inert unless RETRO_ENGLISH is in effect    */
+    VT_FLAG_AUTO_CIRCUMFLEX = 14              /* default false; autoCircumflex (issue #166):
+                                                 vietj → việt when the plain rime is not a
+                                                 syllable. Older libs ignore unknown flags. */
 };
 
 /* Lifecycle */

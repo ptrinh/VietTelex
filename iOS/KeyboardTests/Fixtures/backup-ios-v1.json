@@ -28,6 +28,7 @@
     "addTonesChip" : false,
     "aiProofread" : false,
     "autoCapitalize" : false,
+    "autoCircumflex" : false,
     "autoCorrect" : true,
     "autoFixAdjacent" : true,
     "autoRestore" : true,

@@ -40,6 +40,7 @@ quick_telex = false                 # Gõ nhanh cc→ch, gg→gi, kk→kh, nn→
 spell_check = true                  # Kiểm tra chính tả khi gõ (dừng biến đổi từ không hợp lệ)
 auto_restore = true                 # Tự khôi phục từ không phải tiếng Việt (tiếng Anh)
 teencode = false                    # Chấp nhận teencode (wá, zô, kó, thík…)
+auto_circumflex = false             # Tự thêm dấu mũ (vietj → việt, benhj → bệnh)
 contextual_english = true           # Quyết định theo ngữ cảnh (từ trước là tiếng Anh)
 retroactive_english = false         # Tự sửa từ phía trước (thử nghiệm; chỉ khi contextual_english bật)
 english_by_frequency = false        # Đoán từ trùng theo tần suất (thử nghiệm; chỉ khi contextual_english bật)
@@ -87,7 +88,7 @@ Mặc định = giống bản macOS hiện tại (bảng trên là mặc định
 vốn rỗng). Map sang cờ engine (`vt_engine_set_flag`):
 `input_method=vni→VT_FLAG_VNI`, `simple_telex→SIMPLE_TELEX`, `free_marking→FREE_MARKING`,
 `modern_tone→MODERN_TONE`, `quick_telex→QUICK_TELEX`, `spell_check→LIVE_SPELL_CHECK`,
-`teencode→TEENCODE`, `contextual_english→CONTEXTUAL_ENGLISH`,
+`teencode→TEENCODE`, `auto_circumflex→AUTO_CIRCUMFLEX`, `contextual_english→CONTEXTUAL_ENGLISH`,
 `contextual_english→RETRO_ENGLISH` (`retroactive_english` chọn tự áp / mời bằng gợi ý),
 `contextual_english && english_by_frequency→ENGLISH_BY_FREQUENCY`,
 `collision_prefers_vietnamese→COLLISION_PREFERS_VIETNAMESE`, `bracket_vowels→BRACKET_VOWELS`;

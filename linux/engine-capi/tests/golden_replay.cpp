@@ -241,11 +241,28 @@ bool retroSmoke() {
     return ok;
 }
 
+// autoCircumflex (issue #166): default OFF; on ⇒ "vietj" composes "việt".
+bool autoCircumflexSmoke() {
+    vt_engine *e = vt_engine_new();
+    vt_action a;
+    char buf[64];
+    bool ok = !vt_engine_get_flag(e, VT_FLAG_AUTO_CIRCUMFLEX);
+    vt_engine_set_flag(e, VT_FLAG_LIVE_SPELL_CHECK, true);
+    vt_engine_set_flag(e, VT_FLAG_AUTO_CIRCUMFLEX, true);
+    ok = ok && vt_engine_get_flag(e, VT_FLAG_AUTO_CIRCUMFLEX);
+    for (const char *p = "vietj"; *p; ++p) vt_feed(e, uint32_t(*p), &a);
+    size_t n = vt_composed(e, buf, sizeof buf);
+    ok = ok && std::string(buf, n) == "vi\xE1\xBB\x87t";
+    vt_engine_free(e);
+    return ok;
+}
+
 } // namespace
 
 int main() {
     if (vt_abi_version() != VT_ABI_VERSION) { std::fprintf(stderr, "ABI mismatch\n"); return 2; }
     if (!retroSmoke()) { std::fprintf(stderr, "retro smoke FAILED\n"); return 3; }
+    if (!autoCircumflexSmoke()) { std::fprintf(stderr, "autoCircumflex smoke FAILED\n"); return 3; }
     std::string line;
     size_t total = 0, bad = 0;
     while (std::getline(std::cin, line)) {

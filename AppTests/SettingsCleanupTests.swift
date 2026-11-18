@@ -148,6 +148,7 @@ final class SettingsCleanupTests: XCTestCase {
             "Money amount suggestions": "Gợi ý số tiền",
             "Auto-restore English words": "Tự khôi phục từ tiếng Anh",
             "Teencode spelling": "Chính tả teencode",
+            "Auto-add circumflex": "Tự thêm dấu mũ",
             "Simple Telex": "Telex đơn giản",
             "Quick consonants (cc→ch, gg→gi…)": "Gõ tắt phụ âm nhanh (cc→ch, gg→gi…)",
             "Mixed Vietnamese/English typing": "Gõ lẫn tiếng Anh",

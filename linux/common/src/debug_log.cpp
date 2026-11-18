@@ -96,7 +96,7 @@ std::string settingsLine(const Settings &s) {
     std::string o = "settings: method=";
     o += s.vni ? "vni" : (s.simpleTelex ? "telex-simple" : "telex");
     o += std::string(" free=") + b(s.freeMarking) + " modern=" + b(s.modernTone) + " quick=" + b(s.quickTelex) +
-         " spell=" + b(s.spellCheck) + " restore=" + b(s.autoRestore) + " teen=" + b(s.teencode) +
+         " spell=" + b(s.spellCheck) + " restore=" + b(s.autoRestore) + " teen=" + b(s.teencode) + " hat=" + b(s.autoCircumflex) +
          " ctxEn=" + b(s.contextualEnglish) + " retroEn=" + b(s.retroactiveEnglish) +
          " freqEn=" + b(s.englishByFrequency) + " collVN=" + b(s.collisionPrefersVietnamese) +
          " bracket=" + b(s.bracketVowels) + " reEdit=" + b(s.reEditWord);

@@ -47,6 +47,7 @@ enum BackupSettings {
         Spec(key: "reEditWords", kind: .bool(true)),
         Spec(key: "autoFixAdjacent", kind: .bool(true)),
         Spec(key: "teencode", kind: .bool(false)),
+        Spec(key: "autoCircumflex", kind: .bool(false)),   // "Tự thêm dấu mũ" (issue #166)
         Spec(key: "autoRestore", kind: .bool(true)),
         Spec(key: "liveSpellCheck", kind: .bool(true)),
         Spec(key: "swipeTyping", kind: .bool(false)),

@@ -991,6 +991,8 @@ struct TypingAdvancedPage: View {
     private var modernTone = false
     @AppStorage("teencode", store: UserDefaults(suiteName: AppFlavor.appGroup))
     private var teencode = false
+    @AppStorage("autoCircumflex", store: UserDefaults(suiteName: AppFlavor.appGroup))
+    private var autoCircumflex = false
     @AppStorage("vniMode", store: UserDefaults(suiteName: AppFlavor.appGroup))
     private var vniMode = false
 
@@ -1010,6 +1012,8 @@ struct TypingAdvancedPage: View {
                         settingToggle(L(SettingLabel.modernTone), L(SettingCaption.modernTone), isOn: $modernTone)
                     case .teencode:
                         settingToggle(L(SettingLabel.teencode), L(SettingCaption.teencode), isOn: $teencode)
+                    case .autoCircumflex:
+                        settingToggle(L(SettingLabel.autoCircumflex), L(SettingCaption.autoCircumflex), isOn: $autoCircumflex)
                     }
                 }
             } footer: {

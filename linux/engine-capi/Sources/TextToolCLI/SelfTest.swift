@@ -90,6 +90,8 @@ func caretSelfTest(fixtures: String) -> Int {
     check(!T.isKnown("tpoi"), "known tpoi")
     eq(T.EngineFlags(bits: "1010000110"), T.EngineFlags(), "flags mặc định")
     check(T.EngineFlags(bits: "0000010000").vniMode, "flags vni")
+    check(T.EngineFlags(bits: "00000000001").autoCircumflex, "flags autoCircumflex")
+    eq(T.EngineFlags(bits: "10100001100"), T.EngineFlags(), "flags mặc định (11 chữ số)")
 
     typealias C = T.Cand
     let p = T.Params(minLen: 3, minFreq: 150, margin: 80, edits: [.sub, .swap], rivals: [.del, .ins])

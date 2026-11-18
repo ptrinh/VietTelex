@@ -156,6 +156,7 @@ Settings parseConfig(const std::string &toml) {
             else if (key == "spell_check") setBool(s.spellCheck, v);
             else if (key == "auto_restore") setBool(s.autoRestore, v);
             else if (key == "teencode") setBool(s.teencode, v);
+            else if (key == "auto_circumflex") setBool(s.autoCircumflex, v);
             else if (key == "contextual_english") setBool(s.contextualEnglish, v);
             else if (key == "retroactive_english") setBool(s.retroactiveEnglish, v);
             else if (key == "english_by_frequency") setBool(s.englishByFrequency, v);
@@ -230,6 +231,7 @@ std::string serializeConfig(const Settings &s) {
       << "spell_check = " << b(s.spellCheck) << "\n"
       << "auto_restore = " << b(s.autoRestore) << "\n"
       << "teencode = " << b(s.teencode) << "\n"
+      << "auto_circumflex = " << b(s.autoCircumflex) << "\n"
       << "contextual_english = " << b(s.contextualEnglish) << "\n"
       << "retroactive_english = " << b(s.retroactiveEnglish) << "\n"
       << "english_by_frequency = " << b(s.englishByFrequency) << "\n"

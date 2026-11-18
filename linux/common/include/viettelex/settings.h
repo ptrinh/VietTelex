@@ -34,6 +34,9 @@ struct Settings {
     bool spellCheck = true;
     bool autoRestore = true;
     bool teencode = false;
+    // "Tự thêm dấu mũ" (auto_circumflex, default OFF; engine autoCircumflex, issue #166):
+    // vietj → việt, benhj → bệnh when the plain rime is not a syllable but the hatted one is.
+    bool autoCircumflex = false;
     bool contextualEnglish = true;
     // "Tự sửa từ phía trước" (retroactive_english, EXPERIMENTAL, default OFF; needs
     // contextual_english): on = "Hí cả í very fast" → "His car is very fast" at the boundary,

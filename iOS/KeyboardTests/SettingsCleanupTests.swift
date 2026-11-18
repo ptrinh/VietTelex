@@ -173,6 +173,7 @@ final class SettingsCleanupTests: XCTestCase {
         XCTAssertEqual(SettingsIndex.entry(forKey: "addTonesChip")?.viTitle, "Thêm dấu")
         XCTAssertEqual(SettingsIndex.entry(forKey: "freeMarking")?.location, .typingAdvanced)
         XCTAssertEqual(SettingsIndex.entry(forKey: "teencode")?.location, .typingAdvanced, "teencode ở Nâng cao kiểu gõ")
+        XCTAssertEqual(SettingsIndex.entry(forKey: "autoCircumflex")?.location, .typingAdvanced, "Tự thêm dấu mũ ở Nâng cao kiểu gõ")
         XCTAssertEqual(SettingsIndex.entry(forKey: "reEditWord")?.location, .page(.suaLoi))
         // Sửa chạm trượt gom một chỗ: trang Sửa lỗi & gợi ý.
         for k in ["smartTouch", "autoCorrect", "autoFixAdjacent"] {

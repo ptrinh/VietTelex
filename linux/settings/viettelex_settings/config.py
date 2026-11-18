@@ -23,6 +23,8 @@ DEFAULTS = {
         "spell_check": True,
         "auto_restore": True,
         "teencode": False,
+        # "Tự thêm dấu mũ" (issue #166): vietj → việt. Mặc định tắt.
+        "auto_circumflex": False,
         "contextual_english": True,
         # "Tự sửa từ phía trước" (thử nghiệm): chỉ hiện / chỉ có tác dụng khi contextual_english bật.
         "retroactive_english": False,

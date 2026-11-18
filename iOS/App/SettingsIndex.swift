@@ -52,6 +52,7 @@ enum SettingLabel {
     static let simpleTelex = LK("Telex đơn giản")
     static let quickTelex = LK("Gõ nhanh (Quick Telex)")
     static let teencode = LK("Chính tả teencode")
+    static let autoCircumflex = LK("Tự thêm dấu mũ")
     static let autoCapitalize = LK("Tự động viết hoa đầu câu")
     /// Một tên cho mọi cách thêm dấu cả câu (§4).
     static let addTones = LK("Thêm dấu")
@@ -126,6 +127,7 @@ enum SettingsIndex {
             E(viTitle: SettingLabel.quickTelex, keywords: "quick telex gõ nhanh cc ch gg gi nn ng phụ âm nâng cao advanced", location: .typingAdvanced, key: "quickTelex"),
             E(viTitle: SettingLabel.modernTone, keywords: "hoà hòa thuý thúy kiểu mới kiểu cũ modern tone nâng cao advanced", location: .typingAdvanced, key: "modernTone"),
             E(viTitle: SettingLabel.teencode, keywords: "teencode chat wá zui nâng cao advanced", location: .typingAdvanced, key: "teencode"),
+            E(viTitle: SettingLabel.autoCircumflex, keywords: "dấu mũ mũ circumflex hat việt vietj bệnh tự thêm nâng cao advanced", location: .typingAdvanced, key: "autoCircumflex"),
             // Sửa lỗi & gợi ý
             E(viTitle: LK("Kiểm tra chính tả khi gõ"), keywords: "spell check", location: .page(.suaLoi), key: "liveSpellCheck"),
             E(viTitle: SettingLabel.reEditWord, keywords: "sửa dấu con trỏ backspace", location: .page(.suaLoi), key: "reEditWord"),
@@ -238,6 +240,7 @@ enum SettingCaption {
     static let quickTelex = LK("Gõ đúp phụ âm đầu: kk → kh, nn → ng, pp → ph, tt → th…")
     static let modernTone = LK("hoà, thuý, khoẻ thay vì hòa, thủy, khỏe.")
     static let teencode = LK("Nhận kiểu viết chat: wá, zui zẻ, kó. Tắt: was, zoo giữ nguyên.")
+    static let autoCircumflex = LK("Gõ vietj ra việt, benhj ra bệnh khi vần không mũ không tồn tại.")
     // Gõ lẫn tiếng Anh
     static let profileHint = LK("Chọn một — các công tắc bên dưới sẽ tự đặt theo.")
     static let customProfile = LK("Bạn đã tự chỉnh các công tắc bên dưới.")
@@ -289,7 +292,7 @@ enum SettingCaption {
     static let longPressSymbols = LK("Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …")
     static let holdShiftSymbols = LK("Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.")
     static let autoSpaceAfterPunct = LK("Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).")
-    static let symbolReturn = LK("Tự động: sau , ? ! ; & $ @ và dấu nháy (dấu chấm, hai chấm và ngoặc đóng ở lại). Luôn: sau mọi ký hiệu.")
+    static let symbolReturn = LK("Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu.")
     static let trackpadSpeed = LK("Giữ phím cách rồi kéo để di con trỏ; mức này chỉnh độ tăng tốc.")
     static let swipeKeyCommandsIos = LK("Vuốt C, X, V lên quá hàng trên cùng: sao chép, cắt, dán (cần Toàn quyền).")
     static let oneHandIos = LK("Thu bàn phím về một bên; giữ lâu nút ☰ trên thanh gợi ý để bật/tắt nhanh.")
@@ -339,7 +342,7 @@ enum SettingCaption {
     static let all: [String] = [
         keySoundStylesIos, keySoundVolumeIos, customSound,
         vni, autoCapitalize, simpleTelex, freeMarking, quickTelex, modernTone,
-        teencode, profileHint, customProfile, spaceSwipeLanguage, userDictionary, autoRestore,
+        teencode, autoCircumflex, profileHint, customProfile, spaceSwipeLanguage, userDictionary, autoRestore,
         contextualEnglish, retroEnglish, englishByFrequency, vniMixedNote, liveSpellCheck, reEditWord, autoFixAdjacent,
         smartTouch, autoCorrect, adjacentFooter, showSuggestions, suggestionCount, keyboardDismissButton, suggestInNoSuggestFields,
         emojiSuggest, numberChips, mathResults, pasteButton, addTones, aiProofread,

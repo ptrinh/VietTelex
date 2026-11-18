@@ -33,6 +33,9 @@ struct KeyboardSettings {
     /// Chính tả teencode (wá, zui, kó, bíe, thík, gòy, ừk) — mặc định TẮT như macOS
     /// 1.7.11 (maintainer 25/09/2026, issue #94).
     var teencode = false
+    /// "Tự thêm dấu mũ" (issue #166): vietj → việt, benhj → bệnh khi vần không mũ không tồn tại.
+    /// Mặc định TẮT (cùng macOS/Linux).
+    var autoCircumflex = false
     var showSuggestions = true
     var learnWords = true      // đi theo showSuggestions (không còn toggle riêng)
     var filterSensitive = true
@@ -151,6 +154,7 @@ struct KeyboardSettings {
         if d.object(forKey: "quickTelex") != nil { s.quickTelex = d.bool(forKey: "quickTelex") }
         if d.object(forKey: "modernTone") != nil { s.modernTone = d.bool(forKey: "modernTone") }
         if d.object(forKey: "teencode") != nil { s.teencode = d.bool(forKey: "teencode") }
+        if d.object(forKey: "autoCircumflex") != nil { s.autoCircumflex = d.bool(forKey: "autoCircumflex") }
         if d.object(forKey: "showSuggestions") != nil { s.showSuggestions = d.bool(forKey: "showSuggestions") }
         if d.object(forKey: "filterSensitive") != nil { s.filterSensitive = d.bool(forKey: "filterSensitive") }
         if d.object(forKey: "hapticFeedback") != nil { s.hapticFeedback = d.bool(forKey: "hapticFeedback") }
@@ -359,6 +363,7 @@ final class EngineBridge {
         engine.quickTelex = settings.quickTelex
         engine.modernTone = settings.modernTone
         engine.teencode = settings.teencode
+        engine.autoCircumflex = settings.autoCircumflex
         engine.contextualEnglish = settings.contextualEnglish
         engine.vniMode = settings.vniMode
         // Cả hai chế độ (mời / tự áp) cần quyết định của engine; contextualEnglish tắt ⇒ không gì cả.
@@ -1277,6 +1282,7 @@ final class EngineBridge {
         e.quickTelex = settings.quickTelex
         e.modernTone = settings.modernTone
         e.teencode = settings.teencode
+        e.autoCircumflex = settings.autoCircumflex
         e.vniMode = settings.vniMode
         for ch in raw { _ = e.feed(ch) }
         return e.composed

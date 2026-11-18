@@ -110,6 +110,7 @@ public func vt_engine_set_flag(_ h: OpaquePointer, _ flag: Int32, _ on: Bool) {
     case 11: b.e.eagerEnglishRestore = on
     case 12: b.e.retroactiveEnglish = on
     case 13: b.e.englishByFrequency = on
+    case 14: b.e.autoCircumflex = on
     default: break
     }
 }
@@ -132,6 +133,7 @@ public func vt_engine_get_flag(_ h: OpaquePointer, _ flag: Int32) -> Bool {
     case 11: return e.eagerEnglishRestore
     case 12: return e.retroactiveEnglish
     case 13: return e.englishByFrequency
+    case 14: return e.autoCircumflex
     default: return false
     }
 }

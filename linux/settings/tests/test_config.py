@@ -47,6 +47,7 @@ class ParseTests(unittest.TestCase):
         self.assertIs(n["typing"]["english_by_frequency"], False)  # thử nghiệm: mặc định tắt
         self.assertTrue(n["typing"]["collision_prefers_vietnamese"])
         self.assertFalse(n["typing"]["teencode"])
+        self.assertFalse(n["typing"]["auto_circumflex"])   # "Tự thêm dấu mũ": mặc định tắt
         self.assertEqual(n["general"]["display_mode"], "preedit")
         self.assertEqual(n["general"]["toggle_hotkey"], "Ctrl+space")
         self.assertFalse(n["general"]["preedit_underline"])  # "Hiện gạch chân chữ đang gõ" off

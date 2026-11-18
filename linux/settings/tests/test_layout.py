@@ -145,7 +145,7 @@ class DependentTests(unittest.TestCase):
             self.assertFalse(layout.row_visible(("typing", k), vni), k)
             self.assertTrue(layout.row_visible(("typing", k), telex), k)
         # Teencode, phím ngoặc (chạy cả ở VNI) và Bỏ dấu kiểu mới: luôn hiện.
-        for k in ("teencode", "bracket_vowels", "modern_tone"):
+        for k in ("teencode", "auto_circumflex", "bracket_vowels", "modern_tone"):
             self.assertNotIn(("typing", k), layout.VISIBLE_WHEN)
             self.assertTrue(layout.row_visible(("typing", k), vni), k)
 

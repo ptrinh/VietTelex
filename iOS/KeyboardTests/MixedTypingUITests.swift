@@ -92,8 +92,8 @@ final class SettingsDepsTests: XCTestCase {
 
     func testVniHidesTelexOnlyTypingOptions() {
         XCTAssertEqual(SettingsDeps.typingAdvancedRows(vniMode: false),
-                       [.simpleTelex, .freeMarking, .quickTelex, .modernTone, .teencode])
-        XCTAssertEqual(SettingsDeps.typingAdvancedRows(vniMode: true), [.modernTone, .teencode])
+                       [.simpleTelex, .freeMarking, .quickTelex, .modernTone, .teencode, .autoCircumflex])
+        XCTAssertEqual(SettingsDeps.typingAdvancedRows(vniMode: true), [.modernTone, .teencode, .autoCircumflex])
     }
 
     /// Teencode chạy cả ở VNI (trước đây làm mờ nhầm "Chỉ áp dụng cho Telex").

@@ -143,6 +143,17 @@ final class EngineBridgeTests: XCTestCase {
         XCTAssertEqual(type("kos ", settings: s), "kó ")
         XCTAssertEqual(type("thiks ", settings: s), "thík ")
     }
+
+    /// Issue #166 (18/11/2026): "Tự thêm dấu mũ" — công tắc, mặc định TẮT như macOS.
+    func testAutoCircumflexToggle() {
+        var s = KeyboardSettings()
+        XCTAssertFalse(s.autoCircumflex)
+        s.autoCircumflex = true
+        XCTAssertEqual(type("vietj ", settings: s), "việt ")
+        XCTAssertEqual(type("benhj ", settings: s), "bệnh ")
+        XCTAssertEqual(type("nguyenx ", settings: s), "nguyễn ")
+        XCTAssertEqual(type("quan ", settings: s), "quan ")      // vần không mũ có thật: giữ nguyên
+    }
 }
 
 final class SuggestionTests: XCTestCase {

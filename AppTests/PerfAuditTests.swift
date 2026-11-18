@@ -24,6 +24,8 @@ final class PerfAuditTests: XCTestCase {
         XCTAssertEqual(f.contextualEnglish, s.contextualEnglish)
         XCTAssertEqual(f.retroactiveEnglish, s.retroactiveEnglish)
         XCTAssertEqual(f.englishByFrequency, s.englishByFrequency)
+        XCTAssertEqual(f.teencode, s.teencode)
+        XCTAssertEqual(f.autoCircumflex, s.autoCircumflex)
     }
 
     func testEngineFlagsSnapshotFollowsAToggle() {
@@ -44,6 +46,7 @@ final class PerfAuditTests: XCTestCase {
         flags.simpleTelex = true; flags.quickTelex = true; flags.vniMode = true
         flags.bracketVowels = true; flags.contextualEnglish = true; flags.teencode = true
         flags.autoRestore = true; flags.retroactiveEnglish = true; flags.englishByFrequency = true
+        flags.autoCircumflex = true
         var e = TelexEngine()
         e.apply(flags)
         XCTAssertTrue(e.freeMarking); XCTAssertTrue(e.modernTone)
@@ -51,18 +54,32 @@ final class PerfAuditTests: XCTestCase {
         XCTAssertTrue(e.quickTelex); XCTAssertTrue(e.vniMode)
         XCTAssertTrue(e.bracketVowels); XCTAssertTrue(e.contextualEnglish); XCTAssertTrue(e.teencode)
         XCTAssertTrue(e.eagerEnglishRestore); XCTAssertTrue(e.retroactiveEnglish); XCTAssertTrue(e.englishByFrequency)
+        XCTAssertTrue(e.autoCircumflex)
 
         var allOff = AppState.EngineFlags()
         allOff.freeMarking = false; allOff.modernTone = false; allOff.liveSpellCheck = false
         allOff.simpleTelex = false; allOff.quickTelex = false; allOff.vniMode = false
         allOff.bracketVowels = false; allOff.contextualEnglish = false; allOff.teencode = false
         allOff.autoRestore = false; allOff.retroactiveEnglish = false; allOff.englishByFrequency = false
+        allOff.autoCircumflex = false
         e.apply(allOff)
         XCTAssertFalse(e.freeMarking); XCTAssertFalse(e.modernTone)
         XCTAssertFalse(e.liveSpellCheck); XCTAssertFalse(e.simpleTelex)
         XCTAssertFalse(e.quickTelex); XCTAssertFalse(e.vniMode)
         XCTAssertFalse(e.bracketVowels); XCTAssertFalse(e.contextualEnglish); XCTAssertFalse(e.teencode)
         XCTAssertFalse(e.eagerEnglishRestore); XCTAssertFalse(e.retroactiveEnglish); XCTAssertFalse(e.englishByFrequency)
+        XCTAssertFalse(e.autoCircumflex)
+    }
+
+    /// "Tự thêm dấu mũ" (issue #166): công tắc mặc định TẮT ở cả ảnh chụp lẫn engine.
+    func testAutoCircumflexDefaultsOff() {
+        XCTAssertFalse(AppState.EngineFlags().autoCircumflex)
+        XCTAssertFalse(TelexEngine().autoCircumflex)
+        var e = TelexEngine()
+        var f = AppState.EngineFlags(); f.autoCircumflex = true
+        e.apply(f)
+        for ch in "vietj" { _ = e.feed(ch) }
+        XCTAssertEqual(e.composed, "việt")
     }
 
     func testEngineFlagsHasExactlyTheDocumentedCount() {

@@ -363,6 +363,7 @@ void Session::applySettings(const Settings &s) {
     vt_engine_set_flag(e_, VT_FLAG_LIVE_SPELL_CHECK, s.spellCheck);
     vt_engine_set_flag(e_, VT_FLAG_SIMPLE_TELEX, s.simpleTelex);
     vt_engine_set_flag(e_, VT_FLAG_TEENCODE, s.teencode);
+    vt_engine_set_flag(e_, VT_FLAG_AUTO_CIRCUMFLEX, s.autoCircumflex);
     vt_engine_set_flag(e_, VT_FLAG_QUICK_TELEX, s.quickTelex);
     vt_engine_set_flag(e_, VT_FLAG_BRACKET_VOWELS, s.bracketVowels);
     vt_engine_set_flag(e_, VT_FLAG_VNI, s.vni);
@@ -406,7 +407,7 @@ void Session::applySettings(const Settings &s) {
     // with the same engine settings as the typing engine.
     const bool bits[] = {s.freeMarking, s.modernTone,      s.spellCheck,        s.simpleTelex,
                          s.quickTelex,  s.vni,             s.bracketVowels,     s.contextualEnglish,
-                         s.collisionPrefersVietnamese,      s.teencode};
+                         s.collisionPrefersVietnamese,      s.teencode,          s.autoCircumflex};
     engineBits_.clear();
     for (bool b : bits) engineBits_ += b ? '1' : '0';
     period_ = s.doubleSpacePeriod;

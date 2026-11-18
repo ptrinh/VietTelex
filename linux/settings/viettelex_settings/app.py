@@ -316,7 +316,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         self.vni_help = row(_("Gõ dấu bằng chữ số"),
                             _("Dấu bằng số: 1–5 sắc/huyền/hỏi/ngã/nặng, 6 â ê ô, 7 ơ ư, 8 ă, 9 đ, 0 xoá dấu."))
         g.add(self.vni_help)
-        # Nâng cao kiểu gõ: mục chỉ-Telex ẩn khi chọn VNI; teencode, phím ngoặc chạy cả VNI.
+        # Nâng cao kiểu gõ: mục chỉ-Telex ẩn khi chọn VNI; teencode, dấu mũ, phím ngoặc chạy cả VNI.
         adv = self.advanced(g, _("Telex đơn giản, bỏ dấu tự do, gõ tắt phụ âm, dấu kiểu mới, "
                                  "teencode, phím ngoặc"))
         self.dependent(self.switch(adv, "typing", "simple_telex", _("Telex đơn giản"),
@@ -333,6 +333,8 @@ class SettingsWindow(Adw.PreferencesWindow):
                     _("hoà, thuý, khoẻ thay vì hòa, thủy, khỏe."))
         self.switch(adv, "typing", "teencode", _("Chính tả teencode"),
                     _("Nhận kiểu viết chat: wá, zui zẻ, kó. Tắt: was, zoo giữ nguyên."))
+        self.switch(adv, "typing", "auto_circumflex", _("Tự thêm dấu mũ"),
+                    _("Gõ vietj ra việt, benhj ra bệnh khi vần không mũ không tồn tại."))
         self.switch(adv, "typing", "bracket_vowels", _("Phím ngoặc: [ ra ơ, ] ra ư"),
                     _("[ ra ơ, ] ra ư (th[ → thơ). Nên tắt nếu bạn viết code."))
         page.add(g)

@@ -274,8 +274,9 @@ enum TypoFixLogic {
         var bracketVowels = false, contextualEnglish = true
         var collisionPrefersVietnamese = true
         var teencode = false
+        var autoCircumflex = false
 
-        /// "1011…" (10 chữ số 0/1); thiếu/lạ ⇒ mặc định.
+        /// "1011…" (11 chữ số 0/1); thiếu/lạ ⇒ mặc định (chuỗi 10 chữ số cũ: autoCircumflex tắt).
         init() {}
         init(bits: String) {
             let b = Array(bits)
@@ -284,6 +285,7 @@ enum TypoFixLogic {
             simpleTelex = at(3, false); quickTelex = at(4, false); vniMode = at(5, false)
             bracketVowels = at(6, false); contextualEnglish = at(7, true)
             collisionPrefersVietnamese = at(8, true); teencode = at(9, false)
+            autoCircumflex = at(10, false)
         }
     }
 
@@ -294,6 +296,7 @@ enum TypoFixLogic {
             e.simpleTelex = f.simpleTelex; e.quickTelex = f.quickTelex; e.vniMode = f.vniMode
             e.bracketVowels = f.bracketVowels; e.contextualEnglish = f.contextualEnglish
             e.collisionPrefersVietnamese = f.collisionPrefersVietnamese; e.teencode = f.teencode
+            e.autoCircumflex = f.autoCircumflex
             for ch in raw { _ = e.feed(ch) }
             return e.composed
         }

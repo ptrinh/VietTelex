@@ -898,6 +898,8 @@ extension AppSupportTests {
             ({ s.retroactiveEnglish }, { s.retroactiveEnglish = $0 }),
             ({ s.englishByFrequency }, { s.englishByFrequency = $0 }),
             ({ s.bracketVowels }, { s.bracketVowels = $0 }),
+            ({ s.autoCircumflex }, { s.autoCircumflex = $0 }),
+            ({ s.syncedSetting("autoCircumflex") ?? false }, { s.setSyncedSetting("autoCircumflex", $0) }),
             ({ s.tapModifyEventInPlace }, { s.tapModifyEventInPlace = $0 }),
             ({ s.tapSkipSyntheticKeyUp }, { s.tapSkipSyntheticKeyUp = $0 }),
             ({ s.axSelectionReplace }, { s.axSelectionReplace = $0 }),

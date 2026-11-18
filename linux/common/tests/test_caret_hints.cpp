@@ -407,7 +407,7 @@ void testTypoFix() {
     vni.vni = true;
     Rig n(vni);
     type(n.s, n.m, "tpoi ");
-    CHECK_EQ(n.last(), req({"typo", "tpoi ", "tpoi", " ", "tpoi", "1010010110"}));
+    CHECK_EQ(n.last(), req({"typo", "tpoi ", "tpoi", " ", "tpoi", "10100101100"}));
 }
 
 void testDateHint() {

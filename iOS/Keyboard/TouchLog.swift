@@ -209,7 +209,7 @@ enum TouchLogFormat {
                 + (c.keyboards.isEmpty ? "?" : c.keyboards.joined(separator: ",")),
             "access: fullAccess=\(b(c.fullAccess))",
             "typing: method=\(method) free=\(b(s.freeMarking)) modern=\(b(s.modernTone)) quick=\(b(s.quickTelex))"
-                + " spell=\(b(s.liveSpellCheck)) restore=\(b(s.autoRestore)) teen=\(b(s.teencode))"
+                + " spell=\(b(s.liveSpellCheck)) restore=\(b(s.autoRestore)) teen=\(b(s.teencode)) hat=\(b(s.autoCircumflex))"
                 + " ctxEn=\(b(s.contextualEnglish)) retroEn=\(b(s.retroEnglishAuto)) freqEn=\(b(s.englishByFrequency))"
                 + " reEdit=\(b(s.reEditWord)) adjFix=\(b(s.autoFixAdjacent)) autoCorrect=\(b(s.autoCorrect))"
                 + " caps=\(b(s.autoCapitalize)) spaceAfterPunct=\(b(s.autoSpaceAfterPunct))",

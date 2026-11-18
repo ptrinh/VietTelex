@@ -8,7 +8,7 @@ final class SettingsDepsTests: XCTestCase {
     func testVniHidesTelexOnlyStyleRows() {
         XCTAssertEqual(SettingsDeps.styleRows(vniMode: false), SettingsDeps.StyleRow.allCases)
         XCTAssertEqual(SettingsDeps.styleRows(vniMode: true),
-                       [.modern, .teencode, .bracket, .reEdit, .layout])
+                       [.modern, .teencode, .autoCircumflex, .bracket, .reEdit, .layout])
     }
 
     /// Teencode và Phím ngoặc chạy cả ở VNI (trước đây làm mờ nhầm "Chỉ áp dụng cho Telex").
@@ -17,6 +17,7 @@ final class SettingsDepsTests: XCTestCase {
             let rows = SettingsDeps.styleRows(vniMode: v)
             XCTAssertTrue(rows.contains(.teencode))
             XCTAssertTrue(rows.contains(.bracket))
+            XCTAssertTrue(rows.contains(.autoCircumflex))
         }
     }
 

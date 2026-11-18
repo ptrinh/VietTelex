@@ -249,6 +249,7 @@ Chọn “Sửa tự động” để VietTelex xoá mục quyền cũ của ch�
 "Click: open the Typing modes table + copy debug info" = "Bấm để mở bảng cách gõ (tab Ứng dụng) và sao chép thông tin chẩn đoán";
 
 "Teencode spelling" = "Chính tả teencode";
+"Auto-add circumflex" = "Tự thêm dấu mũ";
 
 "%@ is on a password field" = "%@ đang ở ô mật khẩu";
 "macOS pauses every input method in password fields — normal. Click another field to type Vietnamese again" = "macOS tạm tắt mọi bộ gõ trong ô mật khẩu — bình thường. Bấm sang ô khác là gõ tiếng Việt lại được";
@@ -369,6 +370,7 @@ Chọn “Sửa tự động” để VietTelex xoá mục quyền cũ của ch�
 "Double the first consonant: kk → kh, nn → ng, pp → ph, tt → th…" = "Gõ đúp phụ âm đầu: kk → kh, nn → ng, pp → ph, tt → th…";
 "hoà, thuý, khoẻ instead of hòa, thủy, khỏe." = "hoà, thuý, khoẻ thay vì hòa, thủy, khỏe.";
 "Accept chat spellings: wá, zui zẻ, kó. Off: was, zoo stay as typed." = "Nhận kiểu viết chat: wá, zui zẻ, kó. Tắt: was, zoo giữ nguyên.";
+"Type vietj for việt when the plain vowel isn’t a valid syllable." = "Gõ vietj ra việt, benhj ra bệnh khi vần không mũ không tồn tại.";
 "[ types ơ, ] types ư (th[ → thơ). Leave off if you write code." = "[ ra ơ, ] ra ư (th[ → thơ). Nên tắt nếu bạn viết code.";
 "Add a tone to a word already typed: toan + s → toán." = "Thêm dấu cho từ đã gõ: toan + s → toán.";
 "Physical layout Telex reads (Colemak, Dvorak…)." = "Bố cục phím Telex đọc (Colemak, Dvorak…).";

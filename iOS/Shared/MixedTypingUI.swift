@@ -129,12 +129,13 @@ enum SettingsDeps {
 
     // MARK: Kiểu gõ › Nâng cao (dưới bộ chọn Telex/VNI)
 
-    enum TypingAdvancedRow: CaseIterable, Hashable { case simpleTelex, freeMarking, quickTelex, modernTone, teencode }
+    enum TypingAdvancedRow: CaseIterable, Hashable { case simpleTelex, freeMarking, quickTelex, modernTone, teencode, autoCircumflex }
 
     /// VNI ⇒ ẩn Telex đơn giản, Bỏ dấu tự do, Gõ nhanh (chỉ chạy trong parseStep của Telex).
     /// Teencode chạy cả ở VNI (bộ kiểm âm tiết) ⇒ luôn hiện; Bỏ dấu kiểu mới áp dụng cả hai.
+    /// Tự thêm dấu mũ là bước hiển thị (render), không phụ thuộc kiểu gõ ⇒ luôn hiện.
     static func typingAdvancedRows(vniMode: Bool) -> [TypingAdvancedRow] {
-        vniMode ? [.modernTone, .teencode] : TypingAdvancedRow.allCases
+        vniMode ? [.modernTone, .teencode, .autoCircumflex] : TypingAdvancedRow.allCases
     }
 
     // MARK: Gõ vuốt

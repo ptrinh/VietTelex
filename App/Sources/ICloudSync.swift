@@ -31,6 +31,7 @@ final class MacSyncStore: SyncLocal {
         Setting(canonical: "retroactiveEnglish", local: "retroactiveEnglish"),   // "Tự sửa từ phía trước"
         Setting(canonical: "englishByFrequency", local: "englishByFrequency"),   // "Đoán từ trùng theo tần suất"
         Setting(canonical: "teencode", local: "teencode"),
+        Setting(canonical: "autoCircumflex", local: "autoCircumflex"),         // "Tự thêm dấu mũ"
         Setting(canonical: "autoRestore", local: "autoRestore"),
         Setting(canonical: "liveSpellCheck", local: "liveSpellCheck"),
         Setting(canonical: "reEditWords", local: "reEditWord"),            // "Sửa dấu từ đã gõ"
