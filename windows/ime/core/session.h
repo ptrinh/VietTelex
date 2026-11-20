@@ -161,6 +161,14 @@ public:
     // Cleared by resetContext().
     void setPreferComposition(bool on);
     bool prefersComposition() const { return preferComposition_; }
+    // In place here but for a composition PREFERENCE (setPreferComposition, a web store of
+    // this app that lagged — setAsyncStore): the field itself is readable and the user's
+    // mode is in place. A Chromium address bar is offered to the hook on this, not on
+    // outputMode() (1.3.31, #173: after one lagging web field the address bar composed,
+    // underlined, until the browser was restarted).
+    bool inPlaceButForPreference() const {
+        return mode_ == OutputMode::InPlace && !contextFallback_ && !compositionOnly_;
+    }
     // The store mirrors the app ASYNCHRONOUSLY (Chromium's TSFTextStore: Chrome, Edge,
     // Electron, WebView2 — the transitory contexts classifyContext keeps Normal): what it
     // shows can be renderer round trips behind the page, while an in-place edit lands at

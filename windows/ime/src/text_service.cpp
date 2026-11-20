@@ -859,18 +859,23 @@ bool TextService::fieldPolicyAtWordStart(ITfContext* ctx, TfEditCookie ec) {
     int buf[32];
     const UINT n = inputScopesAtSelection(ctx, ec, buf, 32);
     if (n > 0 && classifyInputScopes(buf, n) == FieldPolicy::Literal) return true;
-    if (session_.outputMode() == OutputMode::InPlace && !session_.prefersComposition() &&
-        fieldPrefersComposition(config::exeName(), buf, n)) {
+    if (omniboxOfferedToHook(fieldPrefersComposition(config::exeName(), buf, n), session_.inPlaceButForPreference(),
+                             addressBarCompose_)) {
         const DirectAsk ask = askDirectForAddressBar();
         const OmniboxStep step = omniboxStepAtWordStart(ask, GetTickCount64() - directAskTick_);
         if (step == OmniboxStep::HookTypes || step == OmniboxStep::PassAsTyped) {
-            if (!addressBarHandover_)
-                config::log(step == OmniboxStep::HookTypes
-                                ? "browser address bar (IS_URL): the hook types here"
-                                : "browser address bar (IS_URL): keys pass as typed until the hook acks");
+            const bool first = !addressBarHandover_;
             addressBarHandover_ = true;
             keysPassAsTyped_ = true;
-            publishTypedWord();  // this key included (OnTestKeyDown recorded it)
+            publishTypedWord();  // this key included (recorded in OnTestKeyDown, else in OnKeyDown)
+            if (first && config::logging()) {
+                const int len = typedWord_.length();
+                config::log(std::string(step == OmniboxStep::HookTypes
+                                            ? "browser address bar (IS_URL): the hook types here"
+                                            : "browser address bar (IS_URL): keys pass as typed until the hook acks") +
+                            " (word so far: " + (len < 0 ? std::string("unknown") : std::to_string(len) + " key(s)") +
+                            ")");
+            }
             return true;         // the key goes to the field untouched
         }
         if (step == OmniboxStep::GiveUp) {
@@ -888,6 +893,7 @@ bool TextService::fieldPolicyAtWordStart(ITfContext* ctx, TfEditCookie ec) {
             keysPassAsTyped_ = false;
             clearTypedWord();
         }
+        addressBarCompose_ = true;  // settled for this focus: not asked again at every word
         session_.setPreferComposition(true);
         config::log("browser address bar (IS_URL): composition for this field (in-place breaks on inline autocomplete)");
     }
@@ -1001,6 +1007,8 @@ STDMETHODIMP TextService::OnSetFocus(ITfDocumentMgr* focus, ITfDocumentMgr*) {
     }
     keysPassAsTyped_ = keptPassAsTyped;
     addressBarHandover_ = false;  // the next field is classified afresh (#173)
+    addressBarCompose_ = false;
+    typedNote_.reset();
     hostEval_.invalidate();
     resolveActiveApp();
     config::reloadVietnamese();
@@ -1325,6 +1333,7 @@ HRESULT TextService::testKeyDownBody(ITfContext* ctx, WPARAM wp, BOOL* eaten) {
     // The raw keys of the word in progress (published only where keys pass as typed).
     // Once the hook acked, typing is off here (typingEnabled) yet the keys the hook passes on
     // still arrive as typed — one typed before the hook was in may arrive only now.
+    typedNote_.fedAtTest(static_cast<uint64_t>(wp));
     if (prepared) {
         typedWord_.note(k);
     } else if (!isModifierVk(static_cast<uint32_t>(wp))) {
@@ -1383,6 +1392,27 @@ HRESULT TextService::testKeyDownBody(ITfContext* ctx, WPARAM wp, BOOL* eaten) {
     return S_OK;
 }
 
+// The raw record of the word (typed_word.h) is fed in OnTestKeyDown. A host that offers a
+// key to OnKeyDown only (1.3.31, #173: the first letter typed in the address bar was not
+// adopted by the hook, "onw" -> "onư") is fed here, exactly as there, and never twice.
+void TextService::noteTypedKeyAtKeyDown(WPARAM wp) {
+    const uint32_t vkey = static_cast<uint32_t>(wp);
+    if (typedNote_.takeAtKeyDown(static_cast<uint64_t>(wp))) return;
+    if (isModifierVk(vkey)) return;
+    if (typingEnabled() || keysPassAsTyped_) {
+        Modifiers m;
+        m.shift = keyDown(VK_SHIFT);
+        m.ctrl = keyDown(VK_CONTROL);
+        m.alt = keyDown(VK_MENU);
+        m.win = keyDown(VK_LWIN) || keyDown(VK_RWIN);
+        m.capsLock = (GetKeyState(VK_CAPITAL) & 1) != 0;
+        typedWord_.note(classifyKey(vkey, m));
+    } else {
+        typedWord_.invalidate();
+    }
+    publishTypedWord();
+}
+
 STDMETHODIMP TextService::OnKeyDown(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* eaten) {
     if (!eaten) return E_INVALIDARG;
     *eaten = FALSE;
@@ -1397,6 +1427,7 @@ STDMETHODIMP TextService::OnKeyDown(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL*
 HRESULT TextService::keyDownBody(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* eaten) {
     if (isOwnInjected(static_cast<uintptr_t>(GetMessageExtraInfo()))) return S_OK;
     altZLatch_.noteKey(static_cast<uint32_t>(wp), true);  // hosts that skip OnTestKeyDown
+    noteTypedKeyAtKeyDown(wp);                            // idem: the raw record of the word
     if (hintKeyAct_ >= 0 || hint_) {
         int act = hintKeyAct_;
         hintKeyAct_ = -1;

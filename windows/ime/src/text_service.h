@@ -216,6 +216,9 @@ private:
     bool directInlineAc_ = false;       // ...and kDirectInlineAutocomplete (#173)
     uint64_t directAskTick_ = 0;        // GetTickCount64 when the request was posted
     bool addressBarHandover_ = false;   // (#173) Chromium address bar handed to the hook, this focus
+    bool addressBarCompose_ = false;    // ...or settled on composition for this focus (Refused / GiveUp)
+    TypedKeyNote typedNote_;            // key event typedWord_ was last fed for (typed_word.h)
+    void noteTypedKeyAtKeyDown(WPARAM wp);  // a host that skipped OnTestKeyDown
     bool keysPassAsTyped_ = false;      // last evaluateHost: WPF default store, keys pass as typed
     TypedWord typedWord_;               // raw keys of the word in progress (typed_word.h)
     HWND typedWordWnd_ = nullptr;       // where kTypedWordProp is set

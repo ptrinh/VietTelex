@@ -195,8 +195,7 @@ bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t c
 // kDirectAdoptTyped | kDirectInlineAutocomplete): the hook types every replace as U+202F
 // (cancels the inline suggestion), Backspace x (N + 1), text — direct_policy.h
 // directEditEvents. Composition (as before #173) stays the fallback. Decided at each word
-// start while the TIP still types there (outputMode InPlace, nothing preferred composition
-// yet):
+// start while the field is offered to the hook (omniboxOfferedToHook below):
 //   Refused   (no VietTelex.exe, UIPI, the field marked NoDirect) -> Compose (as before)
 //   Acked     (kDirectOnProp from the live app on the window)     -> HookTypes: key passes
 //   Pending   (asked, no ack yet), waited < kOmniboxAckWaitMs      -> PassAsTyped: the key
@@ -205,6 +204,14 @@ bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t c
 //             could then type over — the handover race of 1.1.5.
 //   Pending   for kOmniboxAckWaitMs or more (app hung)             -> GiveUp: release the
 //             request, compose for the rest of the focus.
+// (1.3.31) Offered at every word start of the address bar until composition was settled for
+// this focus (Refused / GiveUp), whatever composition preference the field inherited: one
+// lagging web field made every async store of the browser prefer composition
+// (session.h setAsyncStore), the address bar with them, until the browser restarted.
+// `inPlaceButForPreference` = session.h; `composeSettled` = Refused / GiveUp this focus.
+inline bool omniboxOfferedToHook(bool isOmnibox, bool inPlaceButForPreference, bool composeSettled) {
+    return isOmnibox && inPlaceButForPreference && !composeSettled;
+}
 enum class DirectAsk : uint8_t { Refused, Pending, Acked };
 enum class OmniboxStep : uint8_t { Compose, PassAsTyped, HookTypes, GiveUp };
 constexpr uint64_t kOmniboxAckWaitMs = 500;

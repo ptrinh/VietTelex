@@ -906,6 +906,49 @@ TEST(address_bar_step_hook_first_composition_as_fallback) {
     CHECK(omniboxStepAtWordStart(DirectAsk::Pending, 60000) == OmniboxStep::GiveUp);
 }
 
+// 1.3.31 (#173 follow-up): after one lagging web field every async store of the browser
+// prefers composition (setAsyncStore) — the address bar must still go to the hook.
+TEST(address_bar_offered_to_hook_despite_inherited_composition_preference) {
+    TypingSession s;
+    s.setOutputMode(OutputMode::InPlace);
+    CHECK(s.inPlaceButForPreference());
+    s.setPreferComposition(true);  // what setAsyncStore does once a web store lagged
+    CHECK(s.prefersComposition());
+    CHECK(s.inPlaceButForPreference());
+    CHECK(omniboxOfferedToHook(true, s.inPlaceButForPreference(), false));
+    // Refused / GiveUp settled composition for this focus: not asked again at every word.
+    CHECK(!omniboxOfferedToHook(true, s.inPlaceButForPreference(), true));
+    CHECK(!omniboxOfferedToHook(false, s.inPlaceButForPreference(), false));  // not an address bar
+    // No readable store: composition is not a preference there.
+    s.setCompositionOnlyContext(true);
+    CHECK(!s.inPlaceButForPreference());
+    CHECK(!omniboxOfferedToHook(true, s.inPlaceButForPreference(), false));
+}
+
+// 1.3.31 (#173 follow-up): a host that offers keys to OnKeyDown only left the record empty
+// (first letter not adopted: "onw" -> "onư"). OnKeyDown feeds it unless OnTestKeyDown did.
+TEST(typed_key_note_feeds_once_per_key) {
+    TypedKeyNote n;
+    CHECK(!n.takeAtKeyDown('O'));  // no OnTestKeyDown: OnKeyDown feeds the record
+    CHECK(!n.takeAtKeyDown('N'));
+    n.fedAtTest('O');
+    CHECK(n.takeAtKeyDown('O'));   // fed in OnTestKeyDown: not twice
+    CHECK(!n.takeAtKeyDown('O'));  // the same key again, no test before it: a new press
+    n.fedAtTest('O');              // declined in OnTestKeyDown (no OnKeyDown), then another key
+    CHECK(!n.takeAtKeyDown('N'));
+    n.fedAtTest('W');
+    n.reset();                     // focus change
+    CHECK(!n.takeAtKeyDown('W'));
+    TypedWord w;
+    KeyInput o;
+    o.kind = KeyKind::Char;
+    o.ch = U'o';
+    w.note(o);
+    CHECK_EQ(w.length(), 1);
+    w.invalidate();
+    CHECK_EQ(w.length(), -1);
+}
+
 TEST(direct_mode_request_bits_decode) {
     DirectModeRequest r = decodeDirectMode(kDirectOn | kDirectAdoptTyped | kDirectInlineAutocomplete);
     CHECK(r.on && r.adoptTyped && r.inlineAutocomplete);

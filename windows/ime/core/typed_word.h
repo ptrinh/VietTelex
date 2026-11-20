@@ -115,11 +115,37 @@ public:
     }
     uint32_t encoded() const { return unknown_ ? kTypedWordUnknown : keys_; }
     bool empty() const { return !unknown_ && !len_; }
+    int length() const { return unknown_ ? -1 : len_; }  // log only: -1 = unknown keys
 
 private:
     uint32_t keys_ = 0;
     int len_ = 0;
     bool unknown_ = false;
+};
+
+// Which key event the record was last fed for (1.3.31, #173). The TIP feeds it in
+// OnTestKeyDown; a host that offers a key to OnKeyDown only left the record empty, the hook
+// adopted nothing and the first letter of the word was lost ("onw" -> "onư" in the address
+// bar). OnKeyDown feeds the record itself unless this very event (key + message time) was
+// (the key OnTestKeyDown saw last) was already fed — once: the next OnKeyDown of that key
+// with no OnTestKeyDown before it is a new press.
+class TypedKeyNote {
+public:
+    void fedAtTest(uint64_t key) {
+        key_ = key;
+        armed_ = true;
+    }
+    // OnKeyDown: true = OnTestKeyDown fed the record for this key (nothing to do).
+    bool takeAtKeyDown(uint64_t key) {
+        const bool fed = armed_ && key_ == key;
+        armed_ = false;
+        return fed;
+    }
+    void reset() { armed_ = false; }
+
+private:
+    uint64_t key_ = 0;
+    bool armed_ = false;
 };
 
 // What the TIP publishes on its focus root: the word only in a context where every key
