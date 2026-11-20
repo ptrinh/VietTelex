@@ -21,6 +21,7 @@
 		0586DC63E120C311C0AB5413 /* TextTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49B2C3D02FA8B71A8BFA201 /* TextTools.swift */; };
 		06924CF4C8D5C5EE80A6A054 /* UserLMCompactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5DB205A10E21AAD95FDA /* UserLMCompactTests.swift */; };
 		06A12CC4391529A62752829A /* MathResultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46501A28188D32863452971E /* MathResultsTests.swift */; };
+		06E7A597899ADFDBD0D867B9 /* PlaneSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A88434D71F429011A78A37E5 /* PlaneSlide.swift */; };
 		07A47B9DDE01B30DF99D5E65 /* Kaleido.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76BB26AFD798587729A1131F /* Kaleido.swift */; };
 		080FA12CECE7599A9E41A483 /* Tiny5-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B54E7A19E4E9876F575A338D /* Tiny5-Regular.ttf */; };
 		081B2F2ED23D9B8253CF8C51 /* lunar-month-starts.txt in Resources */ = {isa = PBXBuildFile; fileRef = F5F6826BD09A2052F68E533E /* lunar-month-starts.txt */; };
@@ -410,11 +411,13 @@
 		A9283EF79B30B5314DE19E56 /* TouchLogAlerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C358AB627E9E79C3E4E824DE /* TouchLogAlerts.swift */; };
 		A9B5CB329E25C3281FFDE6CC /* KeyAlternatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20B596D225BB513FA414DB3 /* KeyAlternatesTests.swift */; };
 		AAD686F0EFFB0502D1BC32E9 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BDB49FABB2F78D2A96902FA /* L10n.swift */; };
+		AAD97850C044C591EFE2988C /* PlaneSlideTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 067EB1DD072B927746BEAC42 /* PlaneSlideTests.swift */; };
 		AADA245766A91FA02046C53A /* EmojiSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B65EEFA3CD83560C2E9D86B /* EmojiSearchBar.swift */; };
 		AAEAE3FC59DE30D707662F4F /* KeyCommitQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8F1F925F053BA5BF36C118C /* KeyCommitQueue.swift */; };
 		AB0F2E167DA8AA1EBD8F37E5 /* PlusGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D488C3ADF837AC9FCDD9EC1D /* PlusGate.swift */; };
 		AB3FDDE7EE22D498D55C496F /* Zodiac.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625D4BBB065084DF9D051CE0 /* Zodiac.swift */; };
 		AC2407E83BA2FC77C45DE3FF /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738732B955CD39C76B2484C7 /* SeedData.swift */; };
+		AC60860BC0C91A3B522A4601 /* PlaneSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A88434D71F429011A78A37E5 /* PlaneSlide.swift */; };
 		AC6E9978B1D5F292B09158AE /* KeySoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8B6F1BC1B564638DA93D085 /* KeySoundTests.swift */; };
 		AD67BC077725334F09B0357B /* SwipeTyping.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5BA79FCDFB7209A8D1C65B0 /* SwipeTyping.swift */; };
 		ADD40A7393F6B610F37C4C4E /* MeritGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B294619B1349B1116862526 /* MeritGlass.swift */; };
@@ -683,6 +686,7 @@
 		052E6FE3AB0D95827A3C3A25 /* KeyboardBuddyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardBuddyView.swift; sourceTree = "<group>"; };
 		0599154D3A43772DC7456968 /* WordDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDeleteTests.swift; sourceTree = "<group>"; };
 		05FDB06A1704367A4031BAC4 /* RetroChipRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetroChipRenderTests.swift; sourceTree = "<group>"; };
+		067EB1DD072B927746BEAC42 /* PlaneSlideTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaneSlideTests.swift; sourceTree = "<group>"; };
 		07973B1798B754A6DDA969C3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		079761CFA779BBD4401101EF /* SyncCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCore.swift; sourceTree = "<group>"; };
 		080B5DB205A10E21AAD95FDA /* UserLMCompactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserLMCompactTests.swift; sourceTree = "<group>"; };
@@ -913,6 +917,7 @@
 		A7FCB71A2846557F9B5442F7 /* NumberChipsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberChipsTests.swift; sourceTree = "<group>"; };
 		A809E689B0799E01016CE69B /* BackupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStore.swift; sourceTree = "<group>"; };
 		A817C3A81FD07D8BF3E86BF2 /* EnglishAssist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishAssist.swift; sourceTree = "<group>"; };
+		A88434D71F429011A78A37E5 /* PlaneSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaneSlide.swift; sourceTree = "<group>"; };
 		A8F1F925F053BA5BF36C118C /* KeyCommitQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCommitQueue.swift; sourceTree = "<group>"; };
 		A91699D6082AF81FEF6F5B6E /* swipe-vocab.tsv */ = {isa = PBXFileReference; path = "swipe-vocab.tsv"; sourceTree = "<group>"; };
 		A93B754A244411A21FFA6EA0 /* SwipeRevise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRevise.swift; sourceTree = "<group>"; };
@@ -1403,6 +1408,7 @@
 				913B66F6ADBA6F7301A62257 /* PixelKeysTests.swift */,
 				6EAFABBBF6544841D633BFD9 /* PlaneCacheLayoutTests.swift */,
 				E2A6BDCAE323FDEA73473DB7 /* PlanePolicyTests.swift */,
+				067EB1DD072B927746BEAC42 /* PlaneSlideTests.swift */,
 				150EAA710911C53C0656FEBD /* PlusFeedback1015Tests.swift */,
 				8197742D5A3A7B8F8BE4C8DC /* PlusTests.swift */,
 				E75BA8EA748D5D828F5D14BD /* PrideThemeTests.swift */,
@@ -1609,6 +1615,7 @@
 				7CD24A88B2F680A535A339CC /* PasteOfferOnce.swift */,
 				E5251A976F003AF8C3F41CE2 /* PixelKeys.swift */,
 				7C832E4FAF0818129299FF52 /* PlanePolicy.swift */,
+				A88434D71F429011A78A37E5 /* PlaneSlide.swift */,
 				E31F90D3A4E7B3D4EBDF3A52 /* Pride.swift */,
 				4C48C500F39CC4B089E84DA5 /* RainbowBorder.swift */,
 				738732B955CD39C76B2484C7 /* SeedData.swift */,
@@ -2038,6 +2045,7 @@
 				7BFD10B6FA1A7678156B9187 /* PasteOfferOnce.swift in Sources */,
 				EE7F51531D95329E1799A7C5 /* PixelKeys.swift in Sources */,
 				2BD3C710EAF07F0E4C2FE43A /* PlanePolicy.swift in Sources */,
+				06E7A597899ADFDBD0D867B9 /* PlaneSlide.swift in Sources */,
 				01B8210D0F9862246491F86C /* PlusConfig.swift in Sources */,
 				CF927A464EEB48A4770D3C9F /* PlusGate.swift in Sources */,
 				BE9E3396C184E03695342AF0 /* Pride.swift in Sources */,
@@ -2367,6 +2375,8 @@
 				4F177B14857E493A92E95B00 /* PlaneCacheLayoutTests.swift in Sources */,
 				5C1E68D1CE795950C634F366 /* PlanePolicy.swift in Sources */,
 				0E4E1EDF98B16B37559DDCDD /* PlanePolicyTests.swift in Sources */,
+				AC60860BC0C91A3B522A4601 /* PlaneSlide.swift in Sources */,
+				AAD97850C044C591EFE2988C /* PlaneSlideTests.swift in Sources */,
 				7D80FCC5647175620DC1D42E /* PlusConfig.swift in Sources */,
 				BA4825C2AAE03F00404D6B4D /* PlusFeedback1015Tests.swift in Sources */,
 				AB0F2E167DA8AA1EBD8F37E5 /* PlusGate.swift in Sources */,

@@ -588,6 +588,8 @@ class KeyboardView(
         lastSpaceTap = now
     }
     private val newlineFire: () -> Unit = { emit(Key.Newline) }
+    /** Phím CHAR: hàng số trên plane chữ chốt xong nhả Shift một-lần (#143) — lúc CHỐT, không lúc chạm. */
+    private fun charFire(k: LaidKey) = if (plane == Plane.LETTERS) lettersCharFire(k.insert) else textFire(k.insert)
     private val textFires = HashMap<String, () -> Unit>()
     private fun textFire(s: String) = textFires.getOrPut(s) { val k = Key.Text(s); { emit(k) } }
     private val lettersCharFires = HashMap<String, () -> Unit>()
@@ -1697,6 +1699,7 @@ class KeyboardView(
 
     private fun down(pid: Int, x: Float, y: Float, e: MotionEvent) {
         if (pid !in 0 until MAX_PTR) return
+        if (planeSlidePid >= 0 && pid != planeSlidePid) endPlaneSlide(0f, 0f, cancelled = true)   // ngón thứ hai: bỏ trượt 123
         ptrEdge[pid] = false; ptrEdgeShiftOn[pid] = false
         // Trackpad (giữ phím cách): ngón THỨ HAI chạm bất kỳ đâu ⇒ chuyển sang chọn chữ như bàn
         // phím Apple — không gõ phím dưới ngón đó. Ngoài trackpad: một phép so bool.
@@ -1812,8 +1815,7 @@ class KeyboardView(
                 feedback.clickKey(k.label, Feedback.LETTER, this)
                 pressDown(pid, k)
                 if (keyPreview) showBalloon(k, k.label)
-                // Hàng số trên plane chữ: chốt xong nhả Shift một-lần (#143) — lúc CHỐT, không lúc chạm.
-                commits.arm(k, if (plane == Plane.LETTERS) lettersCharFire(k.insert) else textFire(k.insert))
+                commits.arm(k, charFire(k))
                 armPopover(pid, k, x, y)
             }
             KeyKind.PAD -> {
@@ -1893,7 +1895,18 @@ class KeyboardView(
                 if (k.kind == KeyKind.EMOJI && popoversEnabled) { menuX = x; menuY = y; postDelayed(emojiMenuRun, KeyAlternates.HOLD_MS) }
                 else postDelayed(globeLongRun, GLOBE_HOLD_MS)
             }
-            else -> {   // PLANE, MORE, EMOJI, CLEAR, DISMISS: hành động lúc nhấc
+            KeyKind.PLANE -> {
+                feedback.click(Feedback.MODIFIER, this)
+                if (plane == Plane.LETTERS && forced == null) {
+                    // #171: 123 ở plane chữ đổi sang plane số NGAY lúc chạm; ngón trượt sang phím ký
+                    // tự rồi nhấc ⇒ chèn + về chữ (PlaneSlide). Nhấc tại chỗ ⇒ ở lại plane số như cũ.
+                    ptrKey[pid] = null
+                    planeSlidePid = pid
+                    planeSlide = PlaneSlide()
+                    controlAction(k)
+                } else press(k)   // ABC / TalkBack: hành động lúc nhấc như cũ
+            }
+            else -> {   // MORE, EMOJI, CLEAR, DISMISS: hành động lúc nhấc
                 feedback.click(Feedback.MODIFIER, this)
                 press(k)
             }
@@ -1902,6 +1915,7 @@ class KeyboardView(
 
     private fun move(pid: Int, x: Float, y: Float) {
         if (pid !in 0 until MAX_PTR) return
+        if (pid == planeSlidePid) { planeSlideMove(pid, x, y); return }
         if (ptrPane[pid]) {
             when (plane) {
                 Plane.EMOJI -> emojiPane.move(pid, x, y)
@@ -1939,6 +1953,7 @@ class KeyboardView(
 
     private fun up(pid: Int, x: Float, y: Float, cancelled: Boolean, t: Long = SystemClock.uptimeMillis()) {
         if (pid !in 0 until MAX_PTR) return
+        if (pid == planeSlidePid) { endPlaneSlide(x, y, cancelled); return }
         if (ptrPane[pid]) {
             ptrPane[pid] = false
             if (plane == Plane.EMOJI) emojiPane.up(pid, x, y, cancelled)
@@ -2071,6 +2086,47 @@ class KeyboardView(
         if (was == 1) listener?.onSwipeDeleteEnd(commit)
     }
 
+    // MARK: trượt từ phím 123 (#171) — PlaneSlide
+
+    private var planeSlidePid = -1
+    private var planeSlide: PlaneSlide<LaidKey>? = null
+
+    /** Phím ký tự (CHAR, chèn được) của plane hiện tại chứa điểm — khe / phím khác ⇒ null. */
+    private fun slideInsertKey(x: Float, y: Float): LaidKey? {
+        for (i in keys.indices) { val k = keys[i]; if (k.kind == KeyKind.CHAR && k.contains(x, y)) return k }
+        return null
+    }
+
+    private fun planeSlideMove(pid: Int, x: Float, y: Float) {
+        val s = planeSlide ?: return
+        val c = s.move(slideInsertKey(x, y)) ?: return
+        c.leave?.let { pressUp(pid); hideBalloon(it); it.pressed = false; invalidateKey(it) }
+        c.enter?.let { pressDown(pid, it); press(it); if (keyPreview) showBalloon(it, it.label) }
+    }
+
+    /** Kết thúc trượt: nhấc trên phím ký tự ⇒ chèn như chạm thường rồi về chữ; còn lại không gì. */
+    private fun endPlaneSlide(x: Float, y: Float, cancelled: Boolean) {
+        val s = planeSlide ?: return
+        val pid = planeSlidePid
+        planeSlide = null; planeSlidePid = -1
+        s.over?.let { pressUp(pid); hideBalloon(it); it.pressed = false; invalidateKey(it) }
+        val k = PlaneSlide.lift(if (cancelled) null else slideInsertKey(x, y), cancelled) ?: return
+        // Đúng đường chạm thường của phím CHAR: âm/rung, hiệu ứng, KeyCommitQueue, emit (PlanePolicy).
+        fxMark(k)
+        feedback.clickKey(k.label, Feedback.LETTER, this)
+        commits.flush()
+        commits.arm(k, charFire(k))
+        commits.release(k)
+        if (plane != Plane.LETTERS) setPlane(Plane.LETTERS)   // như chạm ABC
+    }
+
+    /** Test: tâm phím đổi plane (123 / ABC) đang hiện. */
+    internal fun planeKeyCenter(): android.graphics.PointF? =
+        keys.firstOrNull { it.kind == KeyKind.PLANE }?.let { android.graphics.PointF(it.centerX, it.centerY) }
+    /** Test: tâm phím ⌫. */
+    internal fun backspaceCenter(): android.graphics.PointF? =
+        keys.firstOrNull { it.kind == KeyKind.BACKSPACE }?.let { android.graphics.PointF(it.centerX, it.centerY) }
+
     private fun controlAction(k: LaidKey) {
         when (k.kind) {
             KeyKind.PLANE -> setPlane(if (plane == Plane.LETTERS || plane == Plane.EMOJI_SEARCH) Plane.NUMBERS
@@ -2088,6 +2144,7 @@ class KeyboardView(
     private fun activeCount(): Int { var n = 0; for (k in ptrKey) if (k != null) n++; return n }
 
     private fun cancelAllTouches() {
+        endPlaneSlide(0f, 0f, cancelled = true)
         abortSwipe()
         endKeyCmd()
         shiftPtr = -1; shiftHold.cancel()

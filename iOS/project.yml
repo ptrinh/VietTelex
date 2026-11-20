@@ -270,6 +270,7 @@ targets:
       - Keyboard/Drift.swift
       - Keyboard/MeritGlass.swift
       - Keyboard/KeyCommitQueue.swift
+      - Keyboard/PlaneSlide.swift
       - Keyboard/LineBreak.swift
       - Keyboard/AdjacentKeyFixer.swift
       - Keyboard/AutoCorrect.swift

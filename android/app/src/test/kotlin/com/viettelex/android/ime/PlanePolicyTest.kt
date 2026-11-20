@@ -93,7 +93,10 @@ class PlanePolicyTest {
             .resolve("com/viettelex/android/ime/KeyboardView.kt").readText()
         val charDown = src.substringAfter("override fun onTouchEvent(").substringAfter("KeyKind.CHAR -> {")
             .substringBefore("KeyKind.PAD -> {")
-        assertTrue(charDown, "commits.arm(k, if (plane == Plane.LETTERS) lettersCharFire(k.insert) else textFire(k.insert))" in charDown)
+        assertTrue(charDown, "commits.arm(k, charFire(k))" in charDown)
+        // charFire dùng chung với trượt từ phím 123 (#171): cùng đường chốt như chạm thường.
+        val pick = src.substringAfter("private fun charFire(").substringBefore("\n")
+        assertTrue(pick, "if (plane == Plane.LETTERS) lettersCharFire(k.insert) else textFire(k.insert)" in pick)
         val fire = src.substringAfter("private fun lettersCharFire(").substringBefore("\n    }\n")
         assertTrue(fire, "emit(k)" in fire && "PlanePolicy.shiftAfterCharKey(Plane.LETTERS, shift)" in fire)
         assertTrue("nhả sau khi chèn", fire.indexOf("emit(k)") < fire.indexOf("shiftAfterCharKey"))

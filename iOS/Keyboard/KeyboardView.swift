@@ -4296,6 +4296,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private func makePlaneKey(_ planeKey: String) -> KeyButton {
         let planeBtn = controlButton(title: planeKey, fire: .down) { [weak self] in
             guard let self else { return }
+            // Trượt từ 123 (#171): chỉ plane chữ → plane số, iPhone, không tách đôi, không bàn số lớn.
+            self.planeSlideArmed = planeKey == "123" && self.plane == .letters && self.keypadStyle == nil
+                && !Self.isPad && !self.builtSplit
             // Từ ô tìm emoji: 123 ra plane số (thoát tìm).
             // Ô bàn số lớn: "123" ở bàn chữ quay lại bàn số lớn (NumericKeypad).
             self.plane = (self.plane == .letters || self.plane == .emojiSearch)
@@ -4305,6 +4308,16 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         planeBtn.accessibilityLabel = planeKey == "123" ? L("Số") : L("Chữ")
         applyLabelFont(planeBtn, size: KeyGeometry.Typography.planeKeySize)
+        if planeKey == "123", !Self.isPad {
+            // Sau action đổi plane (thêm trước) + carryPress: bắt đầu theo dõi ngón trượt.
+            planeBtn.addAction(UIAction { [weak self, weak planeBtn] _ in
+                guard let self, self.planeSlideArmed else { return }
+                self.planeSlideArmed = false
+                guard self.plane == .numbers else { return }
+                self.beginPlaneSlide(touch: planeBtn?.lastBeganTouch)
+            }, for: .touchDown)
+            planeBtn.onTouchPhase = { [weak self] t, phase in self?.planeSlideEvent(t, phase) }
+        }
         return planeBtn
     }
 
@@ -5362,6 +5375,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         private var forwardedTouches: Set<ObjectIdentifier> = []
         /// Chạm vừa bắt đầu trên nút (phím đổi plane theo dõi nó sau khi bị gỡ — carryPress).
         weak var lastBeganTouch: UITouch?
+        /// Phím ký tự của plane số / ký hiệu: ký tự chèn khi trượt từ phím 123 tới rồi nhấc (#171).
+        var slideInsert: String?
+        /// Chỉ phím 123: moved / ended / cancelled của chạm trên nút (trượt từ 123 — #171). nil ⇒ 0 việc.
+        var onTouchPhase: ((UITouch, UITouch.Phase) -> Void)?
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             lastBeganTouch = touches.first
             guard let pre = preTouchDown else { return super.touchesBegan(touches, with: event) }
@@ -5388,14 +5405,17 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
             let rest = splitForwarded(touches, .moved, event)
+            if let f = onTouchPhase { for t in rest { f(t, .moved) } }
             if !rest.isEmpty { super.touchesMoved(rest, with: event) }
         }
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             let rest = splitForwarded(touches, .ended, event)
+            if let f = onTouchPhase { for t in rest { f(t, .ended) } }
             if !rest.isEmpty { super.touchesEnded(rest, with: event) }
         }
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             let rest = splitForwarded(touches, .cancelled, event)
+            if let f = onTouchPhase { for t in rest { f(t, .cancelled) } }
             if !rest.isEmpty { super.touchesCancelled(rest, with: event) }
         }
 
@@ -6084,6 +6104,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let b = baseButton(title: s, special: false)
         if keyPressHighlightEnabled { b.pressedBackground = specialFill }
         if Self.isPad { b.padRole = .digit }   // số/ký hiệu: cỡ chữ iPad, căn giữa như stock
+        b.slideInsert = s
         if let hint {
             // Plane số iPad: ký tự phụ xám phía trên như stock, khối chữ theo tâm phím.
             addPadHint(hint, to: b)
@@ -6245,6 +6266,100 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             }
         }
     }
+    // MARK: trượt từ phím 123 (#171) — PlaneSlide
+
+    /// Phím 123 vừa chạm từ plane chữ (đặt trong action đổi plane, đọc ngay sau đó).
+    private var planeSlideArmed = false
+    private var planeSlide: PlaneSlide<KeyButton>?
+    private weak var planeSlideTouch: UITouch?
+    /// Nút 123 cũ đã bị gỡ ⇒ có thể không nhận moved / ended (xem carryPress): đọc thẳng chạm
+    /// mỗi 50ms làm dự phòng. Chỉ chạy trong lúc trượt.
+    private var planeSlideWatch: Timer?
+
+    /// `touch` nil (VoiceOver / sendActions) hoặc đã kết thúc ⇒ không trượt: chạm 123 như cũ.
+    private func beginPlaneSlide(touch: UITouch?) {
+        guard let touch, touch.phase != .ended, touch.phase != .cancelled,
+              !UIAccessibility.isVoiceOverRunning else { return }
+        startPlaneSlide(touch: touch)
+        let start = CACurrentMediaTime()
+        planeSlideWatch = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self, weak touch] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                guard let touch, CACurrentMediaTime() - start < 10 else {
+                    self.endPlaneSlide(at: nil, cancelled: true)
+                    return
+                }
+                self.planeSlideEvent(touch, touch.phase == .ended || touch.phase == .cancelled ? touch.phase : .moved)
+            }
+        }
+    }
+
+    /// Ngón thứ hai chạm một phím lúc đang trượt: bỏ trượt, không chèn (phím mới gõ như thường).
+    private func planeSlideSecondTouch() { endPlaneSlide(at: nil, cancelled: true) }
+
+    private func startPlaneSlide(touch: UITouch?) {
+        planeSlide = PlaneSlide()
+        planeSlideTouch = touch
+    }
+
+    /// Sự kiện của chạm 123 (từ nút cũ, hoặc đồng hồ dự phòng).
+    private func planeSlideEvent(_ t: UITouch, _ phase: UITouch.Phase) {
+        guard planeSlide != nil, t === planeSlideTouch else { return }
+        let p = t.location(in: self)
+        switch phase {
+        case .ended: endPlaneSlide(at: p, cancelled: false)
+        case .cancelled: endPlaneSlide(at: p, cancelled: true)
+        default: planeSlideMove(to: p)
+        }
+    }
+
+    /// Phím ký tự (chèn được) của plane hiện tại dưới điểm `p` (toạ độ self).
+    private func slideInsertKey(at p: CGPoint) -> KeyButton? {
+        layoutIfNeeded()                         // plane số vừa dựng lúc chạm, có thể chưa layout
+        for row in rowsContainer.arrangedSubviews {
+            for c in rowControls(row) {
+                guard let b = c as? KeyButton, b.slideInsert != nil, !b.isHidden,
+                      convert(b.bounds, from: b).contains(p) else { continue }
+                return b
+            }
+        }
+        return nil
+    }
+
+    private func planeSlideMove(to p: CGPoint) {
+        guard var s = planeSlide else { return }
+        let change = s.move(over: slideInsertKey(at: p))
+        planeSlide = s
+        guard let change else { return }
+        if let old = change.leave { old.release(); hideBalloon() }
+        if let k = change.enter {
+            releaseCarriedPress()                // ABC (chỗ 123 cũ) thôi sẫm: ngón đã rời
+            k.press()
+            showBalloon(over: k, text: k.slideInsert ?? "")
+        }
+    }
+
+    /// Kết thúc trượt. `p` nil = không có điểm nhấc (ngón thứ hai, chạm mất) ⇒ không chèn.
+    private func endPlaneSlide(at p: CGPoint?, cancelled: Bool) {
+        guard let s = planeSlide else { return }
+        planeSlide = nil
+        planeSlideTouch = nil
+        planeSlideWatch?.invalidate(); planeSlideWatch = nil
+        if let o = s.over { o.release(); hideBalloon() }
+        let k = cancelled ? nil : p.flatMap(slideInsertKey(at:))
+        guard let target = PlaneSlide.lift(over: k, cancelled: cancelled) else { return }
+        releaseCarriedPress()
+        // Đúng đường chạm thường của phím đó: âm/rung, balloon, KeyCommitQueue, tapSymbol
+        // (ranh giới từ, tự cách, VNI, về chữ theo PlanePolicy).
+        target.sendActions(for: .touchDown)
+        target.sendActions(for: .touchUpInside)
+        if plane != .letters {                   // như chạm ABC
+            plane = .letters
+            reevaluateShiftForLetters()
+            rebuild()
+        }
+    }
+
     /// Thuần (test được): sẫm thay của phím đổi plane hết khi chạm không còn / đã nhấc / huỷ, hoặc quá 10s.
     static func carriedTouchEnded(phase: UITouch.Phase?, elapsed: CFTimeInterval) -> Bool {
         guard let phase, elapsed < 10 else { return true }
@@ -6996,6 +7111,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// dấu kết vế ở 123/#+= có thể về ABC lúc chốt — nút `b` (plane cũ) không còn hiện ⇒ tra lại
     /// điểm chạm ở plane mới: vùng chữ ⇒ routeDown, nút thật ⇒ gửi touchDown cho nút đó.
     private func flushBeforeButtonDown(_ b: KeyButton, touch t: UITouch, event: UIEvent?) -> Bool {
+        if planeSlide != nil, t !== planeSlideTouch { planeSlideSecondTouch() }
         sweepReroutedTouches()
         settleAltHold()
         guard commits.flush(except: ObjectIdentifier(b), changes: { plane }),
@@ -7238,8 +7354,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
     }
 
-    @objc private func domainTouch(_ sender: UIControl, event: UIEvent) {
-        guard let t = event.allTouches?.first(where: { $0.view === sender }) else { return }
+    @objc private func domainTouch(_ sender: UIControl, event: UIEvent?) {
+        guard let t = event?.allTouches?.first(where: { $0.view === sender }) else { return }
         let p = t.location(in: self)
         domainLastPoint = p
         if domainHold?.button === sender { domainMoved(to: p) }
@@ -8661,6 +8777,27 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     func debugRouteUp(_ id: ObjectIdentifier, at p: CGPoint, time: TimeInterval) {
         routeUp(id, at: p, time: time, cancelled: false)
     }
+    /// Test hook trượt 123 (#171): chạm "123" như nút thật (đổi plane lúc chạm), theo dõi trượt
+    /// không cần UITouch. false nếu không có phím 123 / không sang plane số.
+    @discardableResult
+    func debugPlaneSlideBegin() -> Bool {
+        func find(_ v: UIView) -> KeyButton? {
+            if let b = v as? KeyButton, b.isSpecial, b.currentTitle == "123" { return b }
+            for s in v.subviews { if let r = find(s) { return r } }
+            return nil
+        }
+        guard let b = rowsContainer.arrangedSubviews.lazy.compactMap(find).first else { return false }
+        b.sendActions(for: .touchDown)
+        guard plane == .numbers else { return false }
+        startPlaneSlide(touch: nil)
+        return true
+    }
+    func debugPlaneSlideMove(to p: CGPoint) { planeSlideMove(to: p) }
+    func debugPlaneSlideLift(at p: CGPoint, cancelled: Bool = false) { endPlaneSlide(at: p, cancelled: cancelled) }
+    func debugPlaneSlideSecondTouch() { if planeSlide != nil { planeSlideSecondTouch() } }
+    var debugPlaneSlideActive: Bool { planeSlide != nil }
+    /// Ký tự của phím đang sẫm dưới ngón trượt (nil = không có).
+    var debugPlaneSlideOver: String? { planeSlide?.over?.slideInsert }
     /// Test hook: touch router đang đè bị hệ thống huỷ.
     func debugRouteCancel(_ id: ObjectIdentifier, at p: CGPoint, time: TimeInterval) {
         routeUp(id, at: p, time: time, cancelled: true)
