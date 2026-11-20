@@ -65,6 +65,7 @@ struct Foreground {
     bool direct = false;  // Direct mode (verify echo) vs explicit hookFallback
     bool fresh = false;   // a foreground change (not a mid-focus re-publish)
     bool adopt = false;   // TIP handover: the word in progress reached the app as typed (1.3.16)
+    bool inlineAutocomplete = false;  // TIP handover: Chromium address bar (#173)
 };
 
 struct HookState {
@@ -103,6 +104,9 @@ struct HookState {
     // behind the pending text. Sent from the hook callback and from kSplitTimer.
     bool splitHost = false;
     SplitInjection<INPUT> split{&isUnicodeInput};
+    // Chromium address bar handed over by the TIP (#173, direct_policy.h usesPlaceholderEdit):
+    // replaces go out as U+202F, Backspace x (N + 1), text; the user's ⌫ drops the word.
+    bool inlineAutocomplete = false;
 };
 HookState* h = nullptr;        // hook thread only
 DWORD g_hookTid = 0;
@@ -118,6 +122,7 @@ struct UiState {
     HWINEVENTHOOK fgHook = nullptr;
     bool directFromTip = false;  // TIP asked for direct mode for the current field
     bool adoptTyped = false;     // ...and its word in progress passed as typed (kDirectAdoptTyped)
+    bool inlineAutocomplete = false;  // ...and the field is a Chromium address bar (#173)
     std::wstring fgExe;
     FgApp fgApp;
     DWORD fgThread = 0;
@@ -133,6 +138,7 @@ class HookSink final : public TextSink {
 public:
     std::vector<INPUT> inputs;
     unsigned backspaces = 0, units = 0;
+    bool inlineAutocomplete = false;  // Chromium address bar: the U+202F placeholder sequence
     bool blind() override { return true; }  // nothing can be read back from here
     std::u16string textBeforeCaret(int) override { return {}; }
     char16_t charAfterCaret() override { return 0; }
@@ -140,7 +146,8 @@ public:
     bool replaceBeforeCaret(const std::u16string& expect, const std::u16string& insert) override {
         // VK_BACK as a virtual key (never a Unicode 0x08), then Unicode text: see
         // direct_policy.h directEditEvents (terminals / AI CLIs expect DEL from Backspace).
-        for (const DirectKeyEvent& e : directEditEvents(static_cast<unsigned>(expect.size()), insert)) {
+        // In a Chromium address bar a replace starts with U+202F and deletes it too (#173).
+        for (const DirectKeyEvent& e : directEditEvents(static_cast<unsigned>(expect.size()), insert, inlineAutocomplete)) {
             if (e.up) continue;  // addVk / addUnicode emit down + up
             if (e.unicode) addUnicode(static_cast<char16_t>(e.unit));
             else addVk(e.vk);
@@ -217,7 +224,7 @@ void stopSplitTimer() {
 
 void verifyLatestEdit() {
     if (h->direct && h->session.wordActive())
-        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq);
+        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq, h->inlineAutocomplete);
 }
 
 // Pending text no longer belongs where it would land (another window, the hook stopping).
@@ -373,6 +380,12 @@ LRESULT CALLBACK keyboardProc(int code, WPARAM wp, LPARAM lp) {
         h->adoption.drop();
         return passKey(code, wp, lp, *kb, k);
     }
+    // Chromium address bar (#173): the user's ⌫ may only remove the inline suggestion, not a
+    // letter. It goes through; the hook no longer knows the word — forget it (and the trail).
+    if (k.kind == KeyKind::Backspace && userBackspaceDropsWord(h->inlineAutocomplete)) {
+        dropWord();
+        return passKey(code, wp, lp, *kb, k);
+    }
     // An adopted word whose raw letters still differ from the session's text: ⌫ deletes the
     // last raw letter (the app does it), the rest is adopted again.
     if (h->adoption.owes() && k.kind == KeyKind::Backspace) {
@@ -389,6 +402,7 @@ LRESULT CALLBACK keyboardProc(int code, WPARAM wp, LPARAM lp) {
         case ReopenTrail::Before::Normal: break;
     }
     HookSink sink;
+    sink.inlineAutocomplete = h->inlineAutocomplete;
     // Adopted word: the raw letters on screen become the session's text first, in this
     // key's batch, before the key's own edit (word_adopt.h).
     const bool fixing = h->adoption.owes();
@@ -471,7 +485,7 @@ LRESULT CALLBACK keyboardProc(int code, WPARAM wp, LPARAM lp) {
     }
     h->trail.after(k, h->session, true, eaten, true);
     if (h->direct && h->session.wordActive())
-        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq);
+        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq, h->inlineAutocomplete);
     return 1;
 }
 
@@ -651,6 +665,11 @@ DWORD WINAPI hookThreadMain(void*) {
                     h->direct = f->direct;
                     applyWanted(f->install);
                     const bool typing = f->install && f->direct;
+                    const bool inlineAc = typing && f->inlineAutocomplete;
+                    if (inlineAc != h->inlineAutocomplete)
+                        hookLog(inlineAc ? "address bar (inline autocomplete): replaces as U+202F + backspaces + text"
+                                         : "address bar mode off");
+                    h->inlineAutocomplete = inlineAc;
                     HWND root = f->hwnd ? GetAncestor(f->hwnd, GA_ROOT) : nullptr;
                     setAck(typing ? root : nullptr);
                     if (!f->install) {
@@ -669,6 +688,7 @@ DWORD WINAPI hookThreadMain(void*) {
                     setAck(nullptr);
                     h->arming.disengaged();
                     h->adoption.drop();
+                    h->inlineAutocomplete = false;
                     hookLog("stopped for this field (Direct fell back to composition)");
                     break;
                 case kCmdSuspend: {
@@ -815,13 +835,15 @@ void publishForeground(bool fresh) {
         wsprintfA(rid, " integrity 0x%lx/0x%lx", fgRid, ourRid);
         appLog("hook", "foreground " + narrowAscii(u->fgExe) + " class " + u->fgApp.windowClass + " rule " +
                            std::to_string(static_cast<int>(mode)) + (u->directFromTip ? " +tip-handover" : "") +
+                           (u->directFromTip && u->inlineAutocomplete ? " (address bar)" : "") +
                            " -> " + (hookOn ? (direct ? "DIRECT (hook types)" : "hookFallback") : "no hook") + " (" +
                            why + ")" + rid + (fresh ? "" : " [mid-focus]"));
     }
     directVerifyFocusChanged();
     if (!hookOn && !g_hookThread) return;  // nothing to hook, and no hook thread to tell
     ensureHookThread();
-    auto* f = new Foreground{u->fgApp, u->fgExe, u->fgThread, fg, hookOn, direct, fresh, u->adoptTyped};
+    auto* f = new Foreground{u->fgApp, u->fgExe, u->fgThread, fg,          hookOn,
+                             direct,   fresh,    u->adoptTyped, u->directFromTip && u->inlineAutocomplete};
     if (!PostThreadMessageW(g_hookTid, kCmdForeground, 0, reinterpret_cast<LPARAM>(f))) delete f;
 }
 
@@ -832,6 +854,7 @@ void onForeground(HWND hwnd) {
     u->fgThread = u->fgApp.tid;
     u->directFromTip = false;  // a new window: the TIP re-evaluates its field
     u->adoptTyped = false;
+    u->inlineAutocomplete = false;
     publishForeground(true);
 }
 
@@ -860,12 +883,14 @@ void hookConfigure(const Settings& s) {
     onForeground(GetForegroundWindow());
 }
 
-void hookSetDirectFromTip(bool on, bool adoptTyped) {
+void hookSetDirectFromTip(bool on, bool adoptTyped, bool inlineAutocomplete) {
     if (!u || u->directFromTip == on) return;
     u->directFromTip = on;
     u->adoptTyped = on && adoptTyped;
+    u->inlineAutocomplete = on && inlineAutocomplete;
     appLog("hook", std::string("TIP handover: direct ") + (on ? "requested" : "released") +
-                       (u->adoptTyped ? " (word in progress passed as typed)" : ""));
+                       (u->adoptTyped ? " (word in progress passed as typed)" : "") +
+                       (u->inlineAutocomplete ? " (address bar)" : ""));
     publishForeground(false);
 }
 

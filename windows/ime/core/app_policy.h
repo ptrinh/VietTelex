@@ -189,6 +189,34 @@ FieldPolicy classifyInputScopes(const int* scopes, size_t count);
 bool isChromiumNativeOmniboxBrowser(const std::string& exe);
 bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t count);
 
+// (#173) But the browser's native text field draws an underline under ANY composition,
+// whatever the display attribute says (Edge, Windows 10 22H2). So in that field the TIP
+// first hands the field to VietTelex.exe's hook (Direct, AppCommand::DirectMode with
+// kDirectAdoptTyped | kDirectInlineAutocomplete): the hook types every replace as U+202F
+// (cancels the inline suggestion), Backspace x (N + 1), text — direct_policy.h
+// directEditEvents. Composition (as before #173) stays the fallback. Decided at each word
+// start while the TIP still types there (outputMode InPlace, nothing preferred composition
+// yet):
+//   Refused   (no VietTelex.exe, UIPI, the field marked NoDirect) -> Compose (as before)
+//   Acked     (kDirectOnProp from the live app on the window)     -> HookTypes: key passes
+//   Pending   (asked, no ack yet), waited < kOmniboxAckWaitMs      -> PassAsTyped: the key
+//             reaches the field raw and is recorded (typed_word.h); the hook adopts the
+//             word at its first key (word_adopt.h). The TIP never composes a word the hook
+//             could then type over — the handover race of 1.1.5.
+//   Pending   for kOmniboxAckWaitMs or more (app hung)             -> GiveUp: release the
+//             request, compose for the rest of the focus.
+enum class DirectAsk : uint8_t { Refused, Pending, Acked };
+enum class OmniboxStep : uint8_t { Compose, PassAsTyped, HookTypes, GiveUp };
+constexpr uint64_t kOmniboxAckWaitMs = 500;
+inline OmniboxStep omniboxStepAtWordStart(DirectAsk ask, uint64_t waitedMs) {
+    switch (ask) {
+        case DirectAsk::Acked: return OmniboxStep::HookTypes;
+        case DirectAsk::Pending: return waitedMs < kOmniboxAckWaitMs ? OmniboxStep::PassAsTyped : OmniboxStep::GiveUp;
+        case DirectAsk::Refused: break;
+    }
+    return OmniboxStep::Compose;
+}
+
 // Windows search (Start / taskbar search: SearchHost, SearchApp, StartMenuExperienceHost)
 // on an ASYNC store (a Chromium/WebView2 context: transitory, readable). 2026-11 field
 // report: the first word lost its tone key after "aa" ("taafng" -> "tâfng", "taangf" ->

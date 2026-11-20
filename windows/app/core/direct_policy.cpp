@@ -69,6 +69,16 @@ std::vector<DirectKeyEvent> directEditEvents(unsigned backspaces, const std::u16
     return v;
 }
 
+std::vector<DirectKeyEvent> directEditEvents(unsigned backspaces, const std::u16string& text,
+                                             bool inlineAutocompleteField) {
+    if (!usesPlaceholderEdit(inlineAutocompleteField, backspaces, text.empty()))
+        return directEditEvents(backspaces, text);
+    std::vector<DirectKeyEvent> v = directEditEvents(0, std::u16string(1, kAutocompletePlaceholder));
+    const std::vector<DirectKeyEvent> rest = directEditEvents(backspaces + 1, text);
+    v.insert(v.end(), rest.begin(), rest.end());
+    return v;
+}
+
 bool splitsCorrection(const std::string& cls) { return cls.compare(0, 6, "SunAwt") == 0; }
 
 std::array<KeyInjection, 2> replayKeyInjection(uint32_t vk, uint32_t scanCode, uint32_t llFlags,

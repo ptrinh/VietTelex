@@ -23,7 +23,9 @@ void hookShutdown();
 // xterm.js, unflagged console): the hook types there until the foreground changes.
 // `adoptTyped` (kDirectAdoptTyped, 1.3.16): the word in progress reached the app as typed
 // (WPF list); the hook takes it over at its first key (word_adopt.h).
-void hookSetDirectFromTip(bool on, bool adoptTyped);
+// `inlineAutocomplete` (kDirectInlineAutocomplete, #173): a Chromium address bar — replaces
+// go out as U+202F, Backspace x (N + 1), text (direct_policy.h usesPlaceholderEdit).
+void hookSetDirectFromTip(bool on, bool adoptTyped, bool inlineAutocomplete);
 // Direct proved unusable in the current field (echo verification): stop hooking it.
 void hookDisableCurrentField();
 // Called (UI thread) when a hook-mode app is elevated above VietTelex.exe: SendInput

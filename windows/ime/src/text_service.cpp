@@ -474,7 +474,7 @@ bool TextService::typingEnabled() const {
 // Asks; the TIP only stays out once the hook's ack (kDirectOnProp) is on the window —
 // until then this word (and any before the ack) is composed here. Returns true when the
 // hook already types here.
-bool TextService::requestDirect(const char* why, bool adoptTyped) {
+bool TextService::requestDirect(const char* why, bool adoptTyped, bool inlineAutocomplete) {
     if (directActive_) return true;
     HWND app = FindWindowW(kAppWindowClass, nullptr);
     if (!app) return false;
@@ -495,8 +495,11 @@ bool TextService::requestDirect(const char* why, bool adoptTyped) {
         directFocus_ = f;
         directInWpf_ = focusWpf_;
         directAdopt_ = adoptTyped;
+        directInlineAc_ = inlineAutocomplete;
+        directAskTick_ = GetTickCount64();
         PostMessageW(app, kAppCommandMsg, static_cast<WPARAM>(AppCommand::DirectMode),
-                     kDirectOn | (adoptTyped ? kDirectAdoptTyped : 0));
+                     kDirectOn | (adoptTyped ? kDirectAdoptTyped : 0) |
+                         (inlineAutocomplete ? kDirectInlineAutocomplete : 0));
         config::log(std::string(why) + " (requested; composing until the hook acks)");
     }
     if (!directServesHere()) return false;
@@ -504,6 +507,18 @@ bool TextService::requestDirect(const char* why, bool adoptTyped) {
     session_.reset();
     config::log("handover acked: the hook types in this field");
     return true;
+}
+
+DirectAsk TextService::askDirectForAddressBar() {
+    if (requestDirect("browser address bar (IS_URL) -> direct (hook): no composition underline", true, true))
+        return DirectAsk::Acked;
+    if (!directWanted_) return DirectAsk::Refused;  // no app, UIPI, the field marked NoDirect
+    HWND f = GetFocus();
+    HWND root = f ? GetAncestor(f, GA_ROOT) : nullptr;
+    if ((f && GetPropW(f, kNoDirectProp)) || (root && GetPropW(root, kNoDirectProp))) return DirectAsk::Refused;
+    HWND app = FindWindowW(kAppWindowClass, nullptr);
+    if (!app || !hookReachesHere(app)) return DirectAsk::Refused;
+    return DirectAsk::Pending;
 }
 
 void TextService::publishLangProp() {
@@ -696,7 +711,9 @@ void TextService::evaluateHostAtWordStart(ITfContext* ctx) {
     if (directActive_ && !directServesHere()) {
         directActive_ = false;
         config::log("direct mode unusable in this field -> composition");
-        session_.setCompositionOnlyContext(true);
+        // A Chromium address bar falls back to its own rule (fieldPolicyAtWordStart:
+        // composition, text still readable), exactly as before #173.
+        if (!addressBarHandover_) session_.setCompositionOnlyContext(true);
     } else if (directWanted_ && !directActive_ && directServesHere()) {
         directActive_ = true;  // the hook acked since the request
         config::log("handover acked: the hook types in this field");
@@ -801,7 +818,9 @@ void TextService::evaluateHost(ITfContext* ctx) {
     // Also while a word passes as typed after a misreading Edit store (session.h
     // passingWord): the hook adopts that word, as in a WPF list.
     const bool wpfList = wpfDefaultStore(c, host_);
-    keysPassAsTyped_ = wpfList || session_.passingWord();
+    // A Chromium address bar handed to the hook (#173): keys pass as typed (recorded for the
+    // hook to adopt) until the ack, and the record stays current after it (as for WPF).
+    keysPassAsTyped_ = wpfList || session_.passingWord() || addressBarHandover_;
     if (wpfList) {
         if (!session_.notTextField()) {
             session_.markNotTextField();
@@ -832,12 +851,43 @@ void TextService::evaluateHost(ITfContext* ctx) {
 // At a word start: true = literal field (password, PIN, number, e-mail), let keys through.
 // Also switches a Chromium address bar to composition (app_policy.h
 // fieldPrefersComposition) — one input-scope read serves both.
+//
+// (#173) The browser underlines any composition in its address bar, so that field first goes
+// to the hook (app_policy.h omniboxStepAtWordStart): the key passes (as typed until the ack,
+// the hook adopts that word), and composition stays the fallback.
 bool TextService::fieldPolicyAtWordStart(ITfContext* ctx, TfEditCookie ec) {
     int buf[32];
     const UINT n = inputScopesAtSelection(ctx, ec, buf, 32);
     if (n > 0 && classifyInputScopes(buf, n) == FieldPolicy::Literal) return true;
     if (session_.outputMode() == OutputMode::InPlace && !session_.prefersComposition() &&
         fieldPrefersComposition(config::exeName(), buf, n)) {
+        const DirectAsk ask = askDirectForAddressBar();
+        const OmniboxStep step = omniboxStepAtWordStart(ask, GetTickCount64() - directAskTick_);
+        if (step == OmniboxStep::HookTypes || step == OmniboxStep::PassAsTyped) {
+            if (!addressBarHandover_)
+                config::log(step == OmniboxStep::HookTypes
+                                ? "browser address bar (IS_URL): the hook types here"
+                                : "browser address bar (IS_URL): keys pass as typed until the hook acks");
+            addressBarHandover_ = true;
+            keysPassAsTyped_ = true;
+            publishTypedWord();  // this key included (OnTestKeyDown recorded it)
+            return true;         // the key goes to the field untouched
+        }
+        if (step == OmniboxStep::GiveUp) {
+            directWanted_ = false;
+            directFocus_ = nullptr;
+            directAdopt_ = false;
+            directInlineAc_ = false;
+            if (HWND app = FindWindowW(kAppWindowClass, nullptr))
+                PostMessageW(app, kAppCommandMsg, static_cast<WPARAM>(AppCommand::DirectMode), 0);
+            config::log("browser address bar: no ack from the hook in " + std::to_string(kOmniboxAckWaitMs) +
+                        " ms -> request released");
+        }
+        if (addressBarHandover_) {
+            addressBarHandover_ = false;
+            keysPassAsTyped_ = false;
+            clearTypedWord();
+        }
         session_.setPreferComposition(true);
         config::log("browser address bar (IS_URL): composition for this field (in-place breaks on inline autocomplete)");
     }
@@ -936,7 +986,8 @@ STDMETHODIMP TextService::OnSetFocus(ITfDocumentMgr* focus, ITfDocumentMgr*) {
             // a repeat is a no-op there.
             if (app)
                 PostMessageW(app, kAppCommandMsg, static_cast<WPARAM>(AppCommand::DirectMode),
-                             kDirectOn | (directAdopt_ ? kDirectAdoptTyped : 0));
+                             kDirectOn | (directAdopt_ ? kDirectAdoptTyped : 0) |
+                                 (directInlineAc_ ? kDirectInlineAutocomplete : 0));
             keptPassAsTyped = directAdopt_ && keysPassAsTyped_;
             config::log("focus moved inside the handed-over WPF window -> direct kept");
         } else {
@@ -944,10 +995,12 @@ STDMETHODIMP TextService::OnSetFocus(ITfDocumentMgr* focus, ITfDocumentMgr*) {
             directFocus_ = nullptr;
             directInWpf_ = false;
             directAdopt_ = false;
+            directInlineAc_ = false;
             if (app) PostMessageW(app, kAppCommandMsg, static_cast<WPARAM>(AppCommand::DirectMode), 0);
         }
     }
     keysPassAsTyped_ = keptPassAsTyped;
+    addressBarHandover_ = false;  // the next field is classified afresh (#173)
     hostEval_.invalidate();
     resolveActiveApp();
     config::reloadVietnamese();

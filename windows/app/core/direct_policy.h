@@ -147,6 +147,29 @@ struct DirectKeyEvent {
 constexpr uint16_t kVkBack = 0x08;
 // N backspaces then `text`, as the SendInput batch HookSink builds (scan codes added there).
 std::vector<DirectKeyEvent> directEditEvents(unsigned backspaces, const std::u16string& text);
+
+// ---- Chromium address bar: the placeholder sequence (#173, macOS .emptyReset since 1.4.14) --
+// The TIP hands a Chromium-family browser's native address bar (IS_URL, app_policy.h
+// omniboxStepAtWordStart) to the hook, so the browser draws no composition underline. There
+// inline autocomplete keeps a suggestion SELECTED after the typed text: the first Backspace
+// of a plain edit only removes that suggestion, every later one lands one character short
+// and the retype doubles a letter ("thế" -> "theế"). So a replace goes out as
+//   U+202F (typing replaces the selected suggestion = cancels inline autocomplete),
+//   Backspace x (N + 1) (the +1 removes the U+202F), the text — one SendInput batch.
+// Only a real replace needs it: a plain append (0 backspaces) replaces the suggestion like
+// any typed letter, and a pure deletion (no text) must not flash a stray character (macOS
+// tester report 2026-07-27): plain Backspaces there.
+constexpr char16_t kAutocompletePlaceholder = u' ';  // NARROW NO-BREAK SPACE
+inline bool usesPlaceholderEdit(bool inlineAutocompleteField, unsigned backspaces, bool textEmpty) {
+    return inlineAutocompleteField && backspaces > 0 && !textEmpty;
+}
+std::vector<DirectKeyEvent> directEditEvents(unsigned backspaces, const std::u16string& text,
+                                             bool inlineAutocompleteField);
+// The user's own Backspace in such a field: with a suggestion showing, the browser removes
+// only the suggestion, not a letter — what the hook believes is on screen is unsure from
+// then on. The ⌫ goes through untouched, the hook forgets the word in progress and its ⌫
+// trail (hook_reopen.h); the next letters start afresh.
+inline bool userBackspaceDropsWord(bool inlineAutocompleteField) { return inlineAutocompleteField; }
 // One SendInput keyboard event (KEYBDINPUT without time / extra info), portable so the
 // events HookSink builds are unit-tested. Flag values are the Win32 ones (checked by
 // static_assert in hook_fallback.cpp).

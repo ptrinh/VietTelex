@@ -155,7 +155,9 @@ public:
     // ⌫ re-open stay on). Set by the TIP for a Chromium omnibox (app_policy.h
     // fieldPrefersComposition), or by the session itself when the app dropped the deletion
     // half of a replace (verifyScreen). Unlike contextFellBack() it never asks for the
-    // hook: Direct's backspace-retype races the omnibox autocomplete (macOS 1.4.14).
+    // hook: Direct's backspace-retype races the omnibox autocomplete (macOS 1.4.14). (#173:
+    // the TIP first hands the address bar to the hook itself, which then types replaces with
+    // the U+202F sequence; this flag is the address bar's fallback.)
     // Cleared by resetContext().
     void setPreferComposition(bool on);
     bool prefersComposition() const { return preferComposition_; }

@@ -14,7 +14,7 @@ endif()
 if(VTX_IME_TESTS)
   add_executable(vtx_app_tests ../ime/tests/test_main.cpp tests/app_tests.cpp tests/typo_fix_tests.cpp
                  tests/onboarding_game_tests.cpp tests/word_prediction_tests.cpp tests/settings_pages_tests.cpp
-                 tests/app_feel_tests.cpp tests/hook_reopen_tests.cpp tests/word_adopt_tests.cpp
+                 tests/app_feel_tests.cpp tests/hook_reopen_tests.cpp tests/word_adopt_tests.cpp tests/omnibox_direct_tests.cpp
                  tests/robustness_tests.cpp src/strings.cpp)  # strings.cpp: portable UI text
   target_include_directories(vtx_app_tests PRIVATE ../ime/tests src)
   target_link_libraries(vtx_app_tests PRIVATE vtx_app_core)

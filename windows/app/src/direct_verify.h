@@ -18,7 +18,11 @@
 
 namespace vtx::app {
 
-void directVerifyAfterEdit(HWND foreground, DWORD guiThread, const std::u16string& expected, uint64_t seq);
+// `focusedElement` (#173, Chromium address bar): the field is no window of its own — read the
+// UI Automation FOCUSED element (same process as `foreground`), and only the text before the
+// selection START (the inline suggestion is selected after the typed text).
+void directVerifyAfterEdit(HWND foreground, DWORD guiThread, const std::u16string& expected, uint64_t seq,
+                           bool focusedElement = false);
 void directVerifyFocusChanged();
 void directVerifyShutdown();
 void directSetLogging(bool on);

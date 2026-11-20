@@ -888,6 +888,38 @@ TEST(field_prefers_composition_only_for_chromium_address_bars) {
     CHECK(!fieldPrefersComposition("msedgewebview2.exe", url, 1));  // WebView2 has no omnibox
 }
 
+// #173: the address bar first goes to the hook (the browser underlines any composition);
+// composition is the fallback whenever the hook cannot take it.
+TEST(address_bar_step_hook_first_composition_as_fallback) {
+    CHECK(omniboxStepAtWordStart(DirectAsk::Acked, 0) == OmniboxStep::HookTypes);
+    CHECK(omniboxStepAtWordStart(DirectAsk::Acked, 10000) == OmniboxStep::HookTypes);
+    // No VietTelex.exe, UIPI, the field marked NoDirect (echo mismatch / SendInput refused):
+    // composition, as before #173 — at once, never after a wait.
+    CHECK(omniboxStepAtWordStart(DirectAsk::Refused, 0) == OmniboxStep::Compose);
+    CHECK(omniboxStepAtWordStart(DirectAsk::Refused, 10000) == OmniboxStep::Compose);
+    // Asked, no ack yet: the key reaches the field as typed (the hook adopts the word); the
+    // TIP never composes a word the hook could type over.
+    CHECK(omniboxStepAtWordStart(DirectAsk::Pending, 0) == OmniboxStep::PassAsTyped);
+    CHECK(omniboxStepAtWordStart(DirectAsk::Pending, kOmniboxAckWaitMs - 1) == OmniboxStep::PassAsTyped);
+    // The app never acked (hung): give up, release the request, compose.
+    CHECK(omniboxStepAtWordStart(DirectAsk::Pending, kOmniboxAckWaitMs) == OmniboxStep::GiveUp);
+    CHECK(omniboxStepAtWordStart(DirectAsk::Pending, 60000) == OmniboxStep::GiveUp);
+}
+
+TEST(direct_mode_request_bits_decode) {
+    DirectModeRequest r = decodeDirectMode(kDirectOn | kDirectAdoptTyped | kDirectInlineAutocomplete);
+    CHECK(r.on && r.adoptTyped && r.inlineAutocomplete);
+    r = decodeDirectMode(kDirectOn);
+    CHECK(r.on && !r.adoptTyped && !r.inlineAutocomplete);
+    r = decodeDirectMode(kDirectOn | kDirectAdoptTyped);  // WPF list (1.3.16): unchanged
+    CHECK(r.on && r.adoptTyped && !r.inlineAutocomplete);
+    // A release carries no flags; stray flag bits without kDirectOn mean nothing.
+    r = decodeDirectMode(0);
+    CHECK(!r.on && !r.adoptTyped && !r.inlineAutocomplete);
+    r = decodeDirectMode(kDirectAdoptTyped | kDirectInlineAutocomplete);
+    CHECK(!r.on && !r.adoptTyped && !r.inlineAutocomplete);
+}
+
 TEST(shell_search_composes_from_the_first_letter_only_on_an_async_store) {
     for (const char* app : {"searchhost.exe", "searchapp.exe", "searchui.exe", "startmenuexperiencehost.exe"}) {
         CHECK(shellSearchPrefersComposition(app, true));

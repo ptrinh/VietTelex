@@ -17,7 +17,9 @@ enum class AppCommand : unsigned {
     // TIP -> app: lParam bit 0 = let the hook type in this field (no underline); bit 1
     // (kDirectAdoptTyped, 1.3.16) = the keys of the word in progress reached the app as typed
     // and are on the focus root (typed_word.h): the hook adopts that word instead of waiting
-    // for a boundary. 0 = released.
+    // for a boundary. Bit 2 (kDirectInlineAutocomplete, #173) = the field is a Chromium
+    // address bar with inline autocomplete: every replace goes out as U+202F, Backspace x
+    // (N + 1), text (direct_policy.h directEditEvents). 0 = released.
     DirectMode = 7,
     // TIP -> app after an in-TIP Việt/Anh switch (1.1.5): bit 0 = Vietnamese, bit 1 = the
     // TIP could not store it (AppContainer / low IL): store it for the foreground app.
@@ -32,7 +34,22 @@ enum class AppCommand : unsigned {
     UserSwitched = 10,
 };
 
-constexpr unsigned kDirectOn = 1, kDirectAdoptTyped = 2;  // AppCommand::DirectMode lParam bits
+constexpr unsigned kDirectOn = 1, kDirectAdoptTyped = 2, kDirectInlineAutocomplete = 4;  // DirectMode lParam bits
+
+// AppCommand::DirectMode lParam, decoded by VietTelex.exe. The flags mean nothing without
+// kDirectOn (a release carries 0).
+struct DirectModeRequest {
+    bool on = false;
+    bool adoptTyped = false;
+    bool inlineAutocomplete = false;
+};
+inline DirectModeRequest decodeDirectMode(unsigned long lp) {
+    DirectModeRequest r;
+    r.on = (lp & kDirectOn) != 0;
+    r.adoptTyped = r.on && (lp & kDirectAdoptTyped) != 0;
+    r.inlineAutocomplete = r.on && (lp & kDirectInlineAutocomplete) != 0;
+    return r;
+}
 
 inline bool isValidAppCommand(unsigned v) { return v >= 1 && v <= 10; }
 // Commands a user may pass as `--command <n>` (StateChanged is TIP-internal).

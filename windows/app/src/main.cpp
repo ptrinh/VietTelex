@@ -478,9 +478,11 @@ void runCommand(unsigned cmd, LPARAM lp = 0) {
                 toastShow(lp ? L"V" : L"E");
             playSwitchSound(lp != 0);
             break;
-        case AppCommand::DirectMode:
-            hookSetDirectFromTip((lp & kDirectOn) != 0, (lp & kDirectAdoptTyped) != 0);
+        case AppCommand::DirectMode: {
+            const DirectModeRequest r = decodeDirectMode(static_cast<unsigned long>(lp));
+            hookSetDirectFromTip(r.on, r.adoptTyped, r.inlineAutocomplete);
             break;
+        }
         case AppCommand::SetAppLanguage: onAppLanguage(lp); break;
         case AppCommand::TextToolReply: textActionsTipReply(lp); break;
         case AppCommand::OpenSettings: showSettings(Tab::Typing); break;

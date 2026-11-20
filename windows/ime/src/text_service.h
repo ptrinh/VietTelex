@@ -99,7 +99,11 @@ private:
     bool directServesHere() const;
     // `adoptTyped`: the keys of the word in progress pass to the app as typed and are on
     // the focus root (kTypedWordProp): the hook adopts that word (kDirectAdoptTyped).
-    bool requestDirect(const char* why, bool adoptTyped = false);
+    // `inlineAutocomplete` (#173): a Chromium address bar (kDirectInlineAutocomplete).
+    bool requestDirect(const char* why, bool adoptTyped = false, bool inlineAutocomplete = false);
+    // (#173) Ask the hook for a Chromium address bar: acked, waiting for the ack, or refused
+    // (no app, UIPI, NoDirect) — app_policy.h omniboxStepAtWordStart.
+    DirectAsk askDirectForAddressBar();
     void publishTypedWord();  // kTypedWordProp on the focus root (typed_word.h)
     void clearTypedWord();
     bool hookReachesHere(HWND app) const;  // UIPI: app integrity >= this process's
@@ -209,6 +213,9 @@ private:
     UnreliableControls unreliable_;     // control kinds where in-place was undone (2026-11)
     HWND focusWnd_ = nullptr;           // GetFocus() at the last OnSetFocus (debug log only)
     bool directAdopt_ = false;          // the request carried kDirectAdoptTyped (1.3.16)
+    bool directInlineAc_ = false;       // ...and kDirectInlineAutocomplete (#173)
+    uint64_t directAskTick_ = 0;        // GetTickCount64 when the request was posted
+    bool addressBarHandover_ = false;   // (#173) Chromium address bar handed to the hook, this focus
     bool keysPassAsTyped_ = false;      // last evaluateHost: WPF default store, keys pass as typed
     TypedWord typedWord_;               // raw keys of the word in progress (typed_word.h)
     HWND typedWordWnd_ = nullptr;       // where kTypedWordProp is set
