@@ -198,6 +198,12 @@ TEST(address_bar_placeholder_only_for_a_real_replace) {
     CHECK(!usesPlaceholderEdit(false, 2, false));  // any other Direct field: unchanged
     CHECK(userBackspaceDropsWord(true));
     CHECK(!userBackspaceDropsWord(false));
+    // The address bar is never echo-checked (no UI Automation on the browser); other Direct
+    // fields are as before, and explicit hook-fallback apps never were.
+    CHECK(!echoCheckedAfterEdit(true, true));
+    CHECK(echoCheckedAfterEdit(true, false));
+    CHECK(!echoCheckedAfterEdit(false, false));
+    CHECK(!echoCheckedAfterEdit(false, true));
 }
 
 TEST(address_bar_placeholder_sequence_is_one_batch) {

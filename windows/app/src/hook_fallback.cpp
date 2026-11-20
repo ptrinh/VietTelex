@@ -223,8 +223,8 @@ void stopSplitTimer() {
 }
 
 void verifyLatestEdit() {
-    if (h->direct && h->session.wordActive())
-        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq, h->inlineAutocomplete);
+    if (echoCheckedAfterEdit(h->direct, h->inlineAutocomplete) && h->session.wordActive())
+        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq);
 }
 
 // Pending text no longer belongs where it would land (another window, the hook stopping).
@@ -484,8 +484,8 @@ LRESULT CALLBACK keyboardProc(int code, WPARAM wp, LPARAM lp) {
         return out == SendOutcome::NothingSent ? CallNextHookEx(nullptr, code, wp, lp) : 1;
     }
     h->trail.after(k, h->session, true, eaten, true);
-    if (h->direct && h->session.wordActive())
-        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq, h->inlineAutocomplete);
+    if (echoCheckedAfterEdit(h->direct, h->inlineAutocomplete) && h->session.wordActive())
+        directVerifyAfterEdit(h->fgHwnd, h->fgThread, h->session.shown(), ++h->editSeq);
     return 1;
 }
 

@@ -170,6 +170,14 @@ std::vector<DirectKeyEvent> directEditEvents(unsigned backspaces, const std::u16
 // then on. The ⌫ goes through untouched, the hook forgets the word in progress and its ⌫
 // trail (hook_reopen.h); the next letters start afresh.
 inline bool userBackspaceDropsWord(bool inlineAutocompleteField) { return inlineAutocompleteField; }
+// No echo check after an edit in such a field: reading it means UI Automation on the
+// browser, which can switch on the browser's accessibility mode for the whole browser (CPU
+// and memory for every user typing there) — worse than an unverifiable field. The field is
+// treated like every unreadable host: Direct keeps typing. No verify job is queued, so no
+// UI Automation call reaches the browser from this path.
+inline bool echoCheckedAfterEdit(bool directMode, bool inlineAutocompleteField) {
+    return directMode && !inlineAutocompleteField;
+}
 // One SendInput keyboard event (KEYBDINPUT without time / extra info), portable so the
 // events HookSink builds are unit-tested. Flag values are the Win32 ones (checked by
 // static_assert in hook_fallback.cpp).
