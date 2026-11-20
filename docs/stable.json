@@ -76,8 +76,8 @@
     "notes": "Tuỳ chọn mới Tự thêm dấu mũ (mặc định tắt): vietj ra việt, nguyenx ra nguyễn, benhj ra bệnh."
   },
   "android": {
-    "version": "1.6.14",
-    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.14/VietTelex-android-1.6.14.apk",
+    "version": "1.6.15",
+    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.15/VietTelex-android-1.6.15.apk",
     "play": "https://play.google.com/store/apps/details?id=com.viettelex.android"
   }
 }
