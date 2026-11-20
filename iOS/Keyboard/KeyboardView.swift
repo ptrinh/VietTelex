@@ -3330,7 +3330,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         crossRowConstraints = []
         indentedRow = nil
         rowsContainer.distribution = .fillEqually
-        rowsContainer.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        // Trượt từ 123 (#171): phím 123 đang bị đè phải Ở LẠI trong cửa sổ — gỡ nó là iOS huỷ luôn
+        // chạm (không còn moved / ended) ⇒ hàng phím cũ sang chỗ đậu ẩn tới khi trượt xong.
+        if planeSlideArmed { parkRowsForPlaneSlide(rowsContainer.arrangedSubviews) }
+        else { rowsContainer.arrangedSubviews.forEach { $0.removeFromSuperview() } }
         rowsContainer.heights = .equal
         rowsContainer.headerHeight = nil
         if let cached = planeCache[plane] {
@@ -4313,8 +4316,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             planeBtn.addAction(UIAction { [weak self, weak planeBtn] _ in
                 guard let self, self.planeSlideArmed else { return }
                 self.planeSlideArmed = false
-                guard self.plane == .numbers else { return }
+                guard self.plane == .numbers else { self.unparkPlaneSlideRows(); return }
                 self.beginPlaneSlide(touch: planeBtn?.lastBeganTouch)
+                if self.planeSlide == nil { self.unparkPlaneSlideRows() }   // không trượt (VoiceOver…)
             }, for: .touchDown)
             planeBtn.onTouchPhase = { [weak self] t, phase in self?.planeSlideEvent(t, phase) }
         }
@@ -6234,7 +6238,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
     private func carryPress(from old: KeyButton, slot: (row: Int, index: Int)?) {
         releaseCarriedPress()
-        guard let slot, !old.isDescendant(of: self) else { return }
+        // rowsContainer (không phải self): lúc trượt từ 123 hàng cũ còn đậu ẩn trong self.
+        guard let slot, !old.isDescendant(of: rowsContainer) else { return }
         old.showPressed(false)   // nằm cache plane cũ — đừng để sẫm treo lúc quay lại
         let rows = rowsContainer.arrangedSubviews
         guard slot.row < rows.count else { return }
@@ -6297,6 +6302,21 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// Ngón thứ hai chạm một phím lúc đang trượt: bỏ trượt, không chèn (phím mới gõ như thường).
     private func planeSlideSecondTouch() { endPlaneSlide(at: nil, cancelled: true) }
 
+    /// Chỗ đậu ẩn của hàng phím plane chữ trong lúc trượt từ 123: nút 123 còn trong cửa sổ nên
+    /// chạm của nó sống tới khi nhấc. Ẩn ⇒ không vẽ, không nhận chạm mới. Chỉ gắn vào khi trượt.
+    private let planeSlidePark: UIView = { let v = UIView(); v.isHidden = true; return v }()
+    private func parkRowsForPlaneSlide(_ rows: [UIView]) {
+        if planeSlidePark.superview == nil { insertSubview(planeSlidePark, at: 0) }
+        planeSlidePark.frame = rowsContainer.frame
+        rows.forEach { planeSlidePark.addSubview($0) }
+    }
+    /// Trượt xong / không trượt: hàng còn đậu (chưa được plane chữ lấy lại từ cache) rời cửa sổ như thường.
+    private func unparkPlaneSlideRows() {
+        guard planeSlidePark.superview != nil else { return }
+        planeSlidePark.subviews.forEach { $0.removeFromSuperview() }
+        planeSlidePark.removeFromSuperview()
+    }
+
     private func startPlaneSlide(touch: UITouch?) {
         planeSlide = PlaneSlide()
         planeSlideTouch = touch
@@ -6347,7 +6367,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         planeSlideWatch?.invalidate(); planeSlideWatch = nil
         if let o = s.over { o.release(); hideBalloon() }
         let k = cancelled ? nil : p.flatMap(slideInsertKey(at:))
-        guard let target = PlaneSlide.lift(over: k, cancelled: cancelled) else { return }
+        guard let target = PlaneSlide.lift(over: k, cancelled: cancelled) else { unparkPlaneSlideRows(); return }
         releaseCarriedPress()
         // Đúng đường chạm thường của phím đó: âm/rung, balloon, KeyCommitQueue, tapSymbol
         // (ranh giới từ, tự cách, VNI, về chữ theo PlanePolicy).
@@ -6358,6 +6378,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             reevaluateShiftForLetters()
             rebuild()
         }
+        unparkPlaneSlideRows()                   // hàng plane chữ đã về lưới (cache) — dọn chỗ đậu
     }
 
     /// Thuần (test được): sẫm thay của phím đổi plane hết khi chạm không còn / đã nhấc / huỷ, hoặc quá 10s.
