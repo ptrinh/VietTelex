@@ -129,11 +129,11 @@ class KeyboardView(
         // --- gõ vuốt (chỉ gọi khi [swipeTyping] bật) ---
         /** Tâm phím a–z theo toạ độ view (đổi cỡ / xoay / plane chữ dựng lại). */
         fun onSwipeLayout(layout: SwipeLayout)
-        /** Ngón vừa thành VUỐT: huỷ chữ đã chèn lúc chạm. false ⇒ coi như chạm (bỏ vuốt). */
+        /** Ngón vừa thành VUỐT (chữ đầu hoãn, chưa chèn — #172). false ⇒ coi như chạm (bỏ vuốt). */
         fun onSwipeTypingStart(): Boolean
         /** Nhấc tay: [path] toạ độ view (đã dời điểm chọn như hit-test), [case] theo shift. */
         fun onSwipeTypingEnd(path: SwipePath, case: SwipeSuggest.Case)
-        /** Huỷ (ACTION_CANCEL / bàn phím ẩn) sau khi đã huỷ chữ đầu. */
+        /** Huỷ (ACTION_CANCEL / bàn phím ẩn) sau khi cú vuốt đã bắt đầu. */
         fun onSwipeTypingCancel()
 
         // --- bảng sửa văn bản / một tay ---
@@ -1774,13 +1774,19 @@ class KeyboardView(
                     KeyCommandGesture.start(true, k.label[0], x / d, y / d, keyAreaTop() / d, (k.right - k.left) / d)
                     else null
                 val selDefer = cmdGesture != null && listener?.keyCommandHasSelection() == true
-                val defer = selDefer || edge
+                // Gõ vuốt bật + chạm có thể thành vuốt ⇒ HOÃN chữ tới lúc nhấc (#172): ngón còn đè
+                // thì chưa ghi gì vào ô; chạm ⇒ chữ chèn lúc nhấc (hoặc khi ngón khác chạm xuống),
+                // vuốt ⇒ chỉ từ vuốt. Tắt gõ vuốt ⇒ chèn ngay lúc chạm như cũ (không trễ).
+                val swipeDefer = !selDefer && !edge && swipeTyping && !splitNow && plane == Plane.LETTERS &&
+                    activeCount() == 1 && swipeLayout != null && swipePath != null
+                val defer = selDefer || edge || swipeDefer
                 ptrEdgeShiftOn[pid] = shiftWas == Shift.ON
                 if (selDefer) {
                     val letter = Key.Letter(ch)
                     commits.arm(k) { emit(letter) }
-                } else if (edge) {
-                    // Dải mép: chữ chốt lúc nhấc / khi ngón khác chạm; huỷ (vuốt Quay lại) ⇒ không gõ.
+                } else if (edge || swipeDefer) {
+                    // Dải mép / gõ vuốt: chữ chốt lúc nhấc / khi ngón khác chạm; mép bị huỷ (vuốt
+                    // Quay lại) ⇒ không gõ; thành vuốt ⇒ bỏ (beginSwipe).
                     val letter = Key.Letter(ch)
                     val lt = plane == Plane.LETTERS
                     val dx = (x - (k.left + k.right) / 2) / (k.right - k.left)
@@ -1798,8 +1804,7 @@ class KeyboardView(
                 if (cmdGesture != null) {
                     keyCmd = cmdGesture; keyCmdPid = pid; keyCmdDeferred = defer; keyCmdShiftWas = shiftWas
                 }
-                if (!defer && swipeTyping && !splitNow && plane == Plane.LETTERS && activeCount() == 1)
-                    startSwipeTracking(pid, k, x, y, e.eventTime, since, shiftWas)
+                if (swipeDefer) startSwipeTracking(pid, k, x, y, e.eventTime, since, shiftWas)
                 // Mép: vẫn giữ ra ký tự phụ (chữ gốc chốt trước khi ký tự phụ thay nó — settleAlt / up).
                 if (!selDefer && alts.isNotEmpty()) armAlt(pid, k, x, y, shiftWas)
             }
@@ -2175,8 +2180,8 @@ class KeyboardView(
         swiping = true
         dropAlt()
         pressUp(swipePid)
-        swipeKey?.let { hideBalloon(it) }
-        // Chữ đầu đã huỷ ⇒ shift một-lần bị nhả lúc chạm phải bật lại (từ vuốt viết hoa).
+        swipeKey?.let { hideBalloon(it); commits.disarm(it) }   // chữ đầu hoãn: bỏ, chưa từng chèn
+        // Chữ đầu bỏ ⇒ shift một-lần bị nhả lúc chạm phải bật lại (từ vuốt viết hoa).
         if (swipeShift == Shift.ON && shift == Shift.OFF) { shift = Shift.ON; invalidate() }
         swipeSound?.let { s ->
             // Từ điểm chạm đầu, đưa nốt các điểm đã có: Nốt nhạc theo phím gảy cả phím bắt đầu + phím đi qua lúc phân loại.
@@ -2319,7 +2324,7 @@ class KeyboardView(
 
     // MARK: giữ phím ra ký tự phụ
 
-    /** Chạm phím có ký tự phụ: hẹn giờ [KeyAlternates.HOLD_MS]; chữ đã chèn lúc chạm. */
+    /** Chạm phím có ký tự phụ: hẹn giờ [KeyAlternates.HOLD_MS]; chữ đã chèn lúc chạm (hoãn ⇒ chèn trước khi thay). */
     private fun armAlt(pid: Int, k: LaidKey, x: Float, y: Float, shiftWas: Shift) {
         val alt = alts[k.label[0]] ?: return
         altHold = KeyAlternates.Hold(alt, x / d, y / d)

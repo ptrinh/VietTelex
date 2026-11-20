@@ -101,8 +101,6 @@ final class SwipeReviseTests: XCTestCase {
                    case sc: SwipeCase = .lower, revise: Bool = true, english: Bool = false,
                    natural: Bool = false) -> SwipeTyping.Outcome? {
             let f = SwipeTyping.fold(word)
-            b.letter(sc == .lower ? f.first! : Character(f.prefix(1).uppercased()), proxy: p)
-            s.begin(bridge: b, proxy: p)
             let composing = b.isComposing
             let prev = composing ? b.predictedCommit : committed.last
             let prev2 = composing ? committed.last : committed.dropLast().last

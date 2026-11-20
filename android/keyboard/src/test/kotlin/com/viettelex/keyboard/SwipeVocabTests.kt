@@ -126,8 +126,6 @@ class SwipeVocabTests {
     // ---- ca Phil (đường IME thật: KeyboardSession, LM cá nhân seed như máy mới) ----
 
     private fun KeyboardSession.swipeR(p: TextProxy, word: String, case: SwipeSuggest.Case) {
-        handle(Key.Letter(if (case == SwipeSuggest.Case.LOWER) word[0] else word[0].uppercaseChar()), p)
-        assertTrue(undoLastLetter(p))
         val path = SwipeSim(7).path(word, layout, sigma = 0.0, jitter = 0.0)
         val ctx = swipeContext()
         val cands = decoder.decode(path, SwipeSuggest.TOP_K, ctx.folded, ctx.english, if (ctx.english != null) ctx.englishWord else null)

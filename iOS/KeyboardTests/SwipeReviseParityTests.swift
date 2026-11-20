@@ -41,8 +41,6 @@ final class SwipeReviseParityTests: XCTestCase {
         for (i, w) in ws.enumerated() {
             let sc: SwipeCase = i == 0 ? first : .lower
             let f = SwipeTyping.fold(w)
-            b.letter(sc == .lower ? f.first! : Character(f.prefix(1).uppercased()), proxy: p)
-            s.begin(bridge: b, proxy: p)
             let composing = b.isComposing
             let prev = composing ? b.predictedCommit : committed.last
             let prev2 = composing ? committed.last : committed.dropLast().last

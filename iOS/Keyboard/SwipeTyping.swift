@@ -214,15 +214,6 @@ final class SwipeTyping {
         queue.async { _ = SwipeEnglish.lexicon.swipe }
     }
 
-    /// Cú vuốt bắt đầu: huỷ chữ đầu (đã chèn lúc chạm xuống). Không huỷ được (màn hình
-    /// lệch) ⇒ ⌫ như iPad vuốt xuống.
-    func begin(bridge: EngineBridge, proxy: TextProxyLike) {
-        if !bridge.undoLastLetter(proxy: proxy) {
-            TouchLog.write("swipe: undo chữ đầu thất bại → ⌫")
-            bridge.backspace(proxy: proxy)
-        }
-    }
-
     /// Giải mã (đồng bộ trên hàng đợi decoder) → dạng thắng + phương án.
     /// `contextWords` = từ hay theo sau từ trước (UserLangModel.nextWords), có dấu;
     /// `count` = số lần user đã gõ một âm tiết (UserLangModel.count);

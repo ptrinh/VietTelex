@@ -122,12 +122,10 @@ final class SwipeTypingTests: XCTestCase {
         return (s, EngineBridge(settings: KeyboardSettings()), MockProxy())
     }
 
-    /// Mô phỏng một cú vuốt: chữ đầu chèn lúc chạm, thành vuốt ⇒ huỷ, nhấc tay ⇒ chèn.
+    /// Mô phỏng một cú vuốt: chữ đầu hoãn (không chèn lúc chạm, #172), nhấc tay ⇒ chèn từ.
     @discardableResult
     private func swipe(_ word: String, _ s: SwipeTyping, _ b: EngineBridge, _ p: MockProxy,
                        context: [String] = [], case sc: SwipeCase = .lower) -> SwipeTyping.Outcome? {
-        b.letter(word.first!, proxy: p)
-        s.begin(bridge: b, proxy: p)
         return s.finish(path(word), case: sc, contextWords: context, bridge: b, proxy: p)
     }
 
@@ -236,7 +234,7 @@ final class SwipeTypingTests: XCTestCase {
             typed(prefix, b, p)
             b.letter(Character(first), proxy: p)
             XCTAssertNotEqual(p.text, prefix + first, "\(first) phải biến đổi từ trước")
-            s.begin(bridge: b, proxy: p)
+            XCTAssertTrue(b.undoLastLetter(proxy: p))
             XCTAssertEqual(p.text, prefix, "chữ đầu \(first) chưa huỷ sạch")
             if word == "sao" {
                 _ = s.finish(path(word), case: .lower, contextWords: [], bridge: b, proxy: p)
@@ -249,7 +247,7 @@ final class SwipeTypingTests: XCTestCase {
         swipe("viet", s, b, p, context: ["việt"])
         b.letter("s", proxy: p)
         XCTAssertEqual(p.text, "viết")
-        s.begin(bridge: b, proxy: p)
+        XCTAssertTrue(b.undoLastLetter(proxy: p))
         XCTAssertEqual(p.text, "việt")
         XCTAssertTrue(b.isSwipeWordOpen)
     }
@@ -323,8 +321,6 @@ final class SwipeTypingTests: XCTestCase {
     private func swipeEn(_ word: String, _ s: SwipeTyping, _ b: EngineBridge, _ p: MockProxy,
                          prev1: String?, prev1English: Bool = false, prev2: String? = nil,
                          case sc: SwipeCase = .lower) -> SwipeTyping.Outcome? {
-        b.letter(word.first!, proxy: p)
-        s.begin(bridge: b, proxy: p)
         let prior = SwipeLangContext.prior(
             prev1: SwipeLangContext.classify(prev1, swipedEnglish: prev1English),
             prev2: SwipeLangContext.classify(prev2))
@@ -335,8 +331,6 @@ final class SwipeTypingTests: XCTestCase {
     @discardableResult
     private func swipeRun(_ word: String, _ s: SwipeTyping, _ b: EngineBridge, _ p: MockProxy,
                           recent: [String]) -> SwipeTyping.Outcome? {
-        b.letter(word.first!, proxy: p)
-        s.begin(bridge: b, proxy: p)
         let prior = SwipeLangContext.prior(SwipeLangContext.kinds(
             composing: false, pending: nil, pendingEnglish: false, recent: recent, english: { _ in false }))
         return s.finish(path(word), case: .lower, contextWords: [], prev: recent.last,
@@ -410,7 +404,7 @@ final class SwipeTypingTests: XCTestCase {
         swipeEn("file", s, b, p, prev1: "gửi")
         b.letter("s", proxy: p)                              // phím dấu KHÔNG sửa từ Anh
         XCTAssertEqual(p.text, "gửi file s")
-        s.begin(bridge: b, proxy: p)                         // "s" hoá ra đầu cú vuốt ⇒ huỷ sạch
+        XCTAssertTrue(b.undoLastLetter(proxy: p))            // "s" hoá ra giữ ra ký tự phụ ⇒ huỷ sạch
         XCTAssertEqual(p.text, "gửi file")
         XCTAssertTrue(b.isLiteralSwipeWordOpen)
         b.letter("a", proxy: p)
@@ -448,7 +442,6 @@ final class SwipeKeyboardFlowTests: XCTestCase {
         kb.frame = host.bounds
         kb.layoutIfNeeded()
         kb.swipeEnabled = true
-        kb.onSwipeBegan = { s.begin(bridge: b, proxy: p) }
         kb.onSwipeEnded = { path, sc in
             _ = s.finish(path, case: sc, contextWords: [], bridge: b, proxy: p)
         }
@@ -505,6 +498,89 @@ final class SwipeKeyboardFlowTests: XCTestCase {
         let drag = (1...6).map { CGPoint(x: d.x + (g.x - d.x) * CGFloat($0) / 6, y: d.y) }
         XCTAssertFalse(kb.debugTouch(from: d, through: drag, start: 300.1))
         XCTAssertEqual(p.text.lowercased(), "asd")
+        withExtendedLifetime(host) {}
+    }
+
+    // MARK: #172 — gõ vuốt bật: ngón còn đè thì không ghi gì vào ô
+
+    @MainActor func testSwipeWritesNothingWhileFingerDown() {
+        let (kb, host, p, _, _) = harness()
+        var t: TimeInterval = 100
+        for ch in "xin" { kb.debugTouch(from: center(kb, ch), through: [], start: t); t += 1 }
+        let before = p.text
+        var began = 0
+        kb.onSwipeBegan = { began += 1 }
+        let token = NSObject(), id = ObjectIdentifier(token)
+        let pts = points(kb, "chao")
+        kb.debugRouteDown(id, at: center(kb, "c"), time: t)
+        XCTAssertEqual(p.text, before, "chạm xuống: chữ đầu chưa được chèn")
+        XCTAssertTrue(kb.debugBalloonVisible, "phản hồi (balloon) vẫn ngay lúc chạm")
+        XCTAssertTrue(kb.debugRouteMove(id, through: pts, start: t))
+        XCTAssertEqual(began, 1)
+        XCTAssertEqual(p.text, before, "đang vuốt: không chữ nào hiện rồi mất")
+        kb.debugRouteUp(id, at: pts.last!, time: t + 1)
+        XCTAssertEqual(SwipeTyping.fold(p.text), "xin chao")
+        withExtendedLifetime(token) {}
+        withExtendedLifetime(host) {}
+    }
+
+    @MainActor func testTapCommitsOnLift() {
+        let (kb, host, p, _, _) = harness()
+        let token = NSObject(), id = ObjectIdentifier(token)
+        let a = center(kb, "a")
+        kb.debugRouteDown(id, at: a, time: 10)
+        XCTAssertEqual(p.text, "")
+        XCTAssertTrue(kb.debugBalloonVisible)
+        kb.debugRouteUp(id, at: a, time: 10.08)
+        XCTAssertEqual(p.text.lowercased(), "a")
+        withExtendedLifetime(token) {}
+        withExtendedLifetime(host) {}
+    }
+
+    @MainActor func testOverlappingTapsKeepDownOrder() {
+        let (kb, host, p, _, _) = harness()
+        let t1 = NSObject(), t2 = NSObject(), t3 = NSObject()
+        let (i1, i2, i3) = (ObjectIdentifier(t1), ObjectIdentifier(t2), ObjectIdentifier(t3))
+        // a đè, n chạm (a chưa nhấc) ⇒ a chốt trước n; n nhấc trước a vẫn "an"
+        kb.debugRouteDown(i1, at: center(kb, "a"), time: 20)
+        XCTAssertEqual(p.text, "")
+        kb.debugRouteDown(i2, at: center(kb, "n"), time: 20.05)
+        XCTAssertEqual(p.text.lowercased(), "an")
+        kb.debugRouteUp(i2, at: center(kb, "n"), time: 20.08)
+        kb.debugRouteUp(i1, at: center(kb, "a"), time: 20.09)
+        XCTAssertEqual(p.text.lowercased(), "an")
+        // h đè (một ngón ⇒ hoãn), ngón khác chạm o trước khi h nhấc ⇒ "ho", không mất chữ
+        kb.debugRouteDown(i3, at: center(kb, "h"), time: 21)
+        XCTAssertEqual(p.text.lowercased(), "an")
+        kb.debugRouteDown(i1, at: center(kb, "o"), time: 21.04)
+        kb.debugRouteUp(i3, at: center(kb, "h"), time: 21.06)
+        kb.debugRouteUp(i1, at: center(kb, "o"), time: 21.07)
+        XCTAssertEqual(p.text.lowercased(), "anho")
+        withExtendedLifetime([t1, t2, t3]) {}
+        withExtendedLifetime(host) {}
+    }
+
+    @MainActor func testCancelledTapStillCommits() {
+        // Hệ thống huỷ touch (hàng sát home indicator…) — như trước: chữ không bị nuốt.
+        let (kb, host, p, _, _) = harness()
+        let token = NSObject(), id = ObjectIdentifier(token)
+        kb.debugRouteDown(id, at: center(kb, "e"), time: 30)
+        XCTAssertEqual(p.text, "")
+        kb.debugRouteCancel(id, at: center(kb, "e"), time: 30.05)
+        XCTAssertEqual(p.text.lowercased(), "e")
+        withExtendedLifetime(token) {}
+        withExtendedLifetime(host) {}
+    }
+
+    @MainActor func testSwipeOffInsertsOnTouchDown() {
+        let (kb, host, p, _, _) = harness()
+        kb.swipeEnabled = false
+        let token = NSObject(), id = ObjectIdentifier(token)
+        kb.debugRouteDown(id, at: center(kb, "a"), time: 40)
+        XCTAssertEqual(p.text.lowercased(), "a", "tắt gõ vuốt: chèn ngay lúc chạm như cũ")
+        kb.debugRouteUp(id, at: center(kb, "a"), time: 40.08)
+        XCTAssertEqual(p.text.lowercased(), "a")
+        withExtendedLifetime(token) {}
         withExtendedLifetime(host) {}
     }
 

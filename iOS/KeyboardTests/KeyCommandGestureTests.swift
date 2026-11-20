@@ -241,7 +241,6 @@ final class KeyCommandKeyboardFlowTests: XCTestCase {
         kb.frame = host.bounds
         kb.layoutIfNeeded()
         kb.swipeEnabled = swipe
-        kb.onSwipeBegan = { s.begin(bridge: b, proxy: p) }
         kb.onSwipeEnded = { path, sc in _ = s.finish(path, case: sc, contextWords: [], bridge: b, proxy: p) }
         if let l = kb.swipeLayout() { s.setLayout(l, prepare: false) }
         kb.keyCommandsEnabled = on
@@ -265,16 +264,21 @@ final class KeyCommandKeyboardFlowTests: XCTestCase {
     }
 
     @MainActor func testSwipeUpOnCCopiesAndRemovesLetter() {
-        let r = rig()
-        r.b.letter("a", proxy: r.p)
-        let top = r.kb.debugKeyAreaTop()
-        let start = center(r.kb, "c")
-        XCTAssertFalse(r.kb.debugTouch(from: start, through: vertical(from: start, to: top - 20), start: 100))
-        XCTAssertEqual(r.commands.map(\.0), [.copy])
-        XCTAssertEqual(r.commands.first?.1, false)
-        XCTAssertEqual(r.p.text, "a")                        // "c" chèn lúc chạm đã bị huỷ
-        XCTAssertNil(r.kb.debugKeyCommandPill)               // nhãn xem trước ẩn sau khi nhấc
-        withExtendedLifetime(r.host) {}
+        // Gõ vuốt tắt: "c" chèn lúc chạm rồi bị huỷ. Bật: "c" hoãn tới lúc nhấc (#172) ⇒ không
+        // bao giờ chèn, lệnh nhận letterDeferred = true (controller không huỷ gì).
+        for swipe in [false, true] {
+            let r = rig(swipe: swipe)
+            r.b.letter("a", proxy: r.p)
+            let top = r.kb.debugKeyAreaTop()
+            let start = center(r.kb, "c")
+            XCTAssertFalse(r.kb.debugTouch(from: start, through: vertical(from: start, to: top - 20), start: 100))
+            XCTAssertEqual(r.commands.map(\.0), [.copy])
+            XCTAssertEqual(r.commands.first?.1, swipe)
+            XCTAssertEqual(r.letters, swipe ? 0 : 1)          // gõ vuốt bật: "c" chưa từng tới engine
+            XCTAssertEqual(r.p.text, "a")
+            XCTAssertNil(r.kb.debugKeyCommandPill)               // nhãn xem trước ẩn sau khi nhấc
+            withExtendedLifetime(r.host) {}
+        }
     }
 
     @MainActor func testSelectionDefersLetterSoCutKeepsSelection() {

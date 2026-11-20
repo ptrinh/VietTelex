@@ -1479,11 +1479,9 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
     override fun onSwipeTypingStart(): Boolean {
         if (!session.swipeTypingActive) return false
         clearSwipeUndo()
-        if (!proxy.begin()) return false
-        val ok = try { session.undoLastLetter(proxy) } finally { proxy.end() }
-        resetIfEditFailed()
-        if (ok) { handler.removeCallbacks(suggestRun); handler.removeCallbacks(autoShiftRun) }
-        return ok
+        // Chữ đầu cú vuốt chưa từng chèn (KeyboardView hoãn tới lúc nhấc, #172) ⇒ không gì để huỷ.
+        handler.removeCallbacks(suggestRun); handler.removeCallbacks(autoShiftRun)
+        return true
     }
 
     override fun onSwipeTypingEnd(path: SwipePath, case: SwipeSuggest.Case) {

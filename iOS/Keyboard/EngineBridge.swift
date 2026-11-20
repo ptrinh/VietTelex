@@ -276,7 +276,8 @@ final class EngineBridge {
     private var lastWasOwnBoundary = false
 
     /// Checkpoint của phím CHỮ gần nhất — để HUỶ đúng phím đó khi nó hoá ra là cử chỉ
-    /// (iPad vuốt xuống ra ký tự phụ; sau này gõ vuốt). KHÔNG dùng ⌫: engine.backspace()
+    /// (iPad vuốt xuống / giữ phím ra ký tự phụ, vuốt phím lên ra lệnh; gõ vuốt thì chữ đầu
+    /// được hoãn tới lúc nhấc nên không cần huỷ — #172). KHÔNG dùng ⌫: engine.backspace()
     /// xoá chữ cuối ĐANG HIỆN, không gỡ phím vừa gõ — "tieng" + vuốt s từng ra "tiến#"
     /// (26/09/2026). Mọi thao tác khác ngoài letter() đều xoá checkpoint.
     private struct LetterUndo {
@@ -290,7 +291,8 @@ final class EngineBridge {
     }
     private var letterUndo: LetterUndo?
     /// Có ghi checkpoint huỷ phím chữ không. Controller chỉ bật khi có người dùng nó
-    /// (iPad vuốt xuống ra ký tự phụ, gõ vuốt); tắt ⇒ 0 copy engine mỗi phím.
+    /// (iPad vuốt xuống / giữ phím ra ký tự phụ, vuốt phím lên ra lệnh); tắt ⇒ 0 copy engine
+    /// mỗi phím.
     var letterUndoEnabled = true
 
     // MARK: gõ vuốt — từ vuốt là composition ĐANG MỞ (seed)
@@ -506,7 +508,7 @@ final class EngineBridge {
     /// Phím chữ ngay sau từ vuốt đang mở: phím dấu Telex (s f r x j z w) BIẾN ĐỔI từ ⇒
     /// sửa từ đó (viet vuốt → việt, + s → viết). Phím khác (hoặc phím dấu không đổi
     /// gì) ⇒ dấu cách treo: chốt từ vuốt + " " rồi phím này mở từ mới. Cả hai huỷ được
-    /// trọn vẹn bằng undoLastLetter (chữ đầu của một cú vuốt mới).
+    /// trọn vẹn bằng undoLastLetter (phím đó hoá ra là giữ ra ký tự phụ / vuốt-lên-lệnh).
     private func letterAfterSwipe(_ ch: Character, proxy: TextProxyLike) {
         guard let open = swipeOpen else { return }
         let snapshot = engine

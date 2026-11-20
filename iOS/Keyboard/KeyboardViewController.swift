@@ -2962,9 +2962,9 @@ extension KeyboardViewController {
         let keyCmds = KeyCommandPolicy.enabled(setting: keyCommandsSetting, traits: fieldTraits,
                                                voiceOver: UIAccessibility.isVoiceOverRunning)
         keyboard.keyCommandsEnabled = keyCmds
-        // Checkpoint huỷ phím chữ chỉ có người dùng khi gõ vuốt / iPad vuốt xuống / giữ phím
-        // ra ký tự phụ / vuốt phím lên ra lệnh.
-        bridge.letterUndoEnabled = on || UIDevice.current.userInterfaceIdiom == .pad
+        // Checkpoint huỷ phím chữ chỉ có người dùng khi iPad vuốt xuống / giữ phím ra ký tự phụ /
+        // vuốt phím lên ra lệnh (gõ vuốt hoãn chữ đầu tới lúc nhấc — không cần huỷ).
+        bridge.letterUndoEnabled = UIDevice.current.userInterfaceIdiom == .pad
             || keyboard.altHoldActive || keyCmds
         if on, swipe == nil { swipe = SwipeTyping() }
         // Template vuốt / từ điển Anh / FUTO / vnlm dựng NỀN — nhưng không tranh CPU với khung
@@ -3209,12 +3209,10 @@ extension KeyboardViewController {
     }
 
     fileprivate func swipeBegan() {
-        guard let swipe else { return }
+        guard swipe != nil else { return }
         pushSwipeLayout(prepare: false)
         if externalChangePending { syncComposition("swipe") }
-        applyingEdit = true
-        defer { applyingEdit = false }
-        swipe.begin(bridge: bridge, proxy: Proxy(p: textProxy))
+        // Chữ đầu cú vuốt chưa từng chèn (KeyboardView hoãn tới lúc nhấc, #172) ⇒ không gì để huỷ.
         restoreUndo = nil; undoOfferActive = false
         swipeSuggest = nil
         swipeReviseUndo = nil

@@ -652,7 +652,7 @@ class KeyboardSession(
     /** IME bật/tắt gõ vuốt cho ô hiện tại (sau [startInput]). Tắt ⇒ bridge thôi ghi checkpoint. */
     fun setSwipeTyping(on: Boolean) {
         swipeTypingActive = on
-        bridge.trackLetterUndo = on || letterAlternates || keyCommands
+        // Gõ vuốt không cần checkpoint: chữ đầu cú vuốt hoãn tới lúc nhấc (#172), không chèn rồi huỷ.
         if (!on) clearSwipe()
     }
 
@@ -660,14 +660,14 @@ class KeyboardSession(
     private var letterAlternates = false
     fun setLetterAlternates(on: Boolean) {
         letterAlternates = on
-        bridge.trackLetterUndo = swipeTypingActive || on || keyCommands
+        bridge.trackLetterUndo = on || keyCommands
     }
 
     /** "Vuốt phím để sao chép/dán" bật ở ô này ([KeyCommandGesture]) — cần checkpoint huỷ phím chữ. */
     private var keyCommands = false
     fun setKeyCommands(on: Boolean) {
         keyCommands = on
-        bridge.trackLetterUndo = swipeTypingActive || letterAlternates || on
+        bridge.trackLetterUndo = letterAlternates || on
     }
 
     private fun clearSwipe() {
@@ -1024,8 +1024,8 @@ class KeyboardSession(
     // MARK: gõ vuốt
 
     /**
-     * Ngón vừa chuyển từ chạm sang VUỐT: huỷ phím chữ đã chèn lúc chạm xuống (checkpoint
-     * engine, không ⌫). false ⇒ không huỷ được (ô đổi / thao tác khác xen) — IME coi là chạm.
+     * Phím chữ vừa chèn hoá ra là cử chỉ (giữ ra ký tự phụ, vuốt phím lên ra lệnh): huỷ đúng phím
+     * đó (checkpoint engine, không ⌫). false ⇒ không huỷ được (ô đổi / thao tác khác xen).
      */
     fun undoLastLetter(proxy: TextProxy): Boolean {
         val ok = bridge.undoLastLetter(proxy)

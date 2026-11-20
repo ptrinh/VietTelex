@@ -158,11 +158,8 @@ class SwipeTypingTests {
         for (c in keys) handle(when (c) { ' ' -> Key.Space; ',', '.' -> Key.Text(c.toString()); else -> Key.Letter(c) }, p)
     }
 
-    /** Chạm xuống chữ đầu (chèn ngay) → thành vuốt (huỷ) → nhấc tay (decode + chèn). */
-    private fun KeyboardSession.swipe(p: TextProxy, word: String, case: SwipeSuggest.Case = SwipeSuggest.Case.LOWER,
-                                      first: Char = word[0]): SwipeChoice {
-        handle(Key.Letter(if (case == SwipeSuggest.Case.LOWER) first else first.uppercaseChar()), p)
-        assertTrue("huỷ chữ đầu", undoLastLetter(p))
+    /** Chạm xuống chữ đầu (hoãn, chưa chèn — #172) → thành vuốt (bỏ) → nhấc tay (decode + chèn). */
+    private fun KeyboardSession.swipe(p: TextProxy, word: String, case: SwipeSuggest.Case = SwipeSuggest.Case.LOWER): SwipeChoice {
         val path = SwipeSim(7).path(word, layout, sigma = 0.0, jitter = 0.0)
         val ctx = swipeContext()
         // như IME: ctx.english != null ⇒ thêm ứng viên tiếng Anh
@@ -304,8 +301,6 @@ class SwipeTypingTests {
 
     /** Như [swipe] nhưng đi đường IME thật: resolveSwipe (có sửa lại từ trước) → commitSwipe. */
     private fun KeyboardSession.swipeR(p: TextProxy, word: String, case: SwipeSuggest.Case = SwipeSuggest.Case.LOWER): SwipeChoice {
-        handle(Key.Letter(if (case == SwipeSuggest.Case.LOWER) word[0] else word[0].uppercaseChar()), p)
-        assertTrue("huỷ chữ đầu", undoLastLetter(p))
         val path = SwipeSim(7).path(word, layout, sigma = 0.0, jitter = 0.0)
         val ctx = swipeContext()
         val cands = decoder.decode(path, SwipeSuggest.TOP_K, ctx.folded, ctx.english, if (ctx.english != null) ctx.englishWord else null)
@@ -386,7 +381,6 @@ class SwipeTypingTests {
     @Test fun revisionFailSafeWhenScreenDiffers() {
         val s = session(); val p = MockProxy()
         s.swipeR(p, "co")
-        s.handle(Key.Letter('g'), p); assertTrue(s.undoLastLetter(p))
         val path = SwipeSim(7).path("gang", layout, sigma = 0.0, jitter = 0.0)
         val ctx = s.swipeContext()
         val r = s.resolveSwipe(decoder.decode(path, SwipeSuggest.TOP_K, ctx.folded, ctx.english, ctx.englishWord), ctx)!!

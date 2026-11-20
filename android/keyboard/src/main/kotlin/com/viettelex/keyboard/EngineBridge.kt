@@ -68,7 +68,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
 
     /**
      * Ghi checkpoint mỗi phím chữ để [undoLastLetter] huỷ được đúng phím đó khi nó hoá ra
-     * là đầu một đường VUỐT (gõ vuốt). Tắt (mặc định) ⇒ không tốn gì.
+     * là cử chỉ (giữ ra ký tự phụ, vuốt phím lên ra lệnh). Tắt (mặc định) ⇒ không tốn gì.
      */
     var trackLetterUndo = false
         set(v) { field = v; if (!v) undo.valid = false }

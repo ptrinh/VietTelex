@@ -6,8 +6,8 @@ import kotlin.math.sqrt
 
 /*
  * SwipeTyping.kt — phần THUẦN của tích hợp gõ vuốt (không View/MotionEvent):
- *  - [GestureClassifier]: chạm hay vuốt (chữ đầu vẫn chèn NGAY lúc chạm xuống; thành vuốt
- *    thì caller huỷ chữ đó bằng EngineBridge.undoLastLetter).
+ *  - [GestureClassifier]: chạm hay vuốt (chữ đầu HOÃN tới lúc nhấc — #172; thành vuốt thì
+ *    caller bỏ chữ đó, chưa từng chèn).
  *  - [SwipeSuggest]: ứng viên decoder → từ có dấu top-1 + biến thể cho thanh gợi ý,
  *    điểm ngữ cảnh từ UserLangModel, luật dấu cách treo.
  * Cùng hằng số/hành vi với bản iOS.

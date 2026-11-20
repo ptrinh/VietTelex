@@ -194,6 +194,24 @@ final class KeyAlternatesTests: XCTestCase {
         withExtendedLifetime(host) {}
     }
 
+    /// Gõ vuốt bật (#172): chữ hoãn tới lúc nhấc nhưng giữ ra ký tự phụ cho đúng chuỗi như
+    /// tắt — chữ chèn rồi mới thay (không ⌫ oan chữ trước), cả khi ngón khác chạm sau khi bắn.
+    @MainActor func testHoldWithSwipeTypingOnSameOutput() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)
+        var out: [String] = []
+        let (kb, host) = makeKeyboard(numbers: true, symbols: true) { out.append($0) }
+        kb.swipeEnabled = true
+        XCTAssertTrue(kb.debugHold("e"))
+        XCTAssertEqual(out, ["Le", "R3"])
+        out = []
+        kb.debugHold("e", fire: false)
+        XCTAssertEqual(out, ["Le"])
+        out = []
+        kb.debugHold("q", secondTouch: "a")
+        XCTAssertEqual(out, ["Lq", "R1", "La"])
+        withExtendedLifetime(host) {}
+    }
+
     @MainActor func testOffMeansNoHintsNoTimer() throws {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)
         var out: [String] = []

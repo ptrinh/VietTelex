@@ -86,8 +86,6 @@ final class SwipeShortcutTests: XCTestCase {
 
     private func swipe(_ w: String, _ s: SwipeTyping, _ b: EngineBridge, _ p: MockProxy,
                        case sc: SwipeCase = .lower) -> SwipeTyping.Outcome? {
-        b.letter(w.first!, proxy: p)
-        s.begin(bridge: b, proxy: p)
         return s.finish(path(w), case: sc, contextWords: [], bridge: b, proxy: p)
     }
 

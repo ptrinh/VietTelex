@@ -10,7 +10,6 @@ import com.viettelex.keyboard.SwipeChoice
 import com.viettelex.keyboard.UserLangModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
 import java.io.File
@@ -50,30 +49,27 @@ class SwipeTypingIcProxyTest {
         return tracker.onUpdate(ed.selStart, ed.selEnd)
     }
 
-    private fun swipe(p: IcProxy, ed: FakeEditor, s: KeyboardSession, first: Char, choice: SwipeChoice) {
-        assertFalse(op(p, ed) { s.handle(Key.Letter(first), p) })
-        var ok = false
-        assertFalse(op(p, ed) { ok = s.undoLastLetter(p) })
-        assertTrue(ok)
+    /** Cú vuốt: chữ đầu hoãn tới lúc nhấc rồi bỏ (#172) ⇒ chỉ commitSwipe chạm ô. */
+    private fun swipe(p: IcProxy, ed: FakeEditor, s: KeyboardSession, choice: SwipeChoice) {
         assertFalse(op(p, ed) { s.commitSwipe(choice, p) })
     }
 
     @Test fun swipeInSentenceThroughIcProxy() {
         val (ed, p, s) = setup("Hôm nay")
-        swipe(p, ed, s, 'v', SwipeChoice("viết", listOf("việt", "biết")))
+        swipe(p, ed, s, SwipeChoice("viết", listOf("việt", "biết")))
         assertEquals("Hôm nay viết", ed.text)
         assertFalse(op(p, ed) { s.handle(Key.Letter('j'), p) })     // phím dấu sửa từ vuốt
         assertEquals("Hôm nay việt", ed.text)
         assertFalse(op(p, ed) { s.handle(Key.Text("."), p) })        // dấu câu dính sát
         assertEquals("Hôm nay việt.", ed.text)
-        swipe(p, ed, s, 'n', SwipeChoice("nam", emptyList()))
+        swipe(p, ed, s, SwipeChoice("nam", emptyList()))
         assertEquals("Hôm nay việt. nam", ed.text)
     }
 
     @Test fun firstLetterTelexKeyUndoneAndBackspaceDeletesWord() {
         val (ed, p, s) = setup()
         for (c in "tieeng") op(p, ed) { s.handle(Key.Letter(c), p) }
-        swipe(p, ed, s, 's', SwipeChoice("sao", listOf("sào")))      // s đầu vuốt từng làm "tiếng"
+        swipe(p, ed, s, SwipeChoice("sao", listOf("sào")))      // s đầu vuốt từng làm "tiếng"
         assertEquals("tiêng sao", ed.text)
         assertFalse(op(p, ed) { s.handle(Key.Backspace, p) })        // ⌫ đầu: cả từ vuốt
         assertEquals("tiêng ", ed.text)
@@ -83,7 +79,7 @@ class SwipeTypingIcProxyTest {
 
     @Test fun alternativeTapReplacesWord() {
         val (ed, p, s) = setup("a ")
-        swipe(p, ed, s, 'c', SwipeChoice("co", listOf("cho", "có")))
+        swipe(p, ed, s, SwipeChoice("co", listOf("cho", "có")))
         assertFalse(op(p, ed) { s.acceptSuggestion("cho", p) })
         assertEquals("a cho", ed.text)
         op(p, ed) { s.handle(Key.Space, p) }

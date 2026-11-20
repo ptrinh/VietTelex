@@ -273,12 +273,10 @@ final class SwipeProperCaseFlowTests: XCTestCase {
         s.setLayout(layout, prepare: false)
         let b = EngineBridge(settings: KeyboardSettings()), p = MockProxy()
         p.text = "tôi yêu "
-        b.letter("v", proxy: p); s.begin(bridge: b, proxy: p)
         let first = try XCTUnwrap(s.finish(path("viet"), case: .lower, contextWords: ["việt"], prev: "yêu",
                                            bridge: b, proxy: p))
         XCTAssertEqual(first.word, "việt")
         XCTAssertEqual(p.text, "tôi yêu việt")
-        b.letter("n", proxy: p); s.begin(bridge: b, proxy: p)
         let prev = SwipeTyping.Revisable(word: first.word, scored: first.scored, sc: .lower)
         let out = try XCTUnwrap(s.finish(path("nam"), case: .lower, contextWords: ["nam"], prev: "việt",
                                          prev2: "yêu", previous: prev, bridge: b, proxy: p))
@@ -293,7 +291,6 @@ final class SwipeProperCaseFlowTests: XCTestCase {
         s.setLayout(layout, prepare: false)
         for (sc, want) in [(SwipeCase.lower, "London"), (.capitalized, "London"), (.upper, "LONDON")] {
             let b = EngineBridge(settings: KeyboardSettings()), p = MockProxy()
-            b.letter("l", proxy: p); s.begin(bridge: b, proxy: p)
             let out = s.finish(path("london"), case: sc, contextWords: [], english: SwipeLangContext.onlyEnglishPrior,
                                englishOnly: true, bridge: b, proxy: p)
             XCTAssertEqual(out?.word, want, "\(sc)")
