@@ -47,6 +47,41 @@ final class EngineBridgeTests: XCTestCase {
         return proxy.text
     }
 
+    /// Issue #169: `d` khi con trỏ dính liền sau một từ bắt đầu bằng d gạch đ cho từ đó;
+    /// sau dấu cách (kể cả dấu cách treo sau từ vuốt) `d` vẫn mở từ mới.
+    func testStrokeKeyEditsGluedWordStartingWithD() {
+        func glued(_ word: String, _ keys: String) -> String {
+            let p = MockProxy(); p.text = word
+            let b = EngineBridge(settings: KeyboardSettings())
+            for ch in keys { b.letter(ch, proxy: p) }
+            return p.text
+        }
+        XCTAssertEqual(glued("dùng", "d"), "đùng")
+        XCTAssertEqual(glued("dùng", "ds"), "đúng")
+        XCTAssertEqual(glued("Dung", "d"), "Đung")
+        XCTAssertEqual(glued("co", "d"), "cod")          // không bắt đầu bằng d ⇒ nối chữ như cũ
+        XCTAssertEqual(glued("ban", "d"), "band")
+        XCTAssertEqual(glued("to", "o"), "too")          // a/e/o vẫn không sửa (26/09/2026)
+        XCTAssertEqual(glued("đúng", "d"), "đúngd")      // đã có đ: không có gì để gạch
+        var vni = KeyboardSettings(); vni.vniMode = true
+        let p = MockProxy(); p.text = "dùng"
+        EngineBridge(settings: vni).letter("d", proxy: p)
+        XCTAssertEqual(p.text, "dùngd")                  // VNI: d là chữ thường
+        // Từ vuốt: `d` ngay sau vẫn là từ mới ("dùng đi"); xoá về dính liền rồi mới sửa.
+        let q = MockProxy(); let b = EngineBridge(settings: KeyboardSettings())
+        b.insertSwipeWord("dùng", proxy: q)
+        for ch in "ddi" { b.letter(ch, proxy: q) }
+        XCTAssertEqual(q.text, "dùng đi")
+        let r = MockProxy(); let c = EngineBridge(settings: KeyboardSettings())
+        c.insertSwipeWord("dùng", proxy: r)
+        c.letter("d", proxy: r)
+        XCTAssertEqual(r.text, "dùng d")
+        c.backspace(proxy: r); c.backspace(proxy: r)
+        XCTAssertEqual(r.text, "dùng")
+        c.letter("d", proxy: r); c.letter("s", proxy: r)
+        XCTAssertEqual(r.text, "đúng")
+    }
+
     /// Dấu nháy là ranh giới của từ viết tắt tiếng Anh (07/11/2026; = TelexCore
     /// ContractionCapsReopenTests): bridge chuyển ký tự ranh giới cho engine ⇒ "doesn't" giữ
     /// nguyên, không "doén't"; từ Việt trong nháy giữ dấu.

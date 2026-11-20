@@ -25,6 +25,14 @@ object ReEdit {
         }
 
     /**
+     * Phím `d` (Telex) khi con trỏ DÍNH LIỀN sau một từ bắt đầu bằng d: gạch đ cho từ đó
+     * ("dùng|" + d → "đùng", issue #169). Không ai mở từ mới dính vào từ trước nên, khác
+     * a/e/o, phím này gần như chắc chắn là sửa; sau dấu cách `d` vẫn mở từ mới ("dùng đi").
+     */
+    fun isStrokeKey(ch: Char, word: String, vni: Boolean = false): Boolean =
+        !vni && (ch == 'd' || ch == 'D') && word.length >= 2 && (word[0] == 'd' || word[0] == 'D')
+
+    /**
      * Từ (toàn chữ cái) ngay trước con trỏ trong [before]; null nếu không có, dài quá
      * [MAX_WORD], hoặc dính vào thứ không phải từ tiếng Việt đứng riêng (chữ số, `@ . _ - /`…:
      * "mp3", "gmail.com", "a_b").

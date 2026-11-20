@@ -275,7 +275,8 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
             return
         }
         val ownBoundary = afterOwnBoundary
-        val seedable = reEdit && engine.isEmpty && !afterOwnBoundary && ReEdit.isTransformKey(ch, settings.vniMode)
+        val seedable = reEdit && engine.isEmpty && !afterOwnBoundary &&
+            (ReEdit.isTransformKey(ch, settings.vniMode) || strokeSeedable(ch, proxy))
         afterOwnBoundary = false
         checkpoint(ownBoundary)
         if (seedable && trySeed(ch, proxy)) return
@@ -420,6 +421,13 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         val u = expansionUndo?.takeIf { it.retro } ?: return false
         expansionUndo = null
         return undoExpansion(u, proxy)
+    }
+
+    /** `d` dính liền sau từ bắt đầu bằng d (xem [ReEdit.isStrokeKey]); chỉ đọc context khi phím là d. */
+    private fun strokeSeedable(ch: Char, proxy: TextProxy): Boolean {
+        if (settings.vniMode || (ch != 'd' && ch != 'D')) return false
+        val word = proxy.contextBeforeInput()?.let { ReEdit.trailingWord(it) } ?: return false
+        return ReEdit.isStrokeKey(ch, word)
     }
 
     /**

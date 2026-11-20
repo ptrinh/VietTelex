@@ -185,6 +185,22 @@ class ReEditTests {
         run { val s = session(); val p = MockProxy(); p.sb.append("việt"); s.typeKeys(p, "z"); assertEquals("viêt", p.text) }
     }
 
+    /** Issue #169: `d` dính liền sau từ bắt đầu bằng d gạch đ; sau dấu cách vẫn mở từ mới. */
+    @Test fun strokeKeyEditsGluedWordStartingWithD() {
+        fun glued(word: String, keys: String, settings: KeyboardSettings = KeyboardSettings()): String {
+            val s = session(settings = settings); val p = MockProxy(); p.sb.append(word)
+            s.typeKeys(p, keys); return p.text
+        }
+        assertEquals("đùng", glued("dùng", "d"))
+        assertEquals("đúng", glued("dùng", "ds"))
+        assertEquals("Đung", glued("Dung", "d"))
+        assertEquals("cod", glued("co", "d"))
+        assertEquals("band", glued("ban", "d"))
+        assertEquals("đúngd", glued("đúng", "d"))
+        assertEquals("dùngd", glued("dùng", "d", KeyboardSettings(vniMode = true)))
+        assertEquals("dùng đi", glued("dùng ", "ddi"))
+    }
+
     @Test fun midWordIsLiteral() {
         val s = session(); val p = MockProxy()
         p.sb.append("viet"); p.after = "nam"

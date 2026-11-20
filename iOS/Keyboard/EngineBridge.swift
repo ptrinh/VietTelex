@@ -637,7 +637,8 @@ final class EngineBridge {
             return
         }
         if engine.isEmpty, !ownBoundary, settings.reEditWord, canReachBack {
-            if isReEditKey(ch), seedWordBeforeCaret(then: ch, proxy: proxy) {
+            if isReEditKey(ch) || isStrokeReEdit(ch, proxy: proxy),
+               seedWordBeforeCaret(then: ch, proxy: proxy) {
                 return                                // sửa từ trên màn hình: không huỷ được
             }
             if continueWordBeforeCaret(ch, proxy: proxy) { return }
@@ -1183,6 +1184,21 @@ final class EngineBridge {
         }
     }
     private func isReEditKey(_ ch: Character) -> Bool { Self.isReEditKey(ch, vni: settings.vniMode) }
+
+    /// Phím `d` (Telex) khi con trỏ DÍNH LIỀN sau một từ bắt đầu bằng d: gạch đ cho từ đó
+    /// ("dùng|" + d → "đùng", issue #169 — từ vuốt ra "dùng" mà muốn "đúng"). Không ai mở
+    /// từ mới dính vào từ trước, nên khác a/e/o ("to" + o = "too") phím này gần như chắc
+    /// chắn là sửa; sau dấu cách (kể cả dấu cách treo sau từ vuốt) `d` vẫn mở từ mới
+    /// ("dùng đi"). Từ không bắt đầu bằng d ⇒ false, `d` nối chữ như cũ.
+    private func isStrokeReEdit(_ ch: Character, proxy: TextProxyLike) -> Bool {
+        guard !settings.vniMode, ch == "d" || ch == "D",
+              let ctx = proxy.contextBeforeInput,
+              let word = CompositionSync.trailingWord(ctx) else { return false }
+        return Self.strokeReEditApplies(to: word)
+    }
+    static func strokeReEditApplies(to word: String) -> Bool {
+        word.count >= 2 && (word.first == "d" || word.first == "D")
+    }
 
     /// Engine rỗng, con trỏ đứng NGAY SAU một từ (không ở giữa từ, không vùng chọn):
     /// seed engine bằng từ đó rồi feed `ch`. Chỉ áp khi seed round-trip VÀ phím thật sự
