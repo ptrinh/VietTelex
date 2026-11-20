@@ -71,6 +71,7 @@ final class KeyVariantsTests: XCTestCase {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)
         var out: [String] = []
         let (kb, host) = makeKeyboard { out.append($0) }
+        kb.symbolReturn = .auto   // mặc định là Tắt từ 10/11/2026; test này kiểm luật "Tự động"
         kb.debugSetPlane(numbers: true)
         kb.layoutIfNeeded()
         XCTAssertTrue(kb.debugDomainHold("\"", fire: false))
@@ -97,9 +98,10 @@ final class KeyVariantsTests: XCTestCase {
         XCTAssertEqual(kb.debugPlaneName, "numbers", "huỷ ⇒ không chèn, không đổi plane")
         out = []
         kb.debugDomainHold("$")
-        XCTAssertEqual(kb.debugPlaneName, "numbers", "$ giữ plane")
+        XCTAssertEqual(kb.debugPlaneName, "letters", "$ về chữ ở luật Tự động hiện hành")
         let d = try XCTUnwrap(kb.debugLastDomainLayout)
         out = []
+        kb.debugSetPlane(numbers: true); kb.layoutIfNeeded()
         kb.debugDomainHold("$", dx: d.mirrored ? -d.itemWidth : d.itemWidth)
         XCTAssertEqual(out, ["T₫"], "₫ ngay cạnh $")
         withExtendedLifetime(host) {}

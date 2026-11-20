@@ -20,7 +20,6 @@ struct Job {
     DWORD tid = 0;
     std::u16string expected;
     uint64_t seq = 0;
-    bool focusedElement = false;  // Chromium address bar (#173)
 };
 
 std::mutex g_mu;
@@ -97,10 +96,12 @@ IUIAutomation* uia() {
     return a;
 }
 
-// TextPattern (text before the caret / selection), else ValuePattern (the whole value).
-// `beforeSelectionStart`: compare what precedes the selection's START — a Chromium address
-// bar keeps its inline suggestion selected after the typed text (#173).
-Echo readElement(IUIAutomationElement* el, const std::u16string& expected, bool beforeSelectionStart) {
+Echo readUia(HWND field, const std::u16string& expected) {
+    g_path = "uia (no pattern)";
+    IUIAutomation* a = uia();
+    if (!a || !field) return Echo::Unverifiable;
+    IUIAutomationElement* el = nullptr;
+    if (FAILED(a->ElementFromHandle(field, &el)) || !el) return Echo::Unverifiable;
     Echo result = Echo::Unverifiable;
     IUIAutomationTextPattern* tp = nullptr;
     if (SUCCEEDED(el->GetCurrentPatternAs(UIA_TextPatternId, IID_IUIAutomationTextPattern,
@@ -111,15 +112,13 @@ Echo readElement(IUIAutomationElement* el, const std::u16string& expected, bool 
         if (SUCCEEDED(tp->GetSelection(&sel)) && sel && SUCCEEDED(sel->get_Length(&n)) && n > 0) {
             IUIAutomationTextRange* r = nullptr;
             if (SUCCEEDED(sel->GetElement(0, &r)) && r) {
-                if (beforeSelectionStart)
-                    r->MoveEndpointByRange(TextPatternRangeEndpoint_End, r, TextPatternRangeEndpoint_Start);
                 int moved = 0;
                 r->MoveEndpointByUnit(TextPatternRangeEndpoint_Start, TextUnit_Character,
                                       -static_cast<int>(expected.size()), &moved);
                 BSTR text = nullptr;
                 if (SUCCEEDED(r->GetText(-1, &text)) && text) {
                     std::u16string before(reinterpret_cast<const char16_t*>(text), SysStringLen(text));
-                    g_path = beforeSelectionStart ? "uia focused TextPattern" : "uia TextPattern";
+                    g_path = "uia TextPattern";
                     result = echoMatches(before, expected) ? Echo::Match : Echo::Mismatch;
                     SysFreeString(text);
                 }
@@ -137,45 +136,12 @@ Echo readElement(IUIAutomationElement* el, const std::u16string& expected, bool 
             BSTR v = nullptr;
             if (SUCCEEDED(vp->get_CurrentValue(&v)) && v) {
                 std::u16string value(reinterpret_cast<const char16_t*>(v), SysStringLen(v));
-                g_path = beforeSelectionStart ? "uia focused ValuePattern" : "uia ValuePattern";
+                g_path = "uia ValuePattern";
                 if (!value.empty()) result = echoInValue(value, expected) ? Echo::Match : Echo::Mismatch;
                 SysFreeString(v);
             }
             vp->Release();
         }
-    }
-    return result;
-}
-
-Echo readUia(HWND field, const std::u16string& expected) {
-    g_path = "uia (no pattern)";
-    IUIAutomation* a = uia();
-    if (!a || !field) return Echo::Unverifiable;
-    IUIAutomationElement* el = nullptr;
-    if (FAILED(a->ElementFromHandle(field, &el)) || !el) return Echo::Unverifiable;
-    const Echo result = readElement(el, expected, false);
-    el->Release();
-    return result;
-}
-
-// Chromium address bar (#173): the browser's whole frame is one window, so the window's own
-// element says nothing; the focused element is the address bar. It must belong to the
-// foreground window's process (the user may have moved on): else unverifiable.
-Echo readFocusedUia(HWND fg, const std::u16string& expected) {
-    g_path = "uia focused (no element)";
-    IUIAutomation* a = uia();
-    if (!a || !fg) return Echo::Unverifiable;
-    IUIAutomationElement* el = nullptr;
-    if (FAILED(a->GetFocusedElement(&el)) || !el) return Echo::Unverifiable;
-    DWORD fgPid = 0;
-    GetWindowThreadProcessId(fg, &fgPid);
-    int pid = 0;
-    Echo result = Echo::Unverifiable;
-    if (SUCCEEDED(el->get_CurrentProcessId(&pid)) && fgPid && static_cast<DWORD>(pid) == fgPid) {
-        g_path = "uia focused (no pattern)";
-        result = readElement(el, expected, true);
-    } else {
-        g_path = "uia focused (other process)";
     }
     el->Release();
     return result;
@@ -214,7 +180,6 @@ DWORD WINAPI verifierMain(void*) {
         wchar_t cls[64] = {};
         GetClassNameW(job.fg, cls, 64);
         const Echo e = lstrcmpW(cls, L"ConsoleWindowClass") == 0 ? readConsole(job.fg, job.expected)
-                       : job.focusedElement                       ? readFocusedUia(job.fg, job.expected)
                                                                   : readUia(field ? field : job.fg, job.expected);
         const int control = field ? GetDlgCtrlID(field) : 0;
         if (appLogging())
@@ -243,12 +208,12 @@ void ensureThread() {
 
 }  // namespace
 
-void directVerifyAfterEdit(HWND fg, DWORD tid, const std::u16string& expected, uint64_t seq, bool focusedElement) {
+void directVerifyAfterEdit(HWND fg, DWORD tid, const std::u16string& expected, uint64_t seq) {
     ensureThread();
     g_latestSeq.store(seq);
     {
         std::lock_guard<std::mutex> lk(g_mu);
-        g_job = Job{fg, tid, expected, seq, focusedElement};
+        g_job = Job{fg, tid, expected, seq};
         g_pending = true;
     }
     if (g_wake) SetEvent(g_wake);
