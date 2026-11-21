@@ -275,17 +275,21 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
             return
         }
         val ownBoundary = afterOwnBoundary
-        val reopened = reopenedWord
-        reopenedWord = null
-        val stroke = strokeTarget(ch, proxy, reopened)
+        val editing = editingFinishedWord
+        editingFinishedWord = false
+        val stroke = strokeTarget(ch, proxy, editing)
         val seedable = stroke == null && reEdit && engine.isEmpty && !afterOwnBoundary &&
             ReEdit.isTransformKey(ch, settings.vniMode)
+        val freeMark = if (stroke == null) freeMarkTarget(ch, proxy, editing, seedable) else null
         afterOwnBoundary = false
         checkpoint(ownBoundary)
         if (stroke != null && strokeWord(stroke, proxy)) return
         if (seedable && trySeed(ch, proxy)) return
+        if (freeMark != null && freeMarkWord(freeMark, ch, proxy)) return
         val before = engine.composed
         val action = engine.feed(ch)
+        // phím dấu còn biến đổi từ ⇒ vẫn đang sửa; phím nối chữ ⇒ thôi
+        if (editing && engine.composed != before + ch) editingFinishedWord = true
         if (action is TelexAction.Replace && action.backspaces > 0 && !proxy.confirmTail(before)) {
             // Chữ trên màn hình không còn là từ engine đang giữ (ô bị đổi mà không được báo):
             // KHÔNG xoá mù — quên từ, bắt đầu từ mới bằng chính phím này.
@@ -328,7 +332,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         // [expand] = false: không gõ tắt (từ vuốt — từ từ điển, không phải chữ tắt).
         fun put(text: String) = if (lineBreak) proxy.insertLineBreak() else proxy.insertText(text)
         undo.valid = false
-        reopenedWord = null
+        editingFinishedWord = false
         expansionUndo = null
         expandedAtLastBoundary = false
         if (proxy.isSecure || passthrough) { put(text); return "" }
@@ -433,9 +437,12 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
      * mở lại (engine đang giữ nó), hoặc từ dính liền trước con trỏ khi engine trống. Chỉ đọc
      * context khi phím là d.
      */
-    private fun strokeTarget(ch: Char, proxy: TextProxy, reopened: String?): String? {
+    private fun strokeTarget(ch: Char, proxy: TextProxy, editing: Boolean): String? {
         if (settings.vniMode || (ch != 'd' && ch != 'D') || !proxy.canReEdit) return null
-        if (reopened != null && engine.composed == reopened && ReEdit.isStrokeKey(ch, reopened)) return reopened
+        if (editing && !engine.isEmpty) {
+            val held = engine.composed
+            if (ReEdit.isStrokeKey(ch, held)) return held
+        }
         if (!reEdit || !engine.isEmpty || afterOwnBoundary || proxy.hasSelection) return null
         val word = proxy.contextBeforeInput()?.let { ReEdit.trailingWord(it) } ?: return null
         val after = proxy.contextAfterInput() ?: return null
@@ -457,11 +464,55 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         proxy.deleteCodePoints(Cp.count(word))
         proxy.insertText(target)
         if (trackLetterUndo) { undo.removed = word; undo.inserted = target; undo.valid = true }
+        editingFinishedWord = true
         return true
     }
     private val strokeScratch = TelexEngine()
-    /** Từ vừa được ⌫ mở lại ([tryReopen]) — chỉ sống tới phím kế. */
-    private var reopenedWord: String? = null
+    private val freeMarkTrial = TelexEngine()
+
+    /**
+     * Engine đang giữ một từ ĐÃ GÕ XONG được lấy lại để sửa (⌫ mở lại, nạp từ trước con trỏ,
+     * gạch đ, từ vuốt còn mở): phím `d` / `w` kế tiếp là SỬA từ đó chứ không phải gõ liền mạch,
+     * nên với ngược được cả khi "Bỏ dấu tự do" tắt (#169). Sống qua các phím còn biến đổi từ;
+     * phím nối chữ, ranh giới, ⌫, reset ⇒ tắt.
+     */
+    private var editingFinishedWord = false
+
+    /** Phím kế là phím ngay sau một từ vuốt còn mở trong engine ([KeyboardSession]). */
+    fun noteEditingFinishedWord() { if (!engine.isEmpty) editingFinishedWord = true }
+
+    /** Từ sẽ được `w` thêm móc/trăng theo kiểu bỏ dấu tự do (xem [freeMarkWord]), hoặc null. */
+    private fun freeMarkTarget(ch: Char, proxy: TextProxy, editing: Boolean, seedable: Boolean): String? {
+        if (settings.freeMarking || settings.vniMode || (ch != 'w' && ch != 'W') || !proxy.canReEdit) return null
+        if (editing && !engine.isEmpty) return engine.composed
+        if (!seedable || proxy.hasSelection) return null
+        val word = proxy.contextBeforeInput()?.let { ReEdit.trailingWord(it) } ?: return null
+        val after = proxy.contextAfterInput() ?: return null
+        return if (ReEdit.atWordEnd(after)) word else null
+    }
+
+    /**
+     * `w` khi SỬA một từ đã gõ xong mà "Bỏ dấu tự do" tắt: engine chặt không với `w` qua phụ âm
+     * cuối ("đùng" + w → "đùngw"), nhưng phím dính vào từ đã xong là để sửa — tính kết quả bằng
+     * engine thử có bật bỏ dấu tự do ("đừng") rồi seed thẳng dạng đó (+ s → "đứng"). Chỉ nhận
+     * khi phím biến đổi từ mà không đổi độ dài. Gõ liền mạch không qua đây.
+     */
+    private fun freeMarkWord(word: String, ch: Char, proxy: TextProxy): Boolean {
+        engine.copyInto(freeMarkTrial)
+        freeMarkTrial.freeMarking = true
+        if (!freeMarkTrial.seed(word)) return false
+        freeMarkTrial.feed(ch)
+        val target = freeMarkTrial.composed
+        if (target == word || Cp.count(target) != Cp.count(word) || !proxy.confirmTail(word)) return false
+        engine.copyInto(strokeScratch)
+        if (!engine.seed(target)) { strokeScratch.copyInto(engine); return false }
+        TouchLog.write("re-edit: free mark ${Cp.count(word)} chars")
+        proxy.deleteCodePoints(Cp.count(word))
+        proxy.insertText(target)
+        if (trackLetterUndo) { undo.removed = word; undo.inserted = target; undo.valid = true }
+        editingFinishedWord = true
+        return true
+    }
 
     /**
      * Phím dấu/mũ khi engine rỗng, con trỏ ở CUỐI một từ đã có trên màn hình ("viet|" + j):
@@ -485,6 +536,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         apply(action, ch.toString(), proxy)
         // Checkpoint = engine TRỐNG trước seed; màn hình: đuôi từ bị thay ↔ phần chèn.
         recordUndo(action, word, ch.toString())
+        editingFinishedWord = true
         return true
     }
 
@@ -495,7 +547,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
      */
     fun backspace(proxy: TextProxy): Boolean {
         undo.valid = false
-        reopenedWord = null
+        editingFinishedWord = false
         retroOffer = null
         expansionUndo?.let { u ->
             expansionUndo = null
@@ -545,7 +597,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         }
         proxy.deleteBackward()          // xoá ký tự ranh giới
         TouchLog.write("re-open: ${Cp.count(word)} chars back")
-        reopenedWord = word
+        editingFinishedWord = true
         return true
     }
 
@@ -555,7 +607,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
     /** Đổi ô / con trỏ dời / ẩn bàn phím → quên từ + ngữ cảnh tiếng Anh. */
     fun reset() {
         engine.reset(); engine.resetContext(); afterOwnBoundary = false; undo.valid = false; expansionUndo = null; enWord = ""
-        reopenedWord = null
+        editingFinishedWord = false
         email.invalidate()
     }
 

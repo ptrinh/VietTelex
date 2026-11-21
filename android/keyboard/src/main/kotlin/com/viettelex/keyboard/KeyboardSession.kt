@@ -869,6 +869,7 @@ class KeyboardSession(
         when (key) {
             is Key.Letter -> {
                 val fresh = !bridge.isComposing
+                if (letterAfterSwipe) bridge.noteEditingFinishedWord()   // phím này sửa từ vuốt (#169)
                 bridge.letter(key.ch, proxy); clearUndo()
                 if (wantsTouches) noteTouch(fresh, touch)
             }

@@ -53,21 +53,34 @@ final class EngineBridgeTests: XCTestCase {
             XCTAssertEqual(glued("dùng", "d"), "đùng", "spell=\(spell)")
             XCTAssertEqual(glued("dùng", "ds"), "đúng", "spell=\(spell)")
             XCTAssertEqual(glued("dường", "d"), "đường", "spell=\(spell)")
+            // `w` khi sửa từ đã gõ xong cũng với ngược qua phụ âm cuối (chế độ chặt).
+            XCTAssertEqual(glued("dùng", "dws"), "đứng", "spell=\(spell)")
+            XCTAssertEqual(glued("dung", "w"), "dưng", "spell=\(spell)")
+            XCTAssertEqual(glued("trang", "w"), "trăng", "spell=\(spell)")
+            XCTAssertEqual(glued("duong", "dwf"), "đường", "spell=\(spell)")
             XCTAssertEqual(glued("Dung", "d"), "Đung", "spell=\(spell)")
             XCTAssertEqual(glued("ban", "d"), "band", "spell=\(spell)")
             XCTAssertEqual(glued("đúng", "d"), "đúngd", "spell=\(spell)")
-            // Đúng các bước người báo: vuốt "dùng", gõ d (từ mới), ⌫ ⌫ về sát từ, rồi d s.
+            // Đúng các bước người báo: vuốt "dùng", gõ d (từ mới), ⌫ ⌫ về sát từ, rồi d w s.
             let r = MockProxy(); let c = EngineBridge(settings: st)
             c.insertSwipeWord("dùng", proxy: r)
             c.letter("d", proxy: r)
             XCTAssertEqual(r.text, "dùng d", "spell=\(spell)")
             c.backspace(proxy: r); c.backspace(proxy: r)
             XCTAssertEqual(r.text, "dùng", "spell=\(spell)")
-            for ch in "ds" { c.letter(ch, proxy: r) }
-            XCTAssertEqual(r.text, "đúng", "spell=\(spell)")
+            for ch in "dws" { c.letter(ch, proxy: r) }
+            XCTAssertEqual(r.text, "đứng", "spell=\(spell)")
+            // `w` ngay sau từ vuốt: sửa từ đó.
+            let v = MockProxy(); let e = EngineBridge(settings: st)
+            e.insertSwipeWord("dung", proxy: v)
+            e.letter("w", proxy: v)
+            XCTAssertEqual(v.text, "dưng", "spell=\(spell)")
             // Gõ tay rồi ⌫ mở lại từ: cũng vậy; còn gõ liền mạch thì d cuối vẫn là chữ.
             XCTAssertEqual(type("dungf ⌫ds", settings: st), "đúng", "spell=\(spell)")
             XCTAssertEqual(type("dad", settings: st), "dad", "spell=\(spell)")
+            XCTAssertEqual(type("trang ⌫w", settings: st), "trăng", "spell=\(spell)")
+            // Gõ liền mạch ở chế độ chặt không đổi: w cuối từ vẫn là chữ.
+            XCTAssertEqual(type("trangw", settings: st), "trangw", "spell=\(spell)")
         }
     }
 

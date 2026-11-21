@@ -216,6 +216,13 @@ class ReEditTests {
             assertEquals("đùng", glued("dùng", "d"))
             assertEquals("đúng", glued("dùng", "ds"))
             assertEquals("đường", glued("dường", "d"))
+            // `w` khi sửa từ đã gõ xong cũng với ngược qua phụ âm cuối (chế độ chặt).
+            assertEquals("đứng", glued("dùng", "dws"))
+            assertEquals("dưng", glued("dung", "w"))
+            assertEquals("trăng", glued("trang", "w"))
+            assertEquals("đường", glued("duong", "dwf"))
+            assertEquals("trăng", glued("", "trang <w"))
+            assertEquals("trangw", glued("", "trangw"))      // gõ liền mạch: w cuối vẫn là chữ
             assertEquals("Đung", glued("Dung", "d"))
             assertEquals("band", glued("ban", "d"))
             assertEquals("đúngd", glued("đúng", "d"))
