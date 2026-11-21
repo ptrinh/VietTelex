@@ -1905,7 +1905,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         if (inputShown) { session.invalidatePasteCache(); refreshBar() }
     }
 
-    /** Ghi nền (file nhỏ ≤ 20 mục × 4000 ký tự); chụp chuỗi trên main trước. */
+    /** Ghi nền (file ≤ ClipboardHistory.MAX_TOTAL_CHARS ký tự); chụp chuỗi trên main trước. */
     private fun saveClipHistory(h: ClipboardHistory? = session.clipHistory) {
         val data = h?.serialize() ?: return
         val f = clipFile

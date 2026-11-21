@@ -318,7 +318,7 @@ enum SettingCaption {
     static let advancedStyle = LK("Màu, bo góc, cỡ chữ, phông, độ đậm — lưu riêng cho từng giao diện.")
     static let fontScaleIos = LK("Phím hẹp tự thu nhỏ chữ cho vừa, dấu không bị cắt.")
     // Riêng tư & sao lưu
-    static let clipboardHistory = LK("Nút clipboard trên thanh gợi ý mở 20 mục vừa copy; ghim để giữ. Chỉ lưu trên máy.")
+    static let clipboardHistory = LK("Nút clipboard trên thanh gợi ý mở tối đa 100 mục vừa copy; ghim để giữ. Chỉ lưu trên máy.")
     static let clipboardAutoSave = LK("Lưu vào lịch sử ngay khi bạn sao chép. iOS sẽ hiện thông báo \"VietTelex đã dán từ…\" mỗi lần.")
     static let clipboardTTL = LK("Mục trông như mật khẩu/OTP vẫn tự xoá sau 2 phút; ghim để giữ lâu.")
     static let clipboardPasteAllowIos = LK("Để tự ghi mục mới không bị hỏi: Cài đặt → VietTelex → Dán từ ứng dụng khác → Cho phép.")

@@ -154,12 +154,62 @@ final class ClipboardHistoryTests: XCTestCase {
 
     func testCapEvictsOldestUnpinned() {
         let h = ClipboardHistory(fileURL: nil)
+        XCTAssertEqual(h.maxItems, 100, "trần mặc định 100 mục (cùng số với Android)")
         h.add("keep", now: 0); h.togglePin("keep")
-        for i in 0..<25 { h.add("item \(i)", now: TimeInterval(i + 1)) }
-        XCTAssertEqual(h.raw.count, 20)
+        for i in 0..<105 { h.add("item \(i)", now: TimeInterval(i + 1)) }
+        XCTAssertEqual(h.raw.count, 100)
         XCTAssertTrue(h.raw.contains { $0.text == "keep" })
         XCTAssertFalse(h.raw.contains { $0.text == "item 0" })
-        XCTAssertTrue(h.raw.contains { $0.text == "item 24" })
+        XCTAssertTrue(h.raw.contains { $0.text == "item 104" })
+    }
+
+    /// 100 mục dài sẽ là ~2 MB RAM + file ghi lại mỗi lần copy ⇒ có trần tổng ký tự: vượt thì bỏ
+    /// mục không ghim cũ nhất, giữ mục ghim và mục vừa thêm.
+    func testTotalCharBudgetEvictsOldestUnpinned() {
+        XCTAssertEqual(ClipboardHistory.defaultMaxTotalChars, 200_000)
+        let h = ClipboardHistory(fileURL: nil, maxTotalChars: 1000)
+        func big(_ c: Character) -> String { String(repeating: c, count: 400) }
+        h.add(big("p"), now: 1); h.togglePin(big("p"))
+        h.add(big("a"), now: 2)
+        XCTAssertEqual(h.raw.count, 2, "800 ≤ 1000: giữ cả hai")
+        h.add(big("b"), now: 3)
+        XCTAssertEqual(h.raw.map(\.text), [big("b"), big("p")], "vượt ⇒ bỏ mục thường cũ nhất, giữ ghim")
+        XCTAssertLessThanOrEqual(h.totalChars, 1000)
+        // Chỉ còn mục ghim + mục mới mà vẫn vượt ⇒ mục vừa thêm vẫn được giữ.
+        h.add(String(repeating: "c", count: 900), now: 4)
+        XCTAssertEqual(h.raw.first?.text.count, 900)
+        XCTAssertTrue(h.raw.contains { $0.text == big("p") })
+        XCTAssertFalse(h.raw.contains { $0.text == big("b") })
+        // Mục ngắn (trường hợp thường gặp): trần ký tự không cắt bớt 100 mục.
+        let n = ClipboardHistory(fileURL: nil)
+        for i in 0..<100 { n.add("số tài khoản \(i)", now: TimeInterval(i)) }
+        XCTAssertEqual(n.raw.count, 100)
+    }
+
+    /// Bảng clipboard dựng dòng theo lúc cuộn: 100 mục không tạo 100 dòng view một lượt.
+    @MainActor func testPanelBuildsOnlyVisibleRows() {
+        let p = ClipboardPanel(frame: CGRect(x: 0, y: 0, width: 390, height: 220))
+        let win = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
+        win.addSubview(p); win.isHidden = false
+        defer { win.isHidden = true }
+        let items = (0..<100).map { ClipItem(text: "mục \($0)", at: TimeInterval($0), pinned: $0 == 0, sensitive: false) }
+        p.reload(items: items, dark: false, incognito: false)
+        p.layoutIfNeeded()
+        XCTAssertEqual(p.debugRowCount, 101, "100 mục + ghi chú giới hạn")
+        XCTAssertGreaterThan(p.debugBuiltCellCount, 0)
+        XCTAssertLessThan(p.debugBuiltCellCount, 15, "chỉ dựng các dòng đang thấy")
+        var pasted: [String] = []
+        p.onPaste = { pasted.append($0) }
+        let first = p.debugClipCell(at: 0)
+        XCTAssertEqual(first?.debugTitle, "mục 0")
+        first?.debugTapPaste()
+        XCTAssertEqual(pasted, ["mục 0"])
+        // Nạp lại ít mục hơn: ô tái dùng mang nội dung + hành động của mục mới.
+        p.reload(items: [ClipItem(text: "khác", at: 0, pinned: false, sensitive: false)], dark: true, incognito: false)
+        p.debugClipCell(at: 0)?.debugTapPaste()
+        XCTAssertEqual(pasted, ["mục 0", "khác"])
+        p.reload(items: [], dark: false, incognito: false)
+        XCTAssertEqual(p.debugRowCount, 2, "trống: dòng \"chưa có mục nào\" + ghi chú")
     }
 
     func testRejectsEmptyAndHuge() {

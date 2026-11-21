@@ -19,16 +19,18 @@ enum class ClipboardTTL(val id: String, val ms: Long) {
 }
 
 /**
- * Lịch sử clipboard (chỉ trên máy): tối đa [maxItems] mục, mục không ghim hết hạn sau
+ * Lịch sử clipboard (chỉ trên máy): tối đa [maxItems] mục và [maxTotalChars] ký tự tổng (vượt ⇒
+ * bỏ mục không ghim cũ nhất; mục vừa thêm và mục ghim luôn được giữ), mục không ghim hết hạn sau
  * [ttlMs] ([ClipboardTTL], đổi được lúc chạy — áp ở lần [prune] kế tiếp; mục "trông như
  * bí mật" sau [sensitiveTtlMs]); mục ghim không hết hạn.
  * Hàm thuần, không I/O — IME lo đọc/ghi file bằng [serialize]/[deserialize].
  * iOS `ClipboardHistory.swift` port cùng hợp đồng.
  */
 class ClipboardHistory(
-    val maxItems: Int = 20,
+    val maxItems: Int = MAX_ITEMS,
     var ttlMs: Long = ClipboardTTL.DEFAULT.ms,
     val sensitiveTtlMs: Long = 120_000,
+    val maxTotalChars: Int = MAX_TOTAL_CHARS,
 ) {
     data class Item(val text: String, val at: Long, val pinned: Boolean, val sensitive: Boolean)
 
@@ -49,8 +51,18 @@ class ClipboardHistory(
             if (k < 0) break
             list.removeAt(k)
         }
+        // Trần tổng ký tự: bỏ dần mục không ghim cũ nhất, trừ mục vừa thêm (vị trí 0).
+        var total = totalChars()
+        while (total > maxTotalChars) {
+            val k = list.indexOfLast { !it.pinned }
+            if (k <= 0) break
+            total -= list[k].text.length
+            list.removeAt(k)
+        }
         return true
     }
+
+    fun totalChars(): Int = list.sumOf { it.text.length }
 
     /** Bỏ mục không ghim quá hạn. Trả true nếu có thay đổi. */
     fun prune(now: Long): Boolean = list.removeAll { !it.pinned && now - it.at >= if (it.sensitive) sensitiveTtlMs else ttlMs }
@@ -112,8 +124,12 @@ class ClipboardHistory(
 
     companion object {
         const val MAX_TEXT = 4000
+        /** Trần số mục (20 → 100 theo phản hồi người dùng 22/11/2026) — cùng số với iOS. */
+        const val MAX_ITEMS = 100
+        /** Trần tổng ký tự (cả mục ghim) — cùng số với iOS `defaultMaxTotalChars`. */
+        const val MAX_TOTAL_CHARS = 200_000
 
-        fun deserialize(s: String?, maxItems: Int = 20, ttlMs: Long = ClipboardTTL.DEFAULT.ms): ClipboardHistory {
+        fun deserialize(s: String?, maxItems: Int = MAX_ITEMS, ttlMs: Long = ClipboardTTL.DEFAULT.ms): ClipboardHistory {
             val h = ClipboardHistory(maxItems, ttlMs)
             if (s.isNullOrEmpty()) return h
             for (line in s.split('\n')) {

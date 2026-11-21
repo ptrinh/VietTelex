@@ -1048,7 +1048,7 @@ enum L10n {
         "Màn hình rộng (iPad, xoay ngang, máy gập): chia bàn phím làm hai nửa.": "Wide screens (iPad, landscape, foldables): splits the keyboard in two halves.",
         "Theme, ảnh nền, độ trong suốt, tuỳ chỉnh về mặc định. Ảnh, chiều cao hàng, logo giữ nguyên.": "Resets theme, wallpaper, transparency, customisation. Photo, row height and logo stay.",
         "Màu, bo góc, cỡ chữ, phông, độ đậm — lưu riêng cho từng giao diện.": "Colours, corners, label size, font and weight — saved per theme.",
-        "Nút clipboard trên thanh gợi ý mở 20 mục vừa copy; ghim để giữ. Chỉ lưu trên máy.": "The clipboard button opens your last 20 copies; pin to keep. Stored on this device only.",
+        "Nút clipboard trên thanh gợi ý mở tối đa 100 mục vừa copy; ghim để giữ. Chỉ lưu trên máy.": "The clipboard button opens up to your last 100 copies; pin to keep. Stored on this device only.",
         "Lưu vào lịch sử ngay khi bạn sao chép. iOS sẽ hiện thông báo \"VietTelex đã dán từ…\" mỗi lần.": "Saves to history as soon as you copy. iOS will show \"VietTelex pasted from…\" each time.",
         "Mục trông như mật khẩu/OTP vẫn tự xoá sau 2 phút; ghim để giữ lâu.": "Items that look like passwords/OTPs still go after 2 minutes; pin to keep.",
         "Để tự ghi mục mới không bị hỏi: Cài đặt → VietTelex → Dán từ ứng dụng khác → Cho phép.": "To save copies without prompts: Settings → VietTelex → Paste from Other Apps → Allow.",

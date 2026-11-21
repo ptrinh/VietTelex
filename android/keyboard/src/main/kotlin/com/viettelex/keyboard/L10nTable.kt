@@ -952,7 +952,7 @@ object L10nTable {
         put("Theme, ảnh nền, độ trong suốt, tuỳ chỉnh về mặc định. Ảnh, chiều cao hàng, logo giữ nguyên.", "Resets theme, wallpaper, transparency, customisation. Photo, row height and logo stay.")
         put("Màu, bo góc, cỡ chữ, phông, độ đậm — lưu riêng cho từng giao diện.", "Colours, corners, label size, font and weight — saved per theme.")
         put("Phím hẹp tự thu nhỏ chữ cho vừa. Khi đặt, thay cho “Cỡ chữ trên phím” ở trang Phím.", "Narrow keys shrink labels to fit. Once set, replaces “Key label size” in Keys & gestures.")
-        put("Nút clipboard trên thanh gợi ý mở 20 mục vừa copy; ghim để giữ. Chỉ lưu trên máy.", "The clipboard button opens your last 20 copies; pin to keep. Stored on this device only.")
+        put("Nút clipboard trên thanh gợi ý mở tối đa 100 mục vừa copy; ghim để giữ. Chỉ lưu trên máy.", "The clipboard button opens up to your last 100 copies; pin to keep. Stored on this device only.")
         put("Mục trông như mật khẩu/OTP vẫn tự xoá sau 2 phút; ghim để giữ lâu.", "Items that look like passwords/OTPs still go after 2 minutes; pin to keep.")
         put("Không học từ mới, không lưu clipboard; tự bật ở tab ẩn danh của trình duyệt.", "Learns no new words and saves no clipboard; turns on by itself in incognito tabs.")
         put("File gồm cài đặt, gõ tắt, mẫu câu; mở được trên iPhone, iPad, Android. Nhập sẽ gộp thêm.", "Holds settings, shortcuts and snippets; opens on iPhone, iPad, Android. Import merges in.")

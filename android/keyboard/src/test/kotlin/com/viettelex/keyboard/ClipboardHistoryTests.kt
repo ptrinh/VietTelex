@@ -62,13 +62,33 @@ class ClipboardHistoryTests {
     }
 
     @Test fun capEvictsOldestUnpinned() {
-        val h = ClipboardHistory(maxItems = 20)
+        val h = ClipboardHistory()
+        assertEquals("trần mặc định 100 mục (cùng số với iOS)", 100, h.maxItems)
         h.add("pin", 0); h.togglePin("pin")
-        for (i in 1..25) h.add("t$i", i.toLong())
-        assertEquals(20, h.size)
-        val texts = h.items(30).map { it.text }
+        for (i in 1..105) h.add("t$i", i.toLong())
+        assertEquals(100, h.size)
+        val texts = h.items(200).map { it.text }
         assertTrue("pin" in texts)
-        assertFalse("t1" in texts); assertTrue("t25" in texts)
+        assertFalse("t1" in texts); assertTrue("t105" in texts)
+    }
+
+    /** Trần tổng ký tự: vượt thì bỏ mục không ghim cũ nhất, giữ mục ghim và mục vừa thêm. */
+    @Test fun totalCharBudgetEvictsOldestUnpinned() {
+        assertEquals(200_000, ClipboardHistory.MAX_TOTAL_CHARS)
+        val h = ClipboardHistory(maxTotalChars = 1000)
+        fun big(c: String) = c.repeat(400)
+        h.add(big("p"), 1); h.togglePin(big("p"))
+        h.add(big("a"), 2)
+        assertEquals(2, h.size)
+        h.add(big("b"), 3)
+        assertEquals(listOf(big("p"), big("b")), h.items(4).map { it.text })
+        assertTrue(h.totalChars() <= 1000)
+        h.add("c".repeat(900), 4)
+        val texts = h.items(5).map { it.text }
+        assertTrue("c".repeat(900) in texts); assertTrue(big("p") in texts); assertFalse(big("b") in texts)
+        val n = ClipboardHistory()
+        for (i in 0 until 100) n.add("số tài khoản $i", i.toLong())
+        assertEquals(100, n.size)
     }
 
     @Test fun rejectsBlankAndHuge() {

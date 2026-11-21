@@ -1,7 +1,7 @@
 // Lịch sử clipboard — model THUẦN (không UIKit, không đọc UIPasteboard).
 // Lưu CHỈ trên máy: file JSON trong container riêng của extension (không App
 // Group, không mạng). Hợp đồng chung với Android keyboard/ClipboardHistory.kt:
-// tối đa 20 mục, mục không ghim hết hạn sau 1 giờ / 24 giờ / 7 ngày (ClipboardTTL, mặc
+// tối đa 100 mục và 200.000 ký tự tổng (vượt ⇒ bỏ mục không ghim cũ nhất), mục không ghim hết hạn sau 1 giờ / 24 giờ / 7 ngày (ClipboardTTL, mặc
 // định 1 giờ), mục "giống bí mật" LUÔN sau 2 phút, ghim không hết hạn, trùng text → đưa
 // lên đầu (giữ ghim).
 import Foundation
@@ -42,8 +42,15 @@ final class ClipboardHistory {
     var ttl: TimeInterval
     let sensitiveTTL: TimeInterval
     /// Mục dài hơn bị bỏ qua. 4000 cũ làm văn bản nhiều đoạn copy xong "không được lưu"
-    /// (tester Plus 15/10/2026); 20 mục × 10k ký tự vẫn nhỏ so với trần RAM extension.
+    /// (tester Plus 15/10/2026).
     static let maxTextLength = 10_000
+    /// Trần số mục (20 → 100 theo phản hồi người dùng 22/11/2026).
+    static let defaultMaxItems = 100
+    /// Trần TỔNG ký tự (UTF-16, cả mục ghim) — 100 mục × 10k ký tự sẽ là ~2 MB RAM + file ghi lại
+    /// mỗi lần copy, quá nặng cho extension. Vượt ⇒ bỏ mục KHÔNG ghim cũ nhất; mục vừa thêm
+    /// và mục ghim luôn được giữ.
+    static let defaultMaxTotalChars = 200_000
+    let maxTotalChars: Int
     static let freshWindow: TimeInterval = 180
 
     /// Mới nhất trước. Đọc + giải JSON LƯỜI ở lần dùng đầu (không nằm trong khung hình đầu của
@@ -51,9 +58,11 @@ final class ClipboardHistory {
     private(set) lazy var raw: [ClipItem] = { loadedFlag = true; return Self.read(fileURL) }()
     private let fileURL: URL?
 
-    init(fileURL: URL?, maxItems: Int = 20, ttl: TimeInterval = 3600, sensitiveTTL: TimeInterval = 120) {
+    init(fileURL: URL?, maxItems: Int = ClipboardHistory.defaultMaxItems, ttl: TimeInterval = 3600,
+         sensitiveTTL: TimeInterval = 120, maxTotalChars: Int = ClipboardHistory.defaultMaxTotalChars) {
         self.fileURL = fileURL
         self.maxItems = maxItems
+        self.maxTotalChars = maxTotalChars
         self.ttl = ttl
         self.sensitiveTTL = sensitiveTTL
     }
@@ -90,8 +99,17 @@ final class ClipboardHistory {
         while raw.count > maxItems, let i = raw.lastIndex(where: { !$0.pinned }) {
             raw.remove(at: i)
         }
+        // Trần tổng ký tự: bỏ dần mục không ghim cũ nhất, trừ mục vừa thêm (vị trí 0).
+        var total = totalChars
+        while total > maxTotalChars, let i = raw.lastIndex(where: { !$0.pinned }), i > 0 {
+            total -= raw[i].text.utf16.count
+            raw.remove(at: i)
+        }
         return true
     }
+
+    /// Tổng ký tự UTF-16 đang giữ (đếm O(1) mỗi mục với chuỗi native).
+    var totalChars: Int { raw.reduce(0) { $0 + $1.text.utf16.count } }
 
     /// Bỏ mục không ghim đã hết hạn; true nếu có mục bị bỏ.
     @discardableResult

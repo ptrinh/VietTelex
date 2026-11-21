@@ -89,7 +89,7 @@ internal object SettingCaption {
     const val advancedStyle = "Màu, bo góc, cỡ chữ, phông, độ đậm — lưu riêng cho từng giao diện." // l10n-key
     const val fontScaleAndroid = "Phím hẹp tự thu nhỏ chữ cho vừa. Khi đặt, thay cho “Cỡ chữ trên phím” ở trang Phím." // l10n-key
     // Riêng tư & sao lưu
-    const val clipboardHistory = "Nút clipboard trên thanh gợi ý mở 20 mục vừa copy; ghim để giữ. Chỉ lưu trên máy." // l10n-key
+    const val clipboardHistory = "Nút clipboard trên thanh gợi ý mở tối đa 100 mục vừa copy; ghim để giữ. Chỉ lưu trên máy." // l10n-key
     const val clipboardTTL = "Mục trông như mật khẩu/OTP vẫn tự xoá sau 2 phút; ghim để giữ lâu." // l10n-key
     const val clipboardFooterAndroid = "Lịch sử chỉ ghi khi VietTelex là bàn phím đang chọn. Không có gì rời khỏi máy." // l10n-key
     const val incognitoAndroid = "Không học từ mới, không lưu clipboard; tự bật ở tab ẩn danh của trình duyệt." // l10n-key
