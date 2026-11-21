@@ -275,10 +275,14 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
             return
         }
         val ownBoundary = afterOwnBoundary
-        val seedable = reEdit && engine.isEmpty && !afterOwnBoundary &&
-            (ReEdit.isTransformKey(ch, settings.vniMode) || strokeSeedable(ch, proxy))
+        val reopened = reopenedWord
+        reopenedWord = null
+        val stroke = strokeTarget(ch, proxy, reopened)
+        val seedable = stroke == null && reEdit && engine.isEmpty && !afterOwnBoundary &&
+            ReEdit.isTransformKey(ch, settings.vniMode)
         afterOwnBoundary = false
         checkpoint(ownBoundary)
+        if (stroke != null && strokeWord(stroke, proxy)) return
         if (seedable && trySeed(ch, proxy)) return
         val before = engine.composed
         val action = engine.feed(ch)
@@ -324,6 +328,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         // [expand] = false: không gõ tắt (từ vuốt — từ từ điển, không phải chữ tắt).
         fun put(text: String) = if (lineBreak) proxy.insertLineBreak() else proxy.insertText(text)
         undo.valid = false
+        reopenedWord = null
         expansionUndo = null
         expandedAtLastBoundary = false
         if (proxy.isSecure || passthrough) { put(text); return "" }
@@ -423,12 +428,40 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         return undoExpansion(u, proxy)
     }
 
-    /** `d` dính liền sau từ bắt đầu bằng d (xem [ReEdit.isStrokeKey]); chỉ đọc context khi phím là d. */
-    private fun strokeSeedable(ch: Char, proxy: TextProxy): Boolean {
-        if (settings.vniMode || (ch != 'd' && ch != 'D')) return false
-        val word = proxy.contextBeforeInput()?.let { ReEdit.trailingWord(it) } ?: return false
-        return ReEdit.isStrokeKey(ch, word)
+    /**
+     * Từ sẽ được gạch đ bởi phím `d` này (xem [ReEdit.isStrokeKey]), hoặc null: từ vừa được ⌫
+     * mở lại (engine đang giữ nó), hoặc từ dính liền trước con trỏ khi engine trống. Chỉ đọc
+     * context khi phím là d.
+     */
+    private fun strokeTarget(ch: Char, proxy: TextProxy, reopened: String?): String? {
+        if (settings.vniMode || (ch != 'd' && ch != 'D') || !proxy.canReEdit) return null
+        if (reopened != null && engine.composed == reopened && ReEdit.isStrokeKey(ch, reopened)) return reopened
+        if (!reEdit || !engine.isEmpty || afterOwnBoundary || proxy.hasSelection) return null
+        val word = proxy.contextBeforeInput()?.let { ReEdit.trailingWord(it) } ?: return null
+        val after = proxy.contextAfterInput() ?: return null
+        return if (ReEdit.atWordEnd(after) && ReEdit.isStrokeKey(ch, word)) word else null
     }
+
+    /**
+     * Đổi chữ d đầu của [word] (đang nằm ngay trước con trỏ) thành đ và để engine soạn tiếp từ
+     * đó ("dùng" → "đùng", gõ tiếp s → "đúng"). KHÔNG đi qua engine.feed('d'): khi "Bỏ dấu tự
+     * do" tắt, `d` cuối từ không với ngược về chữ d đầu nên feed chỉ nối chữ ("dùngd", #169).
+     * Dạng có đ không seed được hoặc màn hình lệch ⇒ false, engine giữ nguyên, phím nối chữ.
+     */
+    private fun strokeWord(word: String, proxy: TextProxy): Boolean {
+        if (!proxy.confirmTail(word)) return false
+        val target = (if (word[0] == 'd') "đ" else "Đ") + word.substring(1)
+        engine.copyInto(strokeScratch)
+        if (!engine.seed(target)) { strokeScratch.copyInto(engine); return false }
+        TouchLog.write("re-edit: stroke ${Cp.count(word)} chars")
+        proxy.deleteCodePoints(Cp.count(word))
+        proxy.insertText(target)
+        if (trackLetterUndo) { undo.removed = word; undo.inserted = target; undo.valid = true }
+        return true
+    }
+    private val strokeScratch = TelexEngine()
+    /** Từ vừa được ⌫ mở lại ([tryReopen]) — chỉ sống tới phím kế. */
+    private var reopenedWord: String? = null
 
     /**
      * Phím dấu/mũ khi engine rỗng, con trỏ ở CUỐI một từ đã có trên màn hình ("viet|" + j):
@@ -462,6 +495,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
      */
     fun backspace(proxy: TextProxy): Boolean {
         undo.valid = false
+        reopenedWord = null
         retroOffer = null
         expansionUndo?.let { u ->
             expansionUndo = null
@@ -511,6 +545,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
         }
         proxy.deleteBackward()          // xoá ký tự ranh giới
         TouchLog.write("re-open: ${Cp.count(word)} chars back")
+        reopenedWord = word
         return true
     }
 
@@ -520,6 +555,7 @@ class EngineBridge(settings: KeyboardSettings = KeyboardSettings()) {
     /** Đổi ô / con trỏ dời / ẩn bàn phím → quên từ + ngữ cảnh tiếng Anh. */
     fun reset() {
         engine.reset(); engine.resetContext(); afterOwnBoundary = false; undo.valid = false; expansionUndo = null; enWord = ""
+        reopenedWord = null
         email.invalidate()
     }
 

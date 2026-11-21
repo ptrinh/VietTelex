@@ -201,6 +201,29 @@ class ReEditTests {
         assertEquals("dùng đi", glued("dùng ", "ddi"))
     }
 
+    /**
+     * Issue #169 (báo lại sau bản sửa đầu): "Bỏ dấu tự do" TẮT thì engine không với `d` cuối từ
+     * về chữ d đầu — phím d dính liền vẫn phải gạch đ, cả khi con trỏ đứng sau từ có sẵn lẫn
+     * khi từ vừa được ⌫ mở lại.
+     */
+    @Test fun strokeKeyEditsGluedWordWithFreeMarkingOff() {
+        for (spell in listOf(true, false)) {
+            val st = KeyboardSettings(freeMarking = false, liveSpellCheck = spell)
+            fun glued(word: String, keys: String): String {
+                val s = session(settings = st); val p = MockProxy(); p.sb.append(word)
+                s.typeKeys(p, keys); return p.text
+            }
+            assertEquals("đùng", glued("dùng", "d"))
+            assertEquals("đúng", glued("dùng", "ds"))
+            assertEquals("đường", glued("dường", "d"))
+            assertEquals("Đung", glued("Dung", "d"))
+            assertEquals("band", glued("ban", "d"))
+            assertEquals("đúngd", glued("đúng", "d"))
+            assertEquals("đúng", glued("", "dungf <ds"))     // ⌫ mở lại từ rồi d s
+            assertEquals("dad", glued("", "dad"))            // gõ liền mạch: d cuối vẫn là chữ
+        }
+    }
+
     @Test fun midWordIsLiteral() {
         val s = session(); val p = MockProxy()
         p.sb.append("viet"); p.after = "nam"

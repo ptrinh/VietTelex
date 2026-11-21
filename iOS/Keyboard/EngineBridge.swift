@@ -230,6 +230,8 @@ final class EngineBridge {
     /// .webSearch): inline autocomplete tự sửa chữ bên dưới mình. KHÔNG chặn ⌫ mở lại từ
     /// VỪA CHỐT (#148: thanh địa chỉ "go␣⌫s" phải ra "gó") — xem `canReopen`.
     var reachBackAllowed = true
+    /// Từ vừa được ⌫ mở lại (reopenLastCommit) — chỉ sống tới phím kế; xem letterCore.
+    private var reopenedWord: String?
 
     /// Cho phép gõ tắt ở ô này. Controller TẮT ở omnibox (.webSearch: inline autocomplete
     /// tự viết lại chữ bên dưới). Ô URL/email/mật khẩu đã là passthrough.
@@ -638,9 +640,19 @@ final class EngineBridge {
             proxy.insertText(String(ch))
             return
         }
+        // Từ vừa được ⌫ mở lại (engine đang giữ nó): `d` dính liền cũng gạch đ, kể cả khi
+        // "Bỏ dấu tự do" tắt (engine khi đó không với ngược từ cuối từ về chữ d đầu, #169).
+        let reopened = reopenedWord
+        reopenedWord = nil
+        if let reopened, !settings.vniMode, ch == "d" || ch == "D", canReachBack,
+           Self.strokeReEditApplies(to: reopened), engine.composed == reopened,
+           strokeWord(reopened, proxy: proxy) {
+            return
+        }
         if engine.isEmpty, !ownBoundary, settings.reEditWord, canReachBack {
-            if isReEditKey(ch) || isStrokeReEdit(ch, proxy: proxy),
-               seedWordBeforeCaret(then: ch, proxy: proxy) {
+            if isStrokeReEdit(ch, proxy: proxy) {
+                if strokeWordBeforeCaret(proxy: proxy) { return }
+            } else if isReEditKey(ch), seedWordBeforeCaret(then: ch, proxy: proxy) {
                 return                                // sửa từ trên màn hình: không huỷ được
             }
             if continueWordBeforeCaret(ch, proxy: proxy) { return }
@@ -706,6 +718,7 @@ final class EngineBridge {
     @discardableResult
     func boundary(_ text: String, proxy: TextProxyLike, expand: Bool = true) -> String {
         letterUndo = nil
+        reopenedWord = nil
         expansionUndo = nil
         expandedAtLastBoundary = false
         let literal = swipeOpen?.literal
@@ -850,6 +863,7 @@ final class EngineBridge {
     @discardableResult
     func backspace(proxy: TextProxyLike) -> Bool {
         letterUndo = nil
+        reopenedWord = nil
         retroOffer = nil
         if let u = expansionUndo {
             expansionUndo = nil
@@ -1164,6 +1178,7 @@ final class EngineBridge {
             TouchLog.write("reopen: context sau xoá lệch → bỏ")
             return false
         }
+        reopenedWord = word
         return true
     }
 
@@ -1200,6 +1215,40 @@ final class EngineBridge {
     }
     static func strokeReEditApplies(to word: String) -> Bool {
         word.count >= 2 && (word.first == "d" || word.first == "D")
+    }
+
+    /// `d` dính liền sau từ bắt đầu bằng d (isStrokeReEdit): cùng điều kiện vị trí như
+    /// seedWordBeforeCaret (không vùng chọn, không ở giữa từ) rồi gạch đ bằng `strokeWord`.
+    private func strokeWordBeforeCaret(proxy: TextProxyLike) -> Bool {
+        guard !proxy.hasSelection,
+              let ctx = proxy.contextBeforeInput,
+              let word = CompositionSync.trailingWord(ctx) else { return false }
+        if let after = proxy.contextAfterInput, let next = after.first, next.isLetter {
+            return false                               // đang ở giữa từ
+        }
+        return strokeWord(word, proxy: proxy)
+    }
+
+    /// Đổi chữ d đầu của `word` (đang nằm ngay trước con trỏ) thành đ và để engine soạn
+    /// tiếp từ đó ("dùng" → "đùng", gõ tiếp s → "đúng"). KHÔNG đi qua engine.feed("d"):
+    /// khi "Bỏ dấu tự do" tắt, `d` cuối từ không với ngược về chữ d đầu nên feed chỉ nối
+    /// chữ ("dùngd" — người báo #169 vẫn gặp ở 1.3.13). Seed thẳng dạng có đ thì chế độ nào
+    /// cũng như nhau. Dạng có đ không seed được (không phải âm tiết gõ được) hoặc màn hình
+    /// lệch ⇒ false, engine giữ nguyên, caller nối chữ như cũ.
+    private func strokeWord(_ word: String, proxy: TextProxyLike) -> Bool {
+        guard let first = word.first, first == "d" || first == "D" else { return false }
+        let target = (first == "d" ? "đ" : "Đ") + word.dropFirst()
+        let snapshot = engine
+        guard engine.seed(target),
+              CompositionSync.canDelete(word.count, expected: word,
+                                        context: { proxy.contextBeforeInput }) else {
+            engine = snapshot
+            return false
+        }
+        TouchLog.edit(bs: word.count, insertLen: target.count, insert: target)
+        for _ in 0..<word.count { proxy.deleteBackward() }
+        proxy.insertText(target)
+        return true
     }
 
     /// Engine rỗng, con trỏ đứng NGAY SAU một từ (không ở giữa từ, không vùng chọn):
@@ -1272,6 +1321,7 @@ final class EngineBridge {
     /// "từ ngay trước" nữa (macOS làm y hệt khi activateServer / đổi field).
     func reset() {
         engine.reset(); engine.resetContext(); lastWasOwnBoundary = false; letterUndo = nil
+        reopenedWord = nil
         swipeOpen = nil; expansionUndo = nil; enWord = ""
         email.invalidate()
     }

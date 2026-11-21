@@ -35,6 +35,42 @@ final class EngineBridgeTests: XCTestCase {
         return proxy.text
     }
 
+    /// Issue #169 (báo lại ở 1.3.13): "Bỏ dấu tự do" TẮT thì engine không với `d` cuối từ
+    /// về chữ d đầu — phím d dính liền vẫn phải gạch đ, ở cả hai đường: con trỏ đứng sau
+    /// từ có sẵn (engine trống) và từ vừa được ⌫ mở lại (engine đang giữ từ).
+    func testStrokeKeyEditsGluedWordWithFreeMarkingOff() {
+        for spell in [true, false] {
+            var st = KeyboardSettings()
+            st.freeMarking = false
+            st.liveSpellCheck = spell
+            st.swipeTyping = true
+            func glued(_ word: String, _ keys: String) -> String {
+                let p = MockProxy(); p.text = word
+                let b = EngineBridge(settings: st)
+                for ch in keys { b.letter(ch, proxy: p) }
+                return p.text
+            }
+            XCTAssertEqual(glued("dùng", "d"), "đùng", "spell=\(spell)")
+            XCTAssertEqual(glued("dùng", "ds"), "đúng", "spell=\(spell)")
+            XCTAssertEqual(glued("dường", "d"), "đường", "spell=\(spell)")
+            XCTAssertEqual(glued("Dung", "d"), "Đung", "spell=\(spell)")
+            XCTAssertEqual(glued("ban", "d"), "band", "spell=\(spell)")
+            XCTAssertEqual(glued("đúng", "d"), "đúngd", "spell=\(spell)")
+            // Đúng các bước người báo: vuốt "dùng", gõ d (từ mới), ⌫ ⌫ về sát từ, rồi d s.
+            let r = MockProxy(); let c = EngineBridge(settings: st)
+            c.insertSwipeWord("dùng", proxy: r)
+            c.letter("d", proxy: r)
+            XCTAssertEqual(r.text, "dùng d", "spell=\(spell)")
+            c.backspace(proxy: r); c.backspace(proxy: r)
+            XCTAssertEqual(r.text, "dùng", "spell=\(spell)")
+            for ch in "ds" { c.letter(ch, proxy: r) }
+            XCTAssertEqual(r.text, "đúng", "spell=\(spell)")
+            // Gõ tay rồi ⌫ mở lại từ: cũng vậy; còn gõ liền mạch thì d cuối vẫn là chữ.
+            XCTAssertEqual(type("dungf ⌫ds", settings: st), "đúng", "spell=\(spell)")
+            XCTAssertEqual(type("dad", settings: st), "dad", "spell=\(spell)")
+        }
+    }
+
     /// Ranh giới là mọi phím không phải chữ (số, "_", "/"…), như bàn phím thật.
     private func typeAll(_ keys: String, settings: KeyboardSettings = KeyboardSettings()) -> String {
         let proxy = MockProxy()
