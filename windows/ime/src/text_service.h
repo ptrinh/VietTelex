@@ -107,7 +107,7 @@ private:
     void publishTypedWord();  // kTypedWordProp on the focus root (typed_word.h)
     void clearTypedWord();
     bool hookReachesHere(HWND app) const;  // UIPI: app integrity >= this process's
-    bool retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp);  // #134 IMM hosts
+    bool retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, const char* why = nullptr);  // #134 IMM hosts
     void publishLangProp();  // kTipLangProp on the focus root (hook / tray read it)
     void clearLangProp();
     void notifyAppState(bool on);

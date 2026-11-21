@@ -1226,7 +1226,7 @@ bool TextService::retypeAsUs(ITfContext* ctx, WPARAM wp, bool inject) {
 // #134: type a key OnTestKeyDown claimed and the session let through, in a host that
 // drops such keys (session.h hostDropsPassedKeys). Marked kInjectedMagic: this TIP and the
 // hook let it through untouched. SendInput into our own process: UIPI never applies.
-bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp) {
+bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, const char* why) {
     INPUT in[2] = {};
     switch (passedKeyRetype(k)) {
         case PassedKeyRetype::None:
@@ -1257,8 +1257,8 @@ bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp) {
     const bool ok = SendInput(2, in, sizeof(INPUT)) == 2;
     if (!retypeLogged_) {
         retypeLogged_ = true;
-        config::log(ok ? "IMM host: claimed key let through -> retyped (#134)"
-                       : "IMM host: retyping a claimed key failed (SendInput)");
+        config::log(!ok ? "retyping a claimed key failed (SendInput)"
+                        : why ? why : "IMM host: claimed key let through -> retyped (#134)");
     }
     return ok;
 }
@@ -1493,6 +1493,7 @@ HRESULT TextService::keyDownBody(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* ea
         });
     };
     ownKeyEdit_ = true;  // OnEndEdit inside this synchronous session is our own edit
+    const bool composingBefore = composition_ != nullptr;
     HRESULT hr = run(target);
     if (hr != S_OK && target != ctx && !session_.wordActive()) {
         // Guard: the parent context refused a synchronous edit session. Stop using it
@@ -1561,6 +1562,12 @@ HRESULT TextService::keyDownBody(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* ea
     // #134: an IMM32 host (CUAS) already turned this claimed key into VK_PROCESSKEY: letting
     // it through loses it (Enter / Tab / arrows after a word, a key past an overflow).
     if (!result && session_.hostDropsPassedKeys() && retypeClaimedKey(k, wp, lp)) result = TRUE;
+    // (#173) A browser page gets keydown 229 for the Enter / Tab / Esc that closed a composing
+    // word (keymap.h retypeAfterComposition): the key is typed again, on its own.
+    if (!result && hr == S_OK &&
+        retypeAfterComposition(k, session_.asyncStore(), composingBefore, composition_ != nullptr) &&
+        retypeClaimedKey(k, wp, lp, "browser: the key that closed a composing word -> typed again on its own (#173)"))
+        result = TRUE;
     *eaten = result;
     noteHintKey(k, keyTarget(ctx), hr == S_OK);  // (target may be released by the fallback)
     return S_OK;

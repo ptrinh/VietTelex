@@ -110,4 +110,14 @@ bool shouldRetypeAsUs(const KeyInput& k, uintptr_t hkl, LayoutMatch m);
 enum class PassedKeyRetype : uint8_t { None, Unicode, VirtualKey };
 PassedKeyRetype passedKeyRetype(const KeyInput& k);
 
+// ---- Enter / Tab / Esc ending a composing word in a browser (#173) ------------------
+// In a Chromium text store (async: Chrome, Edge, Electron, WebView2) a key during which the
+// TIP edits the document reaches the page as keydown 229 ("Process"), not as itself. A word
+// still composing when Enter comes is committed inside that key, so a page whose handler
+// only knows the genuine keydown never saw Enter: the default action ran instead (a web
+// chat box got a new line where Enter sends; adding a space first made it send). There the
+// TIP commits the word, eats the key and types the same key again: a key of its own, with
+// no edit inside it. Only Enter / Tab / Esc; only when this very key closed the composition.
+bool retypeAfterComposition(const KeyInput& k, bool asyncStore, bool composingBefore, bool composingAfter);
+
 }  // namespace vtx

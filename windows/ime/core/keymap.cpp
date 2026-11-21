@@ -116,4 +116,8 @@ PassedKeyRetype passedKeyRetype(const KeyInput& k) {
     return PassedKeyRetype::None;
 }
 
+bool retypeAfterComposition(const KeyInput& k, bool asyncStore, bool composingBefore, bool composingAfter) {
+    return asyncStore && composingBefore && !composingAfter && k.kind == KeyKind::Boundary;
+}
+
 }  // namespace vtx

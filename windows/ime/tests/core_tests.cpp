@@ -85,6 +85,21 @@ TEST(retype_number_row_under_vietnamese_layout) {
     CHECK(isVietnameseHkl(kHklVietnamese) && isVietnameseHkl(kHklViSubstUs) && !isVietnameseHkl(kHklUs));
 }
 
+TEST(retype_after_composition_in_browser) {
+    // #173: Enter on a word still composing in a web chat box added a line instead of sending.
+    Modifiers m;
+    const KeyInput enter = classifyKey(vk::Return, m);
+    CHECK(retypeAfterComposition(enter, true, true, false));
+    CHECK(retypeAfterComposition(classifyKey(vk::Tab, m), true, true, false));
+    CHECK(retypeAfterComposition(classifyKey(vk::Escape, m), true, true, false));
+    CHECK(!retypeAfterComposition(enter, true, false, false));   // no word composing: genuine key
+    CHECK(!retypeAfterComposition(enter, true, true, true));     // composition still open
+    CHECK(!retypeAfterComposition(enter, false, true, false));   // not a browser store
+    CHECK(!retypeAfterComposition(classifyKey(vk::Space, m), true, true, false));  // typed by the app
+    CHECK(!retypeAfterComposition(classifyKey(vk::Left, m), true, true, false));
+    CHECK(!retypeAfterComposition(classifyKey(vk::Back, m), true, true, false));
+}
+
 TEST(passed_key_retype_kinds) {
     // #134: what the TIP retypes for a claimed key it let through in an IMM32 host.
     Modifiers m;
