@@ -3,12 +3,12 @@
   "url": "https://github.com/ptrinh/viettelex/releases/tag/v1.9.13",
   "build": 161,
   "windows": {
-    "version": "1.3.31",
-    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.31/VietTelex-1.3.31-x64.msi",
-    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.31/VietTelex-1.3.31-arm64.msi",
-    "notes": "Thanh địa chỉ Edge/Chrome: chữ cái đầu nhận dấu đúng (onw → ơn), không còn quay về kiểu gõ có gạch chân.",
-    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.31/VietTelex-1.3.31-portable-x64.zip",
-    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.31/VietTelex-1.3.31-portable-arm64.zip"
+    "version": "1.3.32",
+    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.32/VietTelex-1.3.32-x64.msi",
+    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.32/VietTelex-1.3.32-arm64.msi",
+    "notes": "Edge/Chrome: Enter ngay sau từ đang gõ nay gửi được tin nhắn trong ô chat web (Gemini), không còn xuống dòng.",
+    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.32/VietTelex-1.3.32-portable-x64.zip",
+    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.32/VietTelex-1.3.32-portable-arm64.zip"
   },
   "linux": {
     "version": "1.0.29",
