@@ -430,3 +430,8 @@ Chọn “Sửa tự động” để VietTelex xoá mục quyền cũ của ch�
 
 /* Gõ lẫn tiếng Anh: chọn VNI ⇒ ẩn nhóm (SETTINGS-CLEANUP-SPEC §1) */
 "VNI leaves English words as typed, so there is nothing to set here." = "Gõ VNI không làm đổi từ tiếng Anh nên không cần chỉnh phần này.";
+
+/* Banner tab Chung: công cụ gõ tiếng Việt khác đang chạy nền (TypingConflicts) */
+"Another Vietnamese typing tool is running: {NAMES}" = "Đang có công cụ gõ tiếng Việt khác chạy: {NAMES}";
+"Quit {NAMES}" = "Thoát {NAMES}";
+"Two typing tools changing the same keystrokes cause doubled or misplaced tone marks. Quit the other one, and turn off its launch at login, while you use VietTelex." = "Hai công cụ cùng sửa một lần gõ sẽ làm dấu bị chồng hoặc đặt sai chỗ. Hãy thoát công cụ kia và tắt tự mở khi đăng nhập của nó trong lúc dùng VietTelex.";

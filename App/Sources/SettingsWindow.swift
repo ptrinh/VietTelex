@@ -254,6 +254,9 @@ final class SettingsModel: ObservableObject {
     /// `main.swift` uses to rebuild the tap). Coming back used to be the ONLY trigger,
     /// which left the red warning standing next to a checkbox the user had just ticked.
     @Published var accessibilityTrusted: Bool = Accessibility.isTrusted
+    /// Công cụ gõ tiếng Việt khác đang chạy nền (TypingConflicts) — banner tab Chung. Đọc lại
+    /// cùng lúc với trạng thái Trợ năng (mở Cài đặt / cửa sổ được chọn lại), không poll.
+    @Published var conflictingTools: [String] = []
 
     init(selected: SettingsTab) {
         selectedTab = selected
@@ -390,6 +393,19 @@ final class SettingsModel: ObservableObject {
         TerminalTapController.shared.recheckTrust(reason: "settings window")
         let now = Accessibility.readTrustNow()
         if now != accessibilityTrusted { accessibilityTrusted = now }
+    }
+
+    func refreshConflicts() {
+        let now = TypingConflicts.current()
+        guard now != conflictingTools else { return }
+        conflictingTools = now
+        DebugLog.log("typing conflicts: \(now.isEmpty ? "none" : now.joined(separator: ", "))")
+    }
+
+    /// Nút "Thoát" trên banner: thoát lịch sự rồi đọc lại (app cần chút thời gian để tắt).
+    func quitConflictingTools() {
+        TypingConflicts.quitAll()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.refreshConflicts() }
     }
 
     /// The Accessibility list changed while the user was in System Settings. Re-read
@@ -1097,6 +1113,23 @@ struct TypingTab: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            // Công cụ gõ khác chạy nền ⇒ hai bên cùng sửa một lần gõ (dấu chồng, chữ nhảy).
+            if !model.conflictingTools.isEmpty {
+                let names = model.conflictingTools.joined(separator: ", ")
+                Section {
+                    Text("⚠️ " + model.loc("Another Vietnamese typing tool is running: {NAMES}")
+                        .replacingOccurrences(of: "{NAMES}", with: names))
+                        .foregroundStyle(.orange)
+                    Button {
+                        model.quitConflictingTools()
+                    } label: {
+                        Label(model.loc("Quit {NAMES}").replacingOccurrences(of: "{NAMES}", with: names),
+                              systemImage: "xmark.circle")
+                    }
+                    Text(model.loc("Two typing tools changing the same keystrokes cause doubled or misplaced tone marks. Quit the other one, and turn off its launch at login, while you use VietTelex."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             // SETTINGS-CLEANUP-SPEC (05/11/2026): cấp 1 chỉ còn Telex/VNI; mọi tuỳ chọn kiểu gõ vào
             // "Nâng cao". §0.4/§6 (06/11/2026): nằm ngay dưới bộ chọn ⇒ mục chỉ-Telex (Simple/Bỏ dấu
             // tự do/Gõ nhanh) ẨN khi chọn VNI (SettingsDeps.styleRows); teencode, phím ngoặc, kiểu
@@ -1195,11 +1228,12 @@ struct TypingTab: View {
             }
         }
         }
-        .onAppear { model.refreshAccessibilityStatus() }
+        .onAppear { model.refreshAccessibilityStatus(); model.refreshConflicts() }
         // Event-driven, like the mode table: the user leaves for System Settings and
         // comes back, which makes this window key again.
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             model.refreshAccessibilityStatus()
+            model.refreshConflicts()
         }
         // …and the moment the checkbox is ticked, WITHOUT waiting for the user to come
         // back here. System Settings keeps the focus after a grant, so with only the
