@@ -61,15 +61,21 @@ final class EngineBridgeTests: XCTestCase {
             XCTAssertEqual(glued("Dung", "d"), "Đung", "spell=\(spell)")
             XCTAssertEqual(glued("ban", "d"), "band", "spell=\(spell)")
             XCTAssertEqual(glued("đúng", "d"), "đúngd", "spell=\(spell)")
-            // Đúng các bước người báo: vuốt "dùng", gõ d (từ mới), ⌫ ⌫ về sát từ, rồi d w s.
+            // Vuốt "dùng" rồi d w s ngay: d gạch đ cho từ vuốt (22/11/2026), w s sửa tiếp.
             let r = MockProxy(); let c = EngineBridge(settings: st)
             c.insertSwipeWord("dùng", proxy: r)
             c.letter("d", proxy: r)
-            XCTAssertEqual(r.text, "dùng d", "spell=\(spell)")
-            c.backspace(proxy: r); c.backspace(proxy: r)
-            XCTAssertEqual(r.text, "dùng", "spell=\(spell)")
-            for ch in "dws" { c.letter(ch, proxy: r) }
+            XCTAssertEqual(r.text, "đùng", "spell=\(spell)")
+            for ch in "ws" { c.letter(ch, proxy: r) }
             XCTAssertEqual(r.text, "đứng", "spell=\(spell)")
+            // Dấu cách rồi mới d: từ mới như cũ; ⌫ ⌫ về sát từ rồi d vẫn gạch đ.
+            let r2 = MockProxy(); let c2 = EngineBridge(settings: st)
+            c2.insertSwipeWord("dùng", proxy: r2)
+            _ = c2.boundary(" ", proxy: r2); c2.letter("d", proxy: r2)
+            XCTAssertEqual(r2.text, "dùng d", "spell=\(spell)")
+            c2.backspace(proxy: r2); c2.backspace(proxy: r2)
+            for ch in "dws" { c2.letter(ch, proxy: r2) }
+            XCTAssertEqual(r2.text, "đứng", "spell=\(spell)")
             // `w` ngay sau từ vuốt: sửa từ đó.
             let v = MockProxy(); let e = EngineBridge(settings: st)
             e.insertSwipeWord("dung", proxy: v)
@@ -116,19 +122,41 @@ final class EngineBridgeTests: XCTestCase {
         let p = MockProxy(); p.text = "dùng"
         EngineBridge(settings: vni).letter("d", proxy: p)
         XCTAssertEqual(p.text, "dùngd")                  // VNI: d là chữ thường
-        // Từ vuốt: `d` ngay sau vẫn là từ mới ("dùng đi"); xoá về dính liền rồi mới sửa.
+        // Từ vuốt bắt đầu bằng d: `d` ngay sau gạch đ cho từ đó ("Dừng" + d → "Đừng", Phil 22/11/2026);
+        // `d` lần hai = hoá ra là từ mới bắt đầu bằng đ ⇒ trả từ vuốt lại ("dùng đi" vẫn gõ được).
         let q = MockProxy(); let b = EngineBridge(settings: KeyboardSettings())
-        b.insertSwipeWord("dùng", proxy: q)
-        for ch in "ddi" { b.letter(ch, proxy: q) }
-        XCTAssertEqual(q.text, "dùng đi")
+        b.insertSwipeWord("Dừng", proxy: q)
+        b.letter("d", proxy: q)
+        XCTAssertEqual(q.text, "Đừng")
+        XCTAssertTrue(b.isSwipeWordOpen); XCTAssertFalse(b.isFreshSwipeWord)
+        XCTAssertEqual(b.boundary(" ", proxy: q), "Đừng")
+        XCTAssertEqual(q.text, "Đừng ")
         let r = MockProxy(); let c = EngineBridge(settings: KeyboardSettings())
         c.insertSwipeWord("dùng", proxy: r)
-        c.letter("d", proxy: r)
-        XCTAssertEqual(r.text, "dùng d")
-        c.backspace(proxy: r); c.backspace(proxy: r)
-        XCTAssertEqual(r.text, "dùng")
-        c.letter("d", proxy: r); c.letter("s", proxy: r)
-        XCTAssertEqual(r.text, "đúng")
+        c.letter("d", proxy: r); XCTAssertEqual(r.text, "đùng")
+        c.letter("d", proxy: r); XCTAssertEqual(r.text, "dùng đ")
+        c.letter("i", proxy: r); XCTAssertEqual(r.text, "dùng đi")
+        // d rồi phím dấu: sửa tiếp từ vuốt; d rồi phím chữ khác: dấu cách treo như mọi từ vuốt.
+        let t = MockProxy(); let e = EngineBridge(settings: KeyboardSettings())
+        e.insertSwipeWord("dùng", proxy: t)
+        e.letter("d", proxy: t); e.letter("s", proxy: t)
+        XCTAssertEqual(t.text, "đúng")
+        e.letter("a", proxy: t)
+        XCTAssertEqual(t.text, "đúng a")
+        // Huỷ phím (giữ phím ra ký tự phụ): trả đúng từ vuốt cũ.
+        let u = MockProxy(); let f = EngineBridge(settings: KeyboardSettings())
+        f.insertSwipeWord("dùng", proxy: u)
+        f.letter("d", proxy: u)
+        XCTAssertTrue(f.undoLastLetter(proxy: u))
+        XCTAssertEqual(u.text, "dùng"); XCTAssertTrue(f.isFreshSwipeWord)
+        // Từ vuốt không bắt đầu bằng d, từ đã có đ, VNI, từ tiếng Anh nguyên văn: d mở từ mới như cũ.
+        for (word, st, literal) in [("viết", KeyboardSettings(), false), ("đúng", KeyboardSettings(), false),
+                                    ("dùng", vni, false), ("data", KeyboardSettings(), true)] {
+            let v = MockProxy(); let g = EngineBridge(settings: st)
+            g.insertSwipeWord(word, literal: literal, proxy: v)
+            g.letter("d", proxy: v)
+            XCTAssertEqual(v.text, word + " d", word)
+        }
     }
 
     /// Dấu nháy là ranh giới của từ viết tắt tiếng Anh (07/11/2026; = TelexCore

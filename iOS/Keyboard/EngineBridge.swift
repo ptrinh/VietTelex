@@ -515,7 +515,38 @@ final class EngineBridge {
     /// gì) ⇒ dấu cách treo: chốt từ vuốt + " " rồi phím này mở từ mới. Cả hai huỷ được
     /// trọn vẹn bằng undoLastLetter (phím đó hoá ra là giữ ra ký tự phụ / vuốt-lên-lệnh).
     private func letterAfterSwipe(_ ch: Character, proxy: TextProxyLike) {
-        guard let open = swipeOpen else { return }
+        guard var open = swipeOpen else { return }
+        let stroked = swipeStroke
+        swipeStroke = nil
+        var again = false
+        if open.literal == nil, !settings.vniMode, ch == "d" || ch == "D" {
+            if let u = stroked, engine.composed == u.new,
+               CompositionSync.canDelete(u.new.count, expected: u.new, context: { proxy.contextBeforeInput }) {
+                // `d` lần hai: phím d đầu hoá ra là mở từ mới bắt đầu bằng đ ("dùng" + ddi → "dùng đi")
+                // ⇒ trả từ vuốt về như cũ, rồi cả hai phím d đi tiếp như phím của từ mới.
+                for _ in 0..<u.new.count { proxy.deleteBackward() }
+                proxy.insertText(u.old)
+                engine = u.engine
+                open = u.open
+                swipeOpen = open
+                editingFinishedWord = false
+                again = true
+            } else if Self.strokeReEditApplies(to: engine.composed) {
+                // `d` ngay sau từ vuốt bắt đầu bằng d: gạch đ cho từ đó ("Dừng" + d → "Đừng"), như `d`
+                // dính liền sau một từ đã gõ (#169) và như Android. Từ vẫn mở: phím dấu sửa tiếp được.
+                let snapshot = engine
+                let old = engine.composed
+                if strokeWord(old, proxy: proxy) {
+                    letterUndo = LetterUndo(engine: snapshot, removed: old, inserted: engine.composed,
+                                            ownBoundary: false, swipe: open, settled: settledCommit)
+                    swipeStroke = SwipeStroke(old: old, new: engine.composed, engine: snapshot, open: open)
+                    swipeOpen = SwipeOpen(fresh: false, accepted: open.accepted)
+                    lastWasOwnBoundary = false
+                    return
+                }
+            }
+        }
+        defer { if again { letterCore(ch, proxy: proxy); letterUndo = nil } }
         let snapshot = engine
         let before = open.literal ?? engine.composed
         if open.literal == nil, isReEditKey(ch) {
@@ -621,8 +652,17 @@ final class EngineBridge {
         return true
     }
 
+    /// Phím `d` vừa gạch đ cho từ vuốt đang mở (letterAfterSwipe) — `d` kế tiếp trả lại được.
+    private struct SwipeStroke {
+        let old: String, new: String
+        let engine: TelexEngine
+        let open: SwipeOpen
+    }
+    private var swipeStroke: SwipeStroke?
+
     private func openSwipeWord(_ word: String, accepted: Bool, literal: Bool = false) {
         lastWasOwnBoundary = false
+        swipeStroke = nil
         if literal {
             engine.reset()
             engine.forgetLastCommit()                 // ⌫ không mở lại từ trước qua từ Anh

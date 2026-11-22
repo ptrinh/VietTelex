@@ -188,6 +188,21 @@ class SwipeTypingTests {
         assertTrue(s.bridge.englishMode)
     }
 
+    /** Vuốt ra từ bắt đầu bằng d rồi gõ d ngay: gạch đ cho từ vuốt ("Dừng" → "Đừng"). = iOS testStrokeKey…. */
+    @Test fun strokeKeyRightAfterSwipedWord() {
+        for (st in listOf(KeyboardSettings(), KeyboardSettings(freeMarking = false))) {
+            val s = KeyboardSession(UserLangModel(), null) { 0L }
+            s.startInput(st, FieldTraits()); s.setSwipeTyping(true)
+            val p = MockProxy()
+            s.commitSwipe(SwipeChoice("Dừng", emptyList()), p)
+            assertEquals("Dừng", p.text)
+            s.type(p, "d")
+            assertEquals("Đừng", p.text)
+            s.type(p, " ")
+            assertEquals("Đừng ", p.text)
+        }
+    }
+
     @Test fun swipeInSentenceSpacesAndPunctuation() {
         val s = session(); val p = MockProxy()
         s.type(p, "baif")                         // đang soạn "bài"
