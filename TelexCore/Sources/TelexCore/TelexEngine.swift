@@ -323,7 +323,7 @@ public struct TelexEngine {
     private var tonesFolded = false
 
     // True when live spell-check froze a word that ALREADY carried Vietnamese letter
-    // marks (đ ư ơ â ê ô ă) plus a pending tone (PR #133, stevedat): the composed word
+    // marks (đ ư ơ â ê ô ă) plus a pending tone (PR #133): the composed word
     // stays exactly as displayed — tone included — and the breaking key (and every key
     // after it) is appended literally: "dduowcj"+"u" → "đượcu", not the half-folded
     // "đươcju". The freeze then starts AT the breaking key (`disabledAtCount` = its

@@ -10,8 +10,6 @@ import XCTest
 /// ô ă) và dấu thanh đang hiện, từ được giữ nguyên như đang hiển thị và phím mới
 /// (cùng mọi phím sau) được gõ thẳng: "dduowcj"+"u" → "đượcu". Từ không có dấu chữ
 /// vẫn gập dấu thanh về phím thô như trước ("installer").
-/// Tham chiếu / chia sẻ từ quá trình đối chiếu hành vi bộ gõ tại:
-/// https://github.com/stevedat/VieLotus-IM
 final class PostTonedSyllableReproTests: XCTestCase {
 
     private func configuredEngine() -> TelexEngine {
