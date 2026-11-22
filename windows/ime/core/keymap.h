@@ -120,4 +120,15 @@ PassedKeyRetype passedKeyRetype(const KeyInput& k);
 // no edit inside it. Only Enter / Tab / Esc; only when this very key closed the composition.
 bool retypeAfterComposition(const KeyInput& k, bool asyncStore, bool composingBefore, bool composingAfter);
 
+// The key events that retype a virtual key. The physical key is still held when the TIP
+// retypes it, so a bare key-down reaches the app as an auto-repeat (lParam bit 30; a page
+// sees KeyboardEvent.repeat = true) and web chat boxes do not send on a repeated Enter
+// (#173, measured in Edge: "keydown Enter 13 repeat=true"). Releasing the key first makes
+// the retyped key-down a first press. up[i]: event i is a key-up.
+struct RetypeStrokes {
+    int count;
+    bool up[3];
+};
+RetypeStrokes retypeStrokes(bool releaseFirst);
+
 }  // namespace vtx

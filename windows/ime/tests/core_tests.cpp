@@ -100,6 +100,17 @@ TEST(retype_after_composition_in_browser) {
     CHECK(!retypeAfterComposition(classifyKey(vk::Back, m), true, true, false));
 }
 
+TEST(retyped_key_is_not_a_repeat) {
+    // #173 (1.3.32 retest): the retyped Enter reached the page as "keydown Enter repeat=true"
+    // because the physical Enter was still down; the chat box did not send. Release first.
+    const RetypeStrokes r = retypeStrokes(true);
+    CHECK(r.count == 3);
+    CHECK(r.up[0] && !r.up[1] && r.up[2]);
+    const RetypeStrokes plain = retypeStrokes(false);  // #134 IMM hosts: unchanged
+    CHECK(plain.count == 2);
+    CHECK(!plain.up[0] && plain.up[1]);
+}
+
 TEST(passed_key_retype_kinds) {
     // #134: what the TIP retypes for a claimed key it let through in an IMM32 host.
     Modifiers m;

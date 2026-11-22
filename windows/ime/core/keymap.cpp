@@ -120,4 +120,8 @@ bool retypeAfterComposition(const KeyInput& k, bool asyncStore, bool composingBe
     return asyncStore && composingBefore && !composingAfter && k.kind == KeyKind::Boundary;
 }
 
+RetypeStrokes retypeStrokes(bool releaseFirst) {
+    return releaseFirst ? RetypeStrokes{3, {true, false, true}} : RetypeStrokes{2, {false, true, false}};
+}
+
 }  // namespace vtx

@@ -1226,8 +1226,9 @@ bool TextService::retypeAsUs(ITfContext* ctx, WPARAM wp, bool inject) {
 // #134: type a key OnTestKeyDown claimed and the session let through, in a host that
 // drops such keys (session.h hostDropsPassedKeys). Marked kInjectedMagic: this TIP and the
 // hook let it through untouched. SendInput into our own process: UIPI never applies.
-bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, const char* why) {
-    INPUT in[2] = {};
+bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, const char* why, bool releaseFirst) {
+    INPUT in[3] = {};
+    UINT n = 2;
     switch (passedKeyRetype(k)) {
         case PassedKeyRetype::None:
             return false;
@@ -1244,17 +1245,20 @@ bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, cons
             WORD scan = static_cast<WORD>((static_cast<uintptr_t>(lp) >> 16) & 0xFF);
             if (!scan) scan = static_cast<WORD>(MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC));
             const DWORD ext = (static_cast<uintptr_t>(lp) & (1u << 24)) ? KEYEVENTF_EXTENDEDKEY : 0;
-            for (int i = 0; i < 2; ++i) {
+            // releaseFirst (#173): the physical key is still down, a bare key-down would be a repeat.
+            const RetypeStrokes strokes = retypeStrokes(releaseFirst);
+            n = static_cast<UINT>(strokes.count);
+            for (int i = 0; i < strokes.count; ++i) {
                 in[i].type = INPUT_KEYBOARD;
                 in[i].ki.wVk = vkey;
                 in[i].ki.wScan = scan;
-                in[i].ki.dwFlags = ext | (i ? KEYEVENTF_KEYUP : 0);
+                in[i].ki.dwFlags = ext | (strokes.up[i] ? KEYEVENTF_KEYUP : 0);
                 in[i].ki.dwExtraInfo = kInjectedMagic;
             }
             break;
         }
     }
-    const bool ok = SendInput(2, in, sizeof(INPUT)) == 2;
+    const bool ok = SendInput(n, in, sizeof(INPUT)) == n;
     if (!retypeLogged_) {
         retypeLogged_ = true;
         config::log(!ok ? "retyping a claimed key failed (SendInput)"
@@ -1563,10 +1567,10 @@ HRESULT TextService::keyDownBody(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* ea
     // it through loses it (Enter / Tab / arrows after a word, a key past an overflow).
     if (!result && session_.hostDropsPassedKeys() && retypeClaimedKey(k, wp, lp)) result = TRUE;
     // (#173) A browser page gets keydown 229 for the Enter / Tab / Esc that closed a composing
-    // word (keymap.h retypeAfterComposition): the key is typed again, on its own.
+    // word (keymap.h retypeAfterComposition): the key is released, then typed again on its own.
     if (!result && hr == S_OK &&
         retypeAfterComposition(k, session_.asyncStore(), composingBefore, composition_ != nullptr) &&
-        retypeClaimedKey(k, wp, lp, "browser: the key that closed a composing word -> typed again on its own (#173)"))
+        retypeClaimedKey(k, wp, lp, "browser: the key that closed a composing word -> released, typed again (#173)", true))
         result = TRUE;
     *eaten = result;
     noteHintKey(k, keyTarget(ctx), hr == S_OK);  // (target may be released by the fallback)
