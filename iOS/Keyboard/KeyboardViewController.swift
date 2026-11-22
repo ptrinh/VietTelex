@@ -203,6 +203,7 @@ final class KeyboardViewController: UIInputViewController {
             onKey: { [weak self] key in self?.handle(key) }
         )
         keyboard.primesLastHeight = true
+        keyboard.primedScreen = UIScreen.main.bounds.size
         keyboard.applyPrimedHeight()
         keyboard.onDeleteWord = { [weak self] in self?.deleteWordBackward() }
         wireWordSwipe()

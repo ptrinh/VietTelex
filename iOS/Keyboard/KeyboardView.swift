@@ -149,6 +149,30 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// mặc định — WhatsApp quay lại từ nền đo bàn phím ĐÚNG lúc đó (232 thay vì 267) rồi giữ khung
     /// kính cao sai tới khi app bị tắt hẳn (dải xám trên bàn phím, log máy Phil 07/11/2026).
     nonisolated(unsafe) static var lastConfiguredHeight: CGFloat = 0
+    /// Nơi nhớ chiều cao đó QUA các lần process bàn phím bị iOS tắt (nil = không nhớ; test tự gán).
+    /// Process mới (lastConfiguredHeight = 0) từng xin chiều cao chưa cấu hình (251) rồi mới lên
+    /// 266: Zalo đo bàn phím đúng lúc đó nên ô nhập nằm thấp 15pt, bị bàn phím che (log máy
+    /// tester 22/11/2026: 2 process mới trong 20 giây). Defaults riêng của extension — không cần
+    /// Full Access. Khoá theo kích thước màn hình (dọc / ngang khác chiều cao).
+    nonisolated(unsafe) static var primedDefaults: UserDefaults? =
+        NSClassFromString("XCTestCase") == nil ? .standard : nil
+    nonisolated(unsafe) private static var persistedHeights: [String: CGFloat] = [:]
+    static func primedKey(screen: CGSize) -> String { "primedHeight.\(Int(screen.width))x\(Int(screen.height))" }
+    /// Chiều cao đã nhớ cho màn hình này; 0 nếu chưa có hoặc số vô lý.
+    static func storedPrimedHeight(screen: CGSize) -> CGFloat {
+        guard screen.width > 0, let d = primedDefaults else { return 0 }
+        let h = CGFloat(d.double(forKey: primedKey(screen: screen)))
+        return (100...700).contains(h) ? h : 0
+    }
+    static func storePrimedHeight(_ h: CGFloat, screen: CGSize) {
+        guard screen.width > 0, (100...700).contains(h), let d = primedDefaults else { return }
+        let key = primedKey(screen: screen)
+        guard persistedHeights[key] != h else { return }   // gọi mỗi lần đổi constraint: chỉ ghi khi đổi
+        persistedHeights[key] = h
+        d.set(Double(h), forKey: key)
+    }
+    /// Kích thước màn hình controller đưa vào (khoá nhớ chiều cao); .zero = không nhớ.
+    var primedScreen: CGSize = .zero
     /// Controller đã chạy cấu hình lần hiện cho view này (markConfigured).
     private(set) var appearanceConfigured = false
     /// Chỉ view của controller (installKeyboard) mượn lastConfiguredHeight trước khi cấu hình;
@@ -160,12 +184,18 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         return baseRequestedHeight + hostFillExtra + heightNudge
     }
     private func applyHeightConstant() {
-        if primesLastHeight, appearanceConfigured { Self.lastConfiguredHeight = requestedHeight }
+        if primesLastHeight, appearanceConfigured {
+            Self.lastConfiguredHeight = requestedHeight
+            Self.storePrimedHeight(requestedHeight, screen: primedScreen)
+        }
         let total = constraintHeight
         if heightConstraint?.constant != total { heightConstraint?.constant = total }
     }
     /// Controller bật primesLastHeight ngay sau khi dựng view: xin luôn chiều cao lần hiện trước.
-    func applyPrimedHeight() { applyHeightConstant() }
+    func applyPrimedHeight() {
+        if Self.lastConfiguredHeight <= 0 { Self.lastConfiguredHeight = Self.storedPrimedHeight(screen: primedScreen) }
+        applyHeightConstant()
+    }
     /// Controller gọi cuối phần cấu hình lần hiện: từ đây xin đúng chiều cao theo cài đặt.
     func markConfigured() {
         appearanceConfigured = true

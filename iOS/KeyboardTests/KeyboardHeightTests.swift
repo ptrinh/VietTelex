@@ -863,4 +863,73 @@ final class HostOversizeControllerTests: XCTestCase {
         XCTAssertEqual(again.debugKeyboard.debugRequestedHeight, shown, accuracy: 0.5)
         detach(again)
     }
+
+    /// Zalo (log máy tester 22/11/2026): iOS tắt process bàn phím giữa hai lần hiện, process mới xin
+    /// chiều cao chưa cấu hình (251) rồi mới lên 266 ⇒ ô nhập Zalo nằm thấp 15pt, bị che. Chiều cao
+    /// lần hiện trước phải sống qua process mới (ở đây: xoá biến tĩnh, giữ defaults).
+    @MainActor func testColdProcessRequestsStoredHeight() {
+        let saved = UserDefaultsProvider.shared
+        let savedPaywall = PlusGate.paywallEnabled
+        let savedLast = KeyboardView.lastConfiguredHeight
+        let savedStore = KeyboardView.primedDefaults
+        let storeSuite = "vt-primed-height-tests"
+        defer {
+            UserDefaultsProvider.shared = saved
+            PlusGate.paywallEnabled = savedPaywall
+            KeyboardView.lastConfiguredHeight = savedLast
+            KeyboardView.primedDefaults = savedStore
+            UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite)
+            UserDefaults(suiteName: storeSuite)?.removePersistentDomain(forName: storeSuite)
+        }
+        let d = UserDefaults(suiteName: suite)!
+        d.removePersistentDomain(forName: suite)
+        d.set(true, forKey: "showSuggestions")
+        PlusGate.paywallEnabled = false
+        UserDefaultsProvider.shared = d
+        let store = UserDefaults(suiteName: storeSuite)!
+        store.removePersistentDomain(forName: storeSuite)
+        KeyboardView.primedDefaults = store
+        KeyboardView.lastConfiguredHeight = 0
+
+        let w: CGFloat = 375, H: CGFloat = 812
+        let win = UIWindow(frame: CGRect(x: 0, y: 0, width: w, height: H))
+        let host = Host()
+        win.rootViewController = host
+        win.isHidden = false
+        defer { win.isHidden = true }
+        func attach() -> KeyboardViewController {
+            let vc = KeyboardViewController()
+            vc.debugProxy = KeyboardBenchTests.BenchProxy()
+            vc.debugFullAccess = false
+            vc.loadViewIfNeeded()
+            host.addChild(vc); host.view.addSubview(vc.view); vc.didMove(toParent: host)
+            vc.debugKeyboard.debugScreenSize = CGSize(width: w, height: H)
+            vc.debugKeyboard.debugSetSafeBottom(0)
+            return vc
+        }
+        func detach(_ vc: KeyboardViewController) {
+            vc.beginAppearanceTransition(false, animated: false); vc.endAppearanceTransition()
+            vc.willMove(toParent: nil); vc.view.removeFromSuperview(); vc.removeFromParent()
+        }
+
+        let first = attach()
+        let unconfigured = first.debugKeyboard.debugRequestedHeight
+        first.beginAppearanceTransition(true, animated: false); first.endAppearanceTransition()
+        first.view.frame = CGRect(x: 0, y: 0, width: w, height: 300); first.view.layoutIfNeeded()
+        let shown = first.debugKeyboard.debugRequestedHeight
+        XCTAssertNotEqual(unconfigured, shown, "tiền đề: chưa cấu hình xin khác mức có thanh gợi ý")
+        detach(first)
+
+        KeyboardView.lastConfiguredHeight = 0   // process mới: biến tĩnh mất, defaults còn
+        let cold = attach()
+        cold.view.frame = CGRect(x: 0, y: 0, width: w, height: H)
+        cold.view.setNeedsLayout(); cold.view.layoutIfNeeded()
+        XCTAssertEqual(cold.debugKeyboard.debugRequestedHeight, shown, accuracy: 0.5,
+                       "process mới, chưa cấu hình: xin đúng chiều cao lần hiện trước")
+        detach(cold)
+
+        store.removePersistentDomain(forName: storeSuite)   // chưa từng hiện: không có gì để mượn
+        KeyboardView.lastConfiguredHeight = 0
+        XCTAssertEqual(KeyboardView.storedPrimedHeight(screen: UIScreen.main.bounds.size), 0)
+    }
 }
