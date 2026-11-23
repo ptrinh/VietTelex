@@ -2,7 +2,7 @@ package com.viettelex.android.ime
 
 /**
  * Đệm dưới hàng phím đáy cho nút hệ thống của IME (⌄ ẩn bàn phím / 🌐 đổi bàn phím)
- * và nav bar 3 nút. Android 15+ vẽ IME edge-to-edge: các nút đó đè LÊN hàng phím đáy
+ * và nav bar 3 nút — CHỈ Android 15+ (trước đó hệ thống tự chừa). Android 15+ vẽ IME edge-to-edge: các nút đó đè LÊN hàng phím đáy
  * nếu không chừa dải như Gboard. THUẦN — pinned by ImeInsetsTest.
  */
 object ImeInsets {
@@ -18,10 +18,12 @@ object ImeInsets {
      */
     fun bottomPad(sdk: Int, navBottom: Int, tappableBottom: Int, fallbackNavBar: Int, insetsKnown: Boolean,
                   captionBottom: Int = 0): Int {
+        // API < 35: hệ thống tự đặt cửa sổ IME TRÊN nav bar ⇒ KHÔNG đệm, kể cả khi insets gốc của cửa sổ vẫn báo
+        // nav bar (#176, Android 13: rootWindowInsets báo đủ chiều cao nav trong khi khung IMS đã chừa sẵn ⇒ đệm
+        // đôi, bàn phím hở một dải đúng bằng nav bar).
+        if (sdk < 35) return 0
         val reported = maxOf(maxOf(navBottom, tappableBottom), captionBottom, 0)
         if (reported > 0) return reported
-        // API < 35: hệ thống tự đặt cửa sổ IME TRÊN nav bar ⇒ không đệm (tránh đệm đôi).
-        if (sdk < 35) return 0
         return if (insetsKnown) 0 else maxOf(fallbackNavBar, 0)
     }
 

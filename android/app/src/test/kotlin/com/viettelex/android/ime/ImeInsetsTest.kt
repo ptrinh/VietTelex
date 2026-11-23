@@ -24,7 +24,15 @@ class ImeInsetsTest {
 
     @Test fun threeButtonNav() {
         assertEquals(126, ImeInsets.bottomPad(35, 126, 126, 132, insetsKnown = true))
-        assertEquals(126, ImeInsets.bottomPad(30, 126, 126, 132, insetsKnown = true))
+    }
+
+    /** #176 (Android 13): insets gốc của cửa sổ IME vẫn báo nav bar dù hệ thống đã đặt bàn phím trên nó ⇒ không đệm thêm. */
+    @Test fun beforeAndroid15ReportedNavBarIsNotPaddedAgain() {
+        assertEquals(0, ImeInsets.bottomPad(33, 132, 132, 132, insetsKnown = true))
+        assertEquals(0, ImeInsets.bottomPad(30, 126, 126, 132, insetsKnown = true))
+        assertEquals(0, ImeInsets.bottomPad(34, 63, 0, 132, insetsKnown = true, captionBottom = 126))
+        // "Nâng bàn phím" vẫn cộng được trên 0.
+        assertEquals(63, ImeInsets.bottomPad(33, 132, 132, 132, insetsKnown = true) + ImeInsets.raisePx(24, 2.625f))
     }
 
     @Test fun olderAndroidNeverDoublePads() {
