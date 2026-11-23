@@ -354,6 +354,26 @@ final class AIProofreadTests: XCTestCase {
         }
     }
 
+    /// Ngừng gõ ⇒ hẹn vẽ lại thanh để mời "✨ Sửa lỗi": chữ không đổi nên KHÔNG được tính lại
+    /// auto-shift — trước đây lượt hẹn này hạ ⇧ người dùng vừa chạm (gõ "- ", bấm ⇧, chữ kế vẫn thường).
+    @MainActor func testTypingPauseOnlyRedrawsTheBar() {
+        guard #available(iOS 26.0, *) else { return }
+        let proxy = KeyboardBenchTests.BenchProxy()
+        proxy.text = "Test - "
+        var refreshes = 0, redraws = 0
+        let ai = AIAssist(host: .init(proxy: { proxy }, keyboard: { nil }, edit: { $0() },
+                                      refresh: { refreshes += 1 }, redraw: { redraws += 1 }))
+        ai.keyPressed()
+        var set = KeyboardView.SuggestionSet()
+        ai.decorate(&set)
+        let done = expectation(description: "pause")
+        DispatchQueue.main.asyncAfter(deadline: .now() + AIAssist.typingPause + 0.2) { done.fulfill() }
+        wait(for: [done], timeout: 3)
+        XCTAssertEqual(redraws, 1)
+        XCTAssertEqual(refreshes, 0, "chữ không đổi ⇒ không đụng ⇧")
+        ai.close()
+    }
+
     /// Không có framework ở đường dẫn ⇒ coi như không dùng được (không crash).
     func testLoaderMissingFrameworkIsUnavailable() {
         AIAssistLoader.debugReset()

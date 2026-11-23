@@ -25,8 +25,11 @@ final class AIAssist {
         let keyboard: () -> KeyboardView?
         /// Chạy thay chữ: controller bật applyingEdit + reset engine (từ đang soạn, ngữ cảnh).
         let edit: (() -> Void) -> Void
-        /// Vẽ lại thanh gợi ý (+ auto-shift).
+        /// SAU KHI THAY CHỮ: tính lại auto-shift + vẽ lại thanh gợi ý.
         let refresh: () -> Void
+        /// Chữ KHÔNG đổi (hẹn giờ ngừng gõ, model trả lời, chạm chip thông báo…): chỉ vẽ lại thanh.
+        /// Tính lại auto-shift ở đây sẽ hạ ⇧ người dùng vừa chạm trong lúc chờ.
+        let redraw: () -> Void
     }
 
     private static let proofreadToken = AITokens.proofread
@@ -127,9 +130,9 @@ final class AIAssist {
     func handleTap(_ item: String) -> Bool {
         switch item {
         case Self.proofreadToken: startProofread(); return true
-        case Self.busyToken: cancelRunning(); fieldCancelled = true; host.refresh(); return true
+        case Self.busyToken: cancelRunning(); fieldCancelled = true; host.redraw(); return true
         case Self.undoToken: doUndo(); return true
-        case Self.noticeToken: notice = nil; host.refresh(); return true
+        case Self.noticeToken: notice = nil; host.redraw(); return true
         default: break
         }
         if let a = alts, a.items.contains(item), case .alternatives(let w) = AIText.mode(selected: proxy.selected),
@@ -192,7 +195,7 @@ final class AIAssist {
         if since < Self.typingPause {
             if scheduleIfTyping {
                 pauseRefresh?.cancel()
-                let item = DispatchWorkItem { [weak self] in self?.host.refresh() }
+                let item = DispatchWorkItem { [weak self] in self?.host.redraw() }
                 pauseRefresh = item
                 DispatchQueue.main.asyncAfter(deadline: .now() + (Self.typingPause - since) + 0.02, execute: item)
             }
@@ -214,8 +217,8 @@ final class AIAssist {
         } else if (proxy.selected ?? "").isEmpty, let full = fieldCandidate(scheduleIfTyping: false) {
             text = full; field = true
             lastFieldOriginal = full   // không mời lại cùng nội dung (kể cả khi không thấy lỗi)
-        } else { host.refresh(); return }
-        guard ensureStatus() == .available else { host.refresh(); return }
+        } else { host.redraw(); return }
+        guard ensureStatus() == .available else { host.redraw(); return }
         cancelRunning()
         let before = AIMemory.footprintMB()
         let t0 = CACurrentMediaTime()
@@ -231,14 +234,14 @@ final class AIAssist {
                 guard let fixed = AIText.assembleProofread(original: text, output: out) else {
                     TouchLog.write("ai: proofread output rejected (len \(text.count) → \(out.count))")
                     self.notice = AIFailure.rejected.message
-                    self.host.refresh(); return
+                    self.host.redraw(); return
                 }
                 // Người dùng đã đổi vùng chọn / ô trong lúc chờ ⇒ lặng lẽ bỏ.
                 let px = self.proxy
                 let still = field ? (px.selected ?? "").isEmpty
                     && AIField.matches(before: px.contextBeforeInput, after: px.contextAfterInput, expected: text)
                     : px.selected == text
-                guard still else { self.host.refresh(); return }
+                guard still else { self.host.redraw(); return }
                 self.showPanel(original: text, corrected: fixed, field: field)
             case .failure(.unavailable):
                 // Model vừa thành không dùng được ⇒ thôi mời (không báo lỗi) tới lần hiện sau.
@@ -246,9 +249,9 @@ final class AIAssist {
             case .failure(let f):
                 self.notice = f.message
             }
-            self.host.refresh()
+            self.host.redraw()
         }
-        host.refresh()
+        host.redraw()
     }
 
     private func showPanel(original: String, corrected: String, field: Bool) {
@@ -260,7 +263,7 @@ final class AIAssist {
         p.configure(segments: WordDiff.diff(original: original, corrected: corrected), changed: changed,
                     dark: kb.isDarkAppearance)
         p.onApply = { [weak self] in self?.applyPending() }
-        p.onCancel = { [weak self] in self?.closePanel(); self?.host.refresh() }
+        p.onCancel = { [weak self] in self?.closePanel(); self?.host.redraw() }
         p.frame = kb.keyAreaFrame   // KeyboardView.layoutOverlayPanel bám vùng phím mỗi lượt layout
         kb.addSubview(p)
         kb.overlayPanel = p
@@ -373,7 +376,7 @@ final class AIAssist {
     }
 
     private func doUndo() {
-        guard let u = undo else { host.refresh(); return }
+        guard let u = undo else { host.redraw(); return }
         undo = nil
         switch u {
         case .selection(let t):
@@ -416,7 +419,7 @@ final class AIAssist {
                                                after: proxy.contextAfterInput)
         let before = AIMemory.footprintMB()
         let t0 = CACurrentMediaTime()
-        host.refresh()
+        host.redraw()
         Task { @MainActor [weak self] in
             let r = await AIAssistLoader.run(kind: 1, instructions: AIText.alternativesInstructions, prompt: prompt)
             guard let self, self.altsKeyInFlight == key else { return }
@@ -431,7 +434,7 @@ final class AIAssist {
                 if f == .unavailable { self.status = .notReady }
             }
             self.alts = (key, word, items)   // rỗng cũng nhớ ⇒ không hỏi lại cùng từ
-            self.host.refresh()
+            self.host.redraw()
         }
     }
 
@@ -462,7 +465,7 @@ final class AIAssist {
             }
             TouchLog.write(String(format: "ai: address %.0fms found=%d", (CACurrentMediaTime() - t0) * 1000, value == nil ? 0 : 1))
             self.clipAddr = (change, value)
-            if value != nil { self.host.refresh() }
+            if value != nil { self.host.redraw() }
         }
         return nil
     }

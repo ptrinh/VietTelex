@@ -3731,7 +3731,8 @@ extension KeyboardViewController {
             refresh: { [weak self] in
                 guard let self else { return }
                 self.updateAutoShift(); self.updateSuggestions()
-            }))
+            },
+            redraw: { [weak self] in self?.updateSuggestions() }))
     }
 }
 
