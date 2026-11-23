@@ -108,6 +108,8 @@ object Keys {
     const val SUGGEST_IN_NO_SUGGEST_FIELDS = "suggestInNoSuggestFields"
     const val FILTER_SENSITIVE = "filterSensitive"
     const val TEMPLATES_ENABLED = "templatesEnabled"
+    /** #175: bảng ☰ hiện mẫu câu mỗi mẫu một dòng (nhãn + nội dung) thay lưới chỉ nhãn. Mặc định tắt. */
+    const val TEMPLATES_AS_LIST = "templatesAsList"
     const val SHOW_SPACE_LOGO = "showSpaceLogo"
     /** Bool — ô phóng to chữ khi bấm phím (balloon); tên như iOS App Group. Mặc định BẬT. */
     const val KEY_PREVIEW = "keyPreviewEnabled"

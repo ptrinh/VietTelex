@@ -56,6 +56,7 @@ enum BackupSettings {
         Spec(key: "showSuggestions", kind: .bool(true)),
         Spec(key: "filterSensitive", kind: .bool(true)),
         Spec(key: "templatesEnabled", kind: .bool(true)),
+        Spec(key: "templatesAsList", kind: .bool(false)),
         Spec(key: "showSpaceLogo", kind: .bool(true)),
         Spec(key: "hapticFeedback", kind: .bool(false)),
         Spec(key: "hapticStrength", kind: .int(KeyHaptics.defaultPercent, 10...100)),

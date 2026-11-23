@@ -295,7 +295,11 @@ class KeyboardView(
         templatesPane.setItems(if (p.showTemplates) templates() else emptyList())
         templatesPane.setExtras(p.tools, gear = p.gear, segmented = p.segmented, toolsTab = p.tab == TemplatesMenu.Tab.TOOLS)
         templatesPane.setQuick(TemplatesMenu.quick(clipAvailable, voiceAvailable))
+        templatesPane.setListMode(templatesAsList)
     }
+    /** "Hiện mẫu câu theo dòng" (#175): bảng ☰ mỗi mẫu một dòng, nhãn + nội dung. */
+    var templatesAsList = false
+        set(v) { if (field != v) { field = v; refreshTemplatesPane() } }
     /** Lịch sử clipboard đang bật ⇒ bảng ☰ có nút 📋 (#175). IME đặt cùng nút 📋 của thanh gợi ý. */
     var clipAvailable = false
         set(v) { if (field != v) { field = v; refreshTemplatesPane() } }

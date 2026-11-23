@@ -604,6 +604,7 @@ struct GoVuotPage: View {
 
 struct GoTatPage: View {
     @AppStorage("templatesEnabled", store: featureDefaults) private var templatesEnabled = true
+    @AppStorage("templatesAsList", store: featureDefaults) private var templatesAsList = false
     @AppStorage(PlusFeature.textToolsKey, store: featureDefaults) private var textToolsEnabled = true
 
     var body: some View {
@@ -611,6 +612,7 @@ struct GoTatPage: View {
             ShortcutsSection()
             Section {
                 settingToggle(L("Mẫu câu"), L(SettingCaption.templates), isOn: $templatesEnabled)
+                settingToggle(L("Hiện mẫu câu theo dòng"), L(SettingCaption.templatesAsList), isOn: $templatesAsList)
                 if PlusGate.isUnlocked(.textTools) {
                     // Mẫu câu tắt ⇒ ☰ vẫn hiện và mở thẳng Công cụ (KeyboardView.LeftZone.tools).
                     settingToggle(L("Công cụ văn bản"), L(SettingCaption.textTools), isOn: $textToolsEnabled)

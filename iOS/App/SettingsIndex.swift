@@ -156,6 +156,7 @@ enum SettingsIndex {
             E(viTitle: LK("Gõ tắt"), keywords: "shortcut viết tắt", location: .page(.goTat)),
             E(viTitle: LK("Bảng gõ tắt"), keywords: "shortcut yaml import export", location: .page(.goTat)),
             E(viTitle: LK("Mẫu câu"), keywords: "template câu soạn sẵn snippets tắt ẩn tab ☰", location: .page(.goTat), key: "templatesEnabled"),
+            E(viTitle: LK("Hiện mẫu câu theo dòng"), keywords: "mẫu câu template snippets danh sách list dòng lưới grid nhãn icon", location: .page(.goTat), key: "templatesAsList"),
             E(viTitle: LK("Công cụ văn bản"), keywords: "text tools hoa thường bỏ dấu dịch translate plus", location: .page(.goTat), condition: .textTools),
             E(viTitle: LK("Dịch trên máy"), keywords: "translate dịch ngôn ngữ language gói dịch plus", location: .page(.goTat), condition: .translate),
             // Phím & cử chỉ
@@ -281,6 +282,7 @@ enum SettingCaption {
     static let shortcuts = LK("Gõ chữ tắt rồi dấu cách để bung: ko → không. ⌫ ngay sau để trả lại.")
     static let systemTextReplacement = LK("Bung cả mục Thay thế văn bản của iOS; trùng chữ tắt thì bảng VietTelex thắng.")
     static let templates = LK("Nút ☰ chèn câu soạn sẵn (tab Mẫu Câu). Tắt: ẩn tab Mẫu Câu.")
+    static let templatesAsList = LK("Bảng mẫu câu hiện mỗi mẫu một dòng kèm nội dung, thay cho lưới chỉ có nhãn.")
     static let textTools = LK("Thẻ Công cụ trong bảng ☰: đổi HOA/thường, thêm/xoá dấu, dịch…")
     static let translate = LK("Chọn ngôn ngữ dịch + tải gói dịch cho chip “Dịch ↔ …” trong Công cụ.")
     // Phím & cử chỉ

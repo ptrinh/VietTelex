@@ -191,7 +191,7 @@ object TouchLogFormat {
                 " haptic=${b(s.hapticFeedback)}:${s.hapticStrength} sound=${b(s.keySound)}:${s.keySoundStyle}:${s.keySoundVolume}",
             // Đếm thôi: cặp gõ tắt là nội dung người dùng.
             "shortcuts: ${if (s.shortcutsEnabled) "on" else "off"}:${s.shortcuts.entries.size}" +
-                " templates=${b(s.templatesEnabled)}",
+                " templates=${b(s.templatesEnabled)} templatesList=${b(s.templatesAsList)}",
         )
     }
 

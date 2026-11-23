@@ -101,6 +101,7 @@ data class KeyboardSettings(
     var shortcuts: ShortcutTable = ShortcutTable(),
     // Phần UI (iOS đọc rải rác trong KeyboardView) — gom về đây cho IME.
     var templatesEnabled: Boolean = true,
+    var templatesAsList: Boolean = false,
     var showSpaceLogo: Boolean = true,
     /** Ô phóng to chữ khi bấm phím — mặc định BẬT; tắt ⇒ không tạo/vẽ balloon. */
     var keyPreview: Boolean = true,
@@ -231,6 +232,7 @@ data class KeyboardSettings(
             s.shortcutsEnabled = b(Keys.SHORTCUTS_ENABLED, s.shortcutsEnabled)
             if (s.shortcutsEnabled) s.shortcuts = ShortcutTable(ShortcutFile.parse(get(Keys.SHORTCUTS) as? String))
             s.templatesEnabled = b(Keys.TEMPLATES_ENABLED, s.templatesEnabled)
+            s.templatesAsList = b(Keys.TEMPLATES_AS_LIST, s.templatesAsList)
             s.showSpaceLogo = b(Keys.SHOW_SPACE_LOGO, s.showSpaceLogo)
             s.keyPreview = b(Keys.KEY_PREVIEW, s.keyPreview)
             s.keyPressHighlight = b(Keys.KEY_PRESS_HIGHLIGHT, s.keyPressHighlight)

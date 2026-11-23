@@ -85,4 +85,15 @@ class TemplatesMenuTest {
         assertEquals(listOf(TemplatesMenu.QUICK_CLIPBOARD), TemplatesMenu.quick(clip = true, voice = false))
         assertTrue(TemplatesMenu.quick(clip = false, voice = false).isEmpty())
     }
+
+    /** #175: "Hiện mẫu câu theo dòng" — một cột, mỗi dòng có nhãn kèm nội dung; lưới giữ nguyên chỉ nhãn. */
+    @Test fun listModeShowsLabelWithText() {
+        assertEquals(1, TemplatesMenu.snippetCols(360f, list = true))
+        assertEquals(TemplatesMenu.snippetCols(360f), TemplatesMenu.snippetCols(360f, list = false))
+        assertEquals("👋", TemplatesMenu.cellText("👋", "Xin chào", list = false))
+        assertEquals("👋  Xin chào", TemplatesMenu.cellText("👋", "Xin chào", list = true))
+        assertEquals("Xin chào", TemplatesMenu.cellText("", "Xin chào", list = true))
+        assertEquals("Xin chào", TemplatesMenu.cellText("Xin chào", "Xin chào", list = true))
+        assertEquals("📍  Số 1 Phố A", TemplatesMenu.cellText("📍", "Số 1\nPhố A", list = true))
+    }
 }

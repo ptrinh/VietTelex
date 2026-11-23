@@ -86,6 +86,8 @@ object L10nTable {
         put("Gõ tắt", "Shortcuts")
         put("Bảng gõ tắt", "Shortcut table")
         put("Mẫu câu", "Snippets")
+        put("Hiện mẫu câu theo dòng", "Show snippets as a list")
+        put("Bảng mẫu câu hiện mỗi mẫu một dòng kèm nội dung, thay cho lưới chỉ có nhãn.", "The snippets panel shows one snippet per line with its text, instead of a grid of labels.")
         put("Hàng phím số", "Number row")
         put("Hàng số cao bằng hàng chữ", "Number row as tall as letter rows")
         put("Phím số to bằng phím chữ (bàn phím cao thêm đúng một hàng).", "Digit keys as big as letter keys (keyboard gets exactly one row taller).")

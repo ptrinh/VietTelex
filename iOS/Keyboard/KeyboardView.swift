@@ -1543,6 +1543,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
     #endif
     private var templatesEnabled = true
+    /// "Hiện mẫu câu theo dòng" (#175): bảng ☰ mỗi mẫu một dòng, nhãn + nội dung. Mặc định tắt.
+    private var templatesAsList = false
     private var templatesActive: Bool { plane == .templates }
     /// Chèn thẳng vào input, KHÔNG qua máy học từ (câu nhiều từ làm bẩn model).
     var onTemplate: ((String) -> Void)?
@@ -2680,6 +2682,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let d = UserDefaultsProvider.shared
         templatesEnabled = d?.object(forKey: "templatesEnabled") == nil
             || d?.bool(forKey: "templatesEnabled") == true
+        templatesAsList = d?.bool(forKey: "templatesAsList") == true
         userTemplatesCache = nil      // đọc lại (lười) lần mở plane mẫu câu kế — app có thể vừa sửa
         if !templatesEnabled, !textToolsEnabled, plane == .templates { plane = .letters }
         rebuild()
@@ -3435,7 +3438,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let chips = TemplateChipsView(items: tools || toolsOnly ? [] : userTemplates, extras: extras,
                                       segments: segmented ? [L("Mẫu câu"), L("Công cụ")] : nil,
                                       selectedSegment: tools ? 1 : 0,
-                                      showGear: templatesEnabled, dark: dark,
+                                      showGear: templatesEnabled, list: templatesAsList, dark: dark,
                                       plainFill: plainFill,
                                       ink: palette.barInk.ui,
                                       onSegment: { [weak self] i in
@@ -3488,6 +3491,17 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     /// Số cột lưới mẫu câu theo bề ngang (pt): điện thoại 5, rộng hơn thêm cột, 4…8.
     static func snippetCols(width: CGFloat) -> Int { min(8, max(4, Int(width / 72))) }
+    /// "Hiện mẫu câu theo dòng" (#175): `list` ⇒ một cột, mỗi mẫu một dòng. Song sinh Android TemplatesMenu.snippetCols.
+    static func snippetCols(width: CGFloat, list: Bool) -> Int { list ? 1 : snippetCols(width: width) }
+    /// Chữ một ô mẫu câu. Lưới: có nhãn ⇒ chỉ nhãn. Theo dòng: "nhãn  nội dung" (nhãn rỗng / trùng nội dung ⇒
+    /// chỉ nội dung). Xuống dòng ⇒ dấu cách. Song sinh Android TemplatesMenu.cellText.
+    static func templateCellText(label: String, text: String, list: Bool) -> String {
+        let t = text.replacingOccurrences(of: "\n", with: " ")
+        let l = label.replacingOccurrences(of: "\n", with: " ")
+        if l.isEmpty { return t }
+        if !list || l == t { return l }
+        return l + "  " + t
+    }
     /// Số cột lưới công cụ: điện thoại 3, iPad / ngang 4.
     static func toolCols(width: CGFloat) -> Int { width >= 560 ? 4 : 3 }
 
@@ -3518,6 +3532,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         private let extras: [(display: String, id: String)]
         /// ⚙️ là ô cuối lưới (không có thanh chọn); có thanh chọn thì ⚙️ nằm bên phải thanh.
         private let gearCell: Bool
+        private let list: Bool
         private let onExtra: (String) -> Void
         private let dark: Bool
         private let fill: UIColor
@@ -3532,7 +3547,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         init(items: [(label: String, text: String)],
              extras: [(display: String, id: String)] = [],
              segments: [String]? = nil, selectedSegment: Int = 0,
-             showGear: Bool = true,
+             showGear: Bool = true, list: Bool = false,
              dark: Bool, plainFill: UIColor, ink: UIColor,
              onSegment: @escaping (Int) -> Void = { _ in },
              onExtra: @escaping (String) -> Void = { _ in },
@@ -3540,6 +3555,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             self.items = items
             self.extras = extras
             self.gearCell = showGear && segments == nil && extras.isEmpty
+            self.list = list
             self.onExtra = onExtra
             self.dark = dark
             self.fill = plainFill
@@ -3550,7 +3566,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             super.init(frame: .zero)
             let tools = !extras.isEmpty
             let layout = GridLayout(stretchLast: tools,
-                                    cols: tools ? KeyboardView.toolCols(width:) : KeyboardView.snippetCols(width:))
+                                    cols: tools ? KeyboardView.toolCols(width:)
+                                        : { [list] w in KeyboardView.snippetCols(width: w, list: list) })
             let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
             cv.backgroundColor = .clear
             cv.disableKeyboardEdgeEffects()
@@ -3666,8 +3683,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 cell.accessibilityLabel = L("Quản lý mẫu câu")
             } else {
                 let item = items[ip.item]
-                cell.set(display: (item.label.isEmpty ? item.text : item.label).replacingOccurrences(of: "\n", with: " "),
-                         fill: fill, ink: ink, dark: dark)
+                cell.set(display: KeyboardView.templateCellText(label: item.label, text: item.text, list: list),
+                         fill: fill, ink: ink, dark: dark, leading: list)
                 cell.accessibilityLabel = nil
             }
             return cell
@@ -3713,8 +3730,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 ])
             }
             required init?(coder: NSCoder) { fatalError() }
-            func set(display: String, fill: UIColor, ink: UIColor, dark: Bool) {
+            func set(display: String, fill: UIColor, ink: UIColor, dark: Bool, leading: Bool = false) {
                 label.text = display
+                label.textAlignment = leading ? .natural : .center   // ô tái dùng: đặt lại mỗi lần
                 label.textColor = ink
                 contentView.backgroundColor = fill
                 contentView.layer.shadowOpacity = dark ? 0.30 : 0.35

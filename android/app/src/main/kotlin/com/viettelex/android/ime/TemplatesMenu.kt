@@ -84,6 +84,24 @@ object TemplatesMenu {
     /** Số cột lưới mẫu câu theo bề ngang (dp): điện thoại 5, rộng hơn thêm cột, 4…8. */
     fun snippetCols(widthDp: Float): Int = (widthDp / 72f).toInt().coerceIn(4, 8)
 
+    /** "Hiện mẫu câu theo dòng" (#175): [list] ⇒ một cột, mỗi mẫu một dòng; không ⇒ lưới [snippetCols]. */
+    fun snippetCols(widthDp: Float, list: Boolean): Int = if (list) 1 else snippetCols(widthDp)
+
+    /**
+     * Chữ một ô mẫu câu. Lưới: có nhãn ⇒ chỉ nhãn (ô hẹp). Theo dòng ([list]): "nhãn  nội dung" — lưới chỉ
+     * hiện nhãn (thường là một emoji) nên không biết mẫu chứa gì; nhãn trùng nội dung / rỗng ⇒ chỉ nội dung.
+     * Xuống dòng trong mẫu ⇒ dấu cách (ô một dòng).
+     */
+    fun cellText(label: String, text: String, list: Boolean): String {
+        val t = text.replace('\n', ' ')
+        val l = label.replace('\n', ' ')
+        return when {
+            l.isEmpty() -> t
+            !list || l == t -> l
+            else -> "$l  $t"
+        }
+    }
+
     /** Số cột lưới công cụ: điện thoại 3, tablet / ngang 4. */
     fun toolCols(widthDp: Float): Int = if (widthDp >= 560f) 4 else 3
 

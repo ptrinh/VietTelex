@@ -94,6 +94,10 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
     private lateinit var clipboard: AndroidClipboard
     private lateinit var session: KeyboardSession
     private val tracker = SelectionTracker()
+    /** Sau Enter không đồng bộ: update của chính Enter ⇒ tính lại auto-shift (#175, [ShiftRecheck]). */
+    private val shiftRecheck = ShiftRecheck()
+    /** [KeyboardSession.generation] của phím Enter đang chờ — đã gõ phím khác thì không đụng shift nữa. */
+    private var enterGen = -1
     private var portCache: AndroidEditorPort? = null
     private val proxy by lazy { IcProxy({ port() }, tracker) }
     private val swipe by lazy { SwipeDeleteController(proxy) }
@@ -880,6 +884,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         kb.setEditHasSelection(info.initialSelStart >= 0 && info.initialSelStart != info.initialSelEnd)
         st.setExtras(clipButton = settings.clipboardHistory, open = false)
         kb.clipAvailable = settings.clipboardHistory
+        kb.templatesAsList = settings.templatesAsList
         ImeTrace.begin("VT.startInput.kbConfigure")
         configuringKb = true
         try { kb.configure(field.returnLabel, field.kind, needsGlobe(), settings.showSpaceLogo,
@@ -991,6 +996,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         val s = info.initialSelStart; val e = info.initialSelEnd
         val ok = InitialSelection.trusted(s, e, before?.length, IcProxy.CONTEXT_CAP)
         if (ok) tracker.reset(s, e) else tracker.reset(-1, -1)
+        shiftRecheck.reset()
         if (!ok && s >= 0 && TouchLog.enabled) TouchLog.write("initialSel $s..$e lệch initialTextBefore len=${before?.length}")
         proxy.startInput(if (ok) before else null,
             ok && before != null && InitialSelection.reachesFieldStart(s, e, before.length))
@@ -1170,7 +1176,15 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         if (candidatesStart != -1) proxy.finishComposingOnNextEdit()
         if (newSelStart < 0) proxy.invalidateShadow()   // "không biết": không reset engine, chỉ đọc lại chữ
         keyboard?.setEditHasSelection(newSelStart >= 0 && newSelStart != newSelEnd)
-        if (!tracker.onUpdate(newSelStart, newSelEnd)) return
+        if (!tracker.onUpdate(newSelStart, newSelEnd)) {
+            // Enter vừa gửi đã tới app: chữ đọc lúc nãy có thể còn thiếu "\n" ⇒ bỏ shadow, tính lại shift (#175).
+            if (shiftRecheck.onOwnUpdate(tracker.hasPending) && newSelStart >= 0) {
+                proxy.invalidateShadow()
+                if (enterGen == session.generation) applyAutoShift()
+            }
+            return
+        }
+        shiftRecheck.reset()
         // Đổi từ NGOÀI (chạm chỗ khác, select-all, app tự sửa): quên từ + ngữ cảnh.
         proxy.invalidateShadow()
         session.externalSelectionChange()
@@ -1327,6 +1341,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         pendingGen = out.generation
         firstBarPending = false                // lượt gợi ý của phím này thay lượt hoãn lúc hiện
         if (out.needsAutoShift) { handler.removeCallbacks(autoShiftRun); handler.post(autoShiftRun) }
+        if (key == Key.Newline && out.needsAutoShift) { shiftRecheck.arm(); enterGen = out.generation }
         handler.removeCallbacks(suggestRun)
         handler.postDelayed(suggestRun, SUGGEST_DELAY_MS)
     }

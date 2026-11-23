@@ -54,6 +54,7 @@ object BackupSettings {
         Spec(Keys.SHOW_SUGGESTIONS, SettingKind.Bool(true)),
         Spec(Keys.FILTER_SENSITIVE, SettingKind.Bool(true)),
         Spec(Keys.TEMPLATES_ENABLED, SettingKind.Bool(true)),
+        Spec(Keys.TEMPLATES_AS_LIST, SettingKind.Bool(false)),
         Spec(Keys.SHOW_SPACE_LOGO, SettingKind.Bool(true)),
         Spec(Keys.HAPTIC_FEEDBACK, SettingKind.Bool(false)),
         Spec(Keys.HAPTIC_STRENGTH, SettingKind.IntRange(HapticStrength.DEFAULT, HapticStrength.RANGE)),

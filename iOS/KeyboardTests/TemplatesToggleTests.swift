@@ -56,4 +56,16 @@ final class TemplatesToggleTests: XCTestCase {
         let spec = BackupSettings.all.first { $0.key == "templatesEnabled" }
         XCTAssertEqual(spec?.kind, .bool(true))
     }
+
+    /// #175: "Hiện mẫu câu theo dòng" — một cột, mỗi dòng có nhãn kèm nội dung; lưới giữ nguyên chỉ nhãn.
+    func testListModeShowsLabelWithText() {
+        XCTAssertEqual(KeyboardView.snippetCols(width: 393, list: true), 1)
+        XCTAssertEqual(KeyboardView.snippetCols(width: 393, list: false), KeyboardView.snippetCols(width: 393))
+        XCTAssertEqual(KeyboardView.templateCellText(label: "👋", text: "Xin chào", list: false), "👋")
+        XCTAssertEqual(KeyboardView.templateCellText(label: "👋", text: "Xin chào", list: true), "👋  Xin chào")
+        XCTAssertEqual(KeyboardView.templateCellText(label: "", text: "Xin chào", list: true), "Xin chào")
+        XCTAssertEqual(KeyboardView.templateCellText(label: "Xin chào", text: "Xin chào", list: true), "Xin chào")
+        XCTAssertEqual(KeyboardView.templateCellText(label: "📍", text: "Số 1\nPhố A", list: true), "📍  Số 1 Phố A")
+        XCTAssertEqual(BackupSettings.all.first { $0.key == "templatesAsList" }?.kind, .bool(false))
+    }
 }

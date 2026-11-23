@@ -633,6 +633,8 @@ private fun GoTatPage(onBack: () -> Unit) {
     VTSection(header = tr("Mẫu câu")) {
         BoolToggle(Keys.TEMPLATES_ENABLED, Prefs.D.templatesEnabled, tr("Mẫu câu"), tr(SettingCaption.templates))
         RowDivider()
+        BoolToggle(Keys.TEMPLATES_AS_LIST, Prefs.D.templatesAsList, tr("Hiện mẫu câu theo dòng"), tr(SettingCaption.templatesAsList))
+        RowDivider()
         // Luôn hiện (tìm "Công cụ văn bản" phải tới được đây); chưa có Plus ⇒ dòng khoá.
         if (PlusGate.isUnlocked(PlusFeature.TEXT_TOOLS)) {
             BoolToggle(Keys.TEXT_TOOLS_ENABLED, Prefs.D.textToolsEnabled, tr("Công cụ văn bản"),

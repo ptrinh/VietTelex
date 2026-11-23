@@ -194,6 +194,8 @@ enum L10n {
         "Gõ tắt: %@ mục": "Shortcuts: %@",
         "Gõ tắt tắt": "Shortcuts off",
         "Mẫu câu bật": "Snippets on",
+        "Hiện mẫu câu theo dòng": "Show snippets as a list",
+        "Bảng mẫu câu hiện mỗi mẫu một dòng kèm nội dung, thay cho lưới chỉ có nhãn.": "The snippets panel shows one snippet per line with its text, instead of a grid of labels.",
         "Mẫu câu tắt": "Snippets off",
         "Hàng số": "Number row",
         "Hàng số cao": "Tall number row",

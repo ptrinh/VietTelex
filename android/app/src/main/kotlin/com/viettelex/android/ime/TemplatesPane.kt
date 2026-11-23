@@ -77,6 +77,14 @@ class TemplatesPane(
         width = 0f
     }
 
+    /** "Hiện mẫu câu theo dòng": một cột, chữ canh trái ([TemplatesMenu.cellText]). */
+    private var listMode = false
+    fun setListMode(on: Boolean) {
+        if (on == listMode) return
+        listMode = on
+        width = 0f
+    }
+
     fun setQuick(list: List<String>) {
         if (list == quick) return
         quick = list
@@ -134,15 +142,14 @@ class TemplatesPane(
         val gearCell = !hasHeader && showGear && !tools
         val n = if (tools) extras.size else items.size + if (gearCell) 1 else 0
         val wDp = w / d
-        val cols = if (tools) TemplatesMenu.toolCols(wDp) else TemplatesMenu.snippetCols(wDp)
+        val cols = if (tools) TemplatesMenu.toolCols(wDp) else TemplatesMenu.snippetCols(wDp, listMode)
         val cells = TemplatesMenu.grid(n, cols, left, right, headerH + 8 * d, chipH, gap, stretchLast = tools)
         for ((i, c) in cells.withIndex()) {
             val maxText = c.r - c.l - 2 * padH
             val chip = when {
                 tools -> extras[i].let { Chip(null, fit(it.first, maxText), it.second) }
                 i < items.size -> items[i].let {
-                    val s = if (it.label.isEmpty()) it.text else it.label
-                    Chip(it, fit(s.replace('\n', ' '), maxText))
+                    Chip(it, fit(TemplatesMenu.cellText(it.label, it.text, listMode), maxText - if (listMode) 8 * d else 0f))
                 }
                 else -> Chip(null, "⚙️")
             }
@@ -203,7 +210,12 @@ class TemplatesPane(
             val t = ch.t - scrollY; val b = ch.b - scrollY
             if (b < headerH || t > bottom) continue
             c.drawRoundRect(ch.l, t, ch.r, b, rad, rad, chipPaint)
-            c.drawText(ch.shown, (ch.l + ch.r) / 2, (t + b) / 2 + textOff, textPaint)
+            // Theo dòng: mẫu câu canh trái (đọc như danh sách); ⚙️ và ô công cụ vẫn canh giữa.
+            if (listMode && ch.item != null) {
+                textPaint.textAlign = android.graphics.Paint.Align.LEFT
+                c.drawText(ch.shown, ch.l + 10 * d, (t + b) / 2 + textOff, textPaint)
+                textPaint.textAlign = android.graphics.Paint.Align.CENTER
+            } else c.drawText(ch.shown, (ch.l + ch.r) / 2, (t + b) / 2 + textOff, textPaint)
         }
         c.restore()
     }

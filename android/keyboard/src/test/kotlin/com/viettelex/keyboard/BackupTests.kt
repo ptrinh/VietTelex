@@ -72,7 +72,7 @@ class BackupTests {
         val p = BackupCodec.decode(fixture("backup-ios-v1"))
         assertEquals("ios", p.platform)
         assertEquals(Instant.parse("2026-09-27T08:00:00Z"), p.createdAt)
-        assertEquals(51, p.settings!!.size)             // +flickDownAlternates (23/11/2026); emojiSuggest/pasteButton chỉ iOS, bị bỏ qua; +autoCircumflex (18/11/2026); +largeKeys (04/11); +englishByFrequency (05/11); +keyboardDismissButton (08/11); +zodiacSign, prideFlag (11/2026)
+        assertEquals(52, p.settings!!.size)             // +templatesAsList (24/11/2026); +flickDownAlternates (23/11/2026); emojiSuggest/pasteButton chỉ iOS, bị bỏ qua; +autoCircumflex (18/11/2026); +largeKeys (04/11); +englishByFrequency (05/11); +keyboardDismissButton (08/11); +zodiacSign, prideFlag (11/2026)
         assertEquals("trans", p.settings!![PrideFlag.KEY])   // Tự hào: chỉ id lá cờ, cùng khoá iOS
         assertEquals("leo", p.settings!![ZodiacSign.KEY])   // Cung hoàng đạo: chỉ id cung, cùng khoá iOS
         assertEquals(false, p.settings!![Keys.KEYBOARD_DISMISS_BUTTON])   // "Nút ẩn bàn phím" — cùng khoá iOS
@@ -148,7 +148,7 @@ class BackupTests {
             "keyboardTransparency" to 250, "keyLabelTransparency" to 35,
             BackupPrefs.SHORTCUTS_KEY to "# VietTelex — bảng gõ tắt\nko: không\n")
         val p = BackupPrefs.snapshot({ prefs[it] }, listOf(TemplateItem("", "a")), null)
-        assertEquals(98, p.settings!!.size)   // +flickDownAlternates (23/11/2026); +autoCircumflex (18/11/2026); +swipeSound (12/11/2026); +zodiacSign, +prideFlag (11/2026); +keyboardDismissButton (08/11); +symbolReturn (06/11); +englishByFrequency (05/11); +largeKeys (04/11); +systemMaterialYou, +suggestionInk (30/10); +trackpadSpeed (29/10); +27 Bạn đồng hành: sinh nhật 2, tên 11, kiểu vẽ 11, vị trí & cỡ 3 (27/10); +retroactiveEnglish (23/10); +splitKeyboard; 6 khoá KeyStyle chung → 1 keyStyles (18/10/2026); +keyEffect, +holdShiftSymbols, +swipeTrail, +keyboardBuddy (19/10)
+        assertEquals(99, p.settings!!.size)   // +templatesAsList (24/11/2026); +flickDownAlternates (23/11/2026); +autoCircumflex (18/11/2026); +swipeSound (12/11/2026); +zodiacSign, +prideFlag (11/2026); +keyboardDismissButton (08/11); +symbolReturn (06/11); +englishByFrequency (05/11); +largeKeys (04/11); +systemMaterialYou, +suggestionInk (30/10); +trackpadSpeed (29/10); +27 Bạn đồng hành: sinh nhật 2, tên 11, kiểu vẽ 11, vị trí & cỡ 3 (27/10); +retroactiveEnglish (23/10); +splitKeyboard; 6 khoá KeyStyle chung → 1 keyStyles (18/10/2026); +keyEffect, +holdShiftSymbols, +swipeTrail, +keyboardBuddy (19/10)
         assertEquals("simple", p.settings!![Keys.SWIPE_TRAIL])   // hiệu ứng nét vuốt: mặc định Đơn giản
         assertEquals("none", p.settings!![Keys.SWIPE_SOUND])   // âm thanh nét vuốt: mặc định Tắt
         assertEquals("off", p.settings!![Keys.KEYBOARD_BUDDY])   // bạn đồng hành: mặc định Tắt

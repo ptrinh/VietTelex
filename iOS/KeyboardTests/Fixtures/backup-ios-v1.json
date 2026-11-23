@@ -117,6 +117,7 @@
     "systemBackdropXmasSnow" : false,
     "systemBackdropZodiac" : false,
     "teencode" : false,
+    "templatesAsList" : false,
     "templatesEnabled" : true,
     "textToolsEnabled" : true,
     "uiLanguage" : "en",
