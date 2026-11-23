@@ -124,4 +124,8 @@ RetypeStrokes retypeStrokes(bool releaseFirst) {
     return releaseFirst ? RetypeStrokes{3, {true, false, true}} : RetypeStrokes{2, {false, true, false}};
 }
 
+unsigned retypeDelayMs(uint32_t vkey, bool releaseFirst) {
+    return releaseFirst && vkey == vk::Return ? kRetypeEnterDelayMs : 0;
+}
+
 }  // namespace vtx

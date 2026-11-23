@@ -111,6 +111,17 @@ TEST(retyped_key_is_not_a_repeat) {
     CHECK(!plain.up[0] && plain.up[1]);
 }
 
+TEST(retyped_enter_waits_after_the_composition) {
+    // #173 (1.3.33 retest): "compositionend, keydown Enter 13 repeat=false" in one instant and
+    // the chat box still did not send. Enter is pressed again a moment later; Tab / Esc and the
+    // #134 IMM path are not delayed.
+    CHECK(retypeDelayMs(vk::Return, true) == kRetypeEnterDelayMs);
+    CHECK(kRetypeEnterDelayMs >= 30 && kRetypeEnterDelayMs <= 150);
+    CHECK(retypeDelayMs(vk::Tab, true) == 0);
+    CHECK(retypeDelayMs(vk::Escape, true) == 0);
+    CHECK(retypeDelayMs(vk::Return, false) == 0);
+}
+
 TEST(passed_key_retype_kinds) {
     // #134: what the TIP retypes for a claimed key it let through in an IMM32 host.
     Modifiers m;

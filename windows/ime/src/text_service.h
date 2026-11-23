@@ -225,6 +225,10 @@ private:
     HWND typedWordWnd_ = nullptr;       // where kTypedWordProp is set
     uint32_t typedWordPublished_ = 0;   // ...its value
     bool directBlockedLogged_ = false;  // "not requested: UIPI" logged for this field (#134)
+    INPUT retypeLater_[2] = {};         // (#173) Enter pressed again after kRetypeEnterDelayMs
+    UINT retypeLaterCount_ = 0;
+    void sendRetypeLater();             // kTimerRetype
+    void dropRetypeLater();
     bool retypeLogged_ = false;         // "claimed key retyped" logged for this field (#134)
     bool notTextFieldLogged_ = false;   // "not a text field" logged + Direct asked for this focus
     HWND langPropWnd_ = nullptr;        // where kTipLangProp is set

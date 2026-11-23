@@ -1223,6 +1223,8 @@ bool TextService::retypeAsUs(ITfContext* ctx, WPARAM wp, bool inject) {
     return SendInput(2, in, sizeof(INPUT)) == 2;
 }
 
+constexpr UINT_PTR kTimerRetype = 0x564B;  // (#173) press the retyped Enter (keymap.h retypeDelayMs)
+
 // #134: type a key OnTestKeyDown claimed and the session let through, in a host that
 // drops such keys (session.h hostDropsPassedKeys). Marked kInjectedMagic: this TIP and the
 // hook let it through untouched. SendInput into our own process: UIPI never applies.
@@ -1258,7 +1260,24 @@ bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, cons
             break;
         }
     }
-    const bool ok = SendInput(n, in, sizeof(INPUT)) == n;
+    // (#173) Enter after a composing word: release now, press again a moment later (keymap.h
+    // retypeDelayMs). Without the tool window (secure mode) it is typed at once, as before.
+    UINT now = n;
+    const unsigned delay = retypeDelayMs(static_cast<uint32_t>(wp), releaseFirst);
+    if (delay && n == 3 && toolWnd_) {
+        sendRetypeLater();  // an Enter still waiting goes first
+        now = 1;
+        retypeLater_[0] = in[1];
+        retypeLater_[1] = in[2];
+        retypeLaterCount_ = 2;
+    }
+    const bool ok = SendInput(now, in, sizeof(INPUT)) == now;
+    if (retypeLaterCount_ && now == 1) {
+        if (!ok || !SetTimer(toolWnd_, kTimerRetype, delay, nullptr)) {
+            retypeLaterCount_ = 0;
+            SendInput(2, in + 1, sizeof(INPUT));
+        }
+    }
     if (!retypeLogged_) {
         retypeLogged_ = true;
         config::log(!ok ? "retyping a claimed key failed (SendInput)"
@@ -1267,8 +1286,23 @@ bool TextService::retypeClaimedKey(const KeyInput& k, WPARAM wp, LPARAM lp, cons
     return ok;
 }
 
+void TextService::sendRetypeLater() {
+    const UINT n = retypeLaterCount_;
+    retypeLaterCount_ = 0;
+    if (toolWnd_) KillTimer(toolWnd_, kTimerRetype);
+    if (n) SendInput(n, retypeLater_, sizeof(INPUT));
+}
+
+// The field lost focus before the delay ran out: the key must not land somewhere else.
+void TextService::dropRetypeLater() {
+    if (!retypeLaterCount_) return;
+    retypeLaterCount_ = 0;
+    if (toolWnd_) KillTimer(toolWnd_, kTimerRetype);
+}
+
 STDMETHODIMP TextService::OnSetFocus(BOOL foreground) {
     if (!foreground) {
+        dropRetypeLater();
         ++keyGen_;
         hideHint();
     }
@@ -1696,6 +1730,8 @@ LRESULT CALLBACK TextService::toolWndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp
             } else if (wp == kTimerLearn) {
                 KillTimer(h, kTimerLearn);
                 self->sendLearnQueue();
+            } else if (wp == kTimerRetype) {
+                self->sendRetypeLater();
             }
             return 0;
         case kMsgHintRead:
@@ -1777,6 +1813,7 @@ void TextService::createToolWindow() {
 void TextService::destroyToolWindow() {
     dropTextToolPending();
     if (!toolWnd_) return;
+    sendRetypeLater();  // (#173) a waiting Enter goes now: the timer dies with the window
     if (learnOn_) {  // Học từ bạn gõ: what is held / queued goes now (the timer dies with the window)
         learnFlush();
         KillTimer(toolWnd_, kTimerLearn);

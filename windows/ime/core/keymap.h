@@ -131,4 +131,13 @@ struct RetypeStrokes {
 };
 RetypeStrokes retypeStrokes(bool releaseFirst);
 
+// How long after the composition closed the retyped key-down is sent (#173, 1.3.33 retest).
+// The retyped Enter was then a clean first press ("keydown Enter 13 repeat=false") yet web
+// chat boxes still did not send: it reached the page in the same instant as compositionend,
+// where a second Enter typed by hand (which does send) comes a moment later. So Enter is
+// released at once and pressed again after this delay. Tab / Esc stay immediate: a letter
+// typed right after Tab must not reach the field Tab is leaving.
+constexpr unsigned kRetypeEnterDelayMs = 60;
+unsigned retypeDelayMs(uint32_t vkey, bool releaseFirst);
+
 }  // namespace vtx
