@@ -183,7 +183,7 @@ object TouchLogFormat {
                 " tools=${b(s.textToolsEnabled)} clipHistory=${b(s.clipboardHistory)} incognito=${b(s.incognito)}",
             "input: swipe=${b(s.swipeTyping)} swipeEn=${b(s.swipeEnglish)} futo=${b(s.swipeFuto)}" +
                 " smartTouch=${b(s.smartTouch)} spaceLang=${b(s.spaceSwipeLanguage)} keyCmds=${b(s.swipeKeyCommands)}" +
-                " trackpad=${s.trackpadSpeed.id} holdShift=${b(s.holdShiftSymbols)}" +
+                " trackpad=${s.trackpadSpeed.id} holdShift=${b(s.holdShiftSymbols)} flickDown=${b(s.flickDownAlternates)}" +
                 " lpNumbers=${b(s.longPressNumbers)} lpSymbols=${b(s.longPressSymbols)}",
             "ui: effect=${s.keyEffect.id} buddy=${s.buddy.id} oneHand=${s.oneHandMode} floating=${b(s.floatingKeyboard)}" +
                 " split=${b(s.splitKeyboard)} numberRow=${b(s.numberRow)} large=${b(s.largeKeys)}" +

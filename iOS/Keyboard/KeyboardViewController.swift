@@ -523,7 +523,8 @@ final class KeyboardViewController: UIInputViewController {
         keyboard.configureSpaceFlick(enabled: spaceFlickSetting, language: language)
         keyboard.trackpadSpeed = settings.trackpadSpeed
         keyboard.configureKeyAlternates(numbers: settings.longPressNumbers, symbols: settings.longPressSymbols,
-                                        holdShift: settings.holdShiftSymbols)
+                                        holdShift: settings.holdShiftSymbols,
+                                        flickDown: settings.flickDownAlternates)
         // Model cá nhân + mô hình âm tiết: sau khung đầu (getter langModel vẫn tạo lười nếu phím
         // tới trước — gõ ngay không mất gì, chỉ gợi ý tới muộn vài chục ms).
         postFrame.schedule { [weak self] in StartupTrace.span("warmUpData") { self?.warmUpData() } }

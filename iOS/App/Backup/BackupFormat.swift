@@ -101,6 +101,7 @@ enum BackupSettings {
         Spec(key: "longPressNumbers", kind: .bool(true)),
         Spec(key: "longPressSymbols", kind: .bool(false)),
         Spec(key: "holdShiftSymbols", kind: .bool(true)),
+        Spec(key: "flickDownAlternates", kind: .bool(false)),
         Spec(key: "autoSpaceAfterPunct", kind: .bool(false)),
         Spec(key: "keyboardTransparency", kind: .int(0, 0...100)),
         Spec(key: "keyLabelTransparency", kind: .int(0, 0...100)),

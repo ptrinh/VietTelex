@@ -59,6 +59,7 @@ internal object SettingCaption {
     const val keyLabelSize = "Lớn: chữ trên phím to hơn ~20%. Plus: chỉnh chi tiết ở Giao diện." // l10n-key
     const val longPressNumbers = "Giữ q … p để gõ 1 … 0 (số nhỏ ở góc phím)." // l10n-key
     const val longPressSymbols = "Giữ a … l, z … m để gõ @ # \$ _ & - + ( ) …" // l10n-key
+    const val flickDownAlternates = "Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6. Tắt khi bật Gõ vuốt." // l10n-key
     const val holdShiftSymbols = "Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3." // l10n-key
     const val autoSpaceAfterPunct = "Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn)." // l10n-key
     const val symbolReturn = "Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu." // l10n-key
@@ -120,7 +121,7 @@ internal object SettingCaption {
         mathResults, addTones, filterSensitive, swipeTyping, swipeEnglish, swipeFuto,
         swipePractice, shortcuts, templates, textTools, numberRow, numberRowFullHeight,
         spaceSideKey, largeKeys, emojiKeyPlacement, keyLabelSize, longPressNumbers, longPressSymbols,
-        holdShiftSymbols, autoSpaceAfterPunct, symbolReturn, trackpadSpeed, swipeKeyCommandsAndroid, oneHandAndroid, floatingKeyboard,
+        holdShiftSymbols, flickDownAlternates, autoSpaceAfterPunct, symbolReturn, trackpadSpeed, swipeKeyCommandsAndroid, oneHandAndroid, floatingKeyboard,
         hardwareTelex, keyPreview, keyPressHighlight, hapticFeedback, keySound, plusThemes,
         materialYou, moleGame, spotlightPhoto, wallpaper, transparency, transparencyHostApp, rowHeightClamp,
         keyboardRaise, suggestionBarHeight, suggestionInk, spaceLogo, splitKeyboardAndroid, resetAppearance,

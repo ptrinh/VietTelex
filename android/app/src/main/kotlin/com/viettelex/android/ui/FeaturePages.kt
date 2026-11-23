@@ -792,6 +792,9 @@ private fun PhimPage(onBack: () -> Unit, feedbackOpen: Boolean, setFeedbackOpen:
         BoolToggle(Keys.HOLD_SHIFT_SYMBOLS, Prefs.D.holdShiftSymbols, tr("Giữ Shift để gõ số và ký hiệu"),
             tr(SettingCaption.holdShiftSymbols))
         RowDivider()
+        BoolToggle(Keys.FLICK_DOWN_ALTERNATES, Prefs.D.flickDownAlternates, tr("Vuốt phím xuống để gõ số và ký hiệu"),
+            tr(SettingCaption.flickDownAlternates))
+        RowDivider()
         BoolToggle(Keys.AUTO_SPACE_AFTER_PUNCT, Prefs.D.autoSpaceAfterPunct, tr("Tự thêm dấu cách sau dấu câu"),
             tr(SettingCaption.autoSpaceAfterPunct))
         RowDivider()

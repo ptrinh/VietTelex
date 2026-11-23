@@ -44,6 +44,22 @@ enum KeyAlternates {
     /// Ngón trôi quá ngần này (pt/dp) trước khi đủ giờ ⇒ không phải giữ (vuốt / trượt).
     static let slop: CGFloat = 10
 
+    /// "Vuốt phím xuống ra ký tự phụ" (iPhone, mặc định TẮT): cùng ký tự với giữ phím, không phải
+    /// chờ `holdDelay`. Gõ vuốt bật ⇒ tắt (kéo xuống từ một phím là đầu một nét vuốt — không phân
+    /// biệt được); bảng rỗng (VoiceOver, hai công tắc giữ phím đều tắt) ⇒ tắt. iPad có cử chỉ riêng.
+    static func flickDownEnabled(setting: Bool, swipeTyping: Bool, isPad: Bool,
+                                 alternates: [Character: String]) -> Bool {
+        setting && !swipeTyping && !isPad && !alternates.isEmpty
+    }
+    /// Quãng kéo xuống tối thiểu (pt/dp) — hơn nửa chiều cao phím điện thoại: ngón trôi lúc gõ
+    /// nhanh (vài pt) không dính.
+    static let flickDownDistance: CGFloat = 24
+    /// Nhấc tay: có phải vuốt THẲNG xuống không — đủ quãng và dọc gấp đôi ngang (kéo chéo sang
+    /// phím hàng dưới không tính).
+    static func isFlickDown(dx: CGFloat, dy: CGFloat) -> Bool {
+        dy >= flickDownDistance && dy >= 2 * abs(dx)
+    }
+
     /// Bảng đang dùng. Hàng số bật ⇒ bỏ số (đã có phím riêng). iPad có ký tự phụ vuốt
     /// xuống riêng; VoiceOver/TalkBack: giữ phím là cử chỉ của trình đọc ⇒ tắt hết.
     /// Rỗng ⇒ không hẹn giờ, không vẽ nhãn (0 chi phí).

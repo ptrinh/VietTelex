@@ -207,4 +207,14 @@ class StripGeometryTest {
         assertTrue(com.viettelex.keyboard.KeyboardSettings.load {
             if (it == com.viettelex.keyboard.Keys.KEYBOARD_DISMISS_BUTTON) true else null }.keyboardDismissButton)
     }
+
+    /** #175: 🎤 nằm trái 📋, cùng cụm công cụ mép phải — chừa đúng bề ngang, và ẩn cùng 📋 khi có gợi ý. */
+    @Test fun micButtonSharesTheRightToolZone() {
+        assertEquals(0f, StripGeometry.rightToolsW(clip = false, voice = false), 0.001f)
+        assertEquals(StripGeometry.MIC_W, StripGeometry.rightToolsW(clip = false, voice = true), 0.001f)
+        val both = StripGeometry.rightToolsW(clip = true, voice = true)
+        assertEquals(StripGeometry.CLIP_W + StripGeometry.MIC_W, both, 0.001f)
+        assertEquals(360f - both, StripGeometry.barRight(360f, both, clipButton = true, toolsShown = true), 0.001f)
+        assertEquals(360f, StripGeometry.barRight(360f, both, clipButton = true, toolsShown = false), 0.001f)
+    }
 }

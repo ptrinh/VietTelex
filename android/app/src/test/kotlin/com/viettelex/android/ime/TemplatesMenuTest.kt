@@ -77,4 +77,12 @@ class TemplatesMenuTest {
         assertEquals(5, TemplatesMenu.snippetCols(360f))
         assertEquals(3, TemplatesMenu.toolCols(392f))
     }
+
+    /** #175: thanh gợi ý có chữ thì ẩn 📋 / 🎤 ⇒ đầu bảng ☰ phải có lối vào cả hai, đúng thứ tự, chỉ khi dùng được. */
+    @Test fun quickButtonsFollowAvailability() {
+        assertEquals(listOf(TemplatesMenu.QUICK_CLIPBOARD, TemplatesMenu.QUICK_VOICE), TemplatesMenu.quick(clip = true, voice = true))
+        assertEquals(listOf(TemplatesMenu.QUICK_VOICE), TemplatesMenu.quick(clip = false, voice = true))
+        assertEquals(listOf(TemplatesMenu.QUICK_CLIPBOARD), TemplatesMenu.quick(clip = true, voice = false))
+        assertTrue(TemplatesMenu.quick(clip = false, voice = false).isEmpty())
+    }
 }

@@ -48,6 +48,18 @@ object KeyAlternates {
         if (!enabled) emptyMap()
         else map(numbers || numberRow, symbols, numberRow = false, accessibility = accessibility)
 
+    /**
+     * "Vuốt phím xuống ra ký tự phụ" (mặc định TẮT): cùng ký tự với giữ phím, không phải chờ
+     * [HOLD_MS]. Gõ vuốt bật ⇒ tắt (kéo xuống từ một phím là đầu một nét vuốt — không phân biệt
+     * được); bảng rỗng (TalkBack, hai công tắc giữ phím đều tắt) ⇒ tắt. Giống iOS.
+     */
+    fun flickDownEnabled(setting: Boolean, swipeTyping: Boolean, alternates: Map<Char, String>) =
+        setting && !swipeTyping && alternates.isNotEmpty()
+    /** Quãng kéo xuống tối thiểu (dp) — hơn nửa chiều cao phím: ngón trôi lúc gõ nhanh không dính. */
+    const val FLICK_DOWN_DP = 24f
+    /** Nhấc tay: vuốt THẲNG xuống — đủ quãng và dọc gấp đôi ngang (kéo chéo sang hàng dưới không tính). */
+    fun isFlickDown(dx: Float, dy: Float) = dy >= FLICK_DOWN_DP && dy >= 2 * kotlin.math.abs(dx)
+
     /** Ký tự phụ của phím "," hàng đáy. */
     const val COMMA_ALT = "."
 

@@ -136,6 +136,8 @@ data class KeyboardSettings(
     var longPressSymbols: Boolean = false,
     /** "Giữ Shift để gõ số và ký hiệu" ([ShiftHold]) — mặc định BẬT. Giống iOS. */
     var holdShiftSymbols: Boolean = true,
+    /** Vuốt phím xuống ra ký tự phụ (cùng bảng với giữ phím; tắt khi Gõ vuốt bật) — mặc định TẮT. Giống iOS. */
+    var flickDownAlternates: Boolean = false,
     /** Phím cạnh dấu cách (bàn chữ ô thường; tablet: có / không "," "." hai bên space) — mặc định "," ([SpaceSideKey]). */
     var spaceSideKey: SpaceSideKey = SpaceSideKey.DEFAULT,
     /** "Về bàn chữ sau ký hiệu": Tự động / Luôn / Tắt (mặc định) ([SymbolReturn]). Giống iOS. */
@@ -245,6 +247,7 @@ data class KeyboardSettings(
             s.longPressNumbers = b(Keys.LONG_PRESS_NUMBERS, s.longPressNumbers)
             s.longPressSymbols = b(Keys.LONG_PRESS_SYMBOLS, s.longPressSymbols)
             s.holdShiftSymbols = b(Keys.HOLD_SHIFT_SYMBOLS, s.holdShiftSymbols)
+            s.flickDownAlternates = b(Keys.FLICK_DOWN_ALTERNATES, s.flickDownAlternates)
             s.spaceSideKey = SpaceSideKey.of(get(Keys.SPACE_SIDE_KEY))
             s.symbolReturn = SymbolReturn.of(get(Keys.SYMBOL_RETURN))
             s.largeKeys = b(Keys.LARGE_KEYS, s.largeKeys)

@@ -40,6 +40,8 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
         fun onToggleOneHand()
         /** Nút 📋 (khi lịch sử clipboard bật): mở/đóng bảng lịch sử. */
         fun onToggleClipboard()
+        /** Nút 🎤 (#175, khi máy có bộ nhận giọng nói): chuyển sang gõ giọng nói. */
+        fun onVoiceInput() {}
         /** Nút 😊 ("Nút emoji" = Thanh trên): chạm = bảng emoji. */
         fun onEmojiButton() {}
         fun onBuddyTickle() {}
@@ -113,6 +115,18 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
     /** Nút 📋 lịch sử clipboard (sát phải bar, bar co lại). */
     private var clipButton = false
     private var clipOpen = false
+    /** Nút 🎤 gõ giọng nói (#175) — trái ô 📋, ẩn/hiện cùng 📋 ([tools]). IME đặt theo VoiceInput.available. */
+    private var voiceButton = false
+    fun setVoiceButton(on: Boolean) {
+        if (on == voiceButton) return
+        voiceButton = on
+        lastSet?.let { layoutSlots(it) }
+        layoutPaste()
+        invalidate()
+    }
+    /** Cụm công cụ mép phải (📋 + 🎤): có nút nào không / bề ngang dp. */
+    private fun rightTools() = clipButton || voiceButton
+    private fun rightToolsW() = StripGeometry.rightToolsW(clipButton, voiceButton)
     /** Nút 😊 sát mép phải ("Nút emoji" = Thanh trên) — luôn hiện (cả khi có gợi ý), StripGeometry.EMOJI_W. */
     var emojiButton = false; private set
     /** Công tắc "Nút ẩn bàn phím" (mặc định TẮT) — ⌄ hiện thật theo [dismissShown]. */
@@ -194,7 +208,7 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
     }
 
     /** Bề rộng dành cho nhân vật + 😊 + 📋 ở mép phải. */
-    private fun extraW(): Float = theme.dp(StripGeometry.rightExtraW(CLIP_W, clipButton, tools(), emojiButton, buddyDp,
+    private fun extraW(): Float = theme.dp(StripGeometry.rightExtraW(rightToolsW(), rightTools(), tools(), emojiButton, buddyDp,
         StripGeometry.dismissW(dismissShown())))
 
     /**
@@ -351,7 +365,7 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
         if (shown != toolsBefore) layoutPaste()
         // Trái: ô mẫu câu + icon con trỏ (bảng sửa); phải: 😊 / 📋 / nhân vật sát mép. Có gợi ý ⇒ ẩn con trỏ/📋 (#113).
         val barL = theme.dp(StripGeometry.barLeft(KeyLayout.STRIP_ZONE_W, STRIP_TOOL_W, shown))
-        val barR = theme.dp(StripGeometry.barRight(width / d, CLIP_W, clipButton, shown, emojiButton, buddyDp,
+        val barR = theme.dp(StripGeometry.barRight(width / d, rightToolsW(), rightTools(), shown, emojiButton, buddyDp,
             StripGeometry.dismissW(dismissShown())))
         slotSpanL = barL; slotSpanR = barR
         // Bar chật (máy nhỏ, icon con trỏ/📋/😊 đang hiện) ⇒ bớt ô cho mỗi ô ≥ 44 dp.
@@ -524,6 +538,13 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
             if (clipOpen) c.drawCircle(cx, cy, theme.dp(18f), chipPaint)
             iconPaint.color = theme.withAlpha(theme.barInk, if (clipOpen) 1f else 0.75f)
             ImeIcons.draw(c, ImeIcons.CLIPBOARD, cx, cy, theme.dp(StripGeometry.iconDp(1f, delta = 1f)), iconPaint)
+            x -= theme.dp(CLIP_W)
+        }
+        if (voiceButton && tools()) {
+            val cx = x - theme.dp(StripGeometry.MIC_W) / 2
+            if (pressed == T_MIC) c.drawCircle(cx, cy, theme.dp(18f), chipPaint)
+            iconPaint.color = theme.withAlpha(theme.barInk, 0.75f)
+            ImeIcons.draw(c, ImeIcons.MIC, cx, cy, theme.dp(StripGeometry.ICON_OPEN), iconPaint)
         }
     }
 
@@ -565,7 +586,7 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
             MotionEvent.ACTION_DOWN -> {
                 target = findTarget(e.x, e.y)
                 downX = e.x; downY = e.y
-                if (target == T_SLOT || target == T_EMOJI || target == T_PASTE || target == T_RESTORE || target == T_PILL || target == T_EDIT || target == T_EMOJI_BTN || target == T_DISMISS) {
+                if (target == T_SLOT || target == T_EMOJI || target == T_PASTE || target == T_RESTORE || target == T_PILL || target == T_EDIT || target == T_EMOJI_BTN || target == T_DISMISS || target == T_MIC) {
                     pressed = target; pressedIndex = targetIndex; invalidate()
                 }
                 // chốt từ đang HIỆN dưới ngón tay — gợi ý nền về trước lúc nhấc không được đổi nó
@@ -618,7 +639,9 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
             return T_BUDDY
         val em = if (emojiButton) theme.dp(StripGeometry.EMOJI_W) else 0f
         if (emojiButton && x >= r - bd - em) return T_EMOJI_BTN
-        if (clipButton && tools && x >= r - bd - em - theme.dp(CLIP_W)) return T_CLIP
+        val cw = if (clipButton && tools) theme.dp(CLIP_W) else 0f
+        if (cw > 0f && x >= r - bd - em - cw) return T_CLIP
+        if (voiceButton && tools && x >= r - bd - em - cw - theme.dp(StripGeometry.MIC_W)) return T_MIC
         if (x >= w - extraW()) return T_NONE
         if (swipePreview != null || statusText != null) return T_NONE
         if (restoreOffer) return T_RESTORE
@@ -635,6 +658,7 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
             T_BURGER -> { feedback.click(Feedback.MODIFIER, this); listener?.onToggleTemplates() }
             T_EDIT -> { feedback.click(Feedback.MODIFIER, this); listener?.onToggleEditPanel() }
             T_CLIP -> { feedback.click(Feedback.MODIFIER, this); listener?.onToggleClipboard() }
+            T_MIC -> { feedback.click(Feedback.MODIFIER, this); listener?.onVoiceInput() }
             T_EMOJI_BTN -> { feedback.click(Feedback.MODIFIER, this); listener?.onEmojiButton() }
             T_BUDDY -> { feedback.buddyClick(); listener?.onBuddyTickle() }
             T_DISMISS -> { feedback.click(Feedback.MODIFIER, this); listener?.onDismissKeyboard() }
@@ -686,6 +710,7 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
         private const val T_EMOJI_BTN = 10
         private const val T_BUDDY = 11
         private const val T_DISMISS = 12
+        private const val T_MIC = 13
         /** Bề ngang ô icon con trỏ (sau ô mẫu câu), dp. */
         const val STRIP_TOOL_W = StripGeometry.TOOL_W
         private const val LONG_MS = 450L

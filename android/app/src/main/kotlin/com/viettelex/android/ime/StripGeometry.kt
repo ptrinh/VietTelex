@@ -13,6 +13,15 @@ object StripGeometry {
     /** Bề ngang ô icon con trỏ (sau ô mẫu câu) / ô 📋 (mép phải), dp. */
     const val TOOL_W = 44f
     const val CLIP_W = 40f
+    /** Ô 🎤 gõ giọng nói (trái ô 📋), dp. */
+    const val MIC_W = 40f
+
+    /**
+     * #175: bề ngang cụm công cụ mép phải (dp) = 📋 (lịch sử clipboard bật) + 🎤 (máy có bộ nhận giọng nói, không
+     * phải ô mật khẩu). Cả cụm ẩn/hiện cùng [toolsShown] — truyền vào `clipW` của [rightExtraW] / [barRight] với
+     * `clipButton = clip || voice`.
+     */
+    fun rightToolsW(clip: Boolean, voice: Boolean): Float = (if (clip) CLIP_W else 0f) + (if (voice) MIC_W else 0f)
     /** Ô nút 😊 sát mép phải / ô nhân vật ("Nút emoji" = Thanh trên), dp. */
     const val EMOJI_W = 40f
     /** Icon thanh công cụ (☰ mẫu câu, con trỏ, 😊, 📋), dp. */

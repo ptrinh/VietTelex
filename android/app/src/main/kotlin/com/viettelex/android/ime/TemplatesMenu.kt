@@ -35,6 +35,23 @@ object TemplatesMenu {
 
     enum class Tab { TEMPLATES, TOOLS }
 
+    /** id nút nhanh đầu bảng ☰ (#175): lịch sử clipboard, gõ giọng nói. */
+    const val QUICK_CLIPBOARD = "quickClipboard"
+    const val QUICK_VOICE = "quickVoice"
+
+    /**
+     * #175: thanh gợi ý có chữ thì ẩn 📋 / 🎤 (#113) ⇒ đang gõ dở không còn lối mở. Đầu bảng ☰ luôn có hai nút
+     * này (theo thứ tự) khi tính năng tương ứng dùng được: [clip] = lịch sử clipboard bật, [voice] = máy có bộ
+     * nhận giọng nói và không phải ô mật khẩu.
+     */
+    fun quick(clip: Boolean, voice: Boolean): List<String> = buildList {
+        if (clip) add(QUICK_CLIPBOARD)
+        if (voice) add(QUICK_VOICE)
+    }
+
+    /** Nhãn nút nhanh (đầu bảng không có thanh chọn ⇒ nút giãn, hiện icon + nhãn). */
+    fun quickLabel(id: String): String = if (id == QUICK_VOICE) tr("Giọng nói") else tr("Clipboard")
+
     /**
      * Nội dung bảng: [tab] đang hiện; [segmented] = có thanh chọn [Mẫu câu | Công cụ] ở đầu;
      * [tools] = ô công cụ (nhãn, id) khi [tab] = TOOLS; [gear] = có nút ⚙️ (quản lý mẫu câu).

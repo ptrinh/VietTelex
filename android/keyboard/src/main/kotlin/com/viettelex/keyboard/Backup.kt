@@ -96,6 +96,7 @@ object BackupSettings {
         Spec(Keys.LONG_PRESS_NUMBERS, SettingKind.Bool(true)),
         Spec(Keys.LONG_PRESS_SYMBOLS, SettingKind.Bool(false)),
         Spec(Keys.HOLD_SHIFT_SYMBOLS, SettingKind.Bool(true)),
+        Spec(Keys.FLICK_DOWN_ALTERNATES, SettingKind.Bool(false)),
         Spec(Keys.AUTO_SPACE_AFTER_PUNCT, SettingKind.Bool(false)),
         Spec(Keys.KEYBOARD_TRANSPARENCY, SettingKind.IntRange(0, 0..100)),
         Spec(Keys.KEY_LABEL_TRANSPARENCY, SettingKind.IntRange(0, 0..100)),

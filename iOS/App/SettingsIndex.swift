@@ -167,6 +167,7 @@ enum SettingsIndex {
             E(viTitle: LK("Giữ phím ra ký tự đặc biệt"), keywords: "ký hiệu symbol @ # giữ lâu", location: .page(.phim)),
             E(viTitle: LK("Giữ phím hàng trên để ra số"), keywords: "số giữ lâu number", location: .page(.phim), condition: .phoneOnly),
             E(viTitle: LK("Giữ Shift để gõ số và ký hiệu"), keywords: "shift giữ hold số number ký hiệu symbol 123", location: .page(.phim), condition: .phoneOnly),
+            E(viTitle: LK("Vuốt phím xuống để gõ số và ký hiệu"), keywords: "vuốt xuống swipe flick down số number ký hiệu symbol 123", location: .page(.phim), condition: .phoneOnly),
             E(viTitle: LK("Chế độ một tay"), keywords: "one hand một tay", location: .page(.phim), condition: .phoneOnly),
             E(viTitle: LK("Độ nhạy con trỏ"), keywords: "trackpad con trỏ cursor phím cách space kéo tốc độ nhạy sensitivity speed", location: .page(.phim)),
             E(viTitle: LK("Vuốt phím để sao chép/dán"), keywords: "copy paste cut sao chép dán cắt clipboard vuốt lên swipe", location: .page(.phim)),
@@ -290,6 +291,7 @@ enum SettingCaption {
     static let emojiKeyPlacement = LK("Thanh trên: nút emoji lên thanh gợi ý, phím cách rộng hơn.")
     static let longPressNumbers = LK("Giữ q … p để gõ 1 … 0 (số nhỏ ở góc phím).")
     static let longPressSymbols = LK("Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …")
+    static let flickDownAlternates = LK("Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6. Tắt khi bật Gõ vuốt.")
     static let holdShiftSymbols = LK("Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.")
     static let autoSpaceAfterPunct = LK("Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).")
     static let symbolReturn = LK("Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu.")
@@ -349,7 +351,7 @@ enum SettingCaption {
         filterSensitive, swipeTyping, swipeFooterIos, swipeEnglish, swipeFuto, swipePractice,
         shortcuts, systemTextReplacement, templates, textTools, translate, numberRow,
         numberRowFullHeight, spaceSideKey, largeKeys, emojiKeyPlacement, longPressNumbers, longPressSymbols,
-        holdShiftSymbols, autoSpaceAfterPunct, symbolReturn, trackpadSpeed, swipeKeyCommandsIos, oneHandIos, gesturesFooterIos,
+        holdShiftSymbols, flickDownAlternates, autoSpaceAfterPunct, symbolReturn, trackpadSpeed, swipeKeyCommandsIos, oneHandIos, gesturesFooterIos,
         keyPreview, keyPressHighlight, hapticFeedback, keySound, plusThemes, systemBackdrop,
         moleGame, spotlightPhoto, wallpaper, transparency, rowHeightIos, keyboardRaise, suggestionBarHeight,
         suggestionInk, spaceLogo, splitKeyboardIos, resetAppearance, advancedStyle, fontScaleIos,

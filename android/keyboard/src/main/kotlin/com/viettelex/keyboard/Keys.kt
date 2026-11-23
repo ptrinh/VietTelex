@@ -156,6 +156,7 @@ object Keys {
     const val LONG_PRESS_SYMBOLS = "longPressSymbols"
     /** Bool — giữ ⇧ + phím chữ ra ký tự phụ (số / ký hiệu), mặc định BẬT — [ShiftHold]. */
     const val HOLD_SHIFT_SYMBOLS = "holdShiftSymbols"
+    const val FLICK_DOWN_ALTERNATES = "flickDownAlternates"
     /** String "comma" | "period" | "both" | "off" — phím cạnh dấu cách bàn chữ điện thoại ([SpaceSideKey]), mặc định "comma". */
     const val SPACE_SIDE_KEY = "spaceSideKey"
     /** String "auto" | "always" | "off" — về bàn chữ sau ký hiệu ở plane ?123 ([SymbolReturn]), mặc định "off" (từ 10/11/2026). */

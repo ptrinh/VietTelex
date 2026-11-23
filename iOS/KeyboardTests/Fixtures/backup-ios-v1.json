@@ -38,6 +38,7 @@
     "emojiSuggest" : true,
     "englishByFrequency" : false,
     "filterSensitive" : true,
+    "flickDownAlternates" : false,
     "freeMarking" : true,
     "hapticFeedback" : true,
     "holdShiftSymbols" : true,

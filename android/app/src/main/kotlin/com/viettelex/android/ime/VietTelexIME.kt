@@ -170,7 +170,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
             val t = v.probe()
             handler.post {
                 v.apply(t)
-                if (inputShown) keyboard?.setVoiceAvailable(v.available && !field.isSecure)
+                if (inputShown) applyVoiceAvailable()
             }
         }
     }
@@ -261,7 +261,8 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         else if (key == Keys.SWIPE_FUTO) { futoSetting = settings().swipeFuto; updateSwipeTyping() }
         else if (key == Keys.SMART_TOUCH) { smartTouchSetting = settings().smartTouch; warmSmartTouch() }
         else if (key == Keys.HARDWARE_TELEX) hwSetting = settings().hardwareTelex
-        else if (key == Keys.LONG_PRESS_NUMBERS || key == Keys.LONG_PRESS_SYMBOLS || key == Keys.HOLD_SHIFT_SYMBOLS) updateAlternates()
+        else if (key == Keys.LONG_PRESS_NUMBERS || key == Keys.LONG_PRESS_SYMBOLS || key == Keys.HOLD_SHIFT_SYMBOLS ||
+            key == Keys.FLICK_DOWN_ALTERNATES) updateAlternates()
         // Bật/tắt kiểu gõ trong app khi bàn phím đang mở (ô Thử gõ) → áp ngay, không đợi mở lại.
         else if (key in Keys.ENGINE_KEYS) session.bridge.applySettings(settings())
         // Tắt lịch sử clipboard trong app: bỏ bản RAM (app đã xoá file). Đổi "Giữ lịch sử" ⇒
@@ -878,6 +879,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         applyFloating(settings.floatingKeyboard, settings)
         kb.setEditHasSelection(info.initialSelStart >= 0 && info.initialSelStart != info.initialSelEnd)
         st.setExtras(clipButton = settings.clipboardHistory, open = false)
+        kb.clipAvailable = settings.clipboardHistory
         ImeTrace.begin("VT.startInput.kbConfigure")
         configuringKb = true
         try { kb.configure(field.returnLabel, field.kind, needsGlobe(), settings.showSpaceLogo,
@@ -914,7 +916,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         // Dò IME giọng nói = 1 + N binder (enabledInputMethodList + subtype từng IME): KHÔNG trước khung đầu —
         // khung đầu dùng kết quả lần trước, dò lại trên worker sau khung đầu ([firstBarFrame] → [probeVoice]).
         if (!restarting || !voiceChecked) { voiceProbePending = true; voiceChecked = true }
-        kb.setVoiceAvailable(voice.available && !field.isSecure)
+        applyVoiceAvailable()
         updateSwipeTyping()
         ImeTrace.end()
         root?.refreshInsets()
@@ -1443,6 +1445,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         val m = KeyAlternates.map(st.longPressNumbers, st.longPressSymbols, st.numberRow,
             accessibility = accessibility?.isTouchExplorationEnabled == true)
         keyboard?.setAlternates(m)
+        keyboard?.flickDownSetting = st.flickDownAlternates
         keyboard?.setShiftAlternates(KeyAlternates.shiftMap(st.holdShiftSymbols, st.longPressNumbers, st.longPressSymbols,
             st.numberRow, accessibility = accessibility?.isTouchExplorationEnabled == true))
         keyboard?.popoversEnabled = accessibility?.isTouchExplorationEnabled != true
@@ -1749,7 +1752,14 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
     }
 
     override fun onVoiceInput() {
-        if (!voice.launch()) { voice.refresh(); keyboard?.setVoiceAvailable(voice.available && !field.isSecure) }
+        if (!voice.launch()) { voice.refresh(); applyVoiceAvailable() }
+    }
+
+    /** Có bộ nhận giọng nói + không phải ô mật khẩu ⇒ 🎤 ở menu giữ 😊, thanh gợi ý và đầu bảng ☰ (#175). */
+    private fun applyVoiceAvailable() {
+        val on = voice.available && !field.isSecure
+        keyboard?.setVoiceAvailable(on)
+        strip?.setVoiceButton(on)
     }
 
     /** "." "," ":" ở plane ?123: ngay sau chữ số thì ở lại ("2.5"). Shadow tin được ⇒ không IPC. */
@@ -1865,6 +1875,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
             clipLoadGen++   // lượt đọc nền còn chờ: bỏ
             if (session.clipHistory != null || clipFile.exists()) { session.clipHistory = null; clipFile.delete() }
             strip?.setExtras(clipButton = false, open = false)
+            keyboard?.clipAvailable = false
             closeClipboardPane()
             return
         }
@@ -1949,6 +1960,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         if (p.visibility != View.VISIBLE) return
         p.visibility = View.GONE
         strip?.setExtras(clipButton = session.clipHistory != null, open = false)
+        keyboard?.clipAvailable = session.clipHistory != null
     }
 
     override fun onClipPick(text: String) {

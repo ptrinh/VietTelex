@@ -219,7 +219,7 @@ enum TouchLogFormat {
                 + " tools=\(b(s.textToolsEnabled)) ai=\(b(s.aiProofread))",
             "input: swipe=\(b(s.swipeTyping)) swipeEn=\(b(s.swipeEnglish)) futo=\(b(s.swipeFuto))"
                 + " smartTouch=\(b(s.smartTouch)) spaceLang=\(b(s.spaceSwipeLanguage)) keyCmds=\(b(s.swipeKeyCommands))"
-                + " trackpad=\(s.trackpadSpeed.rawValue) holdShift=\(b(s.holdShiftSymbols))"
+                + " trackpad=\(s.trackpadSpeed.rawValue) holdShift=\(b(s.holdShiftSymbols)) flickDown=\(b(s.flickDownAlternates))"
                 + " lpNumbers=\(b(s.longPressNumbers)) lpSymbols=\(b(s.longPressSymbols))",
             "ui: theme=\(a.theme) effect=\(a.effect) wallpaper=\(b(a.wallpaper)) buddy=\(a.buddy) oneHand=\(a.oneHand)"
                 + " haptic=\(b(s.hapticFeedback)):\(s.hapticStrength) sound=\(b(s.keySound)):\(s.keySoundStyle):\(s.keySoundVolume)",

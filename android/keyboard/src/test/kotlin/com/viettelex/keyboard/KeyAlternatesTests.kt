@@ -170,4 +170,23 @@ class KeyAlternatesTests {
         s2.handle(Key.Text("1", replacesLetter = true), p2)
         assertEquals("xin 1", p2.text)
     }
+
+    // "Vuốt phím xuống ra ký tự phụ" (mặc định TẮT) — cùng số liệu với iOS KeyAlternatesTests.
+    @Test fun flickDownGate() {
+        val alts = KeyAlternates.map(numbers = true, symbols = false, numberRow = false)
+        assertTrue(KeyAlternates.flickDownEnabled(true, swipeTyping = false, alternates = alts))
+        assertFalse(KeyAlternates.flickDownEnabled(false, swipeTyping = false, alternates = alts))
+        assertFalse("Gõ vuốt bật ⇒ kéo xuống là đầu nét vuốt",
+            KeyAlternates.flickDownEnabled(true, swipeTyping = true, alternates = alts))
+        assertFalse(KeyAlternates.flickDownEnabled(true, swipeTyping = false, alternates = emptyMap()))
+        assertFalse(KeyboardSettings().flickDownAlternates)
+    }
+
+    @Test fun flickDownShape() {
+        assertTrue(KeyAlternates.isFlickDown(0f, 24f))
+        assertTrue(KeyAlternates.isFlickDown(-12f, 30f))
+        assertFalse("ngón trôi lúc gõ nhanh", KeyAlternates.isFlickDown(0f, 23f))
+        assertFalse("kéo chéo sang phím hàng dưới", KeyAlternates.isFlickDown(20f, 30f))
+        assertFalse("vuốt lên là lệnh", KeyAlternates.isFlickDown(0f, -40f))
+    }
 }

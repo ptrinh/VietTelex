@@ -638,6 +638,7 @@ struct PhimPage: View {
     @AppStorage("longPressSymbols", store: featureDefaults) private var longPressSymbols = false
     /// Giữ ⇧ + phím chữ ra ký tự phụ (ShiftHold) — mặc định BẬT.
     @AppStorage("holdShiftSymbols", store: featureDefaults) private var holdShiftSymbols = true
+    @AppStorage("flickDownAlternates", store: featureDefaults) private var flickDownAlternates = false
     // "Vuốt phím cách đổi Tiếng Việt / Tiếng Anh" chuyển sang nhóm "Gõ lẫn tiếng Anh" (tab Kiểu Gõ).
     /// Vuốt phím C / X / V lên ra lệnh sao chép / cắt / dán — mặc định TẮT (KeyCommandGesture).
     @AppStorage("swipeKeyCommands", store: featureDefaults) private var swipeKeyCommands = false
@@ -703,6 +704,9 @@ struct PhimPage: View {
                     }
                     settingToggle(L("Giữ phím hàng 2, 3 để ra ký tự đặc biệt"), L(SettingCaption.longPressSymbols), isOn: $longPressSymbols)
                     settingToggle(L("Giữ Shift để gõ số và ký hiệu"), L(SettingCaption.holdShiftSymbols), isOn: $holdShiftSymbols)
+                    if UIDevice.current.userInterfaceIdiom != .pad {
+                        settingToggle(L("Vuốt phím xuống để gõ số và ký hiệu"), L(SettingCaption.flickDownAlternates), isOn: $flickDownAlternates)
+                    }
                 }
                 settingToggle(L("Tự thêm dấu cách sau dấu câu"), L(SettingCaption.autoSpaceAfterPunct), isOn: $autoSpaceAfterPunct)
                 VStack(alignment: .leading, spacing: 6) {

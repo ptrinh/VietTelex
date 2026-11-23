@@ -134,6 +134,8 @@ struct KeyboardSettings {
     var longPressNumbers = true
     /// Giữ a–l, z–m ra ký hiệu — mặc định TẮT. KeyAlternates.
     var longPressSymbols = false
+    /// Vuốt phím xuống ra ký tự phụ (cùng bảng với giữ phím; tắt khi Gõ vuốt bật) — mặc định TẮT.
+    var flickDownAlternates = false
     /// "Giữ Shift để gõ số và ký hiệu" (ShiftHold) — mặc định BẬT. Giống Android.
     var holdShiftSymbols = true
 
@@ -187,7 +189,7 @@ struct KeyboardSettings {
             ("emojiSuggest", \.emojiSuggest), ("pasteButton", \.pasteButton),
             ("autoCapitalize", \.autoCapitalize), ("spaceSwipeLanguage", \.spaceSwipeLanguage),
             ("longPressNumbers", \.longPressNumbers), ("longPressSymbols", \.longPressSymbols),
-            ("holdShiftSymbols", \.holdShiftSymbols),
+            ("holdShiftSymbols", \.holdShiftSymbols), ("flickDownAlternates", \.flickDownAlternates),
             ("autoCorrect", \.autoCorrect), ("autoSpaceAfterPunct", \.autoSpaceAfterPunct),
             ("swipeKeyCommands", \.swipeKeyCommands)]
         for (k, kp) in flags where d.object(forKey: k) != nil { s[keyPath: kp] = d.bool(forKey: k) }

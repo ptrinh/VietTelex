@@ -104,6 +104,8 @@ class KeyboardView(
         fun onGlobe(longPress: Boolean)
         /** Gõ giọng nói: mục 🎤 menu giữ 😊 (TalkBack: giữ lâu ","), chỉ khi [setVoiceAvailable]. */
         fun onVoiceInput()
+        /** Nút 📋 đầu bảng ☰ (#175): mở lịch sử clipboard (IME tự đóng bảng ☰). */
+        fun onToggleClipboard() {}
         /** Mục ✋ menu giữ 😊: bật/tắt một tay (IME nhớ bên cũ). */
         fun onToggleOneHand()
         /** Mục 🪟 menu giữ 😊: bật/tắt bàn phím thả nổi (#112). */
@@ -211,6 +213,11 @@ class KeyboardView(
     /** "Giữ Shift để gõ số và ký hiệu" ([ShiftHold], [KeyAlternates.shiftMap]) — rỗng khi tắt. */
     private var shiftAlts: Map<Char, String> = emptyMap()
     fun setShiftAlternates(map: Map<Char, String>) { shiftAlts = map }
+    /** "Vuốt phím xuống ra ký tự phụ" ([KeyAlternates.flickDownEnabled]) — IME đặt theo cài đặt. */
+    var flickDownSetting = false
+    private var flickPid = -1
+    private var flickX0 = 0f
+    private var flickY0 = 0f
     private var altHold: KeyAlternates.Hold? = null
     private var altPid = -1
     private var altKey: LaidKey? = null
@@ -287,7 +294,11 @@ class KeyboardView(
         val p = TemplatesMenu.pane(textToolsMode, templatesEnabled, textToolsEnabled, translateEnabled)
         templatesPane.setItems(if (p.showTemplates) templates() else emptyList())
         templatesPane.setExtras(p.tools, gear = p.gear, segmented = p.segmented, toolsTab = p.tab == TemplatesMenu.Tab.TOOLS)
+        templatesPane.setQuick(TemplatesMenu.quick(clipAvailable, voiceAvailable))
     }
+    /** Lịch sử clipboard đang bật ⇒ bảng ☰ có nút 📋 (#175). IME đặt cùng nút 📋 của thanh gợi ý. */
+    var clipAvailable = false
+        set(v) { if (field != v) { field = v; refreshTemplatesPane() } }
     var keyAreaPx = theme.dp(218f); private set
 
     private var keys: List<LaidKey> = emptyList()
@@ -531,6 +542,7 @@ class KeyboardView(
     fun setVoiceAvailable(on: Boolean) {
         if (on == voiceAvailable) return
         voiceAvailable = on
+        refreshTemplatesPane()
         keys.firstOrNull { it.kind == KeyKind.PUNCT && it.label == "," }?.let { invalidateKey(it) }
     }
     // Popup bật (không TalkBack): giữ "," = popup dấu câu (CommaPopup); hai hành vi cũ dưới chỉ còn cho TalkBack.
@@ -1987,10 +1999,20 @@ class KeyboardView(
                 // chữ chờ nhấc (vuốt-ra-lệnh khi có vùng chọn / chạm ở dải mép); thường là no-op.
                 // Chạm mép bị huỷ (vuốt Quay lại) ⇒ bỏ chữ + ký tự phụ, trả Shift một-lần.
                 val kept = EdgeTouch.settle(commits, k, edge, cancelled)
+                var alt: String? = null
                 if (pid == altPid) {
-                    val alt = altHold?.commit
+                    alt = altHold?.commit
                     dropAlt()
                     if (alt != null && kept) commitAlt(alt, k)   // cancel ngoài mép vẫn chốt như chữ thường
+                }
+                // "Vuốt phím xuống ra ký tự phụ": chưa thành giữ, nhấc ở dưới điểm chạm ⇒ cùng đường thay chữ.
+                if (pid == flickPid) {
+                    flickPid = -1
+                    if (alt == null && kept && !cancelled &&
+                        KeyAlternates.flickDownEnabled(flickDownSetting, swipeTyping, alts) &&
+                        KeyAlternates.isFlickDown((x - flickX0) / d, (y - flickY0) / d)) {
+                        alts[k.label[0]]?.let { commitAlt(it, k) }
+                    }
                 }
                 if (!kept && ptrEdgeShiftOn[pid] && shift == Shift.OFF) { shift = Shift.ON; invalidate() }
             }
@@ -2386,6 +2408,7 @@ class KeyboardView(
         val alt = alts[k.label[0]] ?: return
         altHold = KeyAlternates.Hold(alt, x / d, y / d)
         altPid = pid; altKey = k; altShiftWas = shiftWas
+        flickPid = pid; flickX0 = x; flickY0 = y
         removeCallbacks(altRun)
         postDelayed(altRun, KeyAlternates.HOLD_MS)
     }
@@ -2705,6 +2728,11 @@ class KeyboardView(
                 textToolsMode = id == TOOLS_ENTRY
                 templatesPane.resetScroll()
                 refreshTemplatesPane()
+            }
+            TemplatesMenu.QUICK_CLIPBOARD -> listener?.onToggleClipboard()
+            TemplatesMenu.QUICK_VOICE -> {
+                setPlane(Plane.LETTERS)
+                listener?.onVoiceInput()
             }
             TOOLS_TRANSLATE -> {
                 setPlane(Plane.LETTERS)

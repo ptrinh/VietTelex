@@ -23,7 +23,7 @@ class TemplatesPane(
     private val feedback: Feedback,
 ) {
     /** [extraId] != null: ô công cụ / đoạn thanh chọn — chạm gửi id qua [KeyboardView.paneExtra]. */
-    private class Chip(val item: TemplateItem?, val shown: String, val extraId: String? = null) {
+    private class Chip(val item: TemplateItem?, val shown: String, val extraId: String? = null, val icon: Int = -1) {
         var l = 0f; var t = 0f; var r = 0f; var b = 0f
     }
 
@@ -34,6 +34,8 @@ class TemplatesPane(
     private var showGear = true
     private var segmented = false
     private var toolsTab = false
+    /** Nút nhanh đầu bảng (#175): id [TemplatesMenu.quick]. */
+    private var quick: List<String> = emptyList()
     private var chips: List<Chip> = emptyList()
     /** Thanh chọn + ⚙️ (không cuộn). */
     private var header: List<Chip> = emptyList()
@@ -53,6 +55,7 @@ class TemplatesPane(
     private val segOff = theme.centerOffset(segPaint)
     private val chipPaint = theme.fill(theme.keyFill)
     private val selPaint = theme.fill(theme.chip)
+    private val iconPaint = theme.fill(theme.ink)
 
     private var ptr = -1
     private var dragging = false
@@ -74,6 +77,12 @@ class TemplatesPane(
         width = 0f
     }
 
+    fun setQuick(list: List<String>) {
+        if (list == quick) return
+        quick = list
+        width = 0f
+    }
+
     fun resetScroll() { scrollY = 0f; scroller.forceFinished(true) }
 
     fun contains(x: Float, y: Float) = y < bottom
@@ -87,26 +96,42 @@ class TemplatesPane(
         val gap = 6 * d
         val left = 6 * d; val right = w - 6 * d
         // Đầu bảng: [Mẫu câu | Công cụ] giãn hết, ⚙️ vuông bên phải (cùng cao ô lưới).
-        val head = ArrayList<Chip>(3)
-        if (segmented) {
+        // #175: nút nhanh 📋 / 🎤 — có thanh chọn ⇒ ô vuông giữa thanh chọn và ⚙️; không ⇒ giãn đều cả hàng, kèm nhãn.
+        val head = ArrayList<Chip>(5)
+        val hasHeader = segmented || quick.isNotEmpty()
+        if (hasHeader) {
             val top = 8 * d
-            val gearW = if (showGear) chipH * 1.4f else 0f
-            val segR = if (showGear) right - gap - gearW else right
-            val segs = TemplatesMenu.segments()
-            val segW = (segR - left) / segs.size
-            for ((i, sg) in segs.withIndex()) {
-                head += Chip(null, sg.first, sg.second).apply {
-                    l = left + i * segW; r = l + segW; t = top; b = top + chipH
+            val sq = chipH * 1.4f
+            val headGear = showGear && (segmented || extras.isEmpty())
+            var x = right
+            if (headGear) { head += Chip(null, "⚙️").apply { l = x - sq; r = x; t = top; b = top + chipH }; x -= sq + gap }
+            if (segmented) {
+                for (id in quick.asReversed()) {
+                    head += Chip(null, "", id, quickIcon(id)).apply { l = x - sq; r = x; t = top; b = top + chipH }
+                    x -= sq + gap
+                }
+                val segs = TemplatesMenu.segments()
+                val segW = (x + gap - left) / segs.size
+                for ((i, sg) in segs.withIndex()) {
+                    head += Chip(null, sg.first, sg.second).apply {
+                        l = left + i * segW; r = l + segW; t = top; b = top + chipH
+                    }
+                }
+            } else {
+                val each = (x + gap - left - gap * quick.size) / quick.size
+                for ((i, id) in quick.withIndex()) {
+                    head += Chip(null, fit(TemplatesMenu.quickLabel(id), each - 2 * padH - 26 * d), id, quickIcon(id)).apply {
+                        l = left + i * (each + gap); r = l + each; t = top; b = top + chipH
+                    }
                 }
             }
-            if (showGear) head += Chip(null, "⚙️").apply { l = right - gearW; r = right; t = top; b = top + chipH }
             headerH = top + chipH
         } else headerH = 0f
         header = head
         // Lưới: công cụ (giãn hàng cuối) hoặc mẫu câu (+ ⚙️ cuối khi không có thanh chọn).
         val list = ArrayList<Chip>(extras.size + items.size + 1)
         val tools = extras.isNotEmpty()
-        val gearCell = !segmented && showGear && !tools
+        val gearCell = !hasHeader && showGear && !tools
         val n = if (tools) extras.size else items.size + if (gearCell) 1 else 0
         val wDp = w / d
         val cols = if (tools) TemplatesMenu.toolCols(wDp) else TemplatesMenu.snippetCols(wDp)
@@ -129,6 +154,8 @@ class TemplatesPane(
         scrollY = scrollY.coerceIn(0f, maxScroll())
     }
 
+    private fun quickIcon(id: String) = if (id == TemplatesMenu.QUICK_VOICE) ImeIcons.MIC else ImeIcons.CLIPBOARD
+
     private fun fit(s: String, maxW: Float): String =
         TextUtils.ellipsize(s, textPaint, maxOf(maxW, 0f), TextUtils.TruncateAt.END).toString()
 
@@ -138,7 +165,7 @@ class TemplatesPane(
         val rad = 8 * d
         // Đầu bảng đứng yên: nền chung một khối, đoạn đang chọn sáng màu chip.
         if (header.isNotEmpty()) {
-            val segs = header.filter { it.extraId != null }
+            val segs = header.filter { it.extraId != null && it.icon < 0 }
             if (segs.isNotEmpty()) {
                 c.drawRoundRect(segs.first().l, segs.first().t, segs.last().r, segs.last().b, rad, rad, chipPaint)
                 for (s in segs) {
@@ -151,6 +178,21 @@ class TemplatesPane(
             header.firstOrNull { it.extraId == null }?.let { g ->
                 c.drawRoundRect(g.l, g.t, g.r, g.b, rad, rad, chipPaint)
                 c.drawText(g.shown, (g.l + g.r) / 2, (g.t + g.b) / 2 + textOff, textPaint)
+            }
+            for (q in header) {
+                if (q.icon < 0) continue
+                c.drawRoundRect(q.l, q.t, q.r, q.b, rad, rad, chipPaint)
+                val cy = (q.t + q.b) / 2; val ic = 20 * d
+                iconPaint.color = textPaint.color
+                if (q.shown.isEmpty()) ImeIcons.draw(c, q.icon, (q.l + q.r) / 2, cy, ic, iconPaint)
+                else {
+                    // icon + nhãn canh giữa ô như một khối
+                    val tw = segPaint.measureText(q.shown); val sp = 6 * d
+                    val x0 = (q.l + q.r) / 2 - (ic + sp + tw) / 2
+                    ImeIcons.draw(c, q.icon, x0 + ic / 2, cy, ic, iconPaint)
+                    segPaint.alpha = 255
+                    c.drawText(q.shown, x0 + ic + sp + tw / 2, cy + segOff, segPaint)
+                }
             }
         }
         c.save()

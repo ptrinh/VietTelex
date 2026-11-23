@@ -1027,6 +1027,8 @@ enum L10n {
         "Dấu phẩy, dấu chấm cạnh phím cách rộng hơn, đỡ chạm nhầm phím cách.": "Wider comma and period by the space bar, so you hit space by mistake less.",
         "Thanh trên: nút emoji lên thanh gợi ý, phím cách rộng hơn.": "Top bar: the emoji button moves to the suggestion bar; wider space bar.",
         "Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …": "Hold a … l, z … m for @ # $ _ & - + ( ) …",
+        "Vuốt phím xuống để gõ số và ký hiệu": "Swipe down on a key for numbers and symbols",
+        "Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6. Tắt khi bật Gõ vuốt.": "Swipe straight down on a key for its corner character: y → 6. Off while Swipe typing is on.",
         "Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.": "Hold ⇧ and tap a letter for the character in its corner: q w e → 1 2 3.",
         "Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).": "Adds a space after . , ? ! ; : (not in numbers, emails or links).",
         "Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu.": "Auto: after , ? ! ; & $ @ and quotes; . : ) stay. Always: after any symbol.",

@@ -184,6 +184,57 @@ final class KeyAlternatesTests: XCTestCase {
         withExtendedLifetime(host) {}
     }
 
+    // MARK: Vuốt phím xuống ra ký tự phụ (iPhone, mặc định TẮT)
+
+    func testFlickDownGate() {
+        let alts = KeyAlternates.map(numbers: true, symbols: false, numberRow: false)
+        XCTAssertTrue(KeyAlternates.flickDownEnabled(setting: true, swipeTyping: false, isPad: false, alternates: alts))
+        XCTAssertFalse(KeyAlternates.flickDownEnabled(setting: false, swipeTyping: false, isPad: false, alternates: alts))
+        XCTAssertFalse(KeyAlternates.flickDownEnabled(setting: true, swipeTyping: true, isPad: false, alternates: alts),
+                       "Gõ vuốt bật ⇒ kéo xuống là đầu nét vuốt")
+        XCTAssertFalse(KeyAlternates.flickDownEnabled(setting: true, swipeTyping: false, isPad: true, alternates: alts))
+        XCTAssertFalse(KeyAlternates.flickDownEnabled(setting: true, swipeTyping: false, isPad: false, alternates: [:]))
+    }
+
+    func testFlickDownShape() {
+        XCTAssertTrue(KeyAlternates.isFlickDown(dx: 0, dy: 24))
+        XCTAssertTrue(KeyAlternates.isFlickDown(dx: -12, dy: 30))
+        XCTAssertFalse(KeyAlternates.isFlickDown(dx: 0, dy: 23), "ngón trôi lúc gõ nhanh")
+        XCTAssertFalse(KeyAlternates.isFlickDown(dx: 20, dy: 30), "kéo chéo sang phím hàng dưới")
+        XCTAssertFalse(KeyAlternates.isFlickDown(dx: 0, dy: -40), "vuốt lên là lệnh, không phải ký tự phụ")
+    }
+
+    @MainActor func testFlickDownReplacesLetterWithAlternate() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad, "iPad có vuốt xuống riêng")
+        var out: [String] = []
+        let (kb, host) = makeKeyboard(numbers: true, symbols: true) { out.append($0) }
+        kb.debugFlickDown("y", dy: 30)                          // công tắc tắt (mặc định)
+        XCTAssertEqual(out, ["Ly"])
+        kb.configureKeyAlternates(numbers: true, symbols: true, flickDown: true)
+        out = []
+        kb.debugFlickDown("y", dy: 30)
+        XCTAssertEqual(out, ["Ly", "R6"])
+        out = []
+        kb.debugFlickDown("m", dy: 26)
+        XCTAssertEqual(out, ["Lm", "R?"])
+        out = []
+        kb.debugFlickDown("y", dy: 12)                          // trôi nhẹ ⇒ vẫn là chữ
+        XCTAssertEqual(out, ["Ly"])
+        out = []
+        kb.debugFlickDown("y", dx: 22, dy: 30)                  // kéo chéo ⇒ vẫn là chữ
+        XCTAssertEqual(out, ["Ly"])
+        out = []
+        kb.configureKeyAlternates(numbers: true, symbols: false, flickDown: true)
+        kb.layoutIfNeeded()
+        kb.debugFlickDown("m", dy: 30)                          // phím không có ký tự phụ đang bật
+        XCTAssertEqual(out, ["Lm"])
+        out = []
+        kb.swipeEnabled = true                                  // Gõ vuốt bật ⇒ cử chỉ tắt
+        kb.debugFlickDown("y", dy: 30)
+        XCTAssertFalse(out.contains("R6"), "\(out)")
+        withExtendedLifetime(host) {}
+    }
+
     /// Đã bắn mà ngón khác chạm: ký tự phụ chốt TRƯỚC phím mới (checkpoint đúng phím).
     @MainActor func testSecondTouchAfterFireCommitsAlternateFirst() throws {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)

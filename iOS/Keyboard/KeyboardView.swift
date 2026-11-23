@@ -754,8 +754,9 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         return KeyAlternates.map(numbers: altNumbersSetting, symbols: altSymbolsSetting,
                           numberRow: numberRowEnabled, isPad: Self.isPad, accessibility: altAccessibility)
     }
-    func configureKeyAlternates(numbers: Bool, symbols: Bool, holdShift: Bool = true) {
+    func configureKeyAlternates(numbers: Bool, symbols: Bool, holdShift: Bool = true, flickDown: Bool = false) {
         holdShiftSetting = holdShift
+        flickDownSetting = flickDown
         shiftAlts = currentShiftAlts()
         guard numbers != altNumbersSetting || symbols != altSymbolsSetting else { return }
         altNumbersSetting = numbers; altSymbolsSetting = symbols
@@ -824,6 +825,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
     /// Có phím nào ra ký tự phụ không — controller bật checkpoint huỷ phím chữ theo cờ này.
     var altHoldActive: Bool { !currentAlts().isEmpty }
+    /// "Vuốt phím xuống ra ký tự phụ" (iPhone) — KeyAlternates.flickDownEnabled.
+    private var flickDownSetting = false
+    private var flickDownActive: Bool {
+        flickDownSetting && KeyAlternates.flickDownEnabled(setting: true, swipeTyping: swipeEnabled,
+                                                           isPad: Self.isPad, alternates: activeAlts)
+    }
     private var altHold: (id: ObjectIdentifier, button: KeyButton, hold: KeyAlternates.Hold)?
     private var altTimer: DispatchWorkItem?
 
@@ -7246,7 +7253,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         }
         if keyCmd != nil { cancelKeyCommand() }  // ngón thứ hai ⇒ không còn là cử chỉ lệnh
         routedTouches[id] = b
-        if Self.isPad { routedStart[id] = raw }
+        if Self.isPad || flickDownActive { routedStart[id] = raw }
         let since = lastLetterDownTime.map { time - $0 }
         lastLetterDownTime = time
         if let sym = shiftSym {                  // không vuốt / lệnh / giữ ký tự phụ cho chạm này
@@ -7643,7 +7650,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         if let start, KeyLayout.isPadFlick(dx: raw.x - start.x, dy: raw.y - start.y,
                                            threshold: Self.flickDistance),
            let base = letterKeys.first(where: { $0.button === b })?.base,
-           let sec = Self.padSecondary[base] {
+           Self.isPad, let sec = Self.padSecondary[base] {
+            if shiftBeforeLastLetter == .on, shift == .off { shift = .on; applyShiftAppearance() }
+            tapped(.replaceLastLetter(sec))
+        } else if !Self.isPad, let start, flickDownActive,
+                  KeyAlternates.isFlickDown(dx: raw.x - start.x, dy: raw.y - start.y),
+                  let c = letterKeys.first(where: { $0.button === b })?.base.first, let sec = activeAlts[c] {
+            // iPhone "Vuốt phím xuống ra ký tự phụ": cùng đường huỷ-phím-rồi-chèn như iPad.
             if shiftBeforeLastLetter == .on, shift == .off { shift = .on; applyShiftAppearance() }
             tapped(.replaceLastLetter(sec))
         }
@@ -8601,6 +8614,18 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         routeUp(id, at: CGPoint(x: c.x + drift, y: c.y), time: 2, cancelled: false)
         withExtendedLifetime(token) {}
         return armed
+    }
+    /// Test hook "Vuốt phím xuống ra ký tự phụ": chạm giữa phím `s`, nhấc ở điểm lệch (dx, dy).
+    func debugFlickDown(_ s: String, dx: CGFloat = 0, dy: CGFloat) {
+        guard let f = debugLetterFrame(s) else { return }
+        let token = NSObject(), id = ObjectIdentifier(token)
+        let c = CGPoint(x: f.midX, y: f.midY)
+        routeDown(id, at: c, time: 1, batch: 1)
+        if let h = altHold, h.id == id, altHold?.hold.move(to: CGPoint(x: c.x + dx, y: c.y + dy)) == true {
+            dropAltHold()
+        }
+        routeUp(id, at: CGPoint(x: c.x + dx, y: c.y + dy), time: 1.15, cancelled: false)
+        withExtendedLifetime(token) {}
     }
     /// Test hook giữ phím "," hàng đáy: chạm, (tuỳ) hết giờ giữ, (tuỳ) ngón khác chạm phím chữ
     /// `secondTouch`, rồi nhấc — đường action thật của nút. Trả có hẹn giờ không.
