@@ -94,6 +94,8 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
     // Pool cố định SuggestionCount.MAX ô; đang dùng [slotCount] ô ("Số từ gợi ý" — [slotSetting]).
     private val slotText = arrayOfNulls<String>(SuggestionCount.MAX)      // đã ellipsize
     private val slotPayload = arrayOfNulls<String>(SuggestionCount.MAX)
+    /** Hệ số co chữ của ô (StripGeometry.fitScale): từ dài co lại trước, hết mức mới cắt giữa (#178). */
+    private val slotScale = FloatArray(SuggestionCount.MAX) { 1f }
     private val slotL = FloatArray(SuggestionCount.MAX); private val slotR = FloatArray(SuggestionCount.MAX)
     /** "Số từ gợi ý" (0 = Tự động). */
     private var slotSetting = SuggestionCount.AUTO
@@ -408,7 +410,15 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
         for (i in 0 until n) {
             val t = disp[i] ?: continue
             val p = if (i == primary || i == highlight) wordCenterPaint else wordPaint
-            slotText[i] = TextUtils.ellipsize(t, p, cell - 2 * pad, TextUtils.TruncateAt.MIDDLE).toString()
+            val maxW = cell - 2 * pad
+            val k = StripGeometry.fitScale(p.measureText(t), maxW)
+            slotScale[i] = k
+            if (k < 1f) {
+                val full = p.textSize
+                p.textSize = full * k
+                slotText[i] = TextUtils.ellipsize(t, p, maxW, TextUtils.TruncateAt.MIDDLE).toString()
+                p.textSize = full
+            } else slotText[i] = t
         }
         if (emojiCount > 0) {
             val each = cell / emojiCount
@@ -503,10 +513,10 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
                 c.drawRoundRect(slotL[i] + inset, barCy - hh, slotR[i] - inset, barCy + hh, hh, hh, chipPaint)
                 setChipOpacity(255)
                 wordCenterPaint.color = theme.chipInk; wordCenterPaint.alpha = alpha
-                c.drawText(s, (slotL[i] + slotR[i]) / 2, barCy + wordCenterOff, wordCenterPaint)
+                drawWord(c, s, i, barCy + wordCenterOff, wordCenterPaint)
                 wordCenterPaint.color = wordInk; wordCenterPaint.alpha = wa
-            } else if (i == primary) c.drawText(s, (slotL[i] + slotR[i]) / 2, barCy + wordCenterOff, wordCenterPaint)
-            else c.drawText(s, (slotL[i] + slotR[i]) / 2, barCy + wordOff, wordPaint)
+            } else if (i == primary) drawWord(c, s, i, barCy + wordCenterOff, wordCenterPaint)
+            else drawWord(c, s, i, barCy + wordOff, wordPaint)
         }
         emojiPaint.alpha = alpha
         for (i in 0 until emojiCount) {
@@ -549,6 +559,17 @@ class StripView(context: Context, private val theme: ImeTheme, private val feedb
     }
 
     /** Pill giữa bar (cùng kiểu thẻ Dán) cho xem trước vuốt ⌫ / Khôi phục. */
+    /** Chữ ô [i] giữa ô, cỡ đã co theo [slotScale] (cùng đường chân chữ với các ô khác). */
+    private fun drawWord(c: Canvas, s: String, i: Int, y: Float, p: Paint) {
+        val k = slotScale[i]
+        val x = (slotL[i] + slotR[i]) / 2
+        if (k >= 1f) { c.drawText(s, x, y, p); return }
+        val full = p.textSize
+        p.textSize = full * k
+        c.drawText(s, x, y, p)
+        p.textSize = full
+    }
+
     private fun drawChip(c: Canvas, text: String, alpha: Int, trunc: TextUtils.TruncateAt) {
         val cy = theme.dp(barCyDp())
         val padH = theme.dp(14f); val h = theme.dp(StripGeometry.PILL_H)

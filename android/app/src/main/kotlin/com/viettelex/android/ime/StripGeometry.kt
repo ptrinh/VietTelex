@@ -99,6 +99,13 @@ object StripGeometry {
                  emojiButton: Boolean = false, buddy: Float = 0f, dismiss: Float = 0f): Float =
         width - rightExtraW(clipW, clipButton, toolsShown, emojiButton, buddy, dismiss)
 
+    /** Chữ gợi ý dài co tối đa tới mức này (như iOS); vẫn không vừa mới cắt giữa. */
+    const val MIN_WORD_SCALE = 0.7f
+
+    /** Hệ số cỡ chữ để chữ rộng [textW] vừa ô rộng [maxW]: 1 = vừa sẵn, không dưới [MIN_WORD_SCALE]. */
+    fun fitScale(textW: Float, maxW: Float): Float =
+        if (textW <= maxW || textW <= 0f) 1f else (maxW / textW).coerceIn(MIN_WORD_SCALE, 1f)
+
     /** Mép trái/phải slot i (0..2) trong [barL, barR] → ghi vào [l]/[r]. */
     fun thirds(barL: Float, barR: Float, l: FloatArray, r: FloatArray) = cells(barL, barR, 3, l, r)
 

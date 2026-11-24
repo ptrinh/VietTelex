@@ -217,4 +217,13 @@ class StripGeometryTest {
         assertEquals(360f - both, StripGeometry.barRight(360f, both, clipButton = true, toolsShown = true), 0.001f)
         assertEquals(360f, StripGeometry.barRight(360f, both, clipButton = true, toolsShown = false), 0.001f)
     }
+
+    /** #178: từ dài co chữ cho vừa ô trước, chỉ cắt "…" khi co hết mức vẫn không vừa. */
+    @Test fun longWordShrinksBeforeItIsCut() {
+        assertEquals(1f, StripGeometry.fitScale(80f, 100f), 0.001f)
+        assertEquals(1f, StripGeometry.fitScale(100f, 100f), 0.001f)
+        assertEquals(0.8f, StripGeometry.fitScale(125f, 100f), 0.001f)      // co vừa đủ
+        assertEquals(StripGeometry.MIN_WORD_SCALE, StripGeometry.fitScale(400f, 100f), 0.001f)  // hết mức ⇒ cắt
+        assertEquals(1f, StripGeometry.fitScale(0f, 100f), 0.001f)
+    }
 }
