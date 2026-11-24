@@ -80,6 +80,14 @@ class KeyCommandGesture private constructor(
             else -> null
         }
 
+        /**
+         * Lúc nhấc tay chạy lệnh: chữ của phím CÒN chưa chèn? [deferredAtDown] = chữ được hoãn lúc
+         * chạm (KeyCommitQueue); [armedNow] = còn nằm trong hàng chờ. Chữ hoãn đã bị chèn giữa
+         * chừng (giữ lâu ra ký tự phụ, ngón khác chạm) ⇒ false: lệnh phải gỡ chữ đó (#179 — vuốt
+         * V lên dán được mà chữ "v" còn lại).
+         */
+        fun letterStillDeferred(deferredAtDown: Boolean, armedNow: Boolean): Boolean = deferredAtDown && armedNow
+
         /** null khi công tắc tắt hoặc phím không có lệnh. */
         fun start(enabled: Boolean, key: Char, x: Float, y: Float, keyAreaTop: Float, keyPitch: Float,
                   armMargin: Float = ARM_MARGIN, full: Boolean = true): KeyCommandGesture? {

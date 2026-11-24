@@ -42,6 +42,21 @@ object KeyCommands {
         com.viettelex.keyboard.KeyCommand.UNDO -> EditAction.UNDO
         com.viettelex.keyboard.KeyCommand.REDO -> EditAction.REDO
     }
+
+    /**
+     * Chạy lệnh vuốt phím: [settle] gỡ chữ của phím + chốt từ đang gõ trong MỘT batch, đóng batch,
+     * rồi mới chạy lệnh. Ô kiểu Compose gom lệnh sửa trong batch tới endBatchEdit, còn lệnh menu
+     * (dán…) áp ngay rồi khởi động lại phiên nhập ⇒ lệnh xoá đang gom bị bỏ: dán được mà chữ "v"
+     * còn lại (#179). false = không có ô nhập.
+     */
+    fun run(cmd: com.viettelex.keyboard.KeyCommand, proxy: IcProxy, tracker: SelectionTracker, settle: () -> Unit): Boolean {
+        if (!proxy.begin()) return false
+        try { settle() } finally { proxy.end() }
+        if (cmd.needsSelection && !proxy.hasSelection) return true
+        if (!proxy.begin()) return false
+        try { EditCommands.run(editAction(cmd), false, proxy, tracker) } finally { proxy.end() }
+        return true
+    }
 }
 
 object EditPanel {

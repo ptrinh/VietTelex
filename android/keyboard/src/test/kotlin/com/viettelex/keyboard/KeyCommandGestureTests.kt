@@ -137,4 +137,17 @@ class KeyCommandGestureTests {
         for (c in "an") off.handle(Key.Letter(c), q)
         assertFalse(off.undoLastLetter(q))              // tắt ⇒ không ghi checkpoint (0 chi phí)
     }
+
+    /** #179: chữ hoãn lúc chạm mà đã chèn trước khi nhấc ⇒ không còn "hoãn", lệnh phải gỡ chữ. */
+    @Test fun letterFiredBeforeReleaseIsNoLongerDeferred() {
+        val q = KeyCommitQueue()
+        val key = Any()
+        var typed = 0
+        q.arm(key) { typed++ }
+        assertTrue(KeyCommandGesture.letterStillDeferred(true, q.isArmed(key)))    // còn chờ ⇒ chỉ bỏ khỏi hàng
+        q.flush()                                                                  // giữ lâu / ngón khác: chữ đã chèn
+        assertEquals(1, typed)
+        assertFalse(KeyCommandGesture.letterStillDeferred(true, q.isArmed(key)))   // ⇒ lệnh gỡ chữ
+        assertFalse(KeyCommandGesture.letterStillDeferred(false, false))           // chèn ngay lúc chạm như cũ
+    }
 }

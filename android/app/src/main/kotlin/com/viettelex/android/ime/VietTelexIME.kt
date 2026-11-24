@@ -2060,12 +2060,11 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
      */
     override fun onKeyCommand(cmd: KeyCommand, letterDeferred: Boolean) {
         clearSwipeUndo()
-        if (!proxy.begin()) return
-        try {
+        val ran = KeyCommands.run(cmd, proxy, tracker) {
             if (!letterDeferred && !session.undoLastLetter(proxy)) session.handle(Key.Backspace, proxy)
             session.commitComposing(proxy)
-            if (!cmd.needsSelection || proxy.hasSelection) EditCommands.run(KeyCommands.editAction(cmd), false, proxy, tracker)
-        } finally { proxy.end() }
+        }
+        if (!ran) return
         resetIfEditFailed()
         handler.removeCallbacks(suggestRun)
         applyAutoShift()

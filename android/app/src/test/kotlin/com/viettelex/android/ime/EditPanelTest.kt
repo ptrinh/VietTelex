@@ -254,4 +254,42 @@ class EditPanelTest {
         for (a in listOf(EditAction.SELECT, EditAction.DELETE, EditAction.CLOSE)) assertFalse(run(p, a))
         assertEquals("abc", ed.text)
     }
+
+    // MARK: lệnh vuốt phím trên ô gom lệnh trong batch (#179)
+
+    /**
+     * Ô kiểu Compose: lệnh xoá trong batch chỉ áp ở endBatch; lệnh menu áp NGAY trên chữ hiện có
+     * rồi khởi động lại phiên nhập ⇒ lệnh đang gom bị bỏ.
+     */
+    private class BufferingPort(val ed: FakeEditor) : EditorPort by ed {
+        private var depth = 0
+        private val queued = ArrayList<Int>()
+        override fun beginBatch() { depth++ }
+        override fun endBatch() { if (--depth == 0) { queued.forEach { ed.deleteCodePointsBefore(it) }; queued.clear() } }
+        override fun deleteCodePointsBefore(count: Int): Boolean {
+            if (depth > 0) { queued.add(count); return true }
+            return ed.deleteCodePointsBefore(count)
+        }
+        override fun menuAction(action: EditorPort.MenuAction): Boolean { queued.clear(); return ed.menuAction(action) }
+    }
+
+    @Test fun keyCommandRemovesItsLetterBeforePastingInABufferingField() {
+        val ed = FakeEditor("Xin v").also { it.clipboard = "chào" }
+        tracker.reset(ed.selStart, ed.selEnd)
+        val port = BufferingPort(ed)
+        val p = IcProxy({ port }, tracker)
+        p.startInput(null, false)
+        assertTrue(KeyCommands.run(com.viettelex.keyboard.KeyCommand.PASTE, p, tracker) { p.deleteCodePoints(1) })
+        assertEquals("Xin chào", ed.text)   // trước đây: "Xin vchào" — lệnh xoá chữ "v" bị bỏ
+    }
+
+    @Test fun keyCommandNeedingSelectionOnlySettlesWithoutOne() {
+        val ed = FakeEditor("Xin c")
+        tracker.reset(ed.selStart, ed.selEnd)
+        val p = IcProxy({ BufferingPort(ed) }, tracker)
+        p.startInput(null, false)
+        assertTrue(KeyCommands.run(com.viettelex.keyboard.KeyCommand.COPY, p, tracker) { p.deleteCodePoints(1) })
+        assertEquals("Xin ", ed.text)
+        assertTrue(ed.menus.isEmpty())
+    }
 }

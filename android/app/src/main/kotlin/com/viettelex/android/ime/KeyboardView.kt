@@ -1798,12 +1798,16 @@ class KeyboardView(
                 // vuốt ⇒ chỉ từ vuốt. Tắt gõ vuốt ⇒ chèn ngay lúc chạm như cũ (không trễ).
                 val swipeDefer = !selDefer && !edge && swipeTyping && !splitNow && plane == Plane.LETTERS &&
                     activeCount() == 1 && swipeLayout != null && swipePath != null
-                val defer = selDefer || edge || swipeDefer
+                // Phím có lệnh: chữ LUÔN chờ nhấc mới chèn (#179). Chèn lúc chạm rồi gỡ trước khi chạy
+                // lệnh không đáng tin: ô kiểu Compose dán lên trạng thái cũ còn chữ đó ("v" + chữ dán),
+                // và chữ chèn-rồi-gỡ còn làm bẩn lịch sử hoàn tác của app.
+                val cmdDefer = cmdGesture != null && !selDefer
+                val defer = selDefer || edge || swipeDefer || cmdDefer
                 ptrEdgeShiftOn[pid] = shiftWas == Shift.ON
                 if (selDefer) {
                     val letter = Key.Letter(ch)
                     commits.arm(k) { emit(letter) }
-                } else if (edge || swipeDefer) {
+                } else if (edge || swipeDefer || cmdDefer) {
                     // Dải mép / gõ vuốt: chữ chốt lúc nhấc / khi ngón khác chạm; mép bị huỷ (vuốt
                     // Quay lại) ⇒ không gõ; thành vuốt ⇒ bỏ (beginSwipe).
                     val letter = Key.Letter(ch)
@@ -2384,7 +2388,7 @@ class KeyboardView(
         val g = keyCmd ?: return false
         val wasLive = g.live
         val cmd = if (cancelled) null else g.release(x / d, y / d)
-        val deferred = keyCmdDeferred
+        val deferredAtDown = keyCmdDeferred
         endKeyCmd()
         if (cmd == null) {
             if (wasLive && pid == swipePid && !swiping) swipePoint(x, y, t)
@@ -2394,6 +2398,9 @@ class KeyboardView(
         if (pid == altPid) dropAlt()
         val k = ptrKey[pid]
         ptrKey[pid] = null
+        // Chữ hoãn lúc chạm có thể đã chèn giữa chừng (giữ lâu ra ký tự phụ, ngón khác chạm…):
+        // còn trong hàng chờ mới là "chưa chèn" — không thì lệnh phải gỡ chữ đó (#179).
+        val deferred = KeyCommandGesture.letterStillDeferred(deferredAtDown, k != null && commits.isArmed(k))
         if (k != null) {
             hideBalloon(k)
             if (deferred) commits.disarm(k)
