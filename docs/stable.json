@@ -3,12 +3,12 @@
   "url": "https://github.com/ptrinh/viettelex/releases/tag/v1.9.13",
   "build": 161,
   "windows": {
-    "version": "1.3.34",
-    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.34/VietTelex-1.3.34-x64.msi",
-    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.34/VietTelex-1.3.34-arm64.msi",
-    "notes": "Edge/Chrome: Enter ngay sau từ đang gõ trong ô chat web (Gemini, Claude) nay được bấm lại sau khi chữ đã chốt.",
-    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.34/VietTelex-1.3.34-portable-x64.zip",
-    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.34/VietTelex-1.3.34-portable-arm64.zip"
+    "version": "1.3.35",
+    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-x64.msi",
+    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-arm64.msi",
+    "notes": "Edge/Chrome: gõ đúng trong thanh địa chỉ của cửa sổ riêng tư (InPrivate, ẩn danh) khi có gợi ý tự điền.",
+    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-portable-x64.zip",
+    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-portable-arm64.zip"
   },
   "linux": {
     "version": "1.0.29",
