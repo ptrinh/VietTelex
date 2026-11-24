@@ -888,6 +888,27 @@ TEST(field_prefers_composition_only_for_chromium_address_bars) {
     CHECK(!fieldPrefersComposition("msedgewebview2.exe", url, 1));  // WebView2 has no omnibox
 }
 
+// (#173) InPrivate / incognito: every field answers {IS_PRIVATE}; the address bar is the one
+// without a page URL ("oong" came out "oôngm" there, typed in-place over the suggestion).
+TEST(private_window_address_bar_is_the_field_without_a_page_url) {
+    const int priv[] = {61};
+    const int privAndDefault[] = {61, 0};
+    const int plain[] = {0};
+    CHECK(omniboxNeedsPageUrl("msedge.exe", priv, 1));
+    CHECK(!omniboxNeedsPageUrl("msedge.exe", plain, 1));          // normal window: scopes say it all
+    CHECK(!omniboxNeedsPageUrl("msedge.exe", privAndDefault, 2));
+    CHECK(!omniboxNeedsPageUrl("msedge.exe", nullptr, 0));
+    CHECK(!omniboxNeedsPageUrl("firefox.exe", priv, 1));
+    CHECK(fieldPrefersComposition("msedge.exe", priv, 1, PageUrl::Empty));     // address bar
+    CHECK(fieldPrefersComposition("chrome.exe", priv, 1, PageUrl::Empty));
+    CHECK(!fieldPrefersComposition("msedge.exe", priv, 1, PageUrl::Present));  // page field: in-place
+    CHECK(!fieldPrefersComposition("msedge.exe", priv, 1, PageUrl::Unknown));  // attribute unsupported
+    CHECK(!fieldPrefersComposition("msedge.exe", priv, 1));
+    CHECK(!fieldPrefersComposition("msedge.exe", plain, 1, PageUrl::Empty));   // normal window UI field
+    CHECK(!fieldPrefersComposition("firefox.exe", priv, 1, PageUrl::Empty));
+    CHECK(!fieldPrefersComposition("msedgewebview2.exe", priv, 1, PageUrl::Empty));
+}
+
 // #173: the address bar first goes to the hook (the browser underlines any composition);
 // composition is the fallback whenever the hook cannot take it.
 TEST(address_bar_step_hook_first_composition_as_fallback) {

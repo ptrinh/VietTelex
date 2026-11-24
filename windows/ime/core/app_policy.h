@@ -187,7 +187,19 @@ FieldPolicy classifyInputScopes(const int* scopes, size_t count);
 // TEXT_INPUT_TYPE_URL -> IS_URL for non-CJK input locales) -> compose this field.
 // Not Vivaldi/Firefox: their address bars are not views::Textfield (both fine per report).
 bool isChromiumNativeOmniboxBrowser(const std::string& exe);
-bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t count);
+//
+// (#173, InPrivate) A private window (InPrivate, incognito, guest) answers {IS_PRIVATE} for
+// EVERY field — tsf_input_scope.cc CreateInputScope drops the type scopes when the client
+// says "do not learn" — so its address bar is not IS_URL and typed in-place ("oong" ->
+// "oôngm": the replace ate the inline suggestion instead of the "o"). What still tells the
+// browser's own text field from a page field is the store's URL attribute (kPropUrl in
+// text_service.cpp): a page field answers its frame's URL, a views::Textfield an empty
+// string. `Unknown` (attribute not supported, read failed) changes nothing.
+enum class PageUrl { Unknown, Empty, Present };
+// True = the scopes alone cannot say (private window of such a browser): read the URL.
+bool omniboxNeedsPageUrl(const std::string& exe, const int* scopes, size_t count);
+bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t count,
+                             PageUrl pageUrl = PageUrl::Unknown);
 
 // (#173) But the browser's native text field draws an underline under ANY composition,
 // whatever the display attribute says (Edge, Windows 10 22H2). So in that field the TIP

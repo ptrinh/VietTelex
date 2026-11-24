@@ -859,8 +859,15 @@ bool TextService::fieldPolicyAtWordStart(ITfContext* ctx, TfEditCookie ec) {
     int buf[32];
     const UINT n = inputScopesAtSelection(ctx, ec, buf, 32);
     if (n > 0 && classifyInputScopes(buf, n) == FieldPolicy::Literal) return true;
-    if (omniboxOfferedToHook(fieldPrefersComposition(config::exeName(), buf, n), session_.inPlaceButForPreference(),
-                             addressBarCompose_)) {
+    // Private window: the scopes cannot name the address bar, the store's URL attribute can.
+    PageUrl pageUrl = PageUrl::Unknown;
+    if (omniboxNeedsPageUrl(config::exeName(), buf, n)) {
+        pageUrl = pageUrlAtSelection(ctx, ec);  // every word start, like the scopes: in-process, cheap
+        if (pageUrl == PageUrl::Empty && !addressBarCompose_ && !addressBarHandover_)
+            config::log("private window: field without a page URL -> browser address bar");
+    }
+    if (omniboxOfferedToHook(fieldPrefersComposition(config::exeName(), buf, n, pageUrl),
+                             session_.inPlaceButForPreference(), addressBarCompose_)) {
         const DirectAsk ask = askDirectForAddressBar();
         const OmniboxStep step = omniboxStepAtWordStart(ask, GetTickCount64() - directAskTick_);
         if (step == OmniboxStep::HookTypes || step == OmniboxStep::PassAsTyped) {
@@ -898,6 +905,30 @@ bool TextService::fieldPolicyAtWordStart(ITfContext* ctx, TfEditCookie ec) {
         config::log("browser address bar (IS_URL): composition for this field (in-place breaks on inline autocomplete)");
     }
     return false;
+}
+
+// GUID_PROP_URL {D5138268-A1BF-4308-BCBF-2E739398E234}: the URL of the document being edited,
+// a text-store attribute Chromium answers with the focused frame's URL (VT_BSTR; empty for
+// the browser's own text fields).
+const GUID kPropUrl = {0xd5138268, 0xa1bf, 0x4308, {0xbc, 0xbf, 0x2e, 0x73, 0x93, 0x98, 0xe2, 0x34}};
+
+// app_policy.h PageUrl for the field at the selection; Unknown unless the store answers a string.
+PageUrl TextService::pageUrlAtSelection(ITfContext* ctx, TfEditCookie ec) {
+    ITfReadOnlyProperty* prop = nullptr;
+    if (FAILED(ctx->GetAppProperty(kPropUrl, &prop)) || !prop) return PageUrl::Unknown;
+    PageUrl out = PageUrl::Unknown;
+    TF_SELECTION sel;
+    ULONG fetched = 0;
+    if (SUCCEEDED(ctx->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &sel, &fetched)) && fetched == 1) {
+        VARIANT v;
+        VariantInit(&v);
+        if (SUCCEEDED(prop->GetValue(ec, sel.range, &v)) && v.vt == VT_BSTR)
+            out = SysStringLen(v.bstrVal) == 0 ? PageUrl::Empty : PageUrl::Present;
+        VariantClear(&v);
+        sel.range->Release();
+    }
+    prop->Release();
+    return out;
 }
 
 // Input scopes of the field at the selection (up to `cap`); 0 = none / unknown.

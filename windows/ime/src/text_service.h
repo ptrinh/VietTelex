@@ -127,6 +127,7 @@ private:
     void endCompositionAsync();
     bool fieldPolicyAtWordStart(ITfContext* ctx, TfEditCookie ec);
     UINT inputScopesAtSelection(ITfContext* ctx, TfEditCookie ec, int* buf, UINT cap);
+    PageUrl pageUrlAtSelection(ITfContext* ctx, TfEditCookie ec);
 
     // Công cụ văn bản (text_tool_ipc.h): a message-only window per thread manager that
     // VietTelex.exe asks for the selection; one pending request at a time.

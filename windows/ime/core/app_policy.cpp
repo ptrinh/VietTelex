@@ -216,11 +216,16 @@ bool isChromiumNativeOmniboxBrowser(const std::string& exe) {
     return false;
 }
 
-bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t count) {
+bool omniboxNeedsPageUrl(const std::string& exe, const int* scopes, size_t count) {
+    return count == 1 && scopes[0] == 61 /* IS_PRIVATE */ && isChromiumNativeOmniboxBrowser(exe);
+}
+
+bool fieldPrefersComposition(const std::string& exe, const int* scopes, size_t count, PageUrl pageUrl) {
     if (!isChromiumNativeOmniboxBrowser(exe)) return false;
     for (size_t i = 0; i < count; ++i)
         if (scopes[i] == 1) return true;  // IS_URL
-    return false;
+    // Private window: no IS_URL to go by; the browser's own text field has no page URL.
+    return pageUrl == PageUrl::Empty && omniboxNeedsPageUrl(exe, scopes, count);
 }
 
 bool shellSearchPrefersComposition(const std::string& app, bool asyncStore) {
