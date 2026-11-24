@@ -213,3 +213,26 @@ final class HostDesyncTests: XCTestCase {
         XCTAssertFalse(c.lagging)
     }
 }
+
+/// Host trả `documentIdentifier` nil (khai báo non-null): đọc phải ra nil chứ không sập.
+final class ProxyDocumentIDTests: XCTestCase {
+    final class NilIDHost: NSObject {
+        @objc var documentIdentifier: NSUUID? { nil }
+    }
+    final class NoIDHost: NSObject {}
+
+    func testNilIdentifierReadsAsNil() {
+        XCTAssertNil(ProxyDocumentID.read(NilIDHost()))
+        XCTAssertNil(MirroredProxy { unsafeBitCast(NilIDHost(), to: UITextDocumentProxy.self) }.documentID)
+    }
+
+    func testMissingPropertyReadsAsNil() {
+        XCTAssertNil(ProxyDocumentID.read(NoIDHost()), "KVC ném NSException ⇒ nil")
+    }
+
+    func testRealIdentifierPassesThrough() {
+        let host = KeyboardBenchTests.BenchProxy()
+        XCTAssertEqual(ProxyDocumentID.read(host), host.documentIdentifier)
+        XCTAssertEqual(MirroredProxy { host }.documentIdentifier, host.documentIdentifier)
+    }
+}

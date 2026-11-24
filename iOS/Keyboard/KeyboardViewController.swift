@@ -3677,15 +3677,15 @@ extension KeyboardViewController {
 
 // MARK: log gỡ lỗi — ảnh chụp ô nhập (TouchLogAlerts). CHỈ khi Debug mode bật.
 extension KeyboardViewController {
-    /// Ghi `probe …` (độ dài / cờ / ID ô rút gọn) + dòng ⚠︎ khi bất thường chắc chắn. Chỉ sau
-    /// viewDidAppear: documentIdentifier đọc sớm (phiên nhập chưa lập) là bẫy crash — đọc trong vtSafe.
+    /// Ghi `probe …` (độ dài / cờ / ID ô rút gọn) + dòng ⚠︎ khi bất thường chắc chắn. ID ô đọc
+    /// qua ProxyDocumentID (host trả nil ⇒ "?"): đọc kiểu Swift là sập, vtSafe không bắt được.
     fileprivate func probeField(_ event: String) {
         guard TouchLog.enabled, probeReady else { return }
         let p = textProxy
         var sel = 0
         if #available(iOS 16.0, *) { sel = vtSafe(0) { p.selectedText?.count ?? 0 } }
         let now = TouchLogAlerts.Probe(
-            doc: vtSafe("?") { String(p.documentIdentifier.uuidString.prefix(4)) },
+            doc: mirrored.documentID.map { String($0.uuidString.prefix(4)) } ?? "?",
             ctxLen: vtSafe(-1) { p.documentContextBeforeInput?.count ?? -1 },
             afterLen: vtSafe(-1) { p.documentContextAfterInput?.count ?? -1 },
             hasText: vtSafe(false) { p.hasText },
@@ -3807,6 +3807,19 @@ func vtSafe<T>(_ fallback: T, _ read: () -> T) -> T {
     return value
 }
 
+/// `documentIdentifier` khai báo non-null nhưng host CÓ trả nil (phiên nhập chưa lập, hoặc đã
+/// tháo lúc viewWillDisappear). Đọc kiểu Swift ⇒ bridge NSUUID nil → UUID là bẫy
+/// (EXC_BREAKPOINT, không phải NSException nên vtSafe không cứu) — bàn phím sập khi đang bật
+/// Debug mode (crash thật 23/11/2026, 1.3.14). Đọc qua KVC: nil ra nil.
+enum ProxyDocumentID {
+    static func read(_ proxy: AnyObject) -> UUID? {
+        guard let o = proxy as? NSObject else { return nil }
+        var id: UUID?
+        if VTCatchException({ id = o.value(forKey: "documentIdentifier") as? UUID }) != nil { return nil }
+        return id
+    }
+}
+
 /// textDocumentProxy + bản sao chữ trước con trỏ (HostMirror). Mọi lệnh sửa của bàn phím đi qua
 /// đây ⇒ HostMirror biết chính xác chữ host SẼ có; host vọng trễ (đẩy trạng thái cũ của chính
 /// mình, đè bản lạc quan của proxy) ⇒ đọc context trả bản đó thay vì chữ cũ. Host thường (đồng
@@ -3837,7 +3850,9 @@ final class MirroredProxy: NSObject, UITextDocumentProxy {
     var documentContextAfterInput: String? { base().documentContextAfterInput }
     var selectedText: String? { base().selectedText }
     var documentInputMode: UITextInputMode? { base().documentInputMode }
-    var documentIdentifier: UUID { base().documentIdentifier }
+    /// ID ô thật của host; nil khi host không có (phiên nhập chưa lập / đã tháo).
+    var documentID: UUID? { ProxyDocumentID.read(base()) }
+    var documentIdentifier: UUID { documentID ?? UUID() }
     var hasText: Bool { base().hasText }
 
     func insertText(_ text: String) {
