@@ -250,6 +250,7 @@ private:
     unsigned long settingsGen_ = 0;
     FocusStateNotify focusNotify_;      // tray state posts at focus changes (tip_caches.h)
     PerKeyOnce hostEval_;               // evaluateHost once per key (tip_caches.h)
+    TestClaim testClaim_;               // key claimed in OnTestKeyDown stays ours in OnKeyDown
     NoEditableContext noEdit_;          // a page with no editable element (tip_caches.h)
     bool noEditLogged_ = false;         // logged once per focus
     KeyEventRepeat keyRepeat_;          // a key we let through, offered again (tip_caches.h)

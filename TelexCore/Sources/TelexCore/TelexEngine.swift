@@ -1987,9 +1987,14 @@ public struct TelexEngine {
         guard pCount > 0 else { return false }
         for k in 0..<pCount {
             let l = letters[k]
-            if isVowelAscii(l.base) || l.upper != upper { return false }
+            if Self.isAbbreviationVowel(l.base) || l.upper != upper { return false }
         }
         return true
+    }
+
+    /// Y is a vowel in a syllable but stands as any other initial in an initialism ("YKTĐ" = ý kiến thẩm định, report 2026-11-25): it does not end the abbreviation shape. No English or Vietnamese word is letters + "dd" with y as its only vowel.
+    private static func isAbbreviationVowel(_ base: UInt8) -> Bool {
+        base != UInt8(ascii: "y") && isVowelAscii(base)
     }
 
     /// Live-spell-check freeze exception (2026-08-06, maintainer-specified feature):
@@ -2043,7 +2048,7 @@ public struct TelexEngine {
                 var onlyBar = true
                 for k in 0..<pCount {
                     let l = renderLetters[k]
-                    if isVowelAscii(l.base) { onlyBar = false; break }
+                    if Self.isAbbreviationVowel(l.base) { onlyBar = false; break }
                     if l.base == UInt8(ascii: "d"), l.mark == .bar { hasBar = true }
                     else if l.mark != .none { onlyBar = false; break }
                 }

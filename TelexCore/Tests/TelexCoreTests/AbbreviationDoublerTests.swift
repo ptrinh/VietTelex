@@ -36,6 +36,16 @@ final class AbbreviationDoublerTests: XCTestCase {
         }
     }
 
+    /// Y is an initial like any other in an initialism ("YKTĐ" = ý kiến thẩm định).
+    func testYDoesNotEndTheAbbreviationShape() {
+        for (keys, want) in [("YKTDD", "YKTĐ"), ("yktdd", "yktđ"), ("DDYT", "ĐYT")] {
+            XCTAssertEqual(commit(keys), want, keys)
+        }
+        // A real vowel still exits the rule; mixed case too.
+        XCTAssertEqual(commit("YADD"), "YADD")
+        XCTAssertEqual(commit("Yktdd"), "Yktdd")
+    }
+
     /// Already worked before this feature (Đ is the FIRST letter, so the freeze
     /// hadn't triggered yet when the doubler ran) — must not regress.
     func testDInitialAbbreviationsStillWork() {

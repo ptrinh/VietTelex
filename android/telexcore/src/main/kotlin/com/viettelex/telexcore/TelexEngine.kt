@@ -1242,10 +1242,13 @@ class TelexEngine {
         }
     }
 
+    /** Y is a vowel in a syllable but stands as any other initial in an initialism ("YKTĐ" = ý kiến thẩm định, report 2026-11-25): it does not end the abbreviation shape. No English or Vietnamese word is letters + "dd" with y as its only vowel. */
+    private fun isAbbreviationVowel(base: Int): Boolean = base != 'y'.code && isVowelAscii(base)
+
     private fun isAbbreviationPrefix(upper: Boolean): Boolean {
         if (pCount <= 0) return false
         for (k in 0 until pCount) {
-            if (isVowelAscii(lBase[k]) || lUpper[k] != upper) return false
+            if (isAbbreviationVowel(lBase[k]) || lUpper[k] != upper) return false
         }
         return true
     }
@@ -1269,7 +1272,7 @@ class TelexEngine {
                 var hasBar = false
                 var onlyBar = true
                 for (k in 0 until pCount) {
-                    if (isVowelAscii(rBase[k])) { onlyBar = false; break }
+                    if (isAbbreviationVowel(rBase[k])) { onlyBar = false; break }
                     if (rBase[k] == 'd'.code && rMark[k] == Mark.BAR) hasBar = true
                     else if (rMark[k] != Mark.NONE) { onlyBar = false; break }
                 }

@@ -463,6 +463,9 @@ bool TextService::typingEnabled() const {
     // A word this TIP started stays this TIP's even if the hook's ack appears mid-word
     // (the hook waits for a boundary too): one word, one typist.
     if (session_.wordActive()) return true;
+    // The word start this TIP claimed in OnTestKeyDown: the ack may have appeared before the
+    // OnKeyDown of that same key (tip_caches.h TestClaim) — the word is still this TIP's.
+    if (testClaim_.holds(keyGen_)) return true;
     if (directActive_ || directWanted_) return !directServesHere();  // not (yet) typed by the hook: compose
     AppMode m = config::appMode();
     if (m == AppMode::Direct) return !directServesHere();  // the hook types; else compose
@@ -1041,6 +1044,7 @@ STDMETHODIMP TextService::OnSetFocus(ITfDocumentMgr* focus, ITfDocumentMgr*) {
     addressBarCompose_ = false;
     typedNote_.reset();
     hostEval_.invalidate();
+    testClaim_.reset();
     resolveActiveApp();
     config::reloadVietnamese();
     applyConfig(false);  // settings copied only when settings.bin changed
@@ -1453,6 +1457,7 @@ HRESULT TextService::testKeyDownBody(ITfContext* ctx, WPARAM wp, BOOL* eaten) {
         return S_OK;
     }
     *eaten = session_.wantsKey(k) ? TRUE : FALSE;
+    if (*eaten && !session_.wordActive() && directWanted_) testClaim_.claimed(keyGen_);
     if (!*eaten) {
         notePassedBy(k);                        // retro English: one engine call, no edit session
         noteHintKey(k, keyTarget(ctx), false);  // OnKeyDown will not see this key...

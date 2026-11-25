@@ -58,6 +58,28 @@ private:
     bool valid_ = false;
 };
 
+// (1.3.36, Excel cell — debug log of 1.3.33) A key the TIP claimed in OnTestKeyDown stays the
+// TIP's in OnKeyDown of that same key. The hook's handover ack (kDirectOnProp) arrives a
+// millisecond after the request made at a word start in OnTestKeyDown; in an IMM32 host the
+// OnKeyDown of that key comes as a separate message, AFTER the ack. The TIP then read "the
+// hook types here" and let the key through, the hook (engaged mid-focus) waited for a word
+// boundary: nobody typed that word ("khoong", "YKTDD" in a cell, mostly when typing fast).
+// The claim is per key generation: the next key is decided afresh (by then the word is
+// active here, or it never started).
+class TestClaim {
+public:
+    void claimed(uint32_t keyGen) {
+        gen_ = keyGen;
+        valid_ = true;
+    }
+    void reset() { valid_ = false; }
+    bool holds(uint32_t keyGen) const { return valid_ && gen_ == keyGen; }
+
+private:
+    uint32_t gen_ = 0;
+    bool valid_ = false;
+};
+
 // (2026-11, Word's Navigation search box — focus class RICHEDIT60W, debug log of 1.3.18–
 // 1.3.20) One key event offered to the TIP TWICE: a key the TIP lets through is handed to
 // the keystroke manager again before the app inserts it (Word's message loop, then the

@@ -710,6 +710,18 @@ TEST(before_caret_cache_proves_tail_until_written) {
     CHECK(!c.proves(u"b"));
 }
 
+// 1.3.36 (Excel cell): the hook's ack lands between OnTestKeyDown and OnKeyDown of the key
+// that starts a word. The key claimed at the test stays the TIP's; the next key does not.
+TEST(test_claim_holds_for_the_same_key_only) {
+    TestClaim c;
+    CHECK(!c.holds(1));
+    c.claimed(7);
+    CHECK(c.holds(7));   // OnKeyDown of that key
+    CHECK(!c.holds(8));  // the next key is decided afresh
+    c.reset();
+    CHECK(!c.holds(7));
+}
+
 // M4: evaluateHost ran in OnTestKeyDown AND OnKeyDown of the same key.
 TEST(per_key_once_reuses_test_evaluation_once) {
     PerKeyOnce once;

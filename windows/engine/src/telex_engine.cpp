@@ -1396,11 +1396,14 @@ inline int writeCanon(int code, uint8_t* buf) {
 }
 } // namespace
 
+// Y is a vowel in a syllable but stands as any other initial in an initialism ("YKTĐ" = ý kiến thẩm định, report 2026-11-25): it does not end the abbreviation shape. No English or Vietnamese word is letters + "dd" with y as its only vowel.
+static inline bool isAbbreviationVowel(uint8_t base) { return base != 'y' && isVowelAscii(base); }
+
 bool TelexEngine::isAbbreviationPrefix(bool upper) const {
     if (pCount_ <= 0) return false;
     for (int k = 0; k < pCount_; ++k) {
         const Letter& l = letters_[k];
-        if (isVowelAscii(l.base) || l.upper != upper) return false;
+        if (isAbbreviationVowel(l.base) || l.upper != upper) return false;
     }
     return true;
 }
@@ -1428,7 +1431,7 @@ bool TelexEngine::composedIsValidSyllable() const {
             bool hasBar = false, onlyBar = true;
             for (int k = 0; k < pCount_; ++k) {
                 const Letter& l = renderLetters_[k];
-                if (isVowelAscii(l.base)) { onlyBar = false; break; }
+                if (isAbbreviationVowel(l.base)) { onlyBar = false; break; }
                 if (l.base == 'd' && l.mark == Mark::Bar) hasBar = true;
                 else if (l.mark != Mark::None) { onlyBar = false; break; }
             }
