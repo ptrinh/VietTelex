@@ -293,7 +293,7 @@ enum SettingCaption {
     static let emojiKeyPlacement = LK("Thanh trên: nút emoji lên thanh gợi ý, phím cách rộng hơn.")
     static let longPressNumbers = LK("Giữ q … p để gõ 1 … 0 (số nhỏ ở góc phím).")
     static let longPressSymbols = LK("Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …")
-    static let flickDownAlternates = LK("Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6 (tắt khi bật Gõ vuốt). Hàng chữ trên cùng: vuốt thẳng lên cũng ra số, kể cả khi bật Gõ vuốt.")
+    static let flickDownAlternates = LK("Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6 (tắt khi bật Gõ vuốt). Hàng chữ trên cùng: vuốt thẳng lên cũng ra số, kể cả khi bật Gõ vuốt. Phím phẩy / chấm cạnh dấu cách: vuốt xuống ra dấu còn lại.")
     static let holdShiftSymbols = LK("Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.")
     static let autoSpaceAfterPunct = LK("Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).")
     static let symbolReturn = LK("Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu.")

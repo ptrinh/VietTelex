@@ -193,6 +193,19 @@ class KeyAlternatesTests {
         assertFalse(KeyAlternates.isTopRow(keyTop = 6f, keyHeight = 0f, keyAreaTop = 0f))
     }
 
+    @Test fun punctFlickGivesTheOtherMark() {
+        val alts = KeyAlternates.map(numbers = true, symbols = false, numberRow = false)
+        assertEquals(".", KeyAlternates.punctFlick(",", true, alts))
+        assertEquals(",", KeyAlternates.punctFlick(".", true, alts))
+        assertNull(KeyAlternates.punctFlick(",", false, alts))
+        assertNull("TalkBack / hai công tắc giữ phím đều tắt", KeyAlternates.punctFlick(",", true, emptyMap()))
+        assertNull(KeyAlternates.punctFlick("/", true, alts))
+        assertTrue(KeyAlternates.isPunctFlick(3f, 16f))
+        assertFalse("ngón trôi", KeyAlternates.isPunctFlick(0f, 15f))
+        assertFalse("kéo chéo", KeyAlternates.isPunctFlick(14f, 20f))
+        assertFalse("vuốt lên", KeyAlternates.isPunctFlick(0f, -30f))
+    }
+
     @Test fun flickDownShape() {
         assertTrue(KeyAlternates.isFlickDown(0f, 24f))
         assertTrue(KeyAlternates.isFlickDown(-12f, 30f))

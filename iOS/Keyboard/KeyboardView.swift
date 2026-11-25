@@ -4503,6 +4503,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                KeyAlternates.commaHold(alternates: activeAlts) {
                 armCommaHold(b, alt: alt)
             }
+            // Phím "," / "." cạnh space: vuốt thẳng xuống ra dấu còn lại (công tắc xét lúc vuốt).
+            if !Self.isPad, sideKey != nil, planeKey == "123", p.title == "," || p.title == "." {
+                armPunctFlick(b)
+            }
             // Ô địa chỉ / URL / email: giữ "." ra hàng đuôi tên miền như stock (DomainPopup).
             let tlds = DomainPopup.choices(kind: inputKind, key: p.title, lettersPlane: planeKey == "123")
             if !tlds.isEmpty { armDomainHold(b, choices: tlds) }
@@ -7414,6 +7418,36 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var commaTimer: DispatchWorkItem?
     private var commaFired = false
 
+    // MARK: vuốt "," / "." hàng đáy thẳng xuống ⇒ dấu còn lại của cặp (KeyAlternates.punctFlick)
+
+    /// Theo ngón trên phím; đủ quãng thẳng xuống mà phím còn chờ chốt ⇒ đổi ký tự chờ chốt
+    /// (cùng đường với giữ phím: balloon + rung, chốt lúc nhấc / khi ngón khác chạm).
+    private func armPunctFlick(_ b: KeyButton) {
+        b.addTarget(self, action: #selector(punctFlickTouch(_:event:)),
+                    for: [.touchDown, .touchDragInside, .touchDragOutside])
+        b.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            self.punctFlickStart = nil
+            if self.commaFired { self.commaFired = false; self.hideBalloon() }
+        }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
+    }
+    @objc private func punctFlickTouch(_ sender: UIControl, event: UIEvent?) {
+        guard let b = sender as? KeyButton,
+              let t = event?.allTouches?.first(where: { $0.view === sender }) else { return }
+        let p = t.location(in: self), id = ObjectIdentifier(b)
+        if t.phase == .began || punctFlickStart?.id != id { punctFlickStart = (id, p); return }
+        punctFlickMoved(b, to: p)
+    }
+    private func punctFlickMoved(_ b: KeyButton, to p: CGPoint) {
+        guard let s = punctFlickStart, s.id == ObjectIdentifier(b), !commaFired,
+              KeyAlternates.isPunctFlick(dx: p.x - s.p.x, dy: p.y - s.p.y),
+              let alt = KeyAlternates.punctFlick(b.currentTitle ?? "", setting: flickDownSetting,
+                                                 alternates: activeAlts) else { return }
+        commaTimer?.cancel()
+        fireCommaHold(b, alt: alt)
+    }
+    private var punctFlickStart: (id: ObjectIdentifier, p: CGPoint)?
+
     // MARK: giữ "." ⇒ popup đuôi tên miền (ô .search / .url / .email, bàn chữ)
 
     /// Hẹn giờ `holdDelay` như giữ ","; hết giờ mà phím còn chờ chốt ⇒ dựng popup (lần đầu
@@ -8780,6 +8814,20 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             return nil
         }
         return find(rowsContainer)
+    }
+    /// Test hook vuốt phím dấu câu `title` hàng đáy: chạm, trượt (dx, dy), nhấc — đường thật.
+    func debugPunctFlick(_ title: String, dx: CGFloat, dy: CGFloat) {
+        func find(_ v: UIView) -> KeyButton? {
+            if let b = v as? KeyButton, b.currentTitle == title { return b }
+            for s in v.subviews { if let b = find(s) { return b } }
+            return nil
+        }
+        guard let b = find(rowsContainer) else { return }
+        b.sendActions(for: .touchDown)
+        let c = convert(b.bounds, from: b)
+        punctFlickStart = (ObjectIdentifier(b), CGPoint(x: c.midX, y: c.midY))
+        punctFlickMoved(b, to: CGPoint(x: c.midX + dx, y: c.midY + dy))
+        b.sendActions(for: .touchUpOutside)
     }
     private var debugCommaButton: KeyButton? {
         func find(_ v: UIView) -> KeyButton? {

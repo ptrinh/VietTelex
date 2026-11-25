@@ -355,6 +355,39 @@ final class KeyAlternatesTests: XCTestCase {
         withExtendedLifetime(host) {}
     }
 
+    /// Phím "," / "." cạnh space vuốt thẳng xuống ra dấu còn lại — cả khi bật Gõ vuốt.
+    @MainActor func testPunctFlickDownTypesTheOtherMark() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)
+        XCTAssertEqual(KeyAlternates.punctFlick(",", setting: true, alternates: ["q": "1"]), ".")
+        XCTAssertEqual(KeyAlternates.punctFlick(".", setting: true, alternates: ["q": "1"]), ",")
+        XCTAssertNil(KeyAlternates.punctFlick(",", setting: false, alternates: ["q": "1"]))
+        XCTAssertNil(KeyAlternates.punctFlick(",", setting: true, alternates: [:]))
+        XCTAssertNil(KeyAlternates.punctFlick("/", setting: true, alternates: ["q": "1"]))
+        XCTAssertTrue(KeyAlternates.isPunctFlick(dx: 3, dy: 16))
+        XCTAssertFalse(KeyAlternates.isPunctFlick(dx: 0, dy: 15), "ngón trôi")
+        XCTAssertFalse(KeyAlternates.isPunctFlick(dx: 14, dy: 20), "kéo chéo")
+        for swipe in [false, true] {
+            var out: [String] = []
+            let (kb, host) = makeKeyboard(numbers: true, symbols: false, side: .both) { out.append($0) }
+            kb.swipeEnabled = swipe
+            kb.debugPunctFlick(",", dx: 0, dy: 30)              // công tắc tắt (mặc định)
+            XCTAssertEqual(out, ["T,"])
+            kb.configureKeyAlternates(numbers: true, symbols: false, flickDown: true)
+            out = []
+            kb.debugPunctFlick(",", dx: 0, dy: 30)
+            XCTAssertEqual(out, ["T."], "gõ vuốt \(swipe)")
+            out = []
+            kb.debugPunctFlick(".", dx: 2, dy: 20)
+            XCTAssertEqual(out, ["T,"])
+            out = []
+            kb.debugPunctFlick(",", dx: 0, dy: 8)               // chưa đủ quãng
+            kb.debugPunctFlick(",", dx: 20, dy: 24)             // kéo chéo
+            kb.debugPunctFlick(",", dx: 0, dy: -30)             // vuốt lên
+            XCTAssertEqual(out, ["T,", "T,", "T,"])
+            withExtendedLifetime(host) {}
+        }
+    }
+
     @MainActor func testCommaHoldOffIsPlainComma() throws {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)
         var out: [String] = []

@@ -60,7 +60,7 @@ internal object SettingCaption {
     const val keyLabelSize = "Lớn: chữ trên phím to hơn ~20%. Plus: chỉnh chi tiết ở Giao diện." // l10n-key
     const val longPressNumbers = "Giữ q … p để gõ 1 … 0 (số nhỏ ở góc phím)." // l10n-key
     const val longPressSymbols = "Giữ a … l, z … m để gõ @ # \$ _ & - + ( ) …" // l10n-key
-    const val flickDownAlternates = "Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6 (tắt khi bật Gõ vuốt). Hàng chữ trên cùng: vuốt thẳng lên cũng ra số, kể cả khi bật Gõ vuốt." // l10n-key
+    const val flickDownAlternates = "Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6 (tắt khi bật Gõ vuốt). Hàng chữ trên cùng: vuốt thẳng lên cũng ra số, kể cả khi bật Gõ vuốt. Phím phẩy / chấm cạnh dấu cách: vuốt xuống ra dấu còn lại." // l10n-key
     const val holdShiftSymbols = "Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3." // l10n-key
     const val autoSpaceAfterPunct = "Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn)." // l10n-key
     const val symbolReturn = "Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu." // l10n-key

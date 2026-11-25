@@ -72,6 +72,18 @@ object KeyAlternates {
     /** Nhấc tay: vuốt THẲNG xuống — đủ quãng và dọc gấp đôi ngang (kéo chéo sang hàng dưới không tính). */
     fun isFlickDown(dx: Float, dy: Float) = dy >= FLICK_DOWN_DP && dy >= 2 * kotlin.math.abs(dx)
 
+    /**
+     * Cùng công tắc: phím "," / "." cạnh dấu cách (hàng đáy bàn chữ) vuốt thẳng XUỐNG ra dấu còn
+     * lại của cặp. Phía dưới không còn phím nào và phím dấu câu không mở đầu nét gõ vuốt ⇒ dùng
+     * được cả khi Gõ vuốt bật. null = phím khác / đang tắt. Giống iOS.
+     */
+    fun punctFlick(key: String, setting: Boolean, alternates: Map<Char, String>): String? =
+        if (!setting || alternates.isEmpty()) null
+        else when (key) { "," -> "."; "." -> ","; else -> null }
+    /** Quãng kéo xuống của phím dấu câu hàng đáy (dp) — ngắn hơn phím chữ: phím sát mép dưới màn hình. */
+    const val PUNCT_FLICK_DP = 16f
+    fun isPunctFlick(dx: Float, dy: Float) = dy >= PUNCT_FLICK_DP && dy >= 2 * kotlin.math.abs(dx)
+
     /** Ký tự phụ của phím "," hàng đáy. */
     const val COMMA_ALT = "."
 

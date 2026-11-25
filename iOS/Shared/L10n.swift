@@ -1030,7 +1030,7 @@ enum L10n {
         "Thanh trên: nút emoji lên thanh gợi ý, phím cách rộng hơn.": "Top bar: the emoji button moves to the suggestion bar; wider space bar.",
         "Giữ a … l, z … m để gõ @ # $ _ & - + ( ) …": "Hold a … l, z … m for @ # $ _ & - + ( ) …",
         "Vuốt phím xuống để gõ số và ký hiệu": "Swipe down on a key for numbers and symbols",
-        "Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6 (tắt khi bật Gõ vuốt). Hàng chữ trên cùng: vuốt thẳng lên cũng ra số, kể cả khi bật Gõ vuốt.": "Swipe straight down on a key for its corner character: y → 6 (off while Swipe typing is on). Top letter row: swiping straight up types the number too, even with Swipe typing on.",
+        "Vuốt thẳng xuống trên phím để gõ ký tự ở góc phím: y → 6 (tắt khi bật Gõ vuốt). Hàng chữ trên cùng: vuốt thẳng lên cũng ra số, kể cả khi bật Gõ vuốt. Phím phẩy / chấm cạnh dấu cách: vuốt xuống ra dấu còn lại.": "Swipe straight down on a key for its corner character: y → 6 (off while Swipe typing is on). Top letter row: swiping straight up types the number too, even with Swipe typing on. Comma / period key next to space: swipe down for the other one.",
         "Giữ ⇧ rồi chạm phím chữ để gõ ký tự ở góc phím: q w e → 1 2 3.": "Hold ⇧ and tap a letter for the character in its corner: q w e → 1 2 3.",
         "Gõ . , ? ! ; : tự thêm dấu cách sau (trừ trong số, email, đường dẫn).": "Adds a space after . , ? ! ; : (not in numbers, emails or links).",
         "Tự động: sau , ? ! ; & $ @ và dấu nháy; dấu . : ) thì ở lại. Luôn: sau mọi ký hiệu.": "Auto: after , ? ! ; & $ @ and quotes; . : ) stay. Always: after any symbol.",

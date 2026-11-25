@@ -570,6 +570,18 @@ class KeyboardView(
         feedback.longPress(this)
         showBalloon(k, KeyAlternates.COMMA_ALT)
     }
+    /**
+     * Nhấc tay trên "," / "." cạnh space sau khi vuốt thẳng xuống ([KeyAlternates.punctFlick]):
+     * phím còn chờ chốt, chưa thành giữ phím (popup / ".") ⇒ đổi ký tự chờ chốt thành dấu còn lại.
+     */
+    private fun punctFlick(pid: Int, k: LaidKey, x: Float, y: Float) {
+        if (!punctSideKeys || k.kind != KeyKind.PUNCT || periodFired || (pid == popPid && popHold?.fired == true)) return
+        val alt = KeyAlternates.punctFlick(k.label, flickDownSetting, alts) ?: return
+        if (!KeyAlternates.isPunctFlick((x - ptrDownX[pid]) / d, (y - ptrDownY[pid]) / d) || !commits.isArmed(k)) return
+        commits.disarm(k)
+        commits.arm(k, textFire(alt))
+        feedback.longPress(this)
+    }
     private fun cancelCommaHold() {
         if (commaPtr < 0) return
         removeCallbacks(voiceLongRun); removeCallbacks(periodRun)
@@ -969,6 +981,8 @@ class KeyboardView(
     private var typedInSymbolPlane = false
     /** Layout đang hiện có phím "." cạnh space thay "," (Dấu chấm) ⇒ giữ "." ra popup dấu câu. */
     private var periodSideKey = false
+    /** Hàng đáy đang có phím "," / "." cạnh space (bàn chữ điện thoại, ô thường) — vuốt xuống ra dấu còn lại. */
+    private var punctSideKeys = false
     /** "Nút emoji" = Thanh trên và strip hiện ⇒ bàn chữ không có 😊 (nút ở StripView). Trong chữ ký layout. */
     private var emojiInStrip = false
     /** "Phím to" (Settings, mặc định TẮT — [KeyLayout.largeKeysActive]). Trong chữ ký layout, chỉ đọc lúc dựng. */
@@ -1011,6 +1025,7 @@ class KeyboardView(
         fitLetterLabels()
         if (plane == Plane.EDIT) fitEditLabels()
         periodSideKey = KeyLayout.sideKey(cfg) == SpaceSideKey.PERIOD
+        punctSideKeys = KeyLayout.sideKey(cfg) != null
         railSpan = if (OneHand.appliesTo(plane)) OneHand.rail(width.toFloat(), oneHandNow) else null
         a11y.invalidateRoot()             // TalkBack tắt ⇒ trả về ngay (manager không bật)
         // Tách đôi có hai phím cách: phím PHẢI (sau cùng) mang logo / badge như iOS. Không tách: một phím.
@@ -2041,6 +2056,7 @@ class KeyboardView(
                 if (pid == popPid) dropPopover()
             }
             KeyKind.PUNCT, KeyKind.PAD -> {
+                if (!cancelled) punctFlick(pid, k, x, y)
                 if (pid == commaPtr) cancelCommaHold()
                 commits.release(k)        // giữ lâu giọng nói ⇒ disarm rồi, không chèn gì; giữ ra "." ⇒ chèn "."
                 if (pid == popPid) dropPopover()

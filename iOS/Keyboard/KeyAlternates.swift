@@ -93,6 +93,20 @@ enum KeyAlternates {
                    isPad: isPad, accessibility: accessibility)
     }
 
+    /// Cùng công tắc: phím "," / "." cạnh dấu cách (hàng đáy bàn chữ) vuốt thẳng XUỐNG ra dấu
+    /// còn lại của cặp. Phía dưới không còn phím nào và phím dấu câu không mở đầu nét gõ vuốt
+    /// ⇒ dùng được cả khi Gõ vuốt bật. nil = phím khác / đang tắt.
+    static func punctFlick(_ key: String, setting: Bool, alternates: [Character: String]) -> String? {
+        guard setting, !alternates.isEmpty else { return nil }
+        switch key { case ",": return "."; case ".": return ","; default: return nil }
+    }
+    /// Quãng kéo xuống của phím dấu câu hàng đáy (pt/dp) — ngắn hơn phím chữ: phím nằm sát
+    /// mép dưới màn hình (máy có nút Home), ngón không còn chỗ đi xa.
+    static let punctFlickDistance: CGFloat = 16
+    static func isPunctFlick(dx: CGFloat, dy: CGFloat) -> Bool {
+        dy >= punctFlickDistance && dy >= 2 * abs(dx)
+    }
+
     /// Ký tự phụ của phím "," hàng đáy.
     static let commaAlt = "."
     /// Giữ "," ra "." khi bảng ký tự phụ đang dùng không rỗng (mọi gating của `map`).
