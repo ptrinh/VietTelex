@@ -20,7 +20,8 @@ package com.viettelex.keyboard
  * THUẦN — pinned by KeyCommandGestureTests.
  */
 class KeyCommandGesture private constructor(
-    val command: KeyCommand,
+    /** null = cử chỉ vuốt-thẳng-lên không gắn lệnh (hàng chữ trên cùng → số, [startUp]). */
+    val command: KeyCommand?,
     private val startX: Float,
     private val startY: Float,
     private val keyAreaTop: Float,
@@ -62,7 +63,21 @@ class KeyCommandGesture private constructor(
         return if (state == State.ARMED) command else null
     }
 
+    /** Nhấc tay tại (x, y): cử chỉ còn đang bật không (cho cử chỉ không gắn lệnh). */
+    fun releaseArmed(x: Float, y: Float): Boolean {
+        move(x, y)
+        return state == State.ARMED
+    }
+
     companion object {
+        /**
+         * Cùng cử chỉ, không gắn lệnh: phím hàng chữ trên cùng vuốt thẳng lên ra ký tự phụ (số).
+         * KeyboardView tự giữ ký tự; nhấc tay hỏi [releaseArmed].
+         */
+        fun startUp(x: Float, y: Float, keyAreaTop: Float, keyPitch: Float,
+                    armMargin: Float = ARM_MARGIN): KeyCommandGesture? =
+            if (keyPitch <= 0f) null else KeyCommandGesture(null, x, y, keyAreaTop, keyPitch, armMargin)
+
         const val SLOPE = 0.45f
         const val LATERAL_KEYS = 0.5f
         const val DOWN_KEYS = 0.5f

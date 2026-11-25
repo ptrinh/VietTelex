@@ -831,6 +831,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         flickDownSetting && KeyAlternates.flickDownEnabled(setting: true, swipeTyping: swipeEnabled,
                                                            isPad: Self.isPad, alternates: activeAlts)
     }
+    /// Cùng công tắc: phím hàng chữ trên cùng vuốt thẳng LÊN ra ký tự phụ — cả khi gõ vuốt bật.
+    private var flickUpActive: Bool {
+        flickDownSetting && KeyAlternates.flickUpEnabled(setting: true, isPad: Self.isPad, alternates: activeAlts)
+    }
     private var altHold: (id: ObjectIdentifier, button: KeyButton, hold: KeyAlternates.Hold)?
     private var altTimer: DispatchWorkItem?
 
@@ -7296,6 +7300,11 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             cmd = beginKeyCommand(b, at: raw)
         }
         let selectionDefer = cmd != nil && keyCommandHasSelection?() == true
+        // Hàng chữ trên cùng vuốt thẳng lên = ký tự phụ (số). Phím có lệnh thì lệnh thắng.
+        var upAlt: String?
+        if cmd == nil, flickUpActive, plane == .letters, routedTouches.count == 1 {
+            (cmd, upAlt) = beginFlickUp(b, at: raw)
+        }
         // Gõ vuốt bật + chạm có thể thành vuốt ⇒ cũng HOÃN chữ tới lúc nhấc (#172): ngón còn
         // đè thì chưa ghi gì vào ô; chạm ⇒ chữ chèn lúc nhấc (hoặc khi ngón khác chạm xuống),
         // vuốt ⇒ chỉ từ vuốt. Tắt gõ vuốt ⇒ chèn ngay lúc chạm như cũ (không trễ).
@@ -7314,6 +7323,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             keyCmd = cmd
             keyCmdTouchID = id
             keyCmdButton = b
+            keyCmdAlt = upAlt
         }
         // Chữ hoãn vì vùng chọn: không gõ vuốt / ký tự phụ cho chạm này.
         guard !selectionDefer else { return }
@@ -7639,7 +7649,11 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private func routeUp(_ id: ObjectIdentifier, at raw: CGPoint, time: TimeInterval, cancelled: Bool) {
         var command: KeyCommand?
-        if id == keyCmdTouchID { command = keyCommandUp(at: raw, time: time, cancelled: cancelled) }
+        var upAlt: String?
+        if id == keyCmdTouchID {
+            if keyCmdAlt != nil { upAlt = flickUpEnd(at: raw, time: time, cancelled: cancelled) }
+            else { command = keyCommandUp(at: raw, time: time, cancelled: cancelled) }
+        }
         let swiped = swipeUp(id, at: raw, time: time)
         let b = routedTouches.removeValue(forKey: id)
         let start = routedStart.removeValue(forKey: id)
@@ -7660,6 +7674,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         var alt: String?
         if let h = altHold, h.id == id { alt = h.hold.commit; dropAltHold() }
         b.sendActions(for: .touchUpInside)
+        if let upAlt, !swiped {
+            // Vuốt thẳng lên ở hàng chữ trên cùng: cùng đường huỷ-phím-rồi-chèn như vuốt xuống
+            // (chữ hoãn vừa được chèn ở trên, chữ chèn lúc chạm thì đã có sẵn).
+            if shiftBeforeLastLetter == .on, shift == .off { shift = .on; applyShiftAppearance() }
+            tapped(.replaceLastLetter(upAlt))
+            return
+        }
         if let alt, !swiped { commitAlt(alt); return }  // cancel vẫn chốt như chữ thường
         guard !swiped, !cancelled else { return }
         // iPad: vuốt xuống trên phím chữ = ký tự phụ như stock. Chữ đã chèn lúc
@@ -7716,6 +7737,31 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// Điểm chạm (tự sửa) của phím hoãn — báo lúc chữ thật sự chèn.
     private var deferredLetterReport: (() -> Void)?
     private var keyCmdPill: UILabel?
+    /// Cử chỉ đang theo dõi là vuốt-lên-ra-ký-tự-phụ (hàng chữ trên cùng): ký tự sẽ chèn.
+    private var keyCmdAlt: String?
+
+    /// Phím hàng chữ trên cùng có ký tự phụ ⇒ cử chỉ vuốt thẳng lên + ký tự đó.
+    private func beginFlickUp(_ b: KeyButton, at raw: CGPoint) -> (KeyCommandGesture?, String?) {
+        guard let base = letterKeys.first(where: { $0.button === b })?.base.first,
+              let alt = activeAlts[base], let kw = letterKeyPitch() else { return (nil, nil) }
+        let key = convert(b.bounds, from: b), top = rowsContainer.frame.minY
+        guard KeyAlternates.isTopRow(keyMinY: key.minY, keyHeight: key.height, keyAreaTop: top),
+              let g = KeyCommandGesture.beginUp(start: raw, keyAreaTop: top, keyPitch: kw) else { return (nil, nil) }
+        return (g, alt)
+    }
+
+    /// Nhấc tay: ký tự phụ nếu cử chỉ đang bật; chưa bật ⇒ như keyCommandUp (gõ vuốt xét điểm cuối).
+    private func flickUpEnd(at raw: CGPoint, time: TimeInterval, cancelled: Bool) -> String? {
+        guard var g = keyCmd, let alt = keyCmdAlt else { endKeyCommand(); return nil }
+        let fired = !cancelled && g.endArmed(at: raw)
+        endKeyCommand()
+        if !fired, !cancelled, !swipeActive, var c = classifier {
+            let d = c.move(to: TouchGeometry.keySelectionPoint(raw), time: time)
+            classifier = c
+            if d == .swipe { beginSwipe() }
+        }
+        return fired ? alt : nil
+    }
 
     private func beginKeyCommand(_ b: KeyButton, at raw: CGPoint) -> KeyCommandGesture? {
         guard let base = letterKeys.first(where: { $0.button === b })?.base.first,
@@ -7733,7 +7779,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             Self.flickFeedback()
             hideBalloon()
             (keyCmdButton as? KeyButton)?.showPressed(false)
-            showKeyCommandPill(keyCommandLabel?(g.command) ?? L(g.command.viLabel))
+            if let alt = keyCmdAlt { showKeyCommandPill(alt) }
+            else if let c = g.command { showKeyCommandPill(keyCommandLabel?(c) ?? L(c.viLabel)) }
         case .disarmed:
             hideKeyCommandPill()
         case .rejected:
@@ -7761,6 +7808,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         keyCmd = nil
         keyCmdTouchID = nil
         keyCmdButton = nil
+        keyCmdAlt = nil
         hideKeyCommandPill()
     }
 
@@ -7770,6 +7818,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         keyCmd = nil
         keyCmdTouchID = nil
         keyCmdButton = nil
+        keyCmdAlt = nil
         hideKeyCommandPill()
     }
 

@@ -51,6 +51,17 @@ enum KeyAlternates {
                                  alternates: [Character: String]) -> Bool {
         setting && !swipeTyping && !isPad && !alternates.isEmpty
     }
+    /// Cùng công tắc: phím HÀNG CHỮ TRÊN CÙNG vuốt thẳng LÊN (ra khỏi vùng phím, cử chỉ
+    /// KeyCommandGesture) cũng ra ký tự phụ. Phía trên không còn phím chữ nào nên không lẫn
+    /// với gõ vuốt ⇒ dùng được cả khi Gõ vuốt bật.
+    static func flickUpEnabled(setting: Bool, isPad: Bool, alternates: [Character: String]) -> Bool {
+        setting && !isPad && !alternates.isEmpty
+    }
+    /// Phím có nằm ở hàng trên cùng của vùng phím không (đỉnh phím cách đỉnh vùng phím chưa
+    /// tới nửa chiều cao phím). Hàng số bật ⇒ hàng chữ không còn là hàng trên cùng.
+    static func isTopRow(keyMinY: CGFloat, keyHeight: CGFloat, keyAreaTop: CGFloat) -> Bool {
+        keyHeight > 0 && keyMinY - keyAreaTop < keyHeight / 2
+    }
     /// Quãng kéo xuống tối thiểu (pt/dp) — hơn nửa chiều cao phím điện thoại: ngón trôi lúc gõ
     /// nhanh (vài pt) không dính.
     static let flickDownDistance: CGFloat = 24

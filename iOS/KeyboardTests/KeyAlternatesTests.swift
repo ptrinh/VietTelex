@@ -235,6 +235,64 @@ final class KeyAlternatesTests: XCTestCase {
         withExtendedLifetime(host) {}
     }
 
+    // MARK: Hàng chữ trên cùng vuốt thẳng LÊN ra số (cùng công tắc, cả khi Gõ vuốt bật)
+
+    func testFlickUpGateIgnoresSwipeTyping() {
+        let alts = KeyAlternates.map(numbers: true, symbols: false, numberRow: false)
+        XCTAssertTrue(KeyAlternates.flickUpEnabled(setting: true, isPad: false, alternates: alts))
+        XCTAssertFalse(KeyAlternates.flickUpEnabled(setting: false, isPad: false, alternates: alts))
+        XCTAssertFalse(KeyAlternates.flickUpEnabled(setting: true, isPad: true, alternates: alts))
+        XCTAssertFalse(KeyAlternates.flickUpEnabled(setting: true, isPad: false, alternates: [:]))
+        XCTAssertTrue(KeyAlternates.isTopRow(keyMinY: 46, keyHeight: 42, keyAreaTop: 40))
+        XCTAssertFalse(KeyAlternates.isTopRow(keyMinY: 100, keyHeight: 42, keyAreaTop: 40), "hàng 2")
+        XCTAssertFalse(KeyAlternates.isTopRow(keyMinY: 46, keyHeight: 0, keyAreaTop: 40))
+    }
+
+    @MainActor func testFlickUpOnTopRowTypesTheNumber() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)
+        func up(_ kb: KeyboardView, _ key: String, above: CGFloat = 20, dx: CGFloat = 0) -> Bool {
+            let f = kb.debugLetterFrame(key)!, top = kb.debugKeyAreaTop()
+            let a = CGPoint(x: f.midX, y: f.midY), endY = top - above
+            let n = max(2, Int(abs(a.y - endY) / 8))
+            let pts = (1...n).map { i -> CGPoint in
+                let u = CGFloat(i) / CGFloat(n)
+                return CGPoint(x: a.x + dx * u, y: a.y + (endY - a.y) * u)
+            }
+            return kb.debugTouch(from: a, through: pts, start: 100)
+        }
+        for swipe in [false, true] {
+            var out: [String] = []
+            let (kb, host) = makeKeyboard(numbers: true, symbols: true) { out.append($0) }
+            kb.swipeEnabled = swipe
+            _ = up(kb, "y")                                     // công tắc tắt (mặc định)
+            XCTAssertFalse(out.contains("R6"), "\(out)")
+            kb.configureKeyAlternates(numbers: true, symbols: true, flickDown: true)
+            out = []
+            XCTAssertFalse(up(kb, "y"), "không thành nét gõ vuốt")
+            XCTAssertEqual(out, ["Ly", "R6"], "gõ vuốt \(swipe)")
+            XCTAssertNil(kb.debugKeyCommandPill)
+            out = []
+            _ = up(kb, "q")
+            XCTAssertEqual(out, ["Lq", "R1"])
+            out = []
+            _ = up(kb, "h")                                     // hàng 2: không phải hàng trên cùng
+            XCTAssertFalse(out.contains { $0.hasPrefix("R") }, "\(out)")
+            out = []
+            _ = up(kb, "y", above: -6)                          // chưa ra khỏi vùng phím ⇒ vẫn là chữ
+            XCTAssertEqual(out, ["Ly"])
+            withExtendedLifetime(host) {}
+        }
+        // Hàng số bật: hàng chữ không còn là hàng trên cùng, cũng không còn số ở góc phím.
+        var out: [String] = []
+        let (kb, host) = makeKeyboard(numbers: true, symbols: true, numberRow: true) { out.append($0) }
+        kb.configureKeyAlternates(numbers: true, symbols: true, flickDown: true)
+        kb.layoutIfNeeded()
+        out = []
+        _ = up(kb, "y")
+        XCTAssertFalse(out.contains { $0.hasPrefix("R") }, "\(out)")
+        withExtendedLifetime(host) {}
+    }
+
     /// Đã bắn mà ngón khác chạm: ký tự phụ chốt TRƯỚC phím mới (checkpoint đúng phím).
     @MainActor func testSecondTouchAfterFireCommitsAlternateFirst() throws {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom == .pad)

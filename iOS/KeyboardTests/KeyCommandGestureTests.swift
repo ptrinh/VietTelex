@@ -51,6 +51,17 @@ final class KeyCommandGestureTests: XCTestCase {
 
     // MARK: ngưỡng bật / tắt
 
+    func testCommandlessGestureArmsTheSameWay() {
+        var g = KeyCommandGesture.beginUp(start: c, keyAreaTop: top, keyPitch: pitch)!
+        XCTAssertNil(g.command)
+        for p in up(to: 20) { g.move(to: p) }
+        XCTAssertTrue(g.isArmed)
+        XCTAssertTrue(g.endArmed(at: CGPoint(x: c.x, y: 20)))
+        var inside = KeyCommandGesture.beginUp(start: c, keyAreaTop: top, keyPitch: pitch)!
+        XCTAssertFalse(inside.endArmed(at: CGPoint(x: c.x, y: 100)))
+        XCTAssertNil(KeyCommandGesture.beginUp(start: c, keyAreaTop: top, keyPitch: 0))
+    }
+
     func testStraightUpPastTopFires() {
         XCTAssertEqual(run(up(to: 20)), .copy)
         XCTAssertEqual(run(up(to: 20), key: "x"), .cut)

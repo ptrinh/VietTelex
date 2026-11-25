@@ -33,6 +33,21 @@ class KeyCommandGestureTests {
         for (c in "bdefghijklmnopqrstuw") assertNull(c.toString(), KeyCommandGesture.commandFor(c))
     }
 
+    @Test fun commandlessGestureArmsTheSameWay() {
+        val g = KeyCommandGesture.startUp(150f, 27f, top, pitch)!!
+        assertNull(g.command)
+        g.move(150f, 10f)
+        assertFalse(g.armed)
+        g.move(152f, -10f)
+        assertTrue(g.armed)
+        assertTrue(g.releaseArmed(152f, -12f))
+        assertFalse(KeyCommandGesture.startUp(150f, 27f, top, pitch)!!.releaseArmed(150f, 20f))
+        val diag = KeyCommandGesture.startUp(150f, 27f, top, pitch)!!
+        diag.move(200f, 20f)                       // sang phím bên cạnh: gõ vuốt tiếp quản
+        assertFalse(diag.live)
+        assertNull(KeyCommandGesture.startUp(150f, 27f, top, 0f))
+    }
+
     @Test fun iosVariantOnlyCopyCutPaste() {
         assertEquals(KeyCommand.COPY, KeyCommandGesture.commandFor('c', full = false))
         assertEquals(KeyCommand.PASTE, KeyCommandGesture.commandFor('v', full = false))

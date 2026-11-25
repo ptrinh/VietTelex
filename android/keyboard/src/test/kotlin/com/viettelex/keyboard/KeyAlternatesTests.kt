@@ -182,6 +182,17 @@ class KeyAlternatesTests {
         assertFalse(KeyboardSettings().flickDownAlternates)
     }
 
+    // Hàng chữ trên cùng vuốt thẳng LÊN ra số: cùng công tắc, không phụ thuộc Gõ vuốt.
+    @Test fun flickUpGateAndTopRow() {
+        val alts = KeyAlternates.map(numbers = true, symbols = false, numberRow = false)
+        assertTrue(KeyAlternates.flickUpEnabled(true, alts))
+        assertFalse(KeyAlternates.flickUpEnabled(false, alts))
+        assertFalse(KeyAlternates.flickUpEnabled(true, emptyMap()))
+        assertTrue(KeyAlternates.isTopRow(keyTop = 6f, keyHeight = 42f, keyAreaTop = 0f))
+        assertFalse("hàng 2", KeyAlternates.isTopRow(keyTop = 60f, keyHeight = 42f, keyAreaTop = 0f))
+        assertFalse(KeyAlternates.isTopRow(keyTop = 6f, keyHeight = 0f, keyAreaTop = 0f))
+    }
+
     @Test fun flickDownShape() {
         assertTrue(KeyAlternates.isFlickDown(0f, 24f))
         assertTrue(KeyAlternates.isFlickDown(-12f, 30f))

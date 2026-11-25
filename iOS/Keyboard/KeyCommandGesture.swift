@@ -59,7 +59,8 @@ struct KeyCommandGesture: Equatable {
         var armMargin: CGFloat = 4
     }
 
-    let command: KeyCommand
+    /// nil = cử chỉ vuốt-thẳng-lên không gắn lệnh (hàng chữ trên cùng → số, `beginUp`).
+    let command: KeyCommand?
     let start: CGPoint
     let keyAreaTop: CGFloat
     let pitch: CGFloat
@@ -71,6 +72,15 @@ struct KeyCommandGesture: Equatable {
                       keyPitch: CGFloat, params: Params = Params()) -> KeyCommandGesture? {
         guard enabled, keyPitch > 0, let cmd = KeyCommand.forKey(key) else { return nil }
         return KeyCommandGesture(command: cmd, start: start, keyAreaTop: keyAreaTop,
+                                 pitch: keyPitch, params: params)
+    }
+
+    /// Cùng cử chỉ, không gắn lệnh: phím hàng chữ trên cùng vuốt thẳng lên ra ký tự phụ (số).
+    /// KeyboardView tự giữ ký tự; nhấc tay hỏi `endArmed`.
+    static func beginUp(start: CGPoint, keyAreaTop: CGFloat, keyPitch: CGFloat,
+                        params: Params = Params()) -> KeyCommandGesture? {
+        guard keyPitch > 0 else { return nil }
+        return KeyCommandGesture(command: nil, start: start, keyAreaTop: keyAreaTop,
                                  pitch: keyPitch, params: params)
     }
 
@@ -112,10 +122,15 @@ struct KeyCommandGesture: Equatable {
 
     /// Nhấc tay tại `p`: lệnh nếu đang bật (sau khi xét điểm cuối). Sau đó cử chỉ kết thúc.
     mutating func end(at p: CGPoint) -> KeyCommand? {
+        endArmed(at: p) ? command : nil
+    }
+
+    /// Nhấc tay tại `p`: cử chỉ có đang bật không (cho cử chỉ không gắn lệnh). Sau đó kết thúc.
+    mutating func endArmed(at p: CGPoint) -> Bool {
         move(to: p)
-        let fired = state == .armed ? command : nil
+        let armed = state == .armed
         state = .rejected
-        return fired
+        return armed
     }
 }
 

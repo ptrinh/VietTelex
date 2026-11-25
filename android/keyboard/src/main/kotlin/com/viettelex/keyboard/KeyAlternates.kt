@@ -55,6 +55,18 @@ object KeyAlternates {
      */
     fun flickDownEnabled(setting: Boolean, swipeTyping: Boolean, alternates: Map<Char, String>) =
         setting && !swipeTyping && alternates.isNotEmpty()
+    /**
+     * Cùng công tắc: phím HÀNG CHỮ TRÊN CÙNG vuốt thẳng LÊN (ra khỏi vùng phím, cử chỉ
+     * [KeyCommandGesture]) cũng ra ký tự phụ. Phía trên không còn phím chữ nào nên không lẫn với
+     * gõ vuốt ⇒ dùng được cả khi Gõ vuốt bật. Giống iOS.
+     */
+    fun flickUpEnabled(setting: Boolean, alternates: Map<Char, String>) = setting && alternates.isNotEmpty()
+    /**
+     * Phím có nằm ở hàng trên cùng của vùng phím không (đỉnh phím cách đỉnh vùng phím chưa tới
+     * nửa chiều cao phím). Hàng số bật ⇒ hàng chữ không còn là hàng trên cùng.
+     */
+    fun isTopRow(keyTop: Float, keyHeight: Float, keyAreaTop: Float) =
+        keyHeight > 0f && keyTop - keyAreaTop < keyHeight / 2
     /** Quãng kéo xuống tối thiểu (dp) — hơn nửa chiều cao phím: ngón trôi lúc gõ nhanh không dính. */
     const val FLICK_DOWN_DP = 24f
     /** Nhấc tay: vuốt THẲNG xuống — đủ quãng và dọc gấp đôi ngang (kéo chéo sang hàng dưới không tính). */
