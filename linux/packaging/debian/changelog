@@ -1,3 +1,17 @@
+viettelex (1.0.30) UNRELEASED; urgency=medium
+
+  * Tuỳ chọn mới "Bấm Ctrl một mình để chốt từ đang gõ" (mặc định tắt, Ứng
+    dụng › Hiển thị chữ đang gõ › Nâng cao): nhấn rồi nhả Ctrl thì chữ đang
+    gạch chân được chèn hẳn vào ô, để app nhận ra (ví dụ gắn thẻ @tên trong
+    app Electron). (#180)
+  * ---
+  * New option "Tap Ctrl alone to commit the word being typed" (off by
+    default, Apps › Word being typed › Advanced): pressing and releasing
+    Ctrl inserts the underlined text for real, so the app sees it (e.g.
+    @mentions in Electron apps). (#180)
+
+ -- VietTelex Maintainers <maintainers@viettelex.invalid>  Wed, 25 Nov 2026 12:00:00 +0700
+
 viettelex (1.0.29) UNRELEASED; urgency=medium
 
   * Tuỳ chọn mới "Tự thêm dấu mũ" (mặc định tắt, Kiểu gõ › Nâng cao): khi gõ

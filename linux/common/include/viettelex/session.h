@@ -323,6 +323,10 @@ private:
     void applyPendingMode();
     bool autoRestore_ = true;
     bool underlineMisspelled_ = false;  // Settings::underlineMisspelled
+    // Settings::ctrlCommitsWord: Ctrl went down alone and no other key was pressed since —
+    // its release is a "tap" that commits the word in progress.
+    bool ctrlCommitsWord_ = false;
+    bool ctrlTapArmed_ = false;
     bool preeditMisspelled_ = false;    // style of the preedit last sent
     bool shortcutsEnabled_ = true;
     bool reEdit_ = true;

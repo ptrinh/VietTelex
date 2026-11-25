@@ -119,6 +119,9 @@ EN = {
     "Tắt: chữ đang gõ trông như chữ thường (GTK, Qt, VTE X11). Chrome/Electron vẫn tự gạch.":
         "Off: the word being typed looks like normal text (GTK, Qt, X11 VTE). Chrome still underlines.",
     "Terminal: gõ thẳng, sửa dấu bằng Backspace": "Terminals: type directly, fix marks with Backspace",
+    "Bấm Ctrl một mình để chốt từ đang gõ": "Tap Ctrl alone to commit the word being typed",
+    "Chữ đang gạch chân được chèn hẳn vào ô, để app nhận ra (ví dụ gắn thẻ @tên trong Teams, Slack).":
+        "The underlined text is inserted for real, so the app sees it (e.g. @mentions in Teams, Slack).",
     "Bỏ gạch chân trong Chrome/Electron (thử nghiệm)":
         "No underline in Chrome/Electron (experimental)",
     "Chrome, VS Code, Slack… gõ thẳng, sửa bằng Backspace. Chỉ GNOME/KDE Wayland; mở lại app.":

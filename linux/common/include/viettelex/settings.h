@@ -59,6 +59,10 @@ struct Settings {
     bool underlineMisspelled = false;
     bool terminalDirect = true;     // terminals on ordered hosts: Direct instead of Preedit
     std::string toggleHotkey = "Ctrl+space";
+    // "Bấm Ctrl một mình để chốt từ đang gõ" (#180): a lone Ctrl tap commits the composition,
+    // so the app sees the text (mention pickers in web apps only read committed text). Off by
+    // default.
+    bool ctrlCommitsWord = false;
     bool perAppState = true;
     // "Phát tiếng khi đổi Việt/Anh" (switch_sound, default OFF): switch_sound.h.
     bool switchSound = false;

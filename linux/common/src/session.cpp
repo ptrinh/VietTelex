@@ -381,6 +381,8 @@ void Session::applySettings(const Settings &s) {
     vt_engine_set_flag(e_, VT_FLAG_EAGER_ENGLISH_RESTORE, s.autoRestore);
     autoRestore_ = s.autoRestore;
     underlineMisspelled_ = s.underlineMisspelled;
+    ctrlCommitsWord_ = s.ctrlCommitsWord;
+    ctrlTapArmed_ = false;
     shortcutsEnabled_ = s.shortcutsEnabled;
     reEdit_ = s.reEditWord;
     vni_ = s.vni;
@@ -1235,8 +1237,16 @@ bool Session::processKey(const KeyEvent &ev, InputContext &ic) {
         // Double-space period: a held space (autorepeat — frameworks send no repeat flag)
         // presses again without a release in between.
         if (ev.keysym == ks::space) spaceReleased_ = true;
+        // Lone Ctrl tap (#180): commit the word in progress; Ctrl itself still reaches the app.
+        if (ctrlTapArmed_ && (ev.keysym == ks::Control_L || ev.keysym == ks::Control_R)) {
+            ctrlTapArmed_ = false;
+            if (composing()) finish(ic);
+        }
         return false;
     }
+    // Armed by Ctrl going down with no other modifier held; any other key press disarms.
+    ctrlTapArmed_ = ctrlCommitsWord_ && (ev.keysym == ks::Control_L || ev.keysym == ks::Control_R) &&
+                    (ev.mods & ~uint32_t(VT_MOD_CTRL)) == 0;
     if (ks::isModifierOnly(ev.keysym)) return false;
     // Dead keys / Compose key (#161): the framework's keyboard engine that would compose them
     // does not run while we are the input method — compose here, in every mode (English and

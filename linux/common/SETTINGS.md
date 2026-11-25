@@ -55,6 +55,7 @@ preedit_underline = false           # "Hiện gạch chân chữ đang gõ" (fal
 underline_misspelled = false        # Gạch đỏ âm tiết sai chính tả khi gõ (chỉ preedit; IBus: gạch lỗi + chữ đỏ, Fcitx5: gạch chân)
 terminal_direct = true              # Terminal: gõ thẳng, sửa dấu bằng BackSpace forward (khi host hỗ trợ)
 toggle_hotkey = "Ctrl+space"        # xem §4; "" = tắt phím chuyển
+ctrl_commits_word = false           # Bấm Ctrl một mình (nhấn rồi nhả, không kèm phím khác) = chốt từ đang gõ (#180)
 per_app_state = true                # Nhớ Việt/Anh theo từng app
 switch_sound = false                # Phát tiếng khi đổi Việt/Anh (lên = Việt, xuống = Anh; cần pw-play, paplay hoặc aplay)
 default_vietnamese = true           # Trạng thái khi gặp app lần đầu

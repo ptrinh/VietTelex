@@ -18,6 +18,7 @@ constexpr uint32_t BackSpace = 0xff08, Tab = 0xff09, Return = 0xff0d, Escape = 0
                    Delete = 0xffff, Home = 0xff50, Left = 0xff51, Up = 0xff52, Right = 0xff53,
                    Down = 0xff54, PageUp = 0xff55, PageDown = 0xff56, End = 0xff57,
                    KP_Enter = 0xff8d, ISO_Left_Tab = 0xfe20, space = 0x20;
+constexpr uint32_t Control_L = 0xffe3, Control_R = 0xffe4;
 // Modifier-only keys (Shift_L … Hyper_R) and friends: pressing them alone never ends
 // a word.
 inline bool isModifierOnly(uint32_t k) {

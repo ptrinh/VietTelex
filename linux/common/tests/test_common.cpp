@@ -299,6 +299,62 @@ void testCtrlChordCommits() {
     CHECK_EQ(m.doc, std::string("việt"));
 }
 
+// #180: with ctrl_commits_word on, a lone Ctrl tap commits the composition; Ctrl held with
+// another key, Ctrl+Shift, and the switch off leave it alone.
+void testCtrlTapCommitsWord() {
+    auto ctrl = [](Session &s, Mock &m, bool release, uint32_t mods = 0) {
+        KeyEvent ev;
+        ev.keysym = ks::Control_L;
+        ev.mods = mods;
+        ev.release = release;
+        return s.processKey(ev, m);
+    };
+    {
+        Session s;  // default: off
+        Mock m;
+        type(s, m, "vieej");
+        CHECK(!ctrl(s, m, false));
+        CHECK(!ctrl(s, m, true, VT_MOD_CTRL));
+        CHECK_EQ(m.pre, std::string("việ"));
+        CHECK_EQ(m.doc, std::string(""));
+    }
+    Settings on;
+    on.ctrlCommitsWord = true;
+    {
+        Session s;
+        s.applySettings(on);
+        Mock m;
+        type(s, m, "@vieej");
+        CHECK(!ctrl(s, m, false));              // Ctrl itself is never swallowed
+        CHECK_EQ(m.doc, std::string("@"));      // nothing more on the press
+        CHECK(!ctrl(s, m, true, VT_MOD_CTRL));
+        CHECK_EQ(m.pre, std::string(""));
+        CHECK_EQ(m.doc, std::string("@việ"));
+        type(s, m, "t");                        // a new word after the commit
+        CHECK_EQ(m.pre, std::string("t"));
+    }
+    {
+        Session s;
+        s.applySettings(on);
+        Mock m;
+        type(s, m, "vieej");
+        ctrl(s, m, false, VT_MOD_SHIFT);        // Shift already held: not a lone tap
+        ctrl(s, m, true, VT_MOD_SHIFT | VT_MOD_CTRL);
+        CHECK_EQ(m.pre, std::string("việ"));
+        ctrl(s, m, false);
+        KeyEvent shift;                         // Ctrl then Shift (layout switch chords)
+        shift.keysym = 0xffe1;
+        shift.mods = VT_MOD_CTRL;
+        s.processKey(shift, m);
+        ctrl(s, m, true, VT_MOD_CTRL | VT_MOD_SHIFT);
+        CHECK_EQ(m.pre, std::string("việ"));
+        CHECK_EQ(m.doc, std::string(""));
+    }
+    CHECK(parseConfig("[general]\nctrl_commits_word = true\n").ctrlCommitsWord);
+    CHECK(!Settings().ctrlCommitsWord);
+    CHECK(parseConfig(serializeConfig(on)).ctrlCommitsWord);
+}
+
 void testToggleHotkey() {
     Session s;
     Mock m;
@@ -3821,6 +3877,7 @@ int main() {
     testIssue163ReachBackNotes();
     testDirectPolicyTable();
     testUnderlineAndDirectSettings();
+    testCtrlTapCommitsWord();
     testUnderlineMisspelledOffByDefault();
     testUnderlineMisspelledFollowsPreedit();
     testUnderlineMisspelledSkipsValidAndEnglish();

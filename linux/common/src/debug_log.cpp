@@ -101,7 +101,7 @@ std::string settingsLine(const Settings &s) {
          " freqEn=" + b(s.englishByFrequency) + " collVN=" + b(s.collisionPrefersVietnamese) +
          " bracket=" + b(s.bracketVowels) + " reEdit=" + b(s.reEditWord);
     o += std::string(" | display=") + modeName(s.displayMode) + " underline=" + b(s.preeditUnderline) +
-         " redMisspelled=" + b(s.underlineMisspelled) + " termDirect=" + b(s.terminalDirect) +
+         " redMisspelled=" + b(s.underlineMisspelled) + " termDirect=" + b(s.terminalDirect) + " ctrlCommit=" + b(s.ctrlCommitsWord) +
          " perApp=" + b(s.perAppState) + " sound=" + b(s.switchSound) + " defVi=" + b(s.defaultVietnamese) + " ui=" + s.uiLanguage +
          " noUnderline=" + (s.noUnderline == NoUnderline::ForwardKeys ? "forward-keys" : "off");
     o += std::string(" | auto: dblSpace=") + b(s.doubleSpacePeriod) + " caps=" + b(s.autoCapitalize) +

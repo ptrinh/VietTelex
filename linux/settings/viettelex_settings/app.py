@@ -1105,6 +1105,8 @@ class SettingsWindow(Adw.PreferencesWindow):
                     _("Tắt: chữ đang gõ trông như chữ thường (GTK, Qt, VTE X11). Chrome/Electron vẫn tự gạch."))
         self.switch(adv, "general", "terminal_direct", _("Terminal: gõ thẳng, sửa dấu bằng Backspace"),
                     _("Không gạch chân ở gnome-terminal, konsole… (IBus GTK3/Fcitx5). GTK4 và GNOME Wayland vẫn gạch."))
+        self.switch(adv, "general", "ctrl_commits_word", _("Bấm Ctrl một mình để chốt từ đang gõ"),
+                    _("Chữ đang gạch chân được chèn hẳn vào ô, để app nhận ra (ví dụ gắn thẻ @tên trong Teams, Slack)."))
         self._no_underline_switch(adv)
         page.add(g)
 

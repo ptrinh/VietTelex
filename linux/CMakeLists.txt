@@ -6,7 +6,7 @@
 # libtelexcore is built by SwiftPM (swift toolchain on PATH) unless VT_CORE_LIB points at a
 # prebuilt libtelexcore.so.
 cmake_minimum_required(VERSION 3.16)
-project(viettelex-linux VERSION 1.0.29 LANGUAGES C CXX)
+project(viettelex-linux VERSION 1.0.30 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

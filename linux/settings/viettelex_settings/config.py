@@ -42,6 +42,8 @@ DEFAULTS = {
         "underline_misspelled": False,
         "terminal_direct": True,
         "toggle_hotkey": "Ctrl+space",
+        # Bấm Ctrl một mình = chốt từ đang gõ (ô gắn thẻ @tên trong app web chỉ đọc chữ đã chốt).
+        "ctrl_commits_word": False,
         "per_app_state": True,
         "switch_sound": False,
         "default_vietnamese": True,

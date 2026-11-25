@@ -177,6 +177,7 @@ Settings parseConfig(const std::string &toml) {
             else if (key == "preedit_underline") setBool(s.preeditUnderline, v);
             else if (key == "underline_misspelled") setBool(s.underlineMisspelled, v);
             else if (key == "terminal_direct") setBool(s.terminalDirect, v);
+            else if (key == "ctrl_commits_word") setBool(s.ctrlCommitsWord, v);
             else if (key == "per_app_state") setBool(s.perAppState, v);
             else if (key == "switch_sound") setBool(s.switchSound, v);
             else if (key == "default_vietnamese") setBool(s.defaultVietnamese, v);
@@ -245,6 +246,7 @@ std::string serializeConfig(const Settings &s) {
       << "underline_misspelled = " << b(s.underlineMisspelled) << "\n"
       << "terminal_direct = " << b(s.terminalDirect) << "\n"
       << "toggle_hotkey = " << quote(s.toggleHotkey) << "\n"
+      << "ctrl_commits_word = " << b(s.ctrlCommitsWord) << "\n"
       << "per_app_state = " << b(s.perAppState) << "\n"
       << "switch_sound = " << b(s.switchSound) << "\n"
       << "default_vietnamese = " << b(s.defaultVietnamese) << "\n"
