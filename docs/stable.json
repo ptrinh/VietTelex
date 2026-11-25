@@ -3,12 +3,12 @@
   "url": "https://github.com/ptrinh/viettelex/releases/tag/v1.9.13",
   "build": 161,
   "windows": {
-    "version": "1.3.35",
-    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-x64.msi",
-    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-arm64.msi",
-    "notes": "Edge/Chrome: gõ đúng trong thanh địa chỉ của cửa sổ riêng tư (InPrivate, ẩn danh) khi có gợi ý tự điền.",
-    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-portable-x64.zip",
-    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.35/VietTelex-1.3.35-portable-arm64.zip"
+    "version": "1.3.36",
+    "x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.36/VietTelex-1.3.36-x64.msi",
+    "arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.36/VietTelex-1.3.36-arm64.msi",
+    "notes": "Excel: từ đầu tiên gõ trong ô không còn bị sót dấu khi gõ nhanh. Chữ viết tắt có Y gõ được Đ (YKTDD ra YKTĐ).",
+    "portable_x64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.36/VietTelex-1.3.36-portable-x64.zip",
+    "portable_arm64": "https://github.com/ptrinh/viettelex/releases/download/windows-v1.3.36/VietTelex-1.3.36-portable-arm64.zip"
   },
   "linux": {
     "version": "1.0.30",
