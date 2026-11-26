@@ -197,6 +197,8 @@ internal fun MixedTypingSection() {
 /** Trang con "Nâng cao" của nhóm Gõ lẫn tiếng Anh: công tắc nhận diện tiếng Anh. */
 @Composable
 internal fun MixedAdvancedPage(onBack: () -> Unit) {
+    var pickingApps by remember { mutableStateOf(false) }
+    if (pickingApps) { EnglishAppsPage { pickingApps = false }; return }
     val contextual by rememberBoolPref(Keys.CONTEXTUAL_ENGLISH, Prefs.D.contextualEnglish)
     val vni by rememberBoolPref(Keys.VNI_MODE, Prefs.D.vniMode)
     SubPageHeader(tr("Nâng cao"), onBack, backTitle = "‹ " + AppTab.KieuGo.title)
@@ -217,6 +219,50 @@ internal fun MixedAdvancedPage(onBack: () -> Unit) {
             RowDivider(32.dp)
             Highlightable(item.target.id) {
                 DependentToggle(item.prefKey!!, default, tr(item.viTitle), tr(caption), null, experimental = true)
+            }
+        }
+    }
+    val englishApps by rememberStringPref(Keys.ENGLISH_APPS, "")
+    VTSection {
+        val n = com.viettelex.keyboard.EnglishApps.parse(englishApps).size
+        NavRow(tr(ENGLISH_APPS_TITLE), if (n == 0) tr("Chưa chọn app nào") else tr("%d app").format(n)) { pickingApps = true }
+    }
+}
+
+internal const val ENGLISH_APPS_TITLE = "Luôn gõ tiếng Anh trong app" // l10n-key
+
+/** Danh sách app có biểu tượng trên màn hình chính; bật = bàn phím tự ở Tiếng Anh trong app đó ([EnglishApps]). */
+@Composable
+internal fun EnglishAppsPage(onBack: () -> Unit) {
+    val ctx = LocalContext.current
+    var raw by rememberStringPref(Keys.ENGLISH_APPS, "")
+    val chosen = com.viettelex.keyboard.EnglishApps.parse(raw)
+    SubPageHeader(tr(ENGLISH_APPS_TITLE), onBack, backTitle = "‹ " + tr("Nâng cao"))
+    // Nhãn app đọc ở luồng nền (hàng trăm app); app đã chọn mà đã gỡ vẫn hiện để bỏ chọn được.
+    val apps by androidx.compose.runtime.produceState<List<Pair<String, String>>?>(null) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val pm = ctx.packageManager
+            val launch = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+            pm.queryIntentActivities(launch, 0)
+                .map { it.activityInfo.packageName to it.loadLabel(pm).toString() }
+                .filter { it.first != ctx.packageName }
+                .distinctBy { it.first }
+                .sortedBy { it.second.lowercase() }
+        }
+    }
+    val list = apps
+    VTSection(footer = tr(SettingCaption.englishApps)) {
+        if (list == null) {
+            VTRow { Text(tr("Đang tải danh sách app…"), style = VTType.body, color = LocalVT.current.secondary) }
+        } else {
+            val known = list.map { it.first }.toSet()
+            val rows = chosen.filter { it !in known }.sorted().map { it to it } +
+                list.sortedByDescending { it.first in chosen }
+            rows.forEachIndexed { i, (pkg, label) ->
+                if (i > 0) RowDivider()
+                SettingToggle(label, if (label == pkg) null else pkg, pkg in chosen) { on ->
+                    raw = com.viettelex.keyboard.EnglishApps.serialize(com.viettelex.keyboard.EnglishApps.toggled(chosen, pkg, on))
+                }
             }
         }
     }

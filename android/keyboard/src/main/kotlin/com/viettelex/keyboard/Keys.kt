@@ -70,6 +70,8 @@ object Keys {
     const val AUTO_SPACE_AFTER_PUNCT = "autoSpaceAfterPunct"
     /** Ngôn ngữ đang gõ ("vi" | "en") — trạng thái bàn phím, KHÔNG sao lưu. */
     const val KEYBOARD_LANGUAGE = "keyboardLanguage"
+    /** String: tên gói các app luôn gõ Tiếng Anh, cách nhau bằng xuống dòng ([EnglishApps]). Android. */
+    const val ENGLISH_APPS = "englishApps"
     /** Gõ Telex bằng bàn phím cứng (tablet, DeX, Chromebook, BT/USB) — mặc định BẬT. */
     const val HARDWARE_TELEX = "hardwareTelex"
 

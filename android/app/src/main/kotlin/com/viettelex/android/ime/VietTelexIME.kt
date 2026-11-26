@@ -90,6 +90,8 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         }
     }
     private lateinit var prefs: SharedPreferences
+    /** Ô đang gõ thuộc app "Luôn gõ tiếng Anh trong app" ([com.viettelex.keyboard.EnglishApps]). */
+    private var englishApp = false
     private lateinit var model: UserLangModel
     private lateinit var clipboard: AndroidClipboard
     private lateinit var session: KeyboardSession
@@ -981,7 +983,10 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
                     .putString(com.viettelex.keyboard.KeyboardLanguageRequest.APPLIED_KEY, req).apply()
             }
         }
-        session.restoreLanguage(stateStore().getString(Keys.KEYBOARD_LANGUAGE, null), proxy)
+        // "Luôn gõ tiếng Anh trong app": app trong danh sách ⇒ Tiếng Anh cho lần gõ này, không đụng ngôn ngữ đã lưu.
+        englishApp = com.viettelex.keyboard.EnglishApps.forces(info.packageName,
+            com.viettelex.keyboard.EnglishApps.parse(prefs.getString(Keys.ENGLISH_APPS, null)), packageName)
+        session.restoreLanguage(stateStore().getString(Keys.KEYBOARD_LANGUAGE, null), proxy, forceEnglish = englishApp)
         hwSetting = settings.hardwareTelex
         fieldReady = true
     }
@@ -1297,7 +1302,8 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
         val lang = try { session.toggleLanguage(proxy, convert) } finally { proxy.end() }
         resetIfEditFailed()
         if (lang == null) return
-        stateStore().edit().putString(Keys.KEYBOARD_LANGUAGE, lang.id).apply()
+        // App "luôn tiếng Anh": đổi tay chỉ cho lần gõ này, không lưu (app khác không bị kéo theo).
+        if (!englishApp) stateStore().edit().putString(Keys.KEYBOARD_LANGUAGE, lang.id).apply()
         keyboard?.spaceLanguage = lang
         if (lang == com.viettelex.keyboard.KeyboardLanguage.EN) warmEnglish()
         pendingGen = session.generation

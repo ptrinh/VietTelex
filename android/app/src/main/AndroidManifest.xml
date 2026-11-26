@@ -11,6 +11,11 @@
         <intent>
             <action android:name="android.view.InputMethod" />
         </intent>
+        <!-- "Luôn gõ tiếng Anh trong app": liệt kê app có biểu tượng trên màn hình chính để người dùng chọn. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
     <application
         android:label="@string/app_name"

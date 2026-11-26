@@ -616,8 +616,9 @@ class KeyboardSession(
     }
 
     /** Sau [startInput]: khôi phục ngôn ngữ đã lưu ([Keys.KEYBOARD_LANGUAGE]). */
-    fun restoreLanguage(stored: String?, proxy: TextProxy) {
-        language = KeyboardLanguage.effective(stored, spaceFlickEnabled)
+    fun restoreLanguage(stored: String?, proxy: TextProxy, forceEnglish: Boolean = false) {
+        // [forceEnglish]: app thuộc "Luôn gõ tiếng Anh trong app" ([EnglishApps]) — cả khi công tắc vuốt phím cách tắt.
+        language = if (forceEnglish) KeyboardLanguage.EN else KeyboardLanguage.effective(stored, spaceFlickEnabled)
         bridge.setEnglish(language == KeyboardLanguage.EN, proxy)
     }
 

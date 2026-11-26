@@ -76,8 +76,8 @@
     "notes": "Chữ viết tắt có Y gõ được Đ bằng DD: YKTDD ra YKTĐ."
   },
   "android": {
-    "version": "1.6.25",
-    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.25/VietTelex-android-1.6.25.apk",
+    "version": "1.6.26",
+    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.26/VietTelex-android-1.6.26.apk",
     "play": "https://play.google.com/store/apps/details?id=com.viettelex.android"
   }
 }
