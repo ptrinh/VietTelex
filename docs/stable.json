@@ -76,8 +76,8 @@
     "notes": "Tuỳ chọn mới Bấm Ctrl một mình để chốt từ đang gõ (mặc định tắt): chữ đang gạch chân được chèn hẳn vào ô, để app nhận ra khi gắn thẻ @tên."
   },
   "android": {
-    "version": "1.6.24",
-    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.24/VietTelex-android-1.6.24.apk",
+    "version": "1.6.25",
+    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.25/VietTelex-android-1.6.25.apk",
     "play": "https://play.google.com/store/apps/details?id=com.viettelex.android"
   }
 }
