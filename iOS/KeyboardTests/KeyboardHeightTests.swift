@@ -96,6 +96,20 @@ final class KeyboardHeightTests: XCTestCase {
                                     "headroom balloon giữ cả khi host thiếu nhiều")
     }
 
+    /// Host cấp thiếu: icon mép (☰ …) đi theo dòng chữ gợi ý, không đè lên hàng phím đầu.
+    @MainActor func testHostShortfallKeepsBarIconsOnTheSuggestionRow() throws {
+        let (kb, host) = makeKeyboard()
+        _ = host
+        XCTAssertEqual(kb.debugBurgerIconMidY, kb.debugSuggestionBarFrame.midY, accuracy: 0.5)
+        for cut in [8, 14, 24] as [CGFloat] {
+            kb.frame.size.height = kb.debugRequestedHeight - cut
+            kb.setNeedsLayout(); kb.layoutIfNeeded()
+            let bar = kb.debugSuggestionBarFrame, rowTop = try XCTUnwrap(kb.debugRowFrames().first).minY
+            XCTAssertEqual(kb.debugBurgerIconMidY, bar.midY, accuracy: 0.5, "thiếu \(cut)")
+            XCTAssertLessThanOrEqual(bar.maxY, rowTop + 0.5, "thiếu \(cut)")
+        }
+    }
+
     /// Tìm emoji: 4 hàng chữ cao y như plane chữ.
     @MainActor func testEmojiSearchDoesNotCompressKeys() throws {
         for suggestions in [true, false] {

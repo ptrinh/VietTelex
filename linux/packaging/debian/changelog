@@ -1,3 +1,13 @@
+viettelex (1.0.31) UNRELEASED; urgency=medium
+
+  * Chữ viết tắt có Y gõ được Đ bằng DD: "YKTDD" ra "YKTĐ" (trước đây Y
+    bị coi là nguyên âm nên quy tắc chữ viết tắt bỏ qua).
+  * ---
+  * Initialisms containing Y now take Đ from DD: "YKTDD" gives "YKTĐ" (Y
+    used to count as a vowel, so the initialism rule skipped it).
+
+ -- VietTelex Maintainers <maintainers@viettelex.invalid>  Thu, 26 Nov 2026 20:00:00 +0700
+
 viettelex (1.0.30) UNRELEASED; urgency=medium
 
   * Tuỳ chọn mới "Bấm Ctrl một mình để chốt từ đang gõ" (mặc định tắt, Ứng

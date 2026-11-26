@@ -74,6 +74,22 @@ object StripGeometry {
     fun dismissShown(enabled: Boolean, reserved: Boolean, emojiPlane: Boolean): Boolean =
         enabled && reserved && !emojiPlane
 
+    /**
+     * Bàn emoji (lưới, không phải ô tìm): dải gợi ý phía trên đang trống ⇒ hai nút mép — ← về bàn
+     * chữ (trái) và 📋 dán clipboard (phải). Chỉ khi dải đang giữ chỗ (tắt "Thanh gợi ý" ⇒ không có dải).
+     */
+    fun emojiPlaneTools(emojiGrid: Boolean, reserved: Boolean): Boolean = emojiGrid && reserved
+
+    const val EMOJI_TOOL_NONE = 0
+    const val EMOJI_TOOL_BACK = 1
+    const val EMOJI_TOOL_PASTE = 2
+    /** Nút dưới ngón tay (dp): ô mép trái / mép phải rộng [KeyLayout.STRIP_ZONE_W]; giữa dải không có gì. */
+    fun emojiPlaneTool(xDp: Float, widthDp: Float): Int = when {
+        xDp < KeyLayout.STRIP_ZONE_W -> EMOJI_TOOL_BACK
+        xDp >= widthDp - KeyLayout.STRIP_ZONE_W -> EMOJI_TOOL_PASTE
+        else -> EMOJI_TOOL_NONE
+    }
+
     /** Bề ngang ô ⌄ (dp): = ô ☰ trái (như nút thu gọn cũ); 0 khi không hiện ⇒ mọi khung y như chưa có nút. */
     fun dismissW(shown: Boolean): Float = if (shown) KeyLayout.STRIP_ZONE_W else 0f
 

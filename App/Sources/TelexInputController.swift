@@ -1281,6 +1281,13 @@ final class TelexInputController: IMKInputController {
             ch = SystemAutoText.capitalized(ch)
             autoCappedWord = true
         }
+        // #181: chữ đầu từ ở lưới Google Sheets trong Safari phải tới trang như phím thật.
+        let gridNativeLetter = Self.gridFirstLetterNative(
+            wordStart: engine.isEmpty, marked: markedNow, edge: edgeTapWord,
+            webKitBrowser: AppState.webKitBrowsers.contains(id ?? ""),
+            sheetsGrid: FocusedFieldDetector.wantsEmptyResetField,
+            layoutPinned: KeyboardLayoutOverride.translator != nil,
+            afterDeadKey: keyFollowsDeadKey, autoCapped: autoCappedWord)
         let action = engine.feed(ch)
         // OVERFLOW in a MARKED app: feed() returned .passthrough WITHOUT recording the
         // key, so re-setting the marked text (unchanged 32-char prefix) while consuming
@@ -1310,6 +1317,13 @@ final class TelexInputController: IMKInputController {
                 // Same right after a dead key: native could arrive composed, #161.)
                 selToClear = 0
                 onLen += 1
+                return false
+            }
+            if gridNativeLetter {
+                // Chỉ chữ ĐẦU từ; các phím sau vẫn đi kênh insertText có thứ tự như cũ.
+                logDecision("sheets grid (WebKit): first letter passes natively")
+                selToClear = 0
+                if tracking { onLen += 1 }
                 return false
             }
             // Insert the letter ourselves (do NOT return false to let the system
@@ -1379,6 +1393,21 @@ final class TelexInputController: IMKInputController {
         // that is the 2026-07-27 Chrome Web Store class this guard exists for.
         let lag = expected - caret
         return lag >= 0 && lag <= InPlaceProbe.maxCaretLag
+    }
+
+    // MARK: - Lưới Google Sheets trong Safari (#181)
+
+    /// Ô lưới Sheets đang CHỌN (chưa vào chế độ sửa) chỉ bắt đầu sửa khi nhận phím thật
+    /// (keydown/keypress). Chữ chèn bằng insertText (in-place) hay marked text đều không mở
+    /// ô — số và dấu câu (vốn đi thẳng) thì gõ được, bộ gõ Telex của Apple cũng bị. Vì vậy
+    /// chữ ĐẦU của từ, khi không cần biến đổi gì, được để trang nhận như phím thật; ô vào
+    /// chế độ sửa, các phím sau đi in-place như thường. Không áp dụng khi ký tự mình chèn
+    /// khác phím thật: layout ghim (translator), sau dead key, chữ đầu câu tự viết hoa.
+    static func gridFirstLetterNative(wordStart: Bool, marked: Bool, edge: Bool, webKitBrowser: Bool,
+                                      sheetsGrid: Bool, layoutPinned: Bool, afterDeadKey: Bool,
+                                      autoCapped: Bool) -> Bool {
+        wordStart && !marked && !edge && webKitBrowser && sheetsGrid
+            && !layoutPinned && !afterDeadKey && !autoCapped
     }
 
     // MARK: - Engine .passthrough (32-char overflow) contract

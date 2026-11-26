@@ -55,4 +55,23 @@ final class EdgeTapTests: XCTestCase {
         // → giữ đường per-op selectedRange như cũ.
         XCTAssertFalse(TelexInputController.edgeTapEligible(manualInPlace: true, caret: nil, trusted: true))
     }
+
+    // #181 — Google Sheets trong Safari: chữ đầu từ đi như phím thật để ô vào chế độ sửa.
+    func testSheetsGridFirstLetterPassesNativelyInWebKitOnly() {
+        func f(wordStart: Bool = true, marked: Bool = false, edge: Bool = false, webKit: Bool = true,
+               sheets: Bool = true, pinned: Bool = false, dead: Bool = false, capped: Bool = false) -> Bool {
+            TelexInputController.gridFirstLetterNative(
+                wordStart: wordStart, marked: marked, edge: edge, webKitBrowser: webKit, sheetsGrid: sheets,
+                layoutPinned: pinned, afterDeadKey: dead, autoCapped: capped)
+        }
+        XCTAssertTrue(f())
+        XCTAssertFalse(f(wordStart: false), "chỉ chữ đầu từ")
+        XCTAssertFalse(f(webKit: false), "Chromium đi kênh tap + U+202F như cũ")
+        XCTAssertFalse(f(sheets: false), "trang khác trong Safari không đổi")
+        XCTAssertFalse(f(marked: true))
+        XCTAssertFalse(f(edge: true))
+        XCTAssertFalse(f(pinned: true), "layout ghim: phím thật ra chữ khác")
+        XCTAssertFalse(f(dead: true))
+        XCTAssertFalse(f(capped: true), "chữ tự viết hoa khác phím thật")
+    }
 }

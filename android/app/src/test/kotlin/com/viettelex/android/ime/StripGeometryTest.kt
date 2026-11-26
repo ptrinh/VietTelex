@@ -226,4 +226,15 @@ class StripGeometryTest {
         assertEquals(StripGeometry.MIN_WORD_SCALE, StripGeometry.fitScale(400f, 100f), 0.001f)  // hết mức ⇒ cắt
         assertEquals(1f, StripGeometry.fitScale(0f, 100f), 0.001f)
     }
+
+    @Test fun emojiPlaneToolsSitAtTheStripEdges() {
+        assertTrue(StripGeometry.emojiPlaneTools(emojiGrid = true, reserved = true))
+        assertFalse("tắt Thanh gợi ý ⇒ không có dải", StripGeometry.emojiPlaneTools(emojiGrid = true, reserved = false))
+        assertFalse("bàn chữ / ô tìm emoji", StripGeometry.emojiPlaneTools(emojiGrid = false, reserved = true))
+        val w = 360f
+        assertEquals(StripGeometry.EMOJI_TOOL_BACK, StripGeometry.emojiPlaneTool(10f, w))
+        assertEquals(StripGeometry.EMOJI_TOOL_PASTE, StripGeometry.emojiPlaneTool(w - 10f, w))
+        assertEquals(StripGeometry.EMOJI_TOOL_NONE, StripGeometry.emojiPlaneTool(w / 2, w))
+        assertEquals(StripGeometry.EMOJI_TOOL_NONE, StripGeometry.emojiPlaneTool(KeyLayout.STRIP_ZONE_W, w))
+    }
 }

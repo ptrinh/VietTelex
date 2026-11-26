@@ -34,9 +34,12 @@ class ShiftHold(private val doubleTapMs: Long = DOUBLE_TAP_MS) {
     fun down(cur: Shift, now: Long): Shift {
         before = cur
         held = true; selectUsed = false; symbolsUsed = false
-        val next = if (lastTap != NEVER && now - lastTap < doubleTapMs) Shift.CAPS_LOCK
-            else if (cur == Shift.OFF) Shift.ONCE else Shift.OFF
-        lastTap = now; downAt = now
+        // Chạm đôi ⇒ Caps Lock; lần chạm NGAY sau đó là chạm mới (tắt Caps), không phải chạm đôi
+        // nữa — chạm ba nhanh trước đây vẫn kẹt ở Caps. Giống iOS.
+        val double = lastTap != NEVER && now - lastTap < doubleTapMs
+        val next = if (double) Shift.CAPS_LOCK else if (cur == Shift.OFF) Shift.ONCE else Shift.OFF
+        lastTap = if (double) NEVER else now
+        downAt = now
         pressed = next
         return next
     }

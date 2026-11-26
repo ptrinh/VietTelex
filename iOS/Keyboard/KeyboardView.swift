@@ -527,7 +527,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         dismissZone.isHidden = false
         defer { bringSubviewToFront(dismissZone) }
         // layoutSubviews chạy cả khi gõ: trạng thái không đổi ⇒ khỏi dựng lại ảnh.
-        let key = DismissZoneKey(frame: f, rowTop: barRowTop(strip: strip), ink: palette.barInk)
+        let key = DismissZoneKey(frame: f, rowTop: barRowKey, ink: palette.barInk)
         guard key != dismissZoneKey else { return }
         dismissZoneKey = key
         dismissZone.frame = f
@@ -632,10 +632,16 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         SuggestionBarHeight.rowTop(strip: strip, capGap: rowSpec.gap, row: barRowNow, topPad: Self.barTopPad)
     }
     /// Đệm nội dung cho nút mép (☰ / 📋 / 😊) cao trọn strip: icon canh giữa hàng nội dung bar.
+    /// Theo ĐÚNG dòng chữ đang vẽ (suggestionRowSpan): host cấp thiếu chiều cao ⇒ dòng chữ co /
+    /// dời lên, icon dời theo — trước đây icon đứng yên ở vị trí xin, đè lên hàng phím đầu
+    /// (Notes iOS 27 + hàng số, 25/11/2026).
     private func barContentInsets(strip: CGFloat) -> UIEdgeInsets {
-        let top = barRowTop(strip: strip)
-        return UIEdgeInsets(top: top, left: 0, bottom: max(strip - barRowNow - top, 0), right: 0)
+        let (y, h) = suggestionRowSpan()
+        let top = max(y, 0)
+        return UIEdgeInsets(top: top, left: 0, bottom: max(strip - h - top, 0), right: 0)
     }
+    /// Khoá cache của các nút mép: đổi khi dòng chữ gợi ý đổi chỗ / đổi cao.
+    private var barRowKey: CGFloat { let s = suggestionRowSpan(); return s.y * 1024 + s.h }
 
     private func layoutSuggestionBar() {
         let w = Self.stripZoneWidth
@@ -673,7 +679,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let strip = max(rowsTopWanted, openStripNow)
         // layoutSubviews chạy cả khi gõ (shift/balloon) — trạng thái không đổi thì khỏi
         // dựng lại ảnh SF Symbol + insets mỗi lượt.
-        let key = StripZonesKey(width: bounds.width, strip: strip, rowTop: barRowTop(strip: strip),
+        let key = StripZonesKey(width: bounds.width, strip: strip, rowTop: barRowKey,
                                 templates: templatesActive, ink: palette.barInk,
                                 zone: zone, oneHand: oneHand, lastSide: lastOneHandSide)
         guard burgerZoneMade || !hideBurger else { stripZonesKey = nil; return }
@@ -774,6 +780,16 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         KeyAlternates.shiftMap(enabled: holdShiftSetting, numbers: altNumbersSetting,
                                symbols: altSymbolsSetting, numberRow: numberRowEnabled,
                                isPad: Self.isPad, accessibility: altAccessibility)
+    }
+    /// Chạm / chạm đôi (Caps) / giữ làm phím bổ trợ — ShiftHold (THUẦN). Giờ chạm lấy từ CHÍNH
+    /// touch (UITouch.timestamp), không phải lúc xử lý: ⇧ nằm sát mép trái, hệ thống có lúc giao
+    /// touch trễ / dồn, hai lần chạm thong thả bị tính thành chạm đôi ⇒ dính Caps Lock (phản hồi
+    /// 26/11/2026).
+    @objc private func shiftTouchDown(_ sender: UIControl, event: UIEvent?) {
+        let t = event?.allTouches?.first(where: { $0.view === sender && $0.phase == .began })?.timestamp
+        shiftDown(now: t ?? CACurrentMediaTime())
+        // Sau khi đổi trạng thái: Piano cần biết Shift một-lần hay Caps (pedal); kiểu khác = tiếng chức năng.
+        Self.clickShift(shift == .caps ? .caps : (shift == .on ? .on : .off))
     }
     private func shiftDown(now: TimeInterval) {
         shift = Self.fromCase(shiftHold.down(Self.toCase(shift), now: now))
@@ -1429,7 +1445,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let strip = openStripNow
         guard strip != barHitStrip else { return }
         barHitStrip = strip
-        let barHit = UIEdgeInsets(top: -8, left: -3, bottom: -barContentInsets(strip: strip).bottom, right: -3)
+        let barHit = UIEdgeInsets(top: -8, left: -3, bottom: -max(strip - barRowNow - barRowTop(strip: strip), 0), right: -3)
         suggestionBar.hitInsets = UIEdgeInsets(top: barHit.top, left: 0, bottom: barHit.bottom, right: 0)
         for b in slotButtons + emojiButtons { b.hitInsets = barHit }
     }
@@ -1520,6 +1536,11 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     }
     #if DEBUG
     var debugTemplatesLoaded: Bool { userTemplatesCache != nil }
+    /// Tâm dọc icon ☰ (toạ độ view) — theo contentEdgeInsets đang áp.
+    var debugBurgerIconMidY: CGFloat {
+        let i = burgerZone.contentEdgeInsets
+        return burgerZone.frame.minY + (i.top + burgerZone.frame.height - i.bottom) / 2
+    }
     var debugBurgerVisible: Bool { burgerZoneMade && burgerZone.superview != nil && !burgerZone.isHidden }
     var debugLeftZone: LeftZone { leftZone }
     /// Test hook: chạm ô mép trái thanh gợi ý (☰ hoặc nút một tay) — đúng action của nút.
@@ -1909,7 +1930,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         emojiZone.isHidden = false
         defer { bringSubviewToFront(emojiZone) }
         // layoutSubviews chạy cả khi gõ (shift/balloon): trạng thái không đổi ⇒ khỏi dựng lại ảnh.
-        let key = EmojiZoneKey(frame: f, ink: palette.barInk)
+        let key = EmojiZoneKey(frame: f, rowTop: barRowKey, ink: palette.barInk)
         guard key != emojiZoneKey else { return }
         emojiZoneKey = key
         emojiZone.frame = f
@@ -1920,7 +1941,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         // Icon canh hàng chữ gợi ý như 📋 / ☰.
         emojiZone.contentEdgeInsets = barContentInsets(strip: strip)
     }
-    private struct EmojiZoneKey: Equatable { let frame: CGRect; let ink: RGBA }
+    private struct EmojiZoneKey: Equatable { let frame: CGRect; let rowTop: CGFloat; let ink: RGBA }
     private var emojiZoneKey: EmojiZoneKey?
     #if DEBUG
     /// Test hook: khung nút 😊 trên thanh (nil = ẩn / chưa tạo).
@@ -6482,13 +6503,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         shiftKeys.append(b)
         // Toggle ở TOUCH-DOWN: roll shift+chữ nhanh phải ra chữ hoa —
         // touch-up thì chữ đã kịp chốt trước khi shift bật.
-        b.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            // Chạm / chạm đôi (Caps) / giữ làm phím bổ trợ — ShiftHold (THUẦN).
-            self.shiftDown(now: CACurrentMediaTime())
-            // Sau khi đổi trạng thái: Piano cần biết Shift một-lần hay Caps (pedal); kiểu khác = tiếng chức năng.
-            Self.clickShift(self.shift == .caps ? .caps : (self.shift == .on ? .on : .off))
-        }, for: .touchDown)
+        b.addTarget(self, action: #selector(shiftTouchDown(_:event:)), for: .touchDown)
         b.addAction(UIAction { [weak self] _ in
             self?.shiftUp()   // đã giữ ⇧ gõ ký tự phụ ⇒ không để lại viết hoa một lần
         }, for: [.touchUpInside, .touchUpOutside, .touchCancel])

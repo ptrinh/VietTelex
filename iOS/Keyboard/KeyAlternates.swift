@@ -187,9 +187,11 @@ struct ShiftHold {
         before = cur
         held = true; symbolsUsed = false
         let next: Shift
-        if let t = lastTap, now - t < Self.doubleTap { next = .capsLock }
-        else { next = cur == .off ? .once : .off }
-        lastTap = now; downAt = now
+        // Chạm đôi ⇒ Caps Lock; lần chạm NGAY sau đó là chạm mới (tắt Caps), không phải chạm đôi
+        // nữa — chạm ba nhanh trước đây vẫn kẹt ở Caps.
+        if let t = lastTap, now - t < Self.doubleTap { next = .capsLock; lastTap = nil }
+        else { next = cur == .off ? .once : .off; lastTap = now }
+        downAt = now
         pressed = next
         return next
     }

@@ -898,6 +898,15 @@ final class ShiftHoldTests: XCTestCase {
         s = h.down(s, now: 9 + ShiftHold.doubleTap + 0.01); XCTAssertEqual(s, .off, "chậm ⇒ không phải chạm đôi")
     }
 
+    /// Chạm ba nhanh: một lần → Caps → TẮT (lần thứ ba không còn là chạm đôi).
+    func testTripleTapLeavesCapsLock() {
+        var h = ShiftHold()
+        var s = h.down(.off, now: 1); s = h.up(s)
+        s = h.down(s, now: 1.15); XCTAssertEqual(s, .capsLock); s = h.up(s)
+        s = h.down(s, now: 1.3); XCTAssertEqual(s, .off); s = h.up(s)
+        s = h.down(s, now: 1.45); XCTAssertEqual(s, .capsLock, "chạm đôi mới")
+    }
+
     /// Giữ ⇧ + q w e ⇒ 1 2 3; nhả KHÔNG để lại viết hoa một lần; lần chạm kế không thành chạm đôi.
     func testHeldShiftTypesDigitsAndLeavesNoOneShot() {
         var h = ShiftHold()

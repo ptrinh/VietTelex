@@ -21,6 +21,14 @@ class ShiftHoldTests {
     private val H = ShiftHold.ROLLOVER_MS + 50
 
     /** Chạm nhanh ⇧ = viết hoa một lần; chạm đôi = Caps Lock; chạm thứ hai chậm = tắt (như cũ). */
+    @Test fun tripleTapLeavesCapsLock() {
+        val h = ShiftHold()
+        var s = h.down(Shift.OFF, 1_000); s = h.up(s)
+        s = h.down(s, 1_150); assertEquals(Shift.CAPS_LOCK, s); s = h.up(s)
+        s = h.down(s, 1_300); assertEquals("lần thứ ba không còn là chạm đôi", Shift.OFF, s); s = h.up(s)
+        s = h.down(s, 1_450); assertEquals("chạm đôi mới", Shift.CAPS_LOCK, s)
+    }
+
     @Test fun tapDoubleTapUnchanged() {
         val h = ShiftHold()
         var s = h.down(Shift.OFF, 1_000); assertEquals(Shift.ONCE, s)

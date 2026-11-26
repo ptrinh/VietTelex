@@ -2014,6 +2014,7 @@ class VietTelexIME : InputMethodService(), KeyboardView.Listener, StripView.List
 
     // --- nút 😊 trên strip ("Nút emoji" = Thanh trên) ---
     override fun onEmojiButton() { keyboard?.setPlane(Plane.EMOJI) }
+    override fun onBackToLetters() { keyboard?.setPlane(Plane.LETTERS) }
     override fun onBuddyTickle() { root?.buddy?.tickle(); root?.aiEye?.tickle() }
 
     /** Toạ độ StripView → KeyboardView (cùng cha ImeRootView, kể cả thả nổi). */
