@@ -1033,15 +1033,15 @@ constexpr uint16_t kContractionStemsCounts[7] = {0,1,8,13,12,5,1};
 constexpr WordSet kContractionStems{6, kContractionStemsBuckets, kContractionStemsCounts};
 
 // All-caps acronyms Telex mangles (EnglishContextWords.capsAcronyms): ASAP, WWDC.
-// 5 words
+// 10 words
 constexpr const char* const kCapsAcronymsBuckets[5] = {
   "",
   "",
   "",
-  "ispwwf",
-  "asapussrwwdc",
+  "aweeegeekispwwf",
+  "aaplasapootdussrwwdc",
 };
-constexpr uint16_t kCapsAcronymsCounts[5] = {0,0,0,2,3};
+constexpr uint16_t kCapsAcronymsCounts[5] = {0,0,0,5,5};
 constexpr WordSet kCapsAcronyms{4, kCapsAcronymsBuckets, kCapsAcronymsCounts};
 
 // Eager English restore (EnglishFreezePrefixes.swift): raw prefixes at which an English

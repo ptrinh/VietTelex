@@ -1,3 +1,15 @@
+viettelex (1.0.32) UNRELEASED; urgency=medium
+
+  * Chữ viết tắt gõ toàn chữ hoa giữ được Đ, Â, Ê, Ô, Ă, Ơ, Ư dù không phải
+    âm tiết tiếng Việt: "UBDD" ra "UBĐ", "OOB" ra "ÔB", "BCHTUW" ra "BCHTƯ".
+    Từ tiếng Anh viết hoa (BOOK, FREE, ADDRESS…) vẫn giữ nguyên.
+  * ---
+  * All-caps initialisms keep Đ, Â, Ê, Ô, Ă, Ơ, Ư even when they are not a
+    Vietnamese syllable: "UBDD" gives "UBĐ", "OOB" gives "ÔB", "BCHTUW" gives
+    "BCHTƯ". English typed in capitals (BOOK, FREE, ADDRESS…) is unchanged.
+
+ -- VietTelex Maintainers <maintainers@viettelex.invalid>  Fri, 27 Nov 2026 15:00:00 +0700
+
 viettelex (1.0.31) UNRELEASED; urgency=medium
 
   * Chữ viết tắt có Y gõ được Đ bằng DD: "YKTDD" ra "YKTĐ" (trước đây Y

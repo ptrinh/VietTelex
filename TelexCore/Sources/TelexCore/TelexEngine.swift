@@ -1085,7 +1085,7 @@ public struct TelexEngine {
         // fixes the typo instead of getting raw keys back.
         if forceRestoreUpperTone || rawIsEnglishException()
             || (!composedIsValidSyllable() && !isTeencodeKeep() && !isVietnameseTypoKeep()
-                && !isHatInitialismKeep()) { return true }
+                && !isHatInitialismKeep() && !isCapsInitialismKeep()) { return true }
         // ALL-CAPS acronym whose Telex reading is a RARE syllable: "NAS" → "NÁ", "OS" → "Ó"
         // restore; "VIỆT", "ĐÀ NẴNG", "CÓ" (common) stay.
         if isRareAllCapsAcronym() { return true }
@@ -1320,15 +1320,41 @@ public struct TelexEngine {
         return !rawHasEnglishReading()
     }
 
+    /// ALL-CAPS token whose marks the user built by doubling or with w (Đ Â Ê Ô Ă Ơ Ư), no
+    /// tone: an initialism, so it need not be a Vietnamese syllable ("ÔB", "UBĐ", "ƯCV",
+    /// "ÔTC"; maintainer spec 2026-11-27). English still restores: any dictionary or
+    /// English-prefix reading ("BOOK", "ADDRESS"), the closed lists (`capsAcronyms`,
+    /// `hatInitialismEnglish`), and a standalone-w ư ("WL"). Literal doubles stay reachable
+    /// through the triple-key cancel. Boundary-only, non-mutating.
+    private func isCapsInitialismKeep() -> Bool {
+        guard !vniMode, lastEffTone == .none, pCount >= 2, rawIsAllCapsToken() else { return false }
+        var hasMark = false
+        for k in 0..<pCount where renderLetters[k].mark != .none {
+            if renderLetters[k].mark == .horn, renderLetters[k].base == UInt8(ascii: "u"),
+               letterCreatedByW(k) { return false }
+            hasMark = true
+        }
+        guard hasMark else { return false }
+        if rawCount == 3 {
+            let key = UInt32(lowercased(raw[0])) << 16 | UInt32(lowercased(raw[1])) << 8 | UInt32(lowercased(raw[2]))
+            if Self.hatInitialismEnglish.contains(key) { return false }
+        }
+        if isListedCapsAcronym() || rawIsEnglishCollision() { return false }
+        // A coda still waiting for its tone ("KÊP", "MÊT", "BÔT" — keep/meet/boot) is English
+        // double-vowel spelling, as in `isVietnameseTypoKeep`.
+        if SyllableValidator.isValidPrefix(composed.lowercased(), teencode: teencode) { return false }
+        return !rawHasEnglishReading()
+    }
+
     /// Lowercase raw keys (packed v<<16 | m<<8 | c) of the `isHatInitialismKeep` shape that
-    /// read as English: words (aah eel ooh owl awl) and acronyms (aad oob awb awd uwb).
+    /// read as English: words (aah eel ooh owl awl) and acronyms (aad awb awd uwb; "OOB" is ÔB = ông bà, maintainer 2026-11-27).
     /// Stop-consonant forms (eek eeg oop aac…) never reach it. Mirrored in Kotlin and C++.
     /// Third keys `isHatInitialismKeep` never keeps: non-Vietnamese letters (f j w z) and
     /// stops (c k p t g q).
     private static let hatInitialismExcludedConsonants: [UInt8] = Array("fjwzckptgq".utf8)
 
     private static let hatInitialismEnglish: [UInt32] = [
-        "aah", "eel", "ooh", "owl", "awl", "aad", "oob", "awb", "awd", "uwb",
+        "aah", "eel", "ooh", "owl", "awl", "aad", "awb", "awd", "uwb",
     ].map { s in s.utf8.reduce(UInt32(0)) { $0 << 8 | UInt32($1) } }
 
     /// The raw keys spell, or begin like, a known English word: any dictionary the engine
@@ -2002,7 +2028,69 @@ public struct TelexEngine {
     /// Đ even after the word has frozen — see `isAbbreviationPrefix`. VNI spells
     /// Đ with a digit, not by doubling, so it is untouched.
     private func abbreviationDoublerException(lower: UInt8, upper: Bool) -> Bool {
-        !pVniMode && lower == UInt8(ascii: "d") && isAbbreviationPrefix(upper: upper)
+        !pVniMode && lower == UInt8(ascii: "d")
+            && (isAbbreviationPrefix(upper: upper) || isCapsInitialismDoubler(upper: upper))
+    }
+
+    /// English onset clusters (packed lowercase bytes) that `capsInitialismVowelMark` leaves
+    /// alone. Mirrored in Kotlin and C++.
+    private static let englishOnsetClusters: [UInt32] = [
+        "bl", "br", "ch", "chr", "cl", "cr", "dr", "dw", "fl", "fr", "gh", "gl", "gn", "gr", "kl",
+        "kn", "kr", "ph", "phr", "pl", "pr", "ps", "rh", "sc", "sch", "scr", "sh", "shr", "sk",
+        "skr", "sl", "sm", "sn", "sp", "sph", "spl", "spr", "sq", "st", "str", "sv", "sw", "th",
+        "thr", "tr", "ts", "tw", "wh", "wr", "zh", "schw", "schl", "schm", "schn",
+    ].map { s in s.utf8.reduce(UInt32(0)) { $0 << 8 | UInt32($1) } }
+
+    /// ALL-CAPS initialism, frozen word: a doubler (AA EE OO) or w (AW OW UW) still marks the
+    /// letter right before it ("BCHTƯ" = ban chấp hành trung ương, maintainer spec
+    /// 2026-11-27); the same key again cancels to the literal pair. English typed in capitals
+    /// ("SPEED" shows SPÊD while typing) restores at the boundary, see `isCapsInitialismKeep`.
+    private mutating func capsInitialismVowelMark(_ at: Int, lower: UInt8, upper: Bool) -> Bool {
+        guard !pVniMode, upper, pCount >= 3 else { return false }
+        let i = pCount - 1
+        let p = letters[i]
+        // Everything before the vowel is a capital consonant (Đ included), two or more, and
+        // not an English onset cluster: "FREE", "SHOW", "SCHOOL", "STREET" stay literal.
+        var onset: UInt32 = 0
+        for k in 0..<i {
+            let l = letters[k]
+            if !l.upper || isVowelAscii(l.base) { return false }
+            onset = onset << 8 | UInt32(l.base)
+        }
+        if i <= 4, Self.englishOnsetClusters.contains(onset) { return false }
+        let want: Mark
+        if lower == p.base, lower == UInt8(ascii: "a") || lower == UInt8(ascii: "e") || lower == UInt8(ascii: "o") {
+            want = .circumflex
+        } else if lower == UInt8(ascii: "w"), p.base == UInt8(ascii: "a") {
+            want = .breve
+        } else if lower == UInt8(ascii: "w"), p.base == UInt8(ascii: "o") || p.base == UInt8(ascii: "u") {
+            want = .horn
+        } else { return false }
+        if p.mark == .none {
+            letters[i].mark = want; rawLetter[at] = i
+            return true
+        }
+        if p.mark == want, at > 0, rawLetter[at - 1] == i, lowercased(raw[at - 1]) == lower {
+            letters[i].mark = .none
+            pCancelled = true
+            appendLetter(base: lower, mark: .none, upper: upper)
+            rawLetter[at] = pCount - 1
+            return true
+        }
+        return false
+    }
+
+    /// ALL-CAPS initialism that carries a vowel ("UBĐ", report 2026-11-27): the second D of a
+    /// pair folds to Đ after the freeze when everything typed is a capital and the letter
+    /// before the pair is a consonant. English "dd" follows a vowel (ADD, ODD, LADDER), so
+    /// those never match; the boundary rule in `composedIsValidSyllable` restores the rest.
+    private func isCapsInitialismDoubler(upper: Bool) -> Bool {
+        guard upper, pCount >= 2 else { return false }
+        let d = letters[pCount - 1], before = letters[pCount - 2]
+        guard d.base == UInt8(ascii: "d"), d.mark == .none,
+              !Self.isAbbreviationVowel(before.base) else { return false }
+        for k in 0..<pCount where !letters[k].upper { return false }
+        return true
     }
 
     /// NON-mutating: letter classes go into a small STACK buffer
@@ -2046,11 +2134,22 @@ public struct TelexEngine {
             if sameCase {
                 var hasBar = false
                 var onlyBar = true
+                // ALL-CAPS only: bare vowels may come BEFORE the first Đ when a consonant
+                // sits right before it ("UBĐ"); "AĐ", "GRANĐAD" still exit.
+                var sawVowel = false
+                var afterConsonant = false
                 for k in 0..<pCount {
                     let l = renderLetters[k]
-                    if Self.isAbbreviationVowel(l.base) { onlyBar = false; break }
-                    if l.base == UInt8(ascii: "d"), l.mark == .bar { hasBar = true }
-                    else if l.mark != .none { onlyBar = false; break }
+                    if Self.isAbbreviationVowel(l.base) {
+                        if !firstIsUpper || hasBar || l.mark != .none { onlyBar = false; break }
+                        sawVowel = true; afterConsonant = false
+                        continue
+                    }
+                    if l.base == UInt8(ascii: "d"), l.mark == .bar {
+                        if sawVowel, !hasBar, !afterConsonant { onlyBar = false; break }
+                        hasBar = true
+                    } else if l.mark != .none { onlyBar = false; break }
+                    afterConsonant = true
                 }
                 if hasBar, onlyBar { return true }
             }
@@ -2898,6 +2997,7 @@ public struct TelexEngine {
         // this 'd' continues a bare-consonant abbreviation prefix (VNĐ, HTĐ,
         // HĐND…), where dd→Đ must still fire (see abbreviationDoublerException).
         if pCancelled || (at >= disabledAtCount && !abbreviationDoublerException(lower: lower, upper: upper)) {
+            if !pCancelled, capsInitialismVowelMark(at, lower: lower, upper: upper) { return }
             appendLetter(base: lower, mark: .none, upper: upper)
             rawLetter[at] = pCount - 1
             return

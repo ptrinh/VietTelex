@@ -547,7 +547,7 @@ bool TelexEngine::shouldRestoreRawBase() const {
     // Vietnamese typo ("lanwm" -> "lănm") keeps the screen — Swift isVietnameseTypoKeep.
     if (upperToneKey_ || rawIsEnglishException() ||
         (!composedIsValidSyllable() && !isTeencodeKeep() && !isVietnameseTypoKeep() &&
-         !isHatInitialismKeep()))
+         !isHatInitialismKeep() && !isCapsInitialismKeep()))
         return true;
     // ALL-CAPS acronym with a rare reading ("NAS" -> "NÁ") — Swift isRareAllCapsAcronym.
     if (isRareAllCapsAcronym()) return true;
@@ -741,6 +741,32 @@ bool TelexEngine::isVietnameseTypoKeep() const {
 // Exactly 3 raw keys, one case, no tone: vowel + doubler (aa ee oo) or vowel + w (aw ow uw,
 // never a standalone-w ư) + one bare consonant (not f j w z, not a stop c k p t g q); no English reading and not on
 // the closed hat-shape English list. Boundary-only, allocation-free.
+// Swift hatInitialismEnglish: English words / acronyms of exactly this shape.
+static bool isHatInitialismEnglish(uint8_t v, uint8_t m, uint8_t c) {
+    static const char* const kHatInitialismEnglish[] = {
+        "aah", "eel", "ooh", "owl", "awl", "aad", "awb", "awd", "uwb",
+    };
+    for (const char* e : kHatInitialismEnglish)
+        if (e[0] == static_cast<char>(v) && e[1] == static_cast<char>(m) && e[2] == static_cast<char>(c)) return true;
+    return false;
+}
+
+// Swift isCapsInitialismKeep: ALL-CAPS token with user-built marks and no tone is an initialism ("ÔB", "UBĐ", "ƯCV").
+bool TelexEngine::isCapsInitialismKeep() const {
+    if (vniMode || lastEffTone_ != Tone::None || pCount_ < 2 || !rawIsAllCapsToken()) return false;
+    bool hasMark = false;
+    for (int k = 0; k < pCount_; ++k) {
+        if (renderLetters_[k].mark == Mark::None) continue;
+        if (renderLetters_[k].mark == Mark::Horn && renderLetters_[k].base == 'u' && letterCreatedByW(k)) return false;
+        hasMark = true;
+    }
+    if (!hasMark) return false;
+    if (rawCount_ == 3 && isHatInitialismEnglish(lowercased(raw_[0]), lowercased(raw_[1]), lowercased(raw_[2]))) return false;
+    if (isListedCapsAcronym() || rawIsEnglishCollision()) return false;
+    if (SyllableValidator::isValidPrefix(out_, outCount_, teencode)) return false;
+    return !rawHasEnglishReading();
+}
+
 bool TelexEngine::isHatInitialismKeep() const {
     if (vniMode || rawCount_ != 3 || pCount_ != 2 || lastEffTone_ != Tone::None) return false;
     const bool up = isUpperAscii(raw_[0]);
@@ -755,12 +781,7 @@ bool TelexEngine::isHatInitialismKeep() const {
     const Letter& first = renderLetters_[0];
     const Letter& second = renderLetters_[1];
     if (first.base != v || first.mark == Mark::None || second.base != c || second.mark != Mark::None) return false;
-    // Swift hatInitialismEnglish: English words / acronyms of exactly this shape.
-    static const char* const kHatInitialismEnglish[] = {
-        "aah", "eel", "ooh", "owl", "awl", "aad", "oob", "awb", "awd", "uwb",
-    };
-    for (const char* e : kHatInitialismEnglish)
-        if (e[0] == static_cast<char>(v) && e[1] == static_cast<char>(m) && e[2] == static_cast<char>(c)) return false;
+    if (isHatInitialismEnglish(v, m, c)) return false;
     if (isListedCapsAcronym() || rawIsEnglishCollision()) return false;
     return !rawHasEnglishReading();
 }
@@ -1409,7 +1430,60 @@ bool TelexEngine::isAbbreviationPrefix(bool upper) const {
 }
 
 bool TelexEngine::abbreviationDoublerException(uint8_t lower, bool upper) const {
-    return !pVniMode_ && lower == 'd' && isAbbreviationPrefix(upper);
+    return !pVniMode_ && lower == 'd' &&
+           (isAbbreviationPrefix(upper) || isCapsInitialismDoubler(upper));
+}
+
+// Swift capsInitialismVowelMark: frozen ALL-CAPS initialism, doubler / w still marks the previous vowel ("BCHTƯ").
+bool TelexEngine::capsInitialismVowelMark(int at, uint8_t lower, bool upper) {
+    if (pVniMode_ || !upper || pCount_ < 3) return false;
+    const int i = pCount_ - 1;
+    uint32_t onset = 0;
+    for (int k = 0; k < i; ++k) {
+        const Letter& l = letters_[k];
+        if (!l.upper || isVowelAscii(l.base)) return false;
+        onset = onset << 8 | l.base;
+    }
+    if (i <= 4) {
+        // Swift englishOnsetClusters.
+        static const char* const kEnglishOnsetClusters[] = {
+            "bl", "br", "ch", "chr", "cl", "cr", "dr", "dw", "fl", "fr", "gh", "gl", "gn", "gr", "kl",
+            "kn", "kr", "ph", "phr", "pl", "pr", "ps", "rh", "sc", "sch", "scr", "sh", "shr", "sk",
+            "skr", "sl", "sm", "sn", "sp", "sph", "spl", "spr", "sq", "st", "str", "sv", "sw", "th",
+            "thr", "tr", "ts", "tw", "wh", "wr", "zh", "schw", "schl", "schm", "schn",
+        };
+        for (const char* e : kEnglishOnsetClusters) {
+            uint32_t key = 0;
+            for (const char* c = e; *c; ++c) key = key << 8 | static_cast<uint8_t>(*c);
+            if (key == onset) return false;
+        }
+    }
+    const uint8_t pb = letters_[i].base;
+    Mark want;
+    if (lower == pb && (lower == 'a' || lower == 'e' || lower == 'o')) want = Mark::Circumflex;
+    else if (lower == 'w' && pb == 'a') want = Mark::Breve;
+    else if (lower == 'w' && (pb == 'o' || pb == 'u')) want = Mark::Horn;
+    else return false;
+    if (letters_[i].mark == Mark::None) { letters_[i].mark = want; rawLetter_[at] = i; return true; }
+    if (letters_[i].mark == want && at > 0 && rawLetter_[at - 1] == i && lowercased(raw_[at - 1]) == lower) {
+        letters_[i].mark = Mark::None;
+        pCancelled_ = true;
+        appendLetter(lower, Mark::None, upper);
+        rawLetter_[at] = pCount_ - 1;
+        return true;
+    }
+    return false;
+}
+
+// Swift isCapsInitialismDoubler: ALL-CAPS initialism with a vowel ("UBĐ"), consonant right before the DD pair.
+bool TelexEngine::isCapsInitialismDoubler(bool upper) const {
+    if (!upper || pCount_ < 2) return false;
+    const Letter& d = letters_[pCount_ - 1];
+    if (d.base != 'd' || d.mark != Mark::None) return false;
+    if (isAbbreviationVowel(letters_[pCount_ - 2].base)) return false;
+    for (int k = 0; k < pCount_; ++k)
+        if (!letters_[k].upper) return false;
+    return true;
 }
 
 bool TelexEngine::composedIsValidSyllable() const {
@@ -1428,12 +1502,19 @@ bool TelexEngine::composedIsValidSyllable() const {
         for (int i = 0; i < rawCount_; ++i)
             if (isUpperAscii(raw_[i]) != firstIsUpper) { sameCase = false; break; }
         if (sameCase) {
-            bool hasBar = false, onlyBar = true;
+            bool hasBar = false, onlyBar = true, sawVowel = false, afterConsonant = false;
             for (int k = 0; k < pCount_; ++k) {
                 const Letter& l = renderLetters_[k];
-                if (isAbbreviationVowel(l.base)) { onlyBar = false; break; }
-                if (l.base == 'd' && l.mark == Mark::Bar) hasBar = true;
-                else if (l.mark != Mark::None) { onlyBar = false; break; }
+                if (isAbbreviationVowel(l.base)) {
+                    if (!firstIsUpper || hasBar || l.mark != Mark::None) { onlyBar = false; break; }
+                    sawVowel = true; afterConsonant = false;
+                    continue;
+                }
+                if (l.base == 'd' && l.mark == Mark::Bar) {
+                    if (sawVowel && !hasBar && !afterConsonant) { onlyBar = false; break; }
+                    hasBar = true;
+                } else if (l.mark != Mark::None) { onlyBar = false; break; }
+                afterConsonant = true;
             }
             if (hasBar && onlyBar) return true;
         }
@@ -1919,6 +2000,7 @@ void TelexEngine::parseStep(int at) {
     if (at == disabledAtCount_) pFreezeLetters_ = pCount_;
 
     if (pCancelled_ || (at >= disabledAtCount_ && !abbreviationDoublerException(lower, upper))) {
+        if (!pCancelled_ && capsInitialismVowelMark(at, lower, upper)) return;
         appendLetter(lower, Mark::None, upper);
         rawLetter_[at] = pCount_ - 1;
         return;

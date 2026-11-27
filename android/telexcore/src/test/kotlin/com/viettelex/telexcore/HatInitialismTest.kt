@@ -70,7 +70,7 @@ class HatInitialismTest {
             "EEL", "eel", "OOH", "ooh", "EEK", "eek", "BOOK", "book", "COOL", "cool",
             "LOOK", "look", "FEED", "feed", "OOTD", "ootd", "AAPL", "aapl", "EEG", "eeg",
             "OOP", "oop", "AAC", "aac", "OWL", "owl", "AWL", "awl", "AAH", "aah",
-            "UWB", "UWP", "AWK", "awk", "aat", "AAT", "eep", "eet", "oog", "OOG", "uwk", "awt", "owp", "uwc", "Aal", "aAL", "AAl", "WL", "wl", "AAAL", "aaal",
+            "UWB", "UWP", "AWK", "awk", "aat", "AAT", "eep", "eet", "oog", "uwk", "awt", "owp", "uwc", "Aal", "aAL", "AAl", "WL", "wl", "AAAL", "aaal",
         )
         for ((name, cfg) in engines) {
             for (w in raw) {

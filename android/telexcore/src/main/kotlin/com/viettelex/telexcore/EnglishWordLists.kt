@@ -173,7 +173,7 @@ do does did is are was were has have had wo ca could should would might must nee
 ai may there here where what who how why when that this it let i you we they he she
 """
     private const val CAPS_ACRONYMS = """
-asap isp ussr wwdc wwf
+asap isp ussr wwdc wwf aapl eeg eek ootd awe
 """
     private const val NEUTRAL = """
 app apps email mail wifi web blog file files link links game games chat team teams fan

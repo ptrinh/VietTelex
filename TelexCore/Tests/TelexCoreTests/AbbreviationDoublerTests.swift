@@ -46,6 +46,41 @@ final class AbbreviationDoublerTests: XCTestCase {
         XCTAssertEqual(commit("Yktdd"), "Yktdd")
     }
 
+    /// ALL-CAPS initialisms that carry a vowel before the Đ ("UBĐ"), and "ÔB" (ông bà),
+    /// report 2026-11-27. English "dd" follows a vowel, so those still restore.
+    func testCapsInitialismWithAVowelKeepsItsDBar() {
+        for (keys, want) in [("UBDD", "UBĐ"), ("UBDDT", "UBĐT"), ("OOB", "ÔB"),
+                             ("OOTC", "ÔTC"), ("UWCV", "ƯCV"), ("OOG", "ÔG"), ("TOOB", "TÔB"),
+                             ("BCHTUW", "BCHTƯ"), ("BCOO", "BCÔ"), ("TTAAL", "TTÂL"), ("HSAWN", "HSĂN"),
+                             ("BCHTUWW", "BCHTUW"), ("BCOOO", "BCOO")] {
+            XCTAssertEqual(commit(keys), want, keys)
+        }
+        for keys in ["ADD", "ODD", "ADDRESS", "LADDER", "MIDDLE", "AAT", "bchtuw", "Bchtuw",
+                     "SLEEP", "SPOON", "STRAW", "BROWN", "CROWD", "GROW", "SNOW", "SLOW", "FLOW", "BLOW",
+                     "CROWN", "THROW", "SCREEN", "SHEET", "SHEEP", "STEEL", "STEEP", "SWEEP", "GREET",
+                     "FREEZE", "BREEZE", "SNEEZE", "KNEE", "FLEE", "GLEE", "SPREE", "SHOOT", "SCOOP",
+                     "STOOL", "SPOOL", "BLOOM", "BROOM", "GROOM", "GLOOM", "PROOF", "TROOP", "DROOL",
+                     "CLAW", "FLAW", "SPAWN", "DRAWN", "SHAWL", "CRAWL", "BRAWL", "PRAWN",
+                     "SCOWL", "GROWL", "PROWL", "FROWN", "DROWN", "CLOWN", "PLOW", "GLOW", "STOW",
+                     "KNOWN", "SHOWN", "GROWN", "BLOWN", "FLOWN", "THROWN", "GROWTH", "BROWSER",
+                     "SPEECH", "STREAM", "FREEDOM", "GREECE", "CREEK", "CREEP", "BLEED", "BREED",
+                     "PREEN", "TWEED", "SKEW", "SCREW", "SHREW", "KNEW", "CHROME", "SPRING", "XBOX", "HTTP",
+                     "CSS", "HTML", "CRAAP", "KPOP", "ubdd", "Ubdd", "BOOK", "OOPS",
+                     "GOOD", "NEED", "FEEL", "SEE", "WEEK", "FREE", "COOL", "ZOOM",
+                     "TOOL", "FOOD", "DOOR", "LOOK", "KEEP", "MEET", "SEEN", "ADDED",
+                     "HIDDEN", "SUDDEN", "GOOGLE", "FACEBOOK", "MACBOOK", "NOTEBOOK", "FEEDBACK",
+                     "COFFEE", "SPEED", "STREET", "SCHOOL", "GREEN", "THREE", "EEG", "AAC", "OOP",
+                     "OOTD", "AAPL", "UWB", "UWP", "AWK", "AWS", "HOW", "NOW", "LAW", "SAW",
+                     "WWW", "AWARD", "AWAY", "SWEET", "TWEET", "AGREE", "CHEESE",
+                     "BLOOD", "FLOOR", "SMOOTH", "CHOOSE", "BOOT", "ROOT", "FOOT", "POOL", "WOOD",
+                     "DEEP", "FEED", "SEED", "FEE", "ZOO", "TODD", "BUDDY",
+                     "PUDDING", "WEDDING", "MOOD", "HOOK", "COOK", "LOOP", "SOON",
+                     "GOOSE", "LOOSE", "WOW", "ROW", "SHOW", "KNOW",
+                     "DRAW", "RAW", "JAW", "PAW", "OWE", "AWE", "SQL", "USB"] {
+            XCTAssertEqual(commit(keys), keys, keys)
+        }
+    }
+
     /// Already worked before this feature (Đ is the FIRST letter, so the freeze
     /// hadn't triggered yet when the doubler ran) — must not regress.
     func testDInitialAbbreviationsStillWork() {

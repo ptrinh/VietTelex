@@ -555,7 +555,7 @@ class TelexEngine {
         if (rawIsEnglishCollision() && !(collisionPrefersVietnamese && composedIsValidSyllable() && !composedEndsWithK())) return true
         if (upperToneKey || rawIsEnglishException() ||
             (!composedIsValidSyllable() && !isTeencodeKeep() && !isVietnameseTypoKeep() &&
-                !isHatInitialismKeep())
+                !isHatInitialismKeep() && !isCapsInitialismKeep())
         ) return true
         if (isRareAllCapsAcronym()) return true
         if (contextualEnglish && previousWordEnglish &&
@@ -781,6 +781,25 @@ class TelexEngine {
         val key = (v shl 16) or (m shl 8) or c
         for (e in HAT_INITIALISM_ENGLISH) if (e == key) return false
         if (isListedCapsAcronym() || rawIsEnglishCollision()) return false
+        return !rawHasEnglishReading()
+    }
+
+    /** Swift `isCapsInitialismKeep`: ALL-CAPS token with user-built marks and no tone is an initialism ("ÔB", "UBĐ", "ƯCV"). */
+    private fun isCapsInitialismKeep(): Boolean {
+        if (vniMode || lastEffTone != T.NONE || pCount < 2 || !rawIsAllCapsToken()) return false
+        var hasMark = false
+        for (k in 0 until pCount) {
+            if (rMark[k] == Mark.NONE) continue
+            if (rMark[k] == Mark.HORN && rBase[k] == 'u'.code && letterCreatedByW(k)) return false
+            hasMark = true
+        }
+        if (!hasMark) return false
+        if (rawCount == 3) {
+            val key = (lowercased(raw[0]) shl 16) or (lowercased(raw[1]) shl 8) or lowercased(raw[2])
+            for (e in HAT_INITIALISM_ENGLISH) if (e == key) return false
+        }
+        if (isListedCapsAcronym() || rawIsEnglishCollision()) return false
+        if (SyllableValidator.isValidPrefix(composed.lowercase(), teencode)) return false
         return !rawHasEnglishReading()
     }
 
@@ -1254,7 +1273,16 @@ class TelexEngine {
     }
 
     private fun abbreviationDoublerException(lower: Int, upper: Boolean): Boolean =
-        !pVniMode && lower == 'd'.code && isAbbreviationPrefix(upper)
+        !pVniMode && lower == 'd'.code && (isAbbreviationPrefix(upper) || isCapsInitialismDoubler(upper))
+
+    /** Swift `isCapsInitialismDoubler`: ALL-CAPS initialism with a vowel ("UBĐ"), consonant right before the DD pair. */
+    private fun isCapsInitialismDoubler(upper: Boolean): Boolean {
+        if (!upper || pCount < 2) return false
+        if (lBase[pCount - 1] != 'd'.code || lMark[pCount - 1] != Mark.NONE) return false
+        if (isAbbreviationVowel(lBase[pCount - 2])) return false
+        for (k in 0 until pCount) if (!lUpper[k]) return false
+        return true
+    }
 
     private fun composedIsValidSyllable(): Boolean {
         if (pCount >= 1 && lastEffTone == T.NONE && rBase[0] == 'd'.code && rMark[0] == Mark.BAR) {
@@ -1271,10 +1299,19 @@ class TelexEngine {
             if (sameCase) {
                 var hasBar = false
                 var onlyBar = true
+                var sawVowel = false
+                var afterConsonant = false
                 for (k in 0 until pCount) {
-                    if (isAbbreviationVowel(rBase[k])) { onlyBar = false; break }
-                    if (rBase[k] == 'd'.code && rMark[k] == Mark.BAR) hasBar = true
-                    else if (rMark[k] != Mark.NONE) { onlyBar = false; break }
+                    if (isAbbreviationVowel(rBase[k])) {
+                        if (!firstIsUpper || hasBar || rMark[k] != Mark.NONE) { onlyBar = false; break }
+                        sawVowel = true; afterConsonant = false
+                        continue
+                    }
+                    if (rBase[k] == 'd'.code && rMark[k] == Mark.BAR) {
+                        if (sawVowel && !hasBar && !afterConsonant) { onlyBar = false; break }
+                        hasBar = true
+                    } else if (rMark[k] != Mark.NONE) { onlyBar = false; break }
+                    afterConsonant = true
                 }
                 if (hasBar && onlyBar) return true
             }
@@ -1795,6 +1832,33 @@ class TelexEngine {
         rawLetter[at] = pCount - 1
     }
 
+    /** Swift `capsInitialismVowelMark`: frozen ALL-CAPS initialism, doubler / w still marks the previous vowel ("BCHTƯ"). */
+    private fun capsInitialismVowelMark(at: Int, lower: Int, upper: Boolean): Boolean {
+        if (pVniMode || !upper || pCount < 3) return false
+        val i = pCount - 1
+        var onset = 0
+        for (k in 0 until i) {
+            if (!lUpper[k] || isVowelAscii(lBase[k])) return false
+            onset = (onset shl 8) or lBase[k]
+        }
+        if (i <= 4) for (e in ENGLISH_ONSET_CLUSTERS) if (e == onset) return false
+        val pb = lBase[i]
+        val want = when {
+            lower == pb && (lower == 'a'.code || lower == 'e'.code || lower == 'o'.code) -> Mark.CIRCUMFLEX
+            lower == 'w'.code && pb == 'a'.code -> Mark.BREVE
+            lower == 'w'.code && (pb == 'o'.code || pb == 'u'.code) -> Mark.HORN
+            else -> return false
+        }
+        if (lMark[i] == Mark.NONE) { lMark[i] = want; rawLetter[at] = i; return true }
+        if (lMark[i] == want && at > 0 && rawLetter[at - 1] == i && lowercased(raw[at - 1]) == lower) {
+            lMark[i] = Mark.NONE
+            pCancelled = true
+            literal(at, lower, upper)
+            return true
+        }
+        return false
+    }
+
     private fun parseStep(at: Int) {
         val key = raw[at]
         val lower = lowercased(key)
@@ -1802,6 +1866,7 @@ class TelexEngine {
         if (at == disabledAtCount) pFreezeLetters = pCount
 
         if (pCancelled || (at >= disabledAtCount && !abbreviationDoublerException(lower, upper))) {
+            if (!pCancelled && capsInitialismVowelMark(at, lower, upper)) return
             literal(at, lower, upper); return
         }
 
@@ -2216,9 +2281,17 @@ class TelexEngine {
         /** Swift `hatInitialismExcludedConsonants`: f j w z + stops c k p t g q. */
         private const val HAT_INITIALISM_EXCLUDED = "fjwzckptgq"
 
+        /** Swift `englishOnsetClusters`. */
+        private val ENGLISH_ONSET_CLUSTERS: IntArray = arrayOf(
+            "bl", "br", "ch", "chr", "cl", "cr", "dr", "dw", "fl", "fr", "gh", "gl", "gn", "gr", "kl",
+            "kn", "kr", "ph", "phr", "pl", "pr", "ps", "rh", "sc", "sch", "scr", "sh", "shr", "sk",
+            "skr", "sl", "sm", "sn", "sp", "sph", "spl", "spr", "sq", "st", "str", "sv", "sw", "th",
+            "thr", "tr", "ts", "tw", "wh", "wr", "zh", "schw", "schl", "schm", "schn",
+        ).map { w -> w.fold(0) { acc, ch -> (acc shl 8) or ch.code } }.toIntArray()
+
         /** Swift `hatInitialismEnglish`: English words / acronyms of the hat-initialism shape. */
         private val HAT_INITIALISM_ENGLISH: IntArray = arrayOf(
-            "aah", "eel", "ooh", "owl", "awl", "aad", "oob", "awb", "awd", "uwb",
+            "aah", "eel", "ooh", "owl", "awl", "aad", "awb", "awd", "uwb",
         ).map { w -> w.fold(0) { acc, ch -> (acc shl 8) or ch.code } }.toIntArray()
 
         private val ENGLISH_EXCEPTIONS: Array<IntArray> = arrayOf(

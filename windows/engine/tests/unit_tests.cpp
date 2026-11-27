@@ -287,7 +287,7 @@ void hatInitialism() {
     const char* raw[] = {"EEL", "eel", "OOH", "ooh", "EEK", "eek", "BOOK", "book", "COOL", "cool",
                          "LOOK", "look", "FEED", "feed", "OOTD", "ootd", "AAPL", "aapl", "EEG", "eeg",
                          "OOP", "oop", "AAC", "aac", "OWL", "owl", "AWL", "awl", "AAH", "aah",
-                         "UWB", "UWP", "AWK", "awk", "aat", "AAT", "eep", "eet", "oog", "OOG", "uwk", "awt", "owp", "uwc", "Aal", "aAL", "AAl", "WL", "wl"};
+                         "UWB", "UWP", "AWK", "awk", "aat", "AAT", "eep", "eet", "oog", "uwk", "awt", "owp", "uwc", "Aal", "aAL", "AAl", "WL", "wl"};
     for (auto cfg : cfgs) {
         for (const K& k : kept) {
             auto r = liveAndCommit(k.keys, cfg);

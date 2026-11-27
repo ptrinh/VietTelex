@@ -265,6 +265,7 @@ private:
     bool glueRestores() const;
     bool isVietnameseTypoKeep() const;
     bool isHatInitialismKeep() const;
+    bool isCapsInitialismKeep() const;
     bool rawHasEnglishReading() const;
     bool isRareAllCapsAcronym() const;
     bool rawIsDictionaryWord() const;
@@ -344,6 +345,8 @@ private:
     int teencodeOnset() const;        // 0 none, 1 w->qu, 2 z->d, 3 dz->d
     bool isAbbreviationPrefix(bool upper) const;
     bool abbreviationDoublerException(uint8_t lower, bool upper) const;
+    bool isCapsInitialismDoubler(bool upper) const;
+    bool capsInitialismVowelMark(int at, uint8_t lower, bool upper);
     bool composedIsValidSyllable() const;
     int elongationHeadCount(int count, Tone tone) const;
     bool isValidHead(int k, Tone tone, bool plainLast = false) const;

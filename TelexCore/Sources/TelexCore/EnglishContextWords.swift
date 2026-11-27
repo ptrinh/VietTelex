@@ -157,7 +157,7 @@ enum EnglishContextWords {
     /// types in capitals. Deliberately left OUT: "hdd" (HĐ = hợp đồng / hoạt động),
     /// "ddos" (ĐÓ), and every vowel-less đ-abbreviation (HĐND, VĐV, BĐS).
     static let capsAcronyms: Set<String> = parse("""
-        asap isp ussr wwdc wwf
+        asap isp ussr wwdc wwf aapl eeg eek ootd awe
         """)
 
     private static func parseGates(_ list: String) -> [(word: String, predecessors: Set<String>)] {
