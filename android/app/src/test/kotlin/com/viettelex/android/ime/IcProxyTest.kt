@@ -89,8 +89,13 @@ class FakeEditor(initial: String = "", var selStart: Int = initial.length, var s
     override fun setSelection(start: Int, end: Int): Boolean { setSelections++; selStart = start; selEnd = end; return true }
     override fun finishComposing(): Boolean { finishComposingCalls++; return true }
     val actions = ArrayList<Int>()
-    override fun performEditorAction(actionId: Int): Boolean { actions.add(actionId); return true }
-    override fun sendKey(key: EditorPort.PortKey) { keys.add(key); pendingKeys.add(key); if (depth == 0) flushKeys() }
+    /** Độ sâu batch lúc Enter / editor action tới app (#182: phải là 0 — sửa đã áp xong). */
+    val depthAtNewline = ArrayList<Int>()
+    override fun performEditorAction(actionId: Int): Boolean { depthAtNewline.add(depth); actions.add(actionId); return true }
+    override fun sendKey(key: EditorPort.PortKey) {
+        if (key == EditorPort.PortKey.ENTER) depthAtNewline.add(depth)
+        keys.add(key); pendingKeys.add(key); if (depth == 0) flushKeys()
+    }
 
     // --- bảng sửa văn bản: performContextMenuAction + phím kèm meta ---
     /** false ⇒ app không hỗ trợ menu (WebView cũ…): IME phải rơi về phím tắt. */

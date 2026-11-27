@@ -306,7 +306,13 @@ class IcProxy(
     }
 
     private fun newline(c: EditorPort) {
+        // #182: ô Compose gom deleteSurrounding/commitText tới endBatchEdit, còn phím Enter và
+        // editor action chạy NGAY ⇒ trong cùng batch chúng tới trước phần sửa ("K"+Enter bung gõ
+        // tắt ra "KKhông", mất xuống dòng; ô "Gửi" gửi chữ chưa sửa). Đóng batch trước, mở lại sau.
+        val flush = depth > 0 && ic === c
+        if (flush) c.endBatch()
         if (actionId != 0 && !rawKeys) c.performEditorAction(actionId) else c.sendKey(EditorPort.PortKey.ENTER)
+        if (flush) c.beginBatch()
         tracker.unknown()
         shadow.invalidate()
     }

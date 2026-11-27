@@ -33,6 +33,14 @@ class ShortcutIcProxyTest {
         }
     }
 
+    /** #182: Enter sau khi bung gõ tắt phải tới app SAU khi batch sửa đã đóng (ô Compose gom sửa tới endBatchEdit). */
+    @Test fun enterAfterExpansionLeavesTheBatchFirst() {
+        val ed = FakeEditor(); val p = proxy(ed); val b = EngineBridge(settings)
+        type("Ko\n", b, p, ed)
+        assertEquals("Không\n", ed.text)
+        assertEquals(listOf(0), ed.depthAtNewline)
+    }
+
     @Test fun expandAndUndoThroughIcProxy() {
         val ed = FakeEditor(); val p = proxy(ed); val b = EngineBridge(settings)
         type("Ko ", b, p, ed)
