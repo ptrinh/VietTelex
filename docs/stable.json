@@ -76,8 +76,8 @@
     "notes": "Chữ viết tắt gõ toàn chữ hoa giữ được Đ, Â, Ê, Ô, Ă, Ơ, Ư: UBDD ra UBĐ, OOB ra ÔB, BCHTUW ra BCHTƯ."
   },
   "android": {
-    "version": "1.6.27",
-    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.27/VietTelex-android-1.6.27.apk",
+    "version": "1.6.28",
+    "apk": "https://github.com/ptrinh/viettelex/releases/download/android-v1.6.28/VietTelex-android-1.6.28.apk",
     "play": "https://play.google.com/store/apps/details?id=com.viettelex.android"
   }
 }
